@@ -13,7 +13,7 @@ subprojects {
     tasks.withType<Test>().configureEach {
         systemProperty("robolectric.dependency.repo.url", "https://maven-central.storage-download.googleapis.com/maven2")
         systemProperty("robolectric.dependency.repo.id", "mavenCentralMirror")
-        maxHeapSize = "2g"
+        maxHeapSize = "1536m"
         jvmArgs(
             "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
             "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",

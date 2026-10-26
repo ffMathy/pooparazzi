@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Both apps advertise this capability, so each can tell whether the other device has the app (sync status). -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@array/android_wear_capabilities">
+    <string-array name="android_wear_capabilities" translatable="false">
+        <item>xaternity_tracker</item>
+    </string-array>
+</resources>

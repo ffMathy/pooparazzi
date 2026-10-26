@@ -9,7 +9,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.ffmathy.xaternity.core.spikeGreeting
+import com.ffmathy.xaternity.core.sample.SampleData
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,6 +21,6 @@ class MainActivity : AppCompatActivity() {
 @Composable
 fun SpikeScreen() {
     MaterialTheme {
-        Surface(Modifier.fillMaxSize()) { Text("Phone ${spikeGreeting()}", style = MaterialTheme.typography.displayMedium) }
+        Surface(Modifier.fillMaxSize()) { Text(SampleData.BABY_NAME, style = MaterialTheme.typography.displayMedium) }
     }
 }

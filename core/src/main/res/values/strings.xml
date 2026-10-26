@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shared words for the phone and watch apps (V1_ADDITIONS §5.1 glossary).
+    Naming: <group>_<name>. Groups: kind, feed_type, side, diaper, poop_colour, poop_texture, status, action,
+    receipt, guard, nav, settings, appearance, language, count, unit, rel, spoken, sync, pattern.
+    Apps keep their own strings in their own modules and must not redefine these names.
+    Every translatable string here has a Danish twin in values-da/strings.xml (checked by a unit test).
+-->
+<resources>
+    <!-- Event kinds -->
+    <string name="kind_sleep">Sleep</string>
+    <string name="kind_feed">Feed</string>
+    <string name="kind_diaper">Diaper</string>
+
+    <!-- Feed types -->
+    <string name="feed_type_breast">Breast</string>
+    <string name="feed_type_formula">Formula</string>
+    <!-- Same word with a soft hyphen (U+00AD) where it may break in tight places; use with Hyphens.Auto. -->
+    <string name="feed_type_formula_compact">Formula</string>
+    <string name="feed_type_food">Food</string>
+    <string name="feed_breast_starts_timer">Starts a timer</string>
+
+    <!-- Breast sides. The side glyphs carry no letters; the letters below come from text. -->
+    <string name="side_left">Left</string>
+    <string name="side_right">Right</string>
+    <string name="side_left_then_right">Left → Right</string>
+    <string name="side_right_then_left">Right → Left</string>
+    <string name="side_letter_left">L</string>
+    <string name="side_letter_right">R</string>
+    <string name="side_question">Which side?</string>
+
+    <!-- Diapers -->
+    <string name="diaper_pee">Pee</string>
+    <string name="diaper_poop">Poop</string>
+    <!-- Receipts and History -->
+    <string name="diaper_pee_and_poop">Pee + poop</string>
+    <!-- Status surfaces (since-row, tile, complications) -->
+    <string name="diaper_both">Both</string>
+
+    <!-- Poop details -->
+    <string name="poop_colour">Colour</string>
+    <string name="poop_texture">Texture</string>
+    <string name="poop_colour_yellow">Yellow</string>
+    <string name="poop_colour_green">Green</string>
+    <string name="poop_colour_brown">Brown</string>
+    <string name="poop_colour_black">Black</string>
+    <string name="poop_colour_red">Red</string>
+    <string name="poop_colour_pale">Pale</string>
+    <string name="poop_texture_watery">Watery</string>
+    <string name="poop_texture_seedy">Seedy</string>
+    <string name="poop_texture_mushy">Mushy</string>
+    <string name="poop_texture_formed">Formed</string>
+    <string name="poop_texture_hard">Hard</string>
+    <string name="poop_health_hint">Pale, red or black poop can be a reason to call your doctor or health visitor.</string>
+    <string name="optional">Optional</string>
+    <string name="none">None</string>
+
+    <!-- Lamp labels and states -->
+    <string name="status_last_fed">Last fed</string>
+    <!-- As in "Fed at 12:22" (watch, widget; with receipt_at_time) and "Fed 14:32" (tile title) -->
+    <string name="status_fed">Fed</string>
+    <string name="status_asleep">Asleep</string>
+    <string name="status_awake">Awake</string>
+    <string name="status_breastfeeding">Breastfeeding</string>
+    <!-- As in "Breast · running" -->
+    <string name="status_running">running</string>
+
+    <!-- Actions -->
+    <string name="action_start_sleep">Start sleep</string>
+    <string name="action_woke_up">Woke up</string>
+    <string name="action_end_sleep">End sleep</string>
+    <string name="action_end_feed">End feed</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_done">Done</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_earlier">Earlier</string>
+    <string name="action_earlier_question">Earlier?</string>
+    <string name="action_adjust_start">Adjust start</string>
+    <string name="action_now">Now</string>
+    <string name="action_retry">Tap to retry</string>
+
+    <!-- Receipts (undo card, watch Logged). %1$s is a label such as "Formula" or "Pee + poop". -->
+    <string name="receipt_logged">%1$s logged</string>
+    <!-- Watch Logged title: "Formula at 14:32" -->
+    <string name="receipt_at_time">%1$s at %2$s</string>
+    <string name="receipt_feed_started">Feed started</string>
+    <string name="receipt_feed_ended">Feed ended</string>
+    <string name="receipt_feed_cancelled">Feed cancelled</string>
+    <string name="receipt_sleep_started">Sleep started</string>
+    <string name="receipt_sleep_cancelled">Sleep cancelled</string>
+    <!-- "Slept 1h 07m" -->
+    <string name="receipt_slept">Slept %1$s</string>
+    <string name="receipt_undone">Undone</string>
+    <!-- "Sleep deleted", "Pee + poop deleted" -->
+    <string name="receipt_deleted">%1$s deleted</string>
+
+    <!-- Guards. %1$s is a clock time. -->
+    <string name="guard_already_asleep">Already asleep since %1$s</string>
+    <string name="guard_already_awake">Already awake since %1$s</string>
+    <string name="guard_already_feeding">Already feeding since %1$s</string>
+    <string name="guard_already_logged">Already logged at %1$s</string>
+
+    <!-- Navigation -->
+    <string name="nav_history">History</string>
+    <string name="nav_today">Today</string>
+    <string name="nav_yesterday">Yesterday</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Settings -->
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_baby_name">Baby\'s name</string>
+    <!-- Shown when no name is set -->
+    <string name="baby_name_hint">Baby</string>
+    <string name="appearance_auto">Auto</string>
+    <string name="appearance_night">Night</string>
+    <string name="appearance_day">Day</string>
+    <string name="language_system">System default</string>
+    <!-- Language names are written in their own language. -->
+    <string name="language_english" translatable="false">English</string>
+    <string name="language_danish" translatable="false">Dansk</string>
+
+    <!-- Today counts (captions under the numbers) -->
+    <plurals name="count_feeds">
+        <item quantity="one">feed</item>
+        <item quantity="other">feeds</item>
+    </plurals>
+    <string name="count_pee">pee</string>
+    <string name="count_poop">poop</string>
+    <string name="count_sleep">sleep</string>
+
+    <!-- Duration unit letters: "2h 10m", "1d 3h" -->
+    <string name="unit_day">d</string>
+    <string name="unit_hour">h</string>
+    <string name="unit_minute">m</string>
+
+    <!-- Relative phrases. %s / %1$s is a duration ("48m") or a clock time ("13:27"). -->
+    <!-- Lamp sub-line word, as in "ago · 12:22" -->
+    <string name="rel_ago">ago</string>
+    <string name="rel_ago_format">%1$s ago</string>
+    <string name="rel_since_format">since %1$s</string>
+    <string name="rel_just_now">just now</string>
+    <string name="rel_at_format">at %1$s</string>
+
+    <!-- Spoken forms for TalkBack -->
+    <plurals name="spoken_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="spoken_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="spoken_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <string name="spoken_less_than_minute">less than a minute</string>
+    <!-- TalkBack prefixes (§9.4, §9.5): "Last feed, formula, 2 hours 10 minutes ago, at 12:22" -->
+    <string name="spoken_last_feed">Last feed</string>
+    <string name="spoken_last_diaper">Last diaper</string>
+    <string name="spoken_earlier_format">%1$s earlier</string>
+    <string name="spoken_later_format">%1$s later</string>
+
+    <!-- Sync line (DESIGN_SPEC §4.5). Each device names itself or the other one. %1$s is a clock time. -->
+    <string name="sync_synced_with_watch">Synced with watch · %1$s</string>
+    <string name="sync_synced_with_phone">Synced with phone · %1$s</string>
+    <string name="sync_syncing_with_watch">Syncing with watch…</string>
+    <string name="sync_syncing_with_phone">Syncing with phone…</string>
+    <string name="sync_saved_on_phone">Saved on phone · will sync</string>
+    <string name="sync_saved_on_watch">Saved on watch · will sync</string>
+    <!-- Phone error state, followed by action_retry: "Couldn't save · Tap to retry" -->
+    <string name="sync_error">Couldn\'t save</string>
+
+    <!-- java.time pattern for dates such as "Mon 26 Oct" -->
+    <string name="pattern_weekday_day_month">EEE d MMM</string>
+</resources>

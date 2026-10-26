@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Danish twins of values/strings.xml (V1_ADDITIONS §5.1 glossary). -->
+<resources>
+    <!-- Event kinds -->
+    <string name="kind_sleep">Søvn</string>
+    <string name="kind_feed">Måltid</string>
+    <string name="kind_diaper">Ble</string>
+
+    <!-- Feed types -->
+    <string name="feed_type_breast">Amning</string>
+    <string name="feed_type_formula">Modermælkserstatning</string>
+    <string name="feed_type_formula_compact">Modermælks&#173;erstatning</string>
+    <string name="feed_type_food">Mad</string>
+    <string name="feed_breast_starts_timer">Starter tidtagning</string>
+
+    <!-- Breast sides -->
+    <string name="side_left">Venstre</string>
+    <string name="side_right">Højre</string>
+    <string name="side_left_then_right">Venstre → Højre</string>
+    <string name="side_right_then_left">Højre → Venstre</string>
+    <string name="side_letter_left">V</string>
+    <string name="side_letter_right">H</string>
+    <string name="side_question">Hvilken side?</string>
+
+    <!-- Diapers -->
+    <string name="diaper_pee">Tis</string>
+    <string name="diaper_poop">Bæ</string>
+    <string name="diaper_pee_and_poop">Tis + bæ</string>
+    <string name="diaper_both">Begge</string>
+
+    <!-- Poop details -->
+    <string name="poop_colour">Farve</string>
+    <string name="poop_texture">Konsistens</string>
+    <string name="poop_colour_yellow">Gul</string>
+    <string name="poop_colour_green">Grøn</string>
+    <string name="poop_colour_brown">Brun</string>
+    <string name="poop_colour_black">Sort</string>
+    <string name="poop_colour_red">Rød</string>
+    <string name="poop_colour_pale">Bleg</string>
+    <string name="poop_texture_watery">Vandig</string>
+    <string name="poop_texture_seedy">Kornet</string>
+    <string name="poop_texture_mushy">Grødet</string>
+    <string name="poop_texture_formed">Formet</string>
+    <string name="poop_texture_hard">Hård</string>
+    <string name="poop_health_hint">Bleg, rød eller sort bæ kan være en grund til at kontakte lægen eller sundhedsplejersken.</string>
+    <string name="optional">Valgfri</string>
+    <string name="none">Ingen</string>
+
+    <!-- Lamp labels and states -->
+    <string name="status_last_fed">Sidste måltid</string>
+    <string name="status_fed">Spiste</string>
+    <string name="status_asleep">Sover</string>
+    <string name="status_awake">Vågen</string>
+    <string name="status_breastfeeding">Ammer</string>
+    <string name="status_running">i gang</string>
+
+    <!-- Actions -->
+    <string name="action_start_sleep">Start søvn</string>
+    <string name="action_woke_up">Vågnede</string>
+    <string name="action_end_sleep">Afslut søvn</string>
+    <string name="action_end_feed">Afslut amning</string>
+    <string name="action_undo">Fortryd</string>
+    <string name="action_done">Færdig</string>
+    <string name="action_save">Gem</string>
+    <string name="action_cancel">Annuller</string>
+    <string name="action_delete">Slet</string>
+    <string name="action_edit">Rediger</string>
+    <string name="action_earlier">Tidligere</string>
+    <string name="action_earlier_question">Tidligere?</string>
+    <string name="action_adjust_start">Ret start</string>
+    <string name="action_now">Nu</string>
+    <string name="action_retry">Prøv igen</string>
+
+    <!-- Receipts -->
+    <string name="receipt_logged">%1$s registreret</string>
+    <string name="receipt_at_time">%1$s kl. %2$s</string>
+    <string name="receipt_feed_started">Amning startet</string>
+    <string name="receipt_feed_ended">Amning afsluttet</string>
+    <string name="receipt_feed_cancelled">Amning annulleret</string>
+    <string name="receipt_sleep_started">Søvn startet</string>
+    <string name="receipt_sleep_cancelled">Søvn annulleret</string>
+    <string name="receipt_slept">Sov %1$s</string>
+    <string name="receipt_undone">Fortrudt</string>
+    <string name="receipt_deleted">%1$s slettet</string>
+
+    <!-- Guards -->
+    <string name="guard_already_asleep">Sover allerede siden kl. %1$s</string>
+    <string name="guard_already_awake">Allerede vågen siden kl. %1$s</string>
+    <string name="guard_already_feeding">Ammer allerede siden kl. %1$s</string>
+    <string name="guard_already_logged">Allerede registreret kl. %1$s</string>
+
+    <!-- Navigation -->
+    <string name="nav_history">Historik</string>
+    <string name="nav_today">I dag</string>
+    <string name="nav_yesterday">I går</string>
+    <string name="nav_settings">Indstillinger</string>
+
+    <!-- Settings -->
+    <string name="settings_appearance">Udseende</string>
+    <string name="settings_language">Sprog</string>
+    <string name="settings_baby_name">Barnets navn</string>
+    <string name="baby_name_hint">Baby</string>
+    <string name="appearance_auto">Auto</string>
+    <string name="appearance_night">Nat</string>
+    <string name="appearance_day">Dag</string>
+    <string name="language_system">Systemstandard</string>
+
+    <!-- Today counts -->
+    <plurals name="count_feeds">
+        <item quantity="one">måltid</item>
+        <item quantity="other">måltider</item>
+    </plurals>
+    <string name="count_pee">tis</string>
+    <string name="count_poop">bæ</string>
+    <string name="count_sleep">søvn</string>
+
+    <!-- Duration unit letters: "2t 10m", "1d 3t" -->
+    <string name="unit_day">d</string>
+    <string name="unit_hour">t</string>
+    <string name="unit_minute">m</string>
+
+    <!-- Relative phrases -->
+    <string name="rel_ago">siden</string>
+    <string name="rel_ago_format">%1$s siden</string>
+    <string name="rel_since_format">siden kl. %1$s</string>
+    <string name="rel_just_now">lige nu</string>
+    <string name="rel_at_format">kl. %1$s</string>
+
+    <!-- Spoken forms -->
+    <plurals name="spoken_days">
+        <item quantity="one">%d dag</item>
+        <item quantity="other">%d dage</item>
+    </plurals>
+    <plurals name="spoken_hours">
+        <item quantity="one">%d time</item>
+        <item quantity="other">%d timer</item>
+    </plurals>
+    <plurals name="spoken_minutes">
+        <item quantity="one">%d minut</item>
+        <item quantity="other">%d minutter</item>
+    </plurals>
+    <string name="spoken_less_than_minute">under et minut</string>
+    <string name="spoken_last_feed">Sidste måltid</string>
+    <string name="spoken_last_diaper">Sidste bleskift</string>
+    <string name="spoken_earlier_format">%1$s tidligere</string>
+    <string name="spoken_later_format">%1$s senere</string>
+
+    <!-- Sync line -->
+    <string name="sync_synced_with_watch">Synkroniseret med ur · %1$s</string>
+    <string name="sync_synced_with_phone">Synkroniseret med telefon · %1$s</string>
+    <string name="sync_syncing_with_watch">Synkroniserer med ur…</string>
+    <string name="sync_syncing_with_phone">Synkroniserer med telefon…</string>
+    <!-- Short: the phone top bar has room for about "Synkroniseret med ur · 14:31". -->
+    <string name="sync_saved_on_phone">Gemt lokalt · synkes senere</string>
+    <string name="sync_saved_on_watch">Gemt på uret · synkes senere</string>
+    <string name="sync_error">Ikke gemt</string>
+
+    <!-- "man. 26. okt." -->
+    <string name="pattern_weekday_day_month">EEE d. MMM</string>
+</resources>

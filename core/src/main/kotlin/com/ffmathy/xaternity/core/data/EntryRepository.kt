@@ -1,0 +1,139 @@
+package com.ffmathy.xaternity.core.data
+
+import com.ffmathy.xaternity.core.model.AlreadyRunningException
+import com.ffmathy.xaternity.core.model.BreastSide
+import com.ffmathy.xaternity.core.model.Entry
+import com.ffmathy.xaternity.core.model.FeedType
+import com.ffmathy.xaternity.core.model.InvalidEntryException
+import com.ffmathy.xaternity.core.model.PoopColor
+import com.ffmathy.xaternity.core.model.PoopTexture
+import kotlinx.coroutines.flow.Flow
+
+/** Timing rules shared by the repository and the apps (DESIGN_SPEC §5.12, V1_ADDITIONS §1). */
+object EntryRules {
+    /** An interval that ends less than this after its start is a mis-tap and is discarded. */
+    const val MIS_TAP_MILLIS: Long = 60_000L
+
+    /** Two logs of the same kind (and type / flags) whose times are closer than this are one entry. */
+    const val DEDUPE_WINDOW_MILLIS: Long = 5_000L
+
+    /** Soft-deleted entries are purged this long after their deletion. */
+    const val SOFT_DELETE_RETENTION_MILLIS: Long = 7L * 24 * 60 * 60 * 1000
+
+    /** Local writes may lie at most this far in the future (clock jitter between tap and write). */
+    const val FUTURE_TOLERANCE_MILLIS: Long = 60_000L
+}
+
+/** Outcome of ending a running interval. */
+sealed interface EndResult {
+    /** The interval ended normally. [previous] is the running snapshot, for Undo via [EntryRepository.restore]. */
+    data class Ended(val entry: Entry, val previous: Entry) : EndResult
+
+    /**
+     * The interval ended less than [EntryRules.MIS_TAP_MILLIS] after its start, so it was soft-deleted
+     * ("Sleep cancelled" / "Feed cancelled"). [entry] is the discarded entry (deleted, with its end);
+     * [previous] is the running snapshot to pass to [EntryRepository.restore] for Undo.
+     */
+    data class Discarded(val entry: Entry, val previous: Entry) : EndResult
+
+    /**
+     * Nothing was running under that id (already ended, e.g. on the other device, deleted, unknown or of
+     * another kind). [current] is the stored entry when it exists and is not deleted, for "Already awake since …".
+     */
+    data class NotRunning(val current: Entry?) : EndResult
+}
+
+/** Outcome of a one-tap log that is deduplicated (DESIGN_SPEC §4.4). */
+sealed interface LogResult {
+    val entry: Entry
+
+    /** A new entry was written. */
+    data class Logged(override val entry: Entry) : LogResult
+
+    /** The same log already exists within [EntryRules.DEDUPE_WINDOW_MILLIS]; nothing was written. Show "Already logged …". */
+    data class Duplicate(override val entry: Entry) : LogResult
+}
+
+/**
+ * The single source of truth for entries on this device. Every local write bumps [Entry.updatedAtMillis],
+ * is validated (V1_ADDITIONS §1) and is pushed to the other device through sync.
+ *
+ * Invalid writes throw [InvalidEntryException] (or return it as a failure for the `Result` functions);
+ * a second running sleep or breastfeed is rejected with [AlreadyRunningException].
+ * Local times may not lie in the future (beyond [EntryRules.FUTURE_TOLERANCE_MILLIS]).
+ */
+interface EntryRepository {
+    /** Non-deleted entries, oldest first. */
+    fun observeEntries(): Flow<List<Entry>>
+
+    /** The stored entry with [id], including deleted ones, or null. */
+    suspend fun get(id: String): Entry?
+
+    /** Logs a FORMULA or FOOD instant at [at]; returns the existing entry for a duplicate. BREAST is rejected: use [startBreastfeed]. */
+    suspend fun logFeed(type: FeedType, at: Long): Entry = logFeedChecked(type, at).entry
+
+    /** As [logFeed], but tells a new entry apart from a duplicate. */
+    suspend fun logFeedChecked(type: FeedType, at: Long): LogResult
+
+    /** Starts a breastfeed at [at]. Fails with [AlreadyRunningException] while one runs. */
+    suspend fun startBreastfeed(at: Long): Result<Entry>
+
+    /** Ends the running breastfeed [id] at [at] with [side]: [EndResult.Ended], or [EndResult.Discarded] under 60 s. */
+    suspend fun endBreastfeed(id: String, at: Long, side: BreastSide): EndResult
+
+    /** Starts a sleep at [at]. Fails with [AlreadyRunningException] while one runs. */
+    suspend fun startSleep(at: Long): Result<Entry>
+
+    /** Ends the running sleep [id] at [at]: [EndResult.Ended], or [EndResult.Discarded] under 60 s. */
+    suspend fun endSleep(id: String, at: Long): EndResult
+
+    /**
+     * Logs a diaper at [at]. Needs [pee] or [poop] (else [InvalidEntryException]); [color] and [texture]
+     * are dropped unless [poop]. Returns the existing entry for a duplicate.
+     */
+    suspend fun logDiaper(
+        at: Long,
+        pee: Boolean,
+        poop: Boolean,
+        color: PoopColor? = null,
+        texture: PoopTexture? = null,
+    ): Entry = logDiaperChecked(at, pee, poop, color, texture).entry
+
+    /** As [logDiaper], but tells a new entry apart from a duplicate. */
+    suspend fun logDiaperChecked(
+        at: Long,
+        pee: Boolean,
+        poop: Boolean,
+        color: PoopColor? = null,
+        texture: PoopTexture? = null,
+    ): LogResult
+
+    /** Adds a complete entry (History "Add past entry"). Its id must be new. Returns it with a fresh [Entry.updatedAtMillis]. */
+    suspend fun add(entry: Entry): Entry
+
+    /** Replaces an existing entry after validation; bumps [Entry.updatedAtMillis]. Throws [NoSuchElementException] for an unknown id. */
+    suspend fun update(entry: Entry): Entry
+
+    /** Soft-deletes [id]. Returns the snapshot before deletion (for Undo via [restore]), or null for an unknown id. */
+    suspend fun delete(id: String): Entry?
+
+    /** Undo: writes [previous] back (re-inserting it when needed) with a new [Entry.updatedAtMillis]. */
+    suspend fun restore(previous: Entry): Entry
+
+    /** Merges an entry from the other device (last-writer-wins). Never echoes it back to sync. Returns true when stored. */
+    suspend fun applyRemote(entry: Entry): Boolean
+
+    /**
+     * Merges a batch from the other device as one unit: applied oldest write first, with cross-device conflicts
+     * (two running sleeps or breastfeeds, the same log within the dedupe window) resolved once after the batch.
+     * Returns how many entries were stored.
+     */
+    suspend fun applyRemoteAll(entries: List<Entry>): Int = entries.count { applyRemote(it) }
+
+    /**
+     * Removes soft-deleted entries whose deletion is older than [EntryRules.SOFT_DELETE_RETENTION_MILLIS] and has
+     * reached sync. Their Data Layer items are kept (as `deleted = true`), so a device that was away the whole
+     * time still learns of the deletion. Returns how many were purged.
+     */
+    suspend fun purgeDeleted(): Int
+}
