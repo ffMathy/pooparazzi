@@ -49,7 +49,9 @@ object Labels {
         EntryKind.DIAPER -> R.string.kind_diaper
     }
 
-    @StringRes fun feedType(type: FeedType, compact: Boolean = false): Int = when (type) {
+    /** The feed type's word; a feed with no type (null) is plain "Feed" ("Måltid"). */
+    @StringRes fun feedType(type: FeedType?, compact: Boolean = false): Int = when (type) {
+        null -> R.string.kind_feed
         FeedType.BREAST -> R.string.feed_type_breast
         FeedType.FORMULA -> if (compact) R.string.feed_type_formula_compact else R.string.feed_type_formula
         FeedType.FOOD -> R.string.feed_type_food
@@ -79,18 +81,20 @@ object Labels {
         PoopTexture.HARD -> R.string.poop_texture_hard
     }
 
-    /** Receipts and History: "Pee", "Poop", "Pee + poop". */
+    /** Receipts and History: "Pee", "Poop", "Pee + poop", or "Diaper" for a plain change. */
     @StringRes fun diaperKind(kind: DiaperKind): Int = when (kind) {
         DiaperKind.PEE -> R.string.diaper_pee
         DiaperKind.POOP -> R.string.diaper_poop
         DiaperKind.BOTH -> R.string.diaper_pee_and_poop
+        DiaperKind.PLAIN -> R.string.kind_diaper
     }
 
-    /** Status surfaces (since-row 2, tile, complications): "Pee", "Poop", "Both". */
+    /** Status surfaces (since-row 2, tile, complications): "Pee", "Poop", "Both", or "Diaper" for a plain change. */
     @StringRes fun diaperKindStatus(kind: DiaperKind): Int = when (kind) {
         DiaperKind.PEE -> R.string.diaper_pee
         DiaperKind.POOP -> R.string.diaper_poop
         DiaperKind.BOTH -> R.string.diaper_both
+        DiaperKind.PLAIN -> R.string.kind_diaper
     }
 
     @StringRes fun appearance(appearance: Appearance): Int = when (appearance) {
@@ -113,19 +117,25 @@ class LabelFormatter(private val strings: StringResolver) {
 
     fun kind(kind: EntryKind): String = strings.string(Labels.kind(kind))
 
-    /** "Formula" / "Modermælkserstatning"; [compact] adds a soft hyphen for tight places ("Modermælks­erstatning"). */
-    fun feedType(type: FeedType, compact: Boolean = false): String = strings.string(Labels.feedType(type, compact))
+    /**
+     * "Formula" / "Modermælkserstatning"; [compact] adds a soft hyphen for tight places ("Modermælks­erstatning").
+     * An untyped feed (null) is "Feed" / "Måltid".
+     */
+    fun feedType(type: FeedType?, compact: Boolean = false): String = strings.string(Labels.feedType(type, compact))
 
     fun side(side: BreastSide): String = strings.string(Labels.side(side))
+
+    /** The side, or "No side" when none was recorded. */
+    fun sideOrNone(side: BreastSide?): String = side?.let(::side) ?: strings.string(R.string.side_none)
 
     fun poopColor(color: PoopColor): String = strings.string(Labels.poopColor(color))
 
     fun poopTexture(texture: PoopTexture): String = strings.string(Labels.poopTexture(texture))
 
-    /** "Pee", "Poop", "Pee + poop". */
+    /** "Pee", "Poop", "Pee + poop", "Diaper". */
     fun diaperKind(kind: DiaperKind): String = strings.string(Labels.diaperKind(kind))
 
-    /** "Pee", "Poop", "Both". */
+    /** "Pee", "Poop", "Both", "Diaper". */
     fun diaperKindStatus(kind: DiaperKind): String = strings.string(Labels.diaperKindStatus(kind))
 
     fun appearance(appearance: Appearance): String = strings.string(Labels.appearance(appearance))
@@ -147,13 +157,13 @@ class LabelFormatter(private val strings: StringResolver) {
 
     /**
      * History row title: "Sleep · 47m" / "Sleep · running", "Breast · Left → Right" / "Breast · running",
-     * "Formula", "Food", "Pee", "Poop", "Pee + poop".
+     * "Formula", "Food", "Feed" (no type), "Pee", "Poop", "Pee + poop", "Diaper" (a plain change).
      */
     fun historyTitle(entry: Entry, duration: DurationFormatter, now: Long): String = when (entry.kind) {
         EntryKind.SLEEP -> kind(EntryKind.SLEEP) + DOT_SEPARATOR +
             if (entry.isRunning) strings.string(R.string.status_running) else duration.format(entry.clockDurationMillis(now))
         EntryKind.FEED -> {
-            val type = entry.feedType ?: FeedType.FORMULA
+            val type = entry.feedType
             when {
                 !entry.isBreastfeed -> feedType(type)
                 entry.isRunning -> feedType(type) + DOT_SEPARATOR + strings.string(R.string.status_running)

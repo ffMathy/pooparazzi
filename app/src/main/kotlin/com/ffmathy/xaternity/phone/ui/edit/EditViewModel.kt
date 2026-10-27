@@ -11,7 +11,7 @@ import com.ffmathy.xaternity.core.Core
 import com.ffmathy.xaternity.core.data.Clock
 import com.ffmathy.xaternity.core.data.EntryRepository
 import com.ffmathy.xaternity.core.domain.localDate
-import com.ffmathy.xaternity.core.model.BreastSide
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
 import com.ffmathy.xaternity.core.model.FeedType
@@ -161,11 +161,11 @@ class EditViewModel(
         EditRules.newDraft(s.draft.id, kind, s.draft.start, clock.now(), lastFeedType())
     }
 
-    override fun onFeedType(type: FeedType) = edit { s -> EditRules.withFeedType(s.draft, type, s.original, clock.now()) }
-
-    override fun onSide(side: BreastSide) = edit { s ->
-        if (s.draft.isBreastfeed && s.draft.end != null) s.draft.copy(side = side) else s.draft
+    override fun onFeedType(type: FeedType) = edit { s ->
+        EditRules.withFeedType(s.draft, EditRules.tappedFeedType(s.draft, type), s.original, clock.now())
     }
+
+    override fun onSideTick(breast: Breast) = edit { s -> EditRules.withSideTick(s.draft, breast) }
 
     override fun onNudge(field: TimeField, minutes: Int) = edit(HomeHaptic.SEGMENT_TICK) { s -> EditRules.nudge(s.draft, field, minutes) }
 
@@ -222,8 +222,11 @@ class EditViewModel(
 
     private suspend fun entries(): List<Entry> = repository.observeEntries().first()
 
-    private suspend fun lastFeedType(): FeedType =
-        entries().filter { it.isFeed && it.startMillis <= clock.now() }.maxByOrNull { it.startMillis }?.feedType ?: FeedType.BREAST
+    /** The last feed's type (null when it had none); Breast before the first feed. */
+    private suspend fun lastFeedType(): FeedType? {
+        val last = entries().filter { it.isFeed && it.startMillis <= clock.now() }.maxByOrNull { it.startMillis }
+        return if (last == null) FeedType.BREAST else last.feedType
+    }
 
     private fun haptic(type: HomeHaptic) {
         hapticChannel.trySend(type)

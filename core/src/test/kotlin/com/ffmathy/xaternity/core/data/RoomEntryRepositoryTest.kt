@@ -147,16 +147,36 @@ class RoomEntryRepositoryTest {
     }
 
     @Test
-    fun breastfeedEndRequiresSide() = test {
+    fun breastfeedSideIsOptional() = test {
         val feed = repo.startBreastfeed(now - 18 * minute).getOrThrow()
-        val ended = (repo.endBreastfeed(feed.id, now, BreastSide.RIGHT) as EndResult.Ended).entry
-        // An ended breastfeed can never lose its side, and a running one cannot have one.
-        val noSide = assertThrows(InvalidEntryException::class.java) { runBlocking { repo.update(ended.copy(breastSide = null)) } }
-        assertEquals(EntryViolation.SIDE_MISSING, noSide.violation)
+        // Ending with nothing ticked records only the times.
+        val ended = (repo.endBreastfeed(feed.id, now, side = null) as EndResult.Ended).entry
+        assertNull(ended.breastSide)
+        assertEquals(now, repo.get(feed.id)!!.endMillis)
+        // A side can be added (and removed again) later; a running feed still cannot have one.
+        assertEquals(BreastSide.RIGHT, repo.update(ended.copy(breastSide = BreastSide.RIGHT)).breastSide)
+        assertNull(repo.update(repo.get(feed.id)!!.copy(breastSide = null)).breastSide)
         val sideWhileRunning = assertThrows(InvalidEntryException::class.java) {
-            runBlocking { repo.update(ended.copy(endMillis = null)) }
+            runBlocking { repo.update(ended.copy(endMillis = null, breastSide = BreastSide.LEFT)) }
         }
         assertEquals(EntryViolation.SIDE_WHILE_RUNNING, sideWhileRunning.violation)
+    }
+
+    @Test
+    fun feedWithJustTheTime() = test {
+        val feed = repo.logFeed(null, now)
+        assertNull(feed.feedType)
+        assertNull(feed.endMillis)
+        assertEquals(feed, repo.get(feed.id))
+        // Deduplicated like any instant, apart from typed feeds at the same time.
+        val again = repo.logFeedChecked(null, now + 2_000)
+        assertTrue(again is LogResult.Duplicate)
+        assertEquals(feed, again.entry)
+        assertTrue(repo.logFeedChecked(FeedType.FORMULA, now) is LogResult.Logged)
+        assertTrue(repo.logFeedChecked(null, now - 5_000) is LogResult.Logged)
+        // A type can be set later, and cleared again.
+        assertEquals(FeedType.FOOD, repo.update(feed.copy(feedType = FeedType.FOOD)).feedType)
+        assertNull(repo.update(repo.get(feed.id)!!.copy(feedType = null)).feedType)
     }
 
     @Test
@@ -206,8 +226,11 @@ class RoomEntryRepositoryTest {
 
     @Test
     fun diaperInvariants() = test {
-        val empty = assertThrows(InvalidEntryException::class.java) { runBlocking { repo.logDiaper(now, pee = false, poop = false) } }
-        assertEquals(EntryViolation.DIAPER_EMPTY, empty.violation)
+        // Pee and poop are optional: nothing ticked is a plain change, deduplicated like the others.
+        val plain = repo.logDiaper(now - 10 * minute, pee = false, poop = false, color = PoopColor.RED)
+        assertFalse(plain.pee || plain.poop)
+        assertNull("colour is dropped without poop", plain.poopColor)
+        assertEquals(plain, repo.logDiaper(now - 10 * minute + 1_000, pee = false, poop = false))
 
         val pee = repo.logDiaper(now, pee = true, poop = false, color = PoopColor.YELLOW, texture = PoopTexture.SEEDY)
         assertNull("colour is dropped without poop", pee.poopColor)
@@ -221,8 +244,9 @@ class RoomEntryRepositoryTest {
             runBlocking { repo.update(poop.copy(poop = false, pee = true)) }
         }
         assertEquals(EntryViolation.POOP_DETAILS_WITHOUT_POOP, cleared.violation)
-        val emptied = assertThrows(InvalidEntryException::class.java) { runBlocking { repo.update(poop.copy(poop = false, poopColor = null, poopTexture = null)) } }
-        assertEquals(EntryViolation.DIAPER_EMPTY, emptied.violation)
+        val emptied = repo.update(poop.copy(poop = false, poopColor = null, poopTexture = null))
+        assertFalse(emptied.pee || emptied.poop)
+        repo.update(emptied.copy(poop = true, poopColor = PoopColor.YELLOW, poopTexture = PoopTexture.SEEDY))
 
         val updated = repo.update(poop.copy(pee = true, poopColor = PoopColor.GREEN))
         assertEquals(PoopColor.GREEN, repo.get(poop.id)!!.poopColor)
@@ -336,8 +360,21 @@ class RoomEntryRepositoryTest {
 
     @Test
     fun applyRemoteRejectsInvalidEntries() = test {
-        assertFalse(repo.applyRemote(Entry.diaper(now, pee = false, poop = false, id = "bad")))
+        val bad = Entry.diaper(now, pee = true, poop = false, id = "bad").copy(poopColor = PoopColor.RED)
+        assertFalse(repo.applyRemote(bad))
         assertNull(repo.get("bad"))
+    }
+
+    @Test
+    fun applyRemoteAcceptsTheMinimalEntries() = test {
+        // A plain diaper change, a feed with just its time and a breastfeed ended without a side.
+        val plain = Entry.diaper(now, pee = false, poop = false, id = "plain")
+        val untyped = Entry.feed(null, now - minute, id = "untyped")
+        val noSide = Entry.breastfeed(now - 30 * minute, now - 10 * minute, side = null, id = "no-side")
+        assertEquals(3, repo.applyRemoteAll(listOf(plain, untyped, noSide)))
+        assertEquals(plain, repo.get("plain"))
+        assertEquals(untyped, repo.get("untyped"))
+        assertEquals(noSide, repo.get("no-side"))
     }
 
     @Test

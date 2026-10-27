@@ -25,7 +25,7 @@ internal fun HomeSheets(sheet: HomeSheetUi?, zone: ZoneId, formatters: Formatter
         onClosed = actions::onSheetClosed,
         windowInsets = windowInsets,
     ) { side ->
-        SideSheetContent(side, zone, formatters, actions::onSheetOffset, actions::onSide, actions::onSheetDismiss)
+        SideSheetContent(side, zone, formatters, actions::onSheetOffset, actions::onSideTick, actions::onEndFeed, actions::onSheetDismiss)
     }
     val diaperCallbacks = remember(actions) {
         DiaperSheetCallbacks(

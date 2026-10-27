@@ -28,7 +28,7 @@ data class RibbonSpan(
 /** An instant as a fraction 0..1 of the day. */
 data class RibbonMark(val entry: Entry, val at: Float)
 
-/** A diaper mark with its kind (ring = pee, dot = poop, ring + half = both). */
+/** A diaper mark with its kind (ring = pee, dot = poop, ring + half = both, short tick = a plain change). */
 data class RibbonDiaperMark(val entry: Entry, val at: Float, val kind: DiaperKind)
 
 /**

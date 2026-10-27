@@ -61,6 +61,18 @@ class SummaryAt1432Test {
     }
 
     @Test
+    fun minimalEntriesCount() {
+        // A feed with just its time counts as a feed and is the last feed; a plain diaper counts in neither pee nor poop.
+        val untyped = Entry.feed(null, at(14, 0), id = "untyped")
+        val plain = Entry.diaper(at(14, 10), pee = false, poop = false, id = "plain")
+        val more = summarize(SampleData.scenario() + untyped + plain, SampleData.NOW_1432, SampleData.ZONE)
+        assertEquals(DayCounts(feeds = 6, pee = 4, poop = 2, sleepMinutes = 7 * 60 + 57), more.today)
+        assertEquals(untyped, more.lastFeed)
+        assertEquals(plain, more.lastDiaper)
+        assertEquals(32 * MINUTE, more.sinceLastFeedMillis)
+    }
+
+    @Test
     fun lampIsFeedIdle() {
         val state = lampState(summary)
         assertTrue(state is LampState.FeedIdle)

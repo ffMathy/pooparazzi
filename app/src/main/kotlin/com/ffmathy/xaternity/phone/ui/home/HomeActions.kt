@@ -1,7 +1,7 @@
 package com.ffmathy.xaternity.phone.ui.home
 
 import androidx.compose.runtime.Stable
-import com.ffmathy.xaternity.core.model.BreastSide
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.PoopColor
 import com.ffmathy.xaternity.core.model.PoopTexture
@@ -46,8 +46,15 @@ interface HomeActions {
 
     // Sheets
     fun onSheetOffset(minutes: Int) {}
-    fun onFeedType(type: FeedType) {}
-    fun onSide(side: BreastSide) {}
+
+    /** Feed sheet: Breast starts a timer, Formula / Food log an instant, null ("Just the time") logs an untyped feed. */
+    fun onFeedType(type: FeedType?) {}
+
+    /** Side sheet: ticks or unticks [breast]; the tick order is the order recorded (re-ticking appends). */
+    fun onSideTick(breast: Breast) {}
+
+    /** Side sheet "End feed": ends the running breastfeed with the ticked order (nothing ticked records no side). */
+    fun onEndFeed() {}
     fun onDiaperPee(checked: Boolean) {}
     fun onDiaperPoop(checked: Boolean) {}
 

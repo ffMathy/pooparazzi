@@ -45,6 +45,26 @@ class EntryJsonTest {
     }
 
     @Test
+    fun minimalEntriesRoundTripAndOlderJsonStillDecodes() {
+        val minimal = listOf(
+            Entry.feed(null, 1_000L, id = "untyped"),
+            Entry.diaper(2_000L, pee = false, poop = false, id = "plain"),
+            Entry.breastfeed(1_000L, 2_000_000L, side = null, id = "no-side"),
+        )
+        for (entry in minimal) {
+            assertEquals(entry, EntryJson.decode(EntryJson.encode(entry)))
+            assertTrue(entry.isValid)
+        }
+        // An untyped feed is written with "feedType":null, which older apps read as a feed without a type.
+        assertTrue(EntryJson.encode(minimal[0]).contains("\"feedType\":null"))
+        // JSON written before the type, side and flags became optional (every field set) still decodes the same.
+        val older = """{"id":"b","kind":"FEED","startMillis":1000,"endMillis":2000000,"feedType":"BREAST",
+            |"breastSide":"LEFT_THEN_RIGHT","pee":false,"poop":false,"poopColor":null,"poopTexture":null,
+            |"updatedAtMillis":2000000,"deleted":false}""".trimMargin()
+        assertEquals(Entry.breastfeed(1_000L, 2_000_000L, BreastSide.LEFT_THEN_RIGHT, id = "b"), EntryJson.decode(older))
+    }
+
+    @Test
     fun rejectsGarbage() {
         assertNull(EntryJson.decodeOrNull("not json"))
         assertNull(EntryJson.decodeOrNull("""{"id":"x","kind":"NAP","startMillis":1,"updatedAtMillis":1}"""))
@@ -116,7 +136,8 @@ class EntryValidationTest {
     fun breastSide() {
         assertNull(violation(Entry.breastfeed(0L)))
         assertEquals(EntryViolation.SIDE_WHILE_RUNNING, violation(Entry.breastfeed(0L).copy(breastSide = BreastSide.LEFT)))
-        assertEquals(EntryViolation.SIDE_MISSING, violation(Entry.breastfeed(0L, 120_000L, side = null)))
+        // The side is optional: an ended breastfeed may record only its times.
+        assertNull(violation(Entry.breastfeed(0L, 120_000L, side = null)))
         assertNull(violation(Entry.breastfeed(0L, 120_000L, BreastSide.LEFT)))
         assertEquals(
             EntryViolation.SIDE_ON_NON_BREAST,
@@ -126,13 +147,23 @@ class EntryValidationTest {
 
     @Test
     fun feedFields() {
-        assertEquals(EntryViolation.FEED_TYPE_MISSING, violation(Entry(id = "x", kind = EntryKind.FEED, startMillis = 0, updatedAtMillis = 0)))
+        // The type is optional: a feed with just its time is a valid instant, never with an end or a side.
+        val untyped = Entry(id = "x", kind = EntryKind.FEED, startMillis = 0, updatedAtMillis = 0)
+        assertNull(violation(untyped))
+        assertNull(violation(Entry.feed(null, 0L)))
+        assertFalse(untyped.isInterval)
+        assertEquals(EntryViolation.INSTANT_HAS_END, violation(untyped.copy(endMillis = 10L)))
+        assertEquals(EntryViolation.SIDE_ON_NON_BREAST, violation(untyped.copy(breastSide = BreastSide.LEFT)))
         assertEquals(EntryViolation.FEED_FIELDS_ON_NON_FEED, violation(Entry.sleep(0L).copy(feedType = FeedType.FOOD)))
     }
 
     @Test
     fun diapers() {
-        assertEquals(EntryViolation.DIAPER_EMPTY, violation(Entry.diaper(0L, pee = false, poop = false)))
+        // Pee and poop are optional: neither is a plain diaper change.
+        val plain = Entry.diaper(0L, pee = false, poop = false)
+        assertNull(violation(plain))
+        assertEquals(DiaperKind.PLAIN, plain.diaperKind)
+        assertEquals(EntryViolation.POOP_DETAILS_WITHOUT_POOP, violation(plain.copy(poopColor = PoopColor.RED)))
         assertEquals(
             EntryViolation.POOP_DETAILS_WITHOUT_POOP,
             violation(Entry.diaper(0L, pee = true, poop = false).copy(poopColor = PoopColor.GREEN)),
@@ -143,6 +174,35 @@ class EntryValidationTest {
         )
         assertNull(violation(Entry.diaper(0L, pee = false, poop = true, color = PoopColor.BLACK)))
         assertEquals(EntryViolation.DIAPER_FIELDS_ON_NON_DIAPER, violation(Entry.sleep(0L).copy(pee = true)))
+    }
+
+    @Test
+    fun tickOrderMapsToSide() {
+        val l = Breast.LEFT
+        val r = Breast.RIGHT
+        assertNull(BreastSide.fromOrder(emptyList()))
+        assertEquals(BreastSide.LEFT, BreastSide.fromOrder(listOf(l)))
+        assertEquals(BreastSide.RIGHT, BreastSide.fromOrder(listOf(r)))
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, BreastSide.fromOrder(listOf(l, r)))
+        assertEquals(BreastSide.RIGHT_THEN_LEFT, BreastSide.fromOrder(listOf(r, l)))
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, BreastSide.fromOrder(listOf(l, r, l)))
+        // Round trip: every stored side is its own tick order.
+        BreastSide.entries.forEach { assertEquals(it, BreastSide.fromOrder(it.order)) }
+    }
+
+    @Test
+    fun tickingAppendsAndUntickingRemoves() {
+        val l = Breast.LEFT
+        val r = Breast.RIGHT
+        var ticks = BreastSide.toggle(emptyList(), r)
+        ticks = BreastSide.toggle(ticks, l)
+        assertEquals(listOf(r, l), ticks)
+        // Unticking Right leaves Left alone; ticking Right again puts it second.
+        ticks = BreastSide.toggle(ticks, r)
+        assertEquals(listOf(l), ticks)
+        ticks = BreastSide.toggle(ticks, r)
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, BreastSide.fromOrder(ticks))
+        assertEquals(emptyList<Breast>(), BreastSide.toggle(BreastSide.toggle(ticks, l), r))
     }
 
     @Test

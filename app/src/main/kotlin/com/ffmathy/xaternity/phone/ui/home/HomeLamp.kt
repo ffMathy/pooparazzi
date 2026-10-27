@@ -37,7 +37,6 @@ import com.ffmathy.xaternity.core.format.DOT_SEPARATOR
 import com.ffmathy.xaternity.core.format.DurationFormatter
 import com.ffmathy.xaternity.core.format.DurationPart
 import com.ffmathy.xaternity.core.format.Formatters
-import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.ui.icons.XIcon
 import com.ffmathy.xaternity.core.ui.icons.XIcons
 import com.ffmathy.xaternity.core.ui.lamp.Lamp
@@ -170,16 +169,21 @@ private fun lampTexts(lamp: LampState, zone: ZoneId, size: Dp, formatters: Forma
                 val none = stringResource(R.string.lamp_no_feed)
                 LampTexts(XIcons.feed, label, null, stringResource(R.string.lamp_no_feed_hero), none, stringResource(R.string.spoken_pair, label, none))
             } else {
-                val type = feed.feedType ?: FeedType.FORMULA
-                val typeLabel = feedTypeLabel(type)
+                val type = feed.feedType
+                val typeLabel = type?.let { feedTypeLabel(it) }
                 val time = clock.format(feed.startMillis, zone)
                 val under = DurationFormatter.isUnderAMinute(since)
                 val sub = if (under) {
                     relative.at(feed.startMillis, zone)
                 } else {
-                    // "ago · 12:22 · Formula"; the type word is dropped when it would exceed the Lamp chord.
+                    // "ago · 12:22 · Formula"; the type word is dropped when it would exceed the Lamp chord, and a feed
+                    // logged with just its time has none.
                     val base = relative.agoWord + DOT_SEPARATOR + time
-                    fitOrFallback(base + DOT_SEPARATOR + typeLabel, base, PhoneType.dataMedium, size * HomeLampDefaults.SUB_CHORD)
+                    if (typeLabel == null) {
+                        base
+                    } else {
+                        fitOrFallback(base + DOT_SEPARATOR + typeLabel, base, PhoneType.dataMedium, size * HomeLampDefaults.SUB_CHORD)
+                    }
                 }
                 LampTexts(
                     labelIcon = XIcons.forFeedType(type),
@@ -187,13 +191,22 @@ private fun lampTexts(lamp: LampState, zone: ZoneId, size: Dp, formatters: Forma
                     heroParts = if (under) null else duration.parts(since),
                     heroWord = if (under) justNow else null,
                     sub = sub,
-                    spoken = stringResource(
-                        R.string.spoken_last_entry,
-                        stringResource(CoreR.string.spoken_last_feed),
-                        typeLabel.lowercase(clock.locale),
-                        relative.agoSpoken(since),
-                        relative.at(feed.startMillis, zone),
-                    ),
+                    spoken = if (typeLabel == null) {
+                        stringResource(
+                            R.string.spoken_running,
+                            stringResource(CoreR.string.spoken_last_feed),
+                            relative.agoSpoken(since),
+                            relative.at(feed.startMillis, zone),
+                        )
+                    } else {
+                        stringResource(
+                            R.string.spoken_last_entry,
+                            stringResource(CoreR.string.spoken_last_feed),
+                            typeLabel.lowercase(clock.locale),
+                            relative.agoSpoken(since),
+                            relative.at(feed.startMillis, zone),
+                        )
+                    },
                 )
             }
         }

@@ -50,6 +50,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ffmathy.xaternity.core.format.Formatters
 import com.ffmathy.xaternity.core.format.rememberFormatters
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
@@ -64,13 +65,15 @@ import com.ffmathy.xaternity.phone.R
 import com.ffmathy.xaternity.phone.ui.components.ConnectedChoiceGroup
 import com.ffmathy.xaternity.phone.ui.components.IconTarget
 import com.ffmathy.xaternity.phone.ui.history.dayLabel
-import com.ffmathy.xaternity.phone.ui.history.spokenSide
+
 import com.ffmathy.xaternity.phone.ui.preview.EditSamples
 import com.ffmathy.xaternity.phone.ui.home.feedbackType
+import com.ffmathy.xaternity.phone.ui.sheets.BreastSideCheckboxes
 import com.ffmathy.xaternity.phone.ui.sheets.DiaperToggleTiles
 import com.ffmathy.xaternity.phone.ui.sheets.PoopDetails
 import com.ffmathy.xaternity.phone.ui.sheets.SaveButton
 import com.ffmathy.xaternity.phone.ui.sheets.SectionHeading
+import com.ffmathy.xaternity.phone.ui.sheets.SideSummary
 import com.ffmathy.xaternity.phone.ui.sheets.XModalSheet
 import com.ffmathy.xaternity.phone.ui.theme.NightLightTheme
 import com.ffmathy.xaternity.core.R as CoreR
@@ -233,13 +236,14 @@ private fun SleepForm(state: EditUiState, formatters: Formatters, actions: EditA
 }
 
 /**
- * The type (Breast | Formula | Food). A breastfeed has "Started" and "Ended" (or "Still feeding" + End now), the side
- * (a connected group of the four; picked once the feed has ended) and its duration; formula and food one time block.
+ * The optional type (Breast | Formula | Food; tapping the selected one clears it, leaving a feed with just its time).
+ * A breastfeed has "Started" and "Ended" (or "Still feeding" + End now), the optional side (Left / Right checkboxes in
+ * tick order, once the feed has ended) and its duration; every other feed one time block.
  */
 @Composable
 private fun FeedForm(state: EditUiState, formatters: Formatters, actions: EditActions) {
     val draft = state.draft
-    SectionLabel(stringResource(R.string.edit_type))
+    SectionLabel(stringResource(R.string.join_dot, stringResource(R.string.edit_type), stringResource(CoreR.string.optional)))
     ConnectedChoiceGroup(
         options = FeedType.entries,
         selected = draft.feedType,
@@ -259,8 +263,8 @@ private fun FeedForm(state: EditUiState, formatters: Formatters, actions: EditAc
             stillLabel = stringResource(R.string.edit_still_feeding),
         )
         if (draft.end != null) {
-            SectionLabel(stringResource(R.string.edit_side))
-            SideGroup(draft.side, actions::onSide)
+            SectionLabel(stringResource(R.string.join_dot, stringResource(R.string.edit_side), stringResource(CoreR.string.optional)))
+            SideCheckboxes(draft.side, actions::onSideTick)
         }
         Spacer(Modifier.height(24.dp))
         DurationRow(state, formatters, sleep = false)
@@ -341,18 +345,15 @@ private fun IntervalBlocks(
     }
 }
 
-/** Left | Right over Left → Right | Right → Left: one connected group (2 × 2 so Danish labels fit). */
+/** The Side sheet's Left / Right checkboxes (tick order = side order) and the "Left → Right" / "No side" summary. */
 @Composable
-private fun SideGroup(selected: BreastSide?, onSelect: (BreastSide) -> Unit) {
-    ConnectedChoiceGroup(
-        modifier = Modifier.testTag(EditTags.SIDES),
-        options = listOf(BreastSide.LEFT, BreastSide.RIGHT, BreastSide.LEFT_THEN_RIGHT, BreastSide.RIGHT_THEN_LEFT),
-        selected = selected,
-        onSelect = onSelect,
-        label = { stringResource(Labels.side(it)) },
-        spokenLabel = { spokenSide(it) },
-        columns = 2,
-    )
+private fun SideCheckboxes(side: BreastSide?, onTick: (Breast) -> Unit) {
+    val ticks = side?.order.orEmpty()
+    Column(Modifier.testTag(EditTags.SIDES)) {
+        BreastSideCheckboxes(ticks, onTick, enabled = true)
+        Spacer(Modifier.height(8.dp))
+        SideSummary(ticks)
+    }
 }
 
 /** `sleep` / `breast` 20 in the event's strong colour + "Duration 52m" titleMedium + " · was 47m" dataMedium. */

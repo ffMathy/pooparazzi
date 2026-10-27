@@ -11,26 +11,17 @@ enum class EntryViolation {
     /** An interval ends before it starts. */
     END_BEFORE_START,
 
-    /** An instant (FORMULA, FOOD, DIAPER) has an end time. */
+    /** An instant (FORMULA, FOOD, untyped FEED, DIAPER) has an end time. */
     INSTANT_HAS_END,
-
-    /** A FEED has no [Entry.feedType]. */
-    FEED_TYPE_MISSING,
 
     /** A non-FEED has a feed type or breast side. */
     FEED_FIELDS_ON_NON_FEED,
 
-    /** A breast side on a FORMULA or FOOD feed. */
+    /** A breast side on a FORMULA, FOOD or untyped feed. */
     SIDE_ON_NON_BREAST,
 
     /** A running breastfeed already has a side (the side is picked when the feed ends). */
     SIDE_WHILE_RUNNING,
-
-    /** An ended breastfeed has no side. */
-    SIDE_MISSING,
-
-    /** A DIAPER with neither pee nor poop. */
-    DIAPER_EMPTY,
 
     /** A non-DIAPER has diaper flags, colour or texture. */
     DIAPER_FIELDS_ON_NON_DIAPER,
@@ -67,10 +58,8 @@ fun validate(entry: Entry): EntryViolation? {
 
     when (entry.kind) {
         EntryKind.FEED -> {
-            val type = entry.feedType ?: return EntryViolation.FEED_TYPE_MISSING
-            if (type == FeedType.BREAST) {
+            if (entry.feedType == FeedType.BREAST) {
                 if (end == null && entry.breastSide != null) return EntryViolation.SIDE_WHILE_RUNNING
-                if (end != null && entry.breastSide == null) return EntryViolation.SIDE_MISSING
             } else if (entry.breastSide != null) {
                 return EntryViolation.SIDE_ON_NON_BREAST
             }
@@ -81,7 +70,6 @@ fun validate(entry: Entry): EntryViolation? {
     }
 
     if (entry.kind == EntryKind.DIAPER) {
-        if (!entry.pee && !entry.poop) return EntryViolation.DIAPER_EMPTY
         if (!entry.poop && (entry.poopColor != null || entry.poopTexture != null)) return EntryViolation.POOP_DETAILS_WITHOUT_POOP
     } else if (entry.pee || entry.poop || entry.poopColor != null || entry.poopTexture != null) {
         return EntryViolation.DIAPER_FIELDS_ON_NON_DIAPER

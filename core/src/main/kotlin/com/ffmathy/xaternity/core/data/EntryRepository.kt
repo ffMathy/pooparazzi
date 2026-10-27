@@ -69,17 +69,23 @@ interface EntryRepository {
     /** The stored entry with [id], including deleted ones, or null. */
     suspend fun get(id: String): Entry?
 
-    /** Logs a FORMULA or FOOD instant at [at]; returns the existing entry for a duplicate. BREAST is rejected: use [startBreastfeed]. */
-    suspend fun logFeed(type: FeedType, at: Long): Entry = logFeedChecked(type, at).entry
+    /**
+     * Logs a FORMULA, FOOD or untyped ([type] null: just the time) feed instant at [at]; returns the existing entry
+     * for a duplicate. BREAST is rejected: use [startBreastfeed].
+     */
+    suspend fun logFeed(type: FeedType?, at: Long): Entry = logFeedChecked(type, at).entry
 
     /** As [logFeed], but tells a new entry apart from a duplicate. */
-    suspend fun logFeedChecked(type: FeedType, at: Long): LogResult
+    suspend fun logFeedChecked(type: FeedType?, at: Long): LogResult
 
     /** Starts a breastfeed at [at]. Fails with [AlreadyRunningException] while one runs. */
     suspend fun startBreastfeed(at: Long): Result<Entry>
 
-    /** Ends the running breastfeed [id] at [at] with [side]: [EndResult.Ended], or [EndResult.Discarded] under 60 s. */
-    suspend fun endBreastfeed(id: String, at: Long, side: BreastSide): EndResult
+    /**
+     * Ends the running breastfeed [id] at [at] with the optional [side] (null records no side):
+     * [EndResult.Ended], or [EndResult.Discarded] under 60 s.
+     */
+    suspend fun endBreastfeed(id: String, at: Long, side: BreastSide?): EndResult
 
     /** Starts a sleep at [at]. Fails with [AlreadyRunningException] while one runs. */
     suspend fun startSleep(at: Long): Result<Entry>
@@ -88,7 +94,7 @@ interface EntryRepository {
     suspend fun endSleep(id: String, at: Long): EndResult
 
     /**
-     * Logs a diaper at [at]. Needs [pee] or [poop] (else [InvalidEntryException]); [color] and [texture]
+     * Logs a diaper at [at]. [pee] and [poop] are optional (neither logs a plain change); [color] and [texture]
      * are dropped unless [poop]. Returns the existing entry for a duplicate.
      */
     suspend fun logDiaper(

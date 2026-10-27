@@ -1,10 +1,11 @@
 package com.ffmathy.xaternity.phone.ui.sheets
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -18,35 +19,32 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.ffmathy.xaternity.core.format.Formatters
 import com.ffmathy.xaternity.core.format.Labels
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.ui.icons.XIcon
@@ -64,8 +62,9 @@ import java.time.ZoneId
 import com.ffmathy.xaternity.core.R as CoreR
 
 /**
- * The Feed sheet (V1_ADDITIONS §2.1): "Feed · 14:32" stamped on the first tap, Now · −5m · −10m · −15m, and three
- * full-width rows. Breast starts a timer; Formula and Food log an instant at stamp + offset.
+ * The Feed sheet (V1_ADDITIONS §2.1): "Feed · 14:32" stamped on the first tap, Now · −5m · −10m · −15m, three
+ * full-width type rows and an outlined "Just the time" row. Breast starts a timer; Formula and Food log an instant at
+ * stamp + offset; "Just the time" logs a feed with no type (the type is optional).
  */
 @Composable
 internal fun FeedSheetContent(
@@ -73,7 +72,7 @@ internal fun FeedSheetContent(
     zone: ZoneId,
     formatters: Formatters,
     onOffset: (Int) -> Unit,
-    onType: (FeedType) -> Unit,
+    onType: (FeedType?) -> Unit,
     onCancel: () -> Unit,
 ) {
     val readiness = rememberPickerReadiness()
@@ -92,32 +91,37 @@ internal fun FeedSheetContent(
                     onClick = { onType(type) },
                 )
             }
+            FeedTypeRow(type = null, supporting = null, enabled = readiness.ready, onClick = { onType(null) })
         }
     }
 }
 
-/** A 72 dp row, r 28, FEED container: icon 32 FEED strong, headlineSmall label, optional bodyMedium line. */
+/**
+ * A 72 dp row, r 28, FEED container: icon 32 FEED strong, headlineSmall label, optional bodyMedium line. The untyped
+ * row ([type] null, "Just the time") is outlined instead of filled, with the `clock` icon.
+ */
 @Composable
-private fun FeedTypeRow(type: FeedType, supporting: String?, enabled: Boolean, onClick: () -> Unit) {
+private fun FeedTypeRow(type: FeedType?, supporting: String?, enabled: Boolean, onClick: () -> Unit) {
     val feed = LocalXPalette.current.events.feed
     val shape = RoundedCornerShape(28.dp)
+    val untyped = type == null
     Row(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 72.dp)
             .clip(shape)
-            .background(feed.container)
+            .then(if (untyped) Modifier.border(1.dp, MaterialTheme.colorScheme.outline, shape) else Modifier.background(feed.container))
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        XIcon(XIcons.forFeedType(type), contentDescription = null, tint = feed.strong, size = 32.dp)
+        XIcon(if (untyped) XIcons.clock else XIcons.forFeedType(type), contentDescription = null, tint = feed.strong, size = 32.dp)
         Column(Modifier.weight(1f)) {
             Text(
-                feedTypeLabel(type, compact = true),
+                if (untyped) stringResource(CoreR.string.feed_type_none) else feedTypeLabel(type, compact = true),
                 style = MaterialTheme.typography.headlineSmall.copy(hyphens = Hyphens.Auto),
-                color = feed.onContainer,
+                color = if (untyped) MaterialTheme.colorScheme.onSurface else feed.onContainer,
                 maxLines = 2,
             )
             supporting?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = feed.onContainer) }
@@ -127,8 +131,9 @@ private fun FeedTypeRow(type: FeedType, supporting: String?, enabled: Boolean, o
 
 /**
  * The Side sheet (V1_ADDITIONS §2.1): "Which side?", "Breastfeeding · 14:32–14:50 · 18m" (follows the chips), end
- * chips Now · −5m · −10m (disabled before the start) and a 2 × 2 grid of sides. One tap ends the feed; Cancel keeps it
- * running.
+ * chips Now · −5m · −10m (disabled before the start), two checkboxes Left and Right whose tick order is the order
+ * recorded (badges "1" / "2" and a summary line "Left → Right"), and "End feed". The side is optional: ending with
+ * nothing ticked records only the times. Cancel keeps the feed running.
  */
 @Composable
 internal fun SideSheetContent(
@@ -136,7 +141,8 @@ internal fun SideSheetContent(
     zone: ZoneId,
     formatters: Formatters,
     onOffset: (Int) -> Unit,
-    onSide: (BreastSide) -> Unit,
+    onTick: (Breast) -> Unit,
+    onEnd: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val readiness = rememberPickerReadiness()
@@ -162,83 +168,123 @@ internal fun SideSheetContent(
         Text(sub, style = PhoneType.dataMedium, color = colors.onSurfaceVariant, modifier = Modifier.semantics { contentDescription = subSpoken })
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, onOffset)
-        Spacer(Modifier.height(12.dp))
-        BoxWithConstraints(Modifier.alpha(readiness.alpha)) {
-            // One label size for all four tiles: the largest at which every label fits one line of a tile
-            // ("Venstre → Højre" would otherwise shrink alone next to a 24 sp "Venstre").
-            val labelSize = rememberSideLabelSize((maxWidth - 12.dp) / 2 - SideTileHorizontalPadding * 2)
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                listOf(
-                    BreastSide.LEFT to BreastSide.RIGHT,
-                    BreastSide.LEFT_THEN_RIGHT to BreastSide.RIGHT_THEN_LEFT,
-                ).forEach { (first, second) ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SideTile(first, labelSize, readiness.ready, { onSide(first) }, Modifier.weight(1f))
-                        SideTile(second, labelSize, readiness.ready, { onSide(second) }, Modifier.weight(1f))
-                    }
-                }
-            }
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(CoreR.string.side_order_hint), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+        Spacer(Modifier.height(8.dp))
+        BreastSideCheckboxes(sheet.ticks, onTick, enabled = readiness.ready, modifier = Modifier.alpha(readiness.alpha))
+        Spacer(Modifier.height(16.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            SideSummary(sheet.ticks, Modifier.weight(1f))
+            Spacer(Modifier.width(12.dp))
+            SaveButton(
+                enabled = readiness.ready,
+                onClick = onEnd,
+                label = stringResource(CoreR.string.action_end_feed),
+            )
         }
     }
 }
-
-private val SideTileHorizontalPadding = 12.dp
-private val SideLabelMinSize = 15.sp
-private const val SIDE_LABEL_STEP_SP = 0.5f
 
 /**
- * The headlineSmall size (24 sp, down to 15 sp in 0.5 sp steps) at which all four side labels fit one line of
- * [width].
+ * Left and Right as two checkbox tiles side by side (V1_ADDITIONS §2.1), shared by the Side sheet and the edit sheet.
+ * [ticks] is the tick order: a checked tile shows its place ("1" / "2") in a badge. `Role.Checkbox`; TalkBack reads
+ * "Left, first, checkbox, checked".
  */
 @Composable
-private fun rememberSideLabelSize(width: Dp): TextUnit {
-    val measurer = rememberTextMeasurer()
-    val style = MaterialTheme.typography.headlineSmall
-    val labels = BreastSide.entries.map { stringResource(Labels.side(it)) }
-    val widthPx = with(LocalDensity.current) { width.roundToPx() }
-    return remember(labels, widthPx, style, measurer) {
-        val max = style.fontSize.value
-        var size = max
-        fun fits(sp: Float) = labels.all { label ->
-            measurer.measure(label, style.copy(fontSize = sp.sp), maxLines = 1, softWrap = false).size.width <= widthPx
+internal fun BreastSideCheckboxes(ticks: List<Breast>, onTick: (Breast) -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Breast.entries.forEach { breast ->
+            val place = ticks.indexOf(breast).takeIf { it >= 0 }?.plus(1)
+            SideCheckboxTile(breast, place, { onTick(breast) }, enabled, Modifier.weight(1f))
         }
-        while (size > SideLabelMinSize.value && !fits(size)) size -= SIDE_LABEL_STEP_SP
-        size.sp
     }
 }
 
-/** A 165 × 96 tile, r 28, FEED container: the side glyph with its L/R letters (from text) over the side label. */
+/** "Left → Right" for the ticked order, or "No side" while nothing is ticked (live region: read when it changes). */
 @Composable
-private fun SideTile(side: BreastSide, labelSize: TextUnit, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun SideSummary(ticks: List<Breast>, modifier: Modifier = Modifier) {
+    val side = BreastSide.fromOrder(ticks)
+    val text = side?.let { stringResource(Labels.side(it)) } ?: stringResource(CoreR.string.side_none)
+    val spoken = side?.let { spokenSideCapitalised(it) } ?: text
+    val feed = LocalXPalette.current.events.feed
+    Text(
+        text,
+        style = MaterialTheme.typography.titleMedium,
+        color = if (side == null) MaterialTheme.colorScheme.onSurfaceVariant else feed.text,
+        modifier = modifier.semantics {
+            contentDescription = spoken
+            liveRegion = LiveRegionMode.Polite
+        },
+    )
+}
+
+/**
+ * A checkbox tile, min 112 dp tall, r 28 (the Diaper sheet's tiles in FEED colours). Off: FEED container, 1 dp outline,
+ * empty checkbox. On: FEED lit fill, 2 dp FEED strong border, checked checkbox, and the order badge [place] top-start.
+ */
+@Composable
+private fun SideCheckboxTile(breast: Breast, place: Int?, onToggle: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
     val feed = LocalXPalette.current.events.feed
     val shape = RoundedCornerShape(28.dp)
-    // TalkBack says "Left then right", not the arrow of the visible label (DESIGN_SPEC §9.4).
-    val spoken = spokenSideCapitalised(side)
-    Column(
+    val checked = place != null
+    val side = if (breast == Breast.LEFT) BreastSide.LEFT else BreastSide.RIGHT
+    val label = stringResource(Labels.side(side))
+    val placeSpoken = place?.let { stringResource(if (it == 1) R.string.spoken_side_first else R.string.spoken_side_second) }
+    Box(
         modifier
-            .heightIn(min = 96.dp)
+            .heightIn(min = 112.dp)
             .clip(shape)
-            .background(feed.container)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-            // The label and glyph letters are replaced by the spoken name; the click, role and enabled state stay.
-            .clearAndSetSemantics { contentDescription = spoken }
-            .padding(horizontal = SideTileHorizontalPadding, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            .background(if (checked) feed.containerLit else feed.container)
+            .border(if (checked) BorderStroke(2.dp, feed.strong) else BorderStroke(1.dp, colors.outline), shape)
+            .toggleable(value = checked, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
+            // The label and glyph letters are replaced by "Left, first"; the toggle, role and state stay.
+            .clearAndSetSemantics {
+                contentDescription = if (placeSpoken != null) "$label, $placeSpoken" else label
+            },
     ) {
-        Box(Modifier.size(width = 32.dp, height = 44.dp).clearAndSetSemantics { }) {
-            XIcon(XIcons.forSide(side), contentDescription = null, tint = feed.strong, size = 32.dp)
-            // The circles sit at x 6.5 and 17.5 of 24: the letters go under them.
-            SideLetter(stringResource(CoreR.string.side_letter_left), centreX = 32f * 6.5f / 24f)
-            SideLetter(stringResource(CoreR.string.side_letter_right), centreX = 32f * 17.5f / 24f)
+        if (place != null) {
+            Box(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 12.dp, start = 12.dp)
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(feed.strong),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(place.toString(), style = MaterialTheme.typography.labelLarge, color = feed.containerLit, maxLines = 1)
+            }
         }
-        BasicText(
-            stringResource(Labels.side(side)),
-            style = MaterialTheme.typography.headlineSmall.copy(color = feed.onContainer, textAlign = TextAlign.Center, fontSize = labelSize),
-            maxLines = 1,
-            // Only a safety net below the shared size (e.g. a rounding difference): never larger than the others.
-            autoSize = if (labelSize > SideLabelMinSize) TextAutoSize.StepBased(SideLabelMinSize, labelSize, 0.5.sp) else null,
+        XIcon(
+            if (checked) XIcons.checkboxChecked else XIcons.checkbox,
+            contentDescription = null,
+            tint = if (checked) feed.strong else colors.outline,
+            size = 24.dp,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 14.dp, end = 14.dp),
         )
+        Column(
+            Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(Modifier.size(width = 32.dp, height = 44.dp)) {
+                XIcon(XIcons.forSide(side), contentDescription = null, tint = feed.strong, size = 32.dp)
+                // The circles sit at x 6.5 and 17.5 of 24: the letters go under them.
+                SideLetter(stringResource(CoreR.string.side_letter_left), centreX = 32f * 6.5f / 24f)
+                SideLetter(stringResource(CoreR.string.side_letter_right), centreX = 32f * 17.5f / 24f)
+            }
+            Text(
+                label,
+                style = MaterialTheme.typography.headlineSmall,
+                color = feed.onContainer,
+                maxLines = 1,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 

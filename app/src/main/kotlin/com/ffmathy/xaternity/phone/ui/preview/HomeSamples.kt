@@ -1,5 +1,6 @@
 package com.ffmathy.xaternity.phone.ui.preview
 
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.PoopColor
@@ -54,14 +55,14 @@ object HomeSamples {
     /** The Feed sheet opened at 14:32. */
     fun feedSheet(): HomeUiState = build(SampleData.scenario(zone), SampleData.NOW_1432, sheet = SheetModel.Feed(SampleData.NOW_1432))
 
-    /** The Side sheet at 14:50 for the breastfeed running since 14:32. */
-    fun sideSheet(): HomeUiState {
+    /** The Side sheet at 14:50 for the breastfeed running since 14:32, with [ticks] ticked in that order. */
+    fun sideSheet(ticks: List<Breast> = emptyList()): HomeUiState {
         val feed = SampleData.runningBreastfeed(zone)
         return build(
             SampleData.scenarioWithRunningFeed(zone),
             SampleData.NOW_1450,
             sync = SyncStatus.Synced(SampleData.at(14, 49)),
-            sheet = SheetModel.Side(feed.id, feed.startMillis, SampleData.NOW_1450),
+            sheet = SheetModel.Side(feed.id, feed.startMillis, SampleData.NOW_1450, ticks = ticks),
         )
     }
 

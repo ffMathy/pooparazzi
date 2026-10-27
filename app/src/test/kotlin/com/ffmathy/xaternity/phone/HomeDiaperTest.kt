@@ -27,23 +27,28 @@ class HomeDiaperTest : HomeViewModelTestBase() {
     private fun HomeTestRig.diaperSheet() = settle().sheet as HomeSheetUi.Diaper
 
     @Test
-    fun bothCheckboxesAreOffWhenTheSheetOpensAndSaveNeedsOne() = homeTest { home ->
+    fun bothCheckboxesAreOffWhenTheSheetOpensAndSavingThenLogsAPlainChange() = homeTest { home ->
         home.viewModel.onDiaper()
         val sheet = home.diaperSheet()
         assertFalse(sheet.pee)
         assertFalse(sheet.poop)
-        assertFalse(sheet.canSave)
 
         home.viewModel.onDiaperSave()
-        assertTrue("nothing is logged without a checkbox", home.entries().isEmpty())
-        assertTrue(home.settle().sheet is HomeSheetUi.Diaper)
+        val state = home.settle()
+        val diaper = home.entries().single()
+        assertFalse(diaper.pee || diaper.poop)
+        assertNull(state.sheet)
+        assertEquals(CardVariant.DiaperLogged(DiaperKind.PLAIN), state.card!!.variant)
+        assertEquals(DiaperKind.PLAIN, (state.row2 as SinceRow.LastDiaper).kind)
+        // A plain change counts in neither pee nor poop.
+        assertEquals(0, state.today.pee)
+        assertEquals(0, state.today.poop)
     }
 
     @Test
     fun peeAloneLogsAPeeDiaper() = homeTest { home ->
         home.viewModel.onDiaper()
         home.viewModel.onDiaperPee(true)
-        assertTrue(home.diaperSheet().canSave)
         home.viewModel.onDiaperSave()
         val state = home.settle()
         val diaper = home.entries().single()

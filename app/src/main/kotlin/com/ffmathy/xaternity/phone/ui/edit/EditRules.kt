@@ -1,6 +1,8 @@
 package com.ffmathy.xaternity.phone.ui.edit
 
 import com.ffmathy.xaternity.core.domain.localDate
+import com.ffmathy.xaternity.core.model.Breast
+import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
 import com.ffmathy.xaternity.core.model.FeedType
@@ -28,10 +30,10 @@ internal object EditRules {
     fun sameMinute(a: Long, b: Long): Boolean = Math.floorDiv(a, MINUTE_MILLIS) == Math.floorDiv(b, MINUTE_MILLIS)
 
     /**
-     * A new draft of [kind] starting at [start]: intervals end 15 min later (not after now), a feed takes [feedType],
-     * a diaper starts with both toggles off (Save waits for one, as in the Diaper sheet).
+     * A new draft of [kind] starting at [start]: intervals end 15 min later (not after now), a feed takes [feedType]
+     * (null: no type), a diaper starts with both toggles off (a plain change unless one is ticked).
      */
-    fun newDraft(id: String, kind: EntryKind, start: Long, now: Long, feedType: FeedType): EditDraft {
+    fun newDraft(id: String, kind: EntryKind, start: Long, now: Long, feedType: FeedType?): EditDraft {
         val end = defaultEnd(start, now)
         return when (kind) {
             EntryKind.SLEEP -> EditDraft(id, EntryKind.SLEEP, start, end)
@@ -44,9 +46,9 @@ internal object EditRules {
 
     /**
      * Changes a feed's type, keeping its start. A breastfeed gets back the original's end and side when [original]
-     * was one, otherwise a default end and no side (Save waits for one); formula and food drop end and side.
+     * was one, otherwise a default end and no side; formula, food and no type (null) drop end and side.
      */
-    fun withFeedType(draft: EditDraft, type: FeedType, original: Entry?, now: Long): EditDraft = when {
+    fun withFeedType(draft: EditDraft, type: FeedType?, original: Entry?, now: Long): EditDraft = when {
         draft.kind != EntryKind.FEED || draft.feedType == type -> draft
         type == FeedType.BREAST && original?.isBreastfeed == true ->
             draft.copy(feedType = type, end = original.endMillis, side = original.breastSide)
@@ -108,12 +110,16 @@ internal object EditRules {
             .maxByOrNull { it.startMillis }
     }
 
-    /** Whether everything required is set: a diaper has pee or poop; an ended breastfeed has a side. */
-    fun isComplete(draft: EditDraft): Boolean = when {
-        draft.kind == EntryKind.DIAPER -> draft.pee || draft.poop
-        draft.isBreastfeed && draft.end != null -> draft.side != null
-        else -> true
-    }
+    /** The feed type after tapping [type] in the type selector: the selected type again clears it (no type). */
+    fun tappedFeedType(draft: EditDraft, type: FeedType): FeedType? = type.takeUnless { draft.feedType == it }
+
+    /** Ticks or unticks [breast] on an ended breastfeed; the side is the tick order (V1_ADDITIONS §2.1). */
+    fun withSideTick(draft: EditDraft, breast: Breast): EditDraft =
+        if (draft.isBreastfeed && draft.end != null) {
+            draft.copy(side = BreastSide.fromOrder(BreastSide.toggle(draft.side?.order.orEmpty(), breast)))
+        } else {
+            draft
+        }
 
     /** True when saving [draft] would not change [original] (Save then just closes). */
     fun unchanged(draft: EditDraft, original: Entry): Boolean = draft == EditDraft.of(original)
@@ -187,7 +193,6 @@ internal object EditRules {
             durationMillis = duration,
             wasDurationMillis = originalDuration?.takeIf { draft.end != null && it != duration },
             issue = issue(validate(draft, entries, now), saveFailed, conflict),
-            complete = isComplete(draft),
         )
     }
 }

@@ -70,7 +70,8 @@ data class DiaperActions(
 /**
  * Diaper (V1_ADDITIONS §3.2): "Diaper · 14:32" (stamped on the Diaper tap), CheckboxButtons Pee and Poop (both off
  * at first); with Poop on, Colour and Texture show their value or "Optional" and open option lists; Earlier cycles
- * the time; the pinned Medium EdgeButton "Save" is disabled until a checkbox is on. 500 ms tap cooldown.
+ * the time; the pinned Medium EdgeButton "Save" is always enabled (nothing ticked logs a plain diaper change).
+ * 500 ms tap cooldown.
  */
 @Composable
 fun DiaperScreen(draft: DiaperDraft, actions: DiaperActions, modifier: Modifier = Modifier) {
@@ -162,7 +163,7 @@ fun DiaperScreen(draft: DiaperDraft, actions: DiaperActions, modifier: Modifier 
                 }
             }
             SaveEdgeButton(
-                enabled = draft.canSave && cooldown.ready,
+                enabled = cooldown.ready,
                 onClick = actions.onSave,
                 ambient = ambient,
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -220,7 +221,7 @@ private fun DiaperCheckbox(
     )
 }
 
-/** Save (V1_ADDITIONS §3.2): pinned Medium EdgeButton in the neutral chrome container; disabled until a box is on. */
+/** Save (V1_ADDITIONS §3.2): pinned Medium EdgeButton in the neutral chrome container. */
 @Composable
 private fun SaveEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Boolean, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme

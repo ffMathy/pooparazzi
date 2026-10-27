@@ -14,6 +14,8 @@
     <string name="spoken_pee_and_poop">Tis og bæ</string>
     <string name="spoken_side_left_then_right">venstre, så højre</string>
     <string name="spoken_side_right_then_left">højre, så venstre</string>
+    <string name="spoken_side_first">først</string>
+    <string name="spoken_side_second">bagefter</string>
 
     <string name="action_ok">OK</string>
 

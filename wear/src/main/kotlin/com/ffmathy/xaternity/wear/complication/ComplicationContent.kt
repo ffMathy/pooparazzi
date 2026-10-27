@@ -24,7 +24,6 @@ import androidx.wear.watchface.complications.data.TimeDifferenceStyle
 import com.ffmathy.xaternity.core.domain.Summary
 import com.ffmathy.xaternity.core.format.Labels
 import com.ffmathy.xaternity.core.model.DiaperKind
-import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.diaperKind
 import com.ffmathy.xaternity.core.ui.icons.XDrawables
 import com.ffmathy.xaternity.wear.R
@@ -89,7 +88,7 @@ class ComplicationContent(
             value = text.duration(feed.startMillis, now),
             since = feed.startMillis,
             spoken = spoken,
-            icon = XDrawables.forFeedType(feed.feedType ?: FeedType.FORMULA),
+            icon = XDrawables.forFeedType(feed.feedType),
             title = null,
             tapAction = tapAction,
         )
@@ -101,7 +100,7 @@ class ComplicationContent(
         if (diaper == null) {
             return empty(XDrawables.diaper, R.string.complication_cd_no_diaper, tapAction)
         }
-        val kind = diaper.diaperKind ?: DiaperKind.PEE
+        val kind = diaper.diaperKind ?: DiaperKind.PLAIN
         val word = res.getString(Labels.diaperKindStatus(kind))
         // "Last diaper, pee and poop, 48 minutes ago": the spoken word, never the status word "Both".
         val spokenWord = res.getString(SpokenLabels.diaperKind(kind)).lowercase(text.formatters.clock.locale)

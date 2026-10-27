@@ -36,6 +36,13 @@ abstract class EntryDao {
     )
     abstract suspend fun feedsBetween(type: FeedType, fromMillis: Long, toMillis: Long): List<EntryEntity>
 
+    /** Feeds logged with just their time (no type). */
+    @Query(
+        "SELECT * FROM entries WHERE deleted = 0 AND kind = 'FEED' AND feedType IS NULL " +
+            "AND startMillis BETWEEN :fromMillis AND :toMillis ORDER BY startMillis ASC",
+    )
+    abstract suspend fun untypedFeedsBetween(fromMillis: Long, toMillis: Long): List<EntryEntity>
+
     @Query(
         "SELECT * FROM entries WHERE deleted = 0 AND kind = 'DIAPER' AND pee = :pee AND poop = :poop " +
             "AND startMillis BETWEEN :fromMillis AND :toMillis ORDER BY startMillis ASC",

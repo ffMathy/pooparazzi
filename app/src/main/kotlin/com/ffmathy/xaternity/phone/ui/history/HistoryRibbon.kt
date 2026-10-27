@@ -129,6 +129,11 @@ internal fun HistoryRibbon(ribbon: Ribbon, zone: ZoneId, summary: String, modifi
                             size = Size(2 * r, 2 * r),
                         )
                     }
+                    // A plain change (neither pee nor poop): a small DIAPER strong square, unlike every other mark.
+                    DiaperKind.PLAIN -> {
+                        val half = dp(RibbonDefaults.POOP_RADIUS) * 0.8f
+                        drawRect(events.diaper.strong, topLeft = Offset(centre.x - half, centre.y - half), size = Size(2 * half, 2 * half))
+                    }
                 }
             }
 

@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
-import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.diaperKind
 import com.ffmathy.xaternity.core.ui.tokens.EventPalette
 import com.ffmathy.xaternity.core.ui.tokens.LocalXPalette
@@ -91,15 +90,16 @@ fun EventAvatar(
     size: Dp = XAvatars.PhoneSize,
     events: EventPalette = LocalXPalette.current.events,
 ) {
-    val diaper = entry.diaperKind ?: DiaperKind.PEE
+    val diaper = entry.diaperKind ?: DiaperKind.PLAIN
     val bothIcon = rememberBothIcon(events.pee.strong, events.poop.strong)
     val (icon, iconColor) = when (entry.kind) {
         EntryKind.SLEEP -> XIcons.sleep to events.sleep.strong
-        EntryKind.FEED -> XIcons.forFeedType(entry.feedType ?: FeedType.FORMULA) to events.feed.strong
+        EntryKind.FEED -> XIcons.forFeedType(entry.feedType) to events.feed.strong
         EntryKind.DIAPER -> when (diaper) {
             DiaperKind.PEE -> XIcons.pee to events.pee.strong
             DiaperKind.POOP -> XIcons.poop to events.poop.strong
             DiaperKind.BOTH -> bothIcon to Color.Unspecified
+            DiaperKind.PLAIN -> XIcons.diaper to events.diaper.strong
         }
     }
     val colors = remember(entry.kind, diaper, events) { avatarColors(entry.kind, diaper, events) }
@@ -122,6 +122,7 @@ private fun avatarColors(kind: EntryKind, diaper: DiaperKind, events: EventPalet
         DiaperKind.PEE -> AvatarColors(events.pee.container, null, events.diaper.strong)
         DiaperKind.POOP -> AvatarColors(events.poop.container, null, events.diaper.strong)
         DiaperKind.BOTH -> AvatarColors(events.bothStartContainer, events.bothEndContainer, events.diaper.strong)
+        DiaperKind.PLAIN -> AvatarColors(events.diaper.container, null, events.diaper.strong)
     }
 }
 

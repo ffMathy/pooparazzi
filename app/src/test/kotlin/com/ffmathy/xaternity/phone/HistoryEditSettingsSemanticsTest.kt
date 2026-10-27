@@ -28,7 +28,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.test.core.app.ApplicationProvider
-import com.ffmathy.xaternity.core.model.BreastSide
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.settings.AppLanguage
 import com.ffmathy.xaternity.core.settings.Appearance
 import com.ffmathy.xaternity.phone.ui.edit.EditActions
@@ -70,7 +70,7 @@ class HistoryEditSettingsSemanticsTest {
 
     private val edit = object : EditActions {
         override fun onNudge(field: TimeField, minutes: Int) { calls += "nudge:$field:$minutes" }
-        override fun onSide(side: BreastSide) { calls += "side:$side" }
+        override fun onSideTick(breast: Breast) { calls += "tick:$breast" }
         override fun onSave() { calls += "save" }
         override fun onDelete() { calls += "delete" }
         override fun onDismiss() { calls += "dismiss" }
@@ -168,14 +168,15 @@ class HistoryEditSettingsSemanticsTest {
     }
 
     @Test
-    fun theSideGroupIsARadioGroupWithSpokenSides() {
+    fun theSidesAreCheckboxesThatSpeakTheirTickOrder() {
+        // The sample ended Right → Left: Right was ticked first, Left second.
         showSheet(EditSamples.breastfeed())
-        compose.onNodeWithContentDescription("right then left").performScrollTo().assertIsSelected()
-        compose.onNodeWithContentDescription("left then right").assertIsNotSelected()
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, androidx.compose.ui.semantics.Role.RadioButton))
-            .performClick()
+        compose.onNodeWithContentDescription("Right, first").performScrollTo().assertIsOn()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, androidx.compose.ui.semantics.Role.Checkbox))
+        compose.onNodeWithContentDescription("Right then left").assertExists()
+        compose.onNodeWithContentDescription("Left, second").assertIsOn().performClick()
         compose.onNodeWithText("Breast").assertIsSelected()
-        assertEquals(listOf("side:LEFT_THEN_RIGHT"), calls)
+        assertEquals(listOf("tick:LEFT"), calls)
     }
 
     @Test

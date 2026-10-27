@@ -167,7 +167,7 @@ class WearNavHostTest {
     }
 
     @Test
-    fun breastfeedThenEndWithASide() {
+    fun breastfeedThenEndWithTickedSides() {
         waitFor("Feed").performClick()
         settle(600)
         compose.onNodeWithText("Breast").performClick()
@@ -179,8 +179,15 @@ class WearNavHostTest {
         compose.onNodeWithContentDescription("End feed").performClick()
         waitFor("Which side?")
         settle(600)
-        // Read as "Left then right" (the label shows an arrow).
-        compose.onNodeWithContentDescription("Left then right").performClick()
+        // Tick Left, then Right: the order is the order recorded, read as "Left then right".
+        compose.onNodeWithContentDescription("Left").performClick()
+        settle()
+        compose.onNodeWithContentDescription("Right").performClick()
+        settle()
+        compose.onNodeWithContentDescription("Left then right").assertExists()
+        // Main (with its own "End feed") has slid away once the transition is over.
+        settle(1_000)
+        compose.onNodeWithContentDescription("End feed").performClick()
 
         waitFor("Feed ended")
         // The side label is kept on one line with no-break spaces around the arrow.

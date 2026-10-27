@@ -269,7 +269,7 @@ private fun ReceiptTitle(receipt: Receipt, f: Formatters, ambient: Boolean) {
         ReceiptKind.FEED_LOGGED ->
             withTime(feedTypeLabel(entry, compact = true), entry.startMillis, f, events.feed.strong, ambient)
         ReceiptKind.DIAPER_LOGGED ->
-            withTime(stringResource(Labels.diaperKind(entry.diaperKind ?: DiaperKind.PEE)), entry.startMillis, f, events.diaper.text, ambient)
+            withTime(stringResource(Labels.diaperKind(entry.diaperKind ?: DiaperKind.PLAIN)), entry.startMillis, f, events.diaper.text, ambient)
         ReceiptKind.WOKE_UP ->
             withTime(stringResource(CoreR.string.action_woke_up), entry.endMillis ?: entry.startMillis, f, events.sleep.text, ambient)
         ReceiptKind.FEED_ENDED -> AnnotatedString(stringResource(CoreR.string.receipt_feed_ended))
@@ -280,7 +280,7 @@ private fun ReceiptTitle(receipt: Receipt, f: Formatters, ambient: Boolean) {
     val spoken = if (receipt.kind == ReceiptKind.DIAPER_LOGGED) {
         stringResource(
             CoreR.string.receipt_at_time,
-            stringResource(SpokenLabels.diaperKind(entry.diaperKind ?: DiaperKind.PEE)),
+            stringResource(SpokenLabels.diaperKind(entry.diaperKind ?: DiaperKind.PLAIN)),
             f.clock.format(entry.startMillis, f.zone),
         )
     } else {

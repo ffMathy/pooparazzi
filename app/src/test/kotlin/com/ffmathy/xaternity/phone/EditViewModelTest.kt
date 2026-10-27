@@ -2,6 +2,7 @@ package com.ffmathy.xaternity.phone
 
 import android.app.Application
 import androidx.lifecycle.SavedStateHandle
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.EntryKind
 import com.ffmathy.xaternity.core.model.FeedType
@@ -143,7 +144,9 @@ class EditViewModelTest : CoreTestBase() {
         val sheet = core.sheet()
         sheet.vm.openEntry("sample-breast-0800")
         assertEquals(BreastSide.RIGHT_THEN_LEFT, state(sheet).draft.side)
-        sheet.vm.onSide(BreastSide.LEFT)
+        // The checkboxes show Right (1) and Left (2): unticking Right leaves Left.
+        sheet.vm.onSideTick(Breast.RIGHT)
+        assertEquals(BreastSide.LEFT, state(sheet).draft.side)
         sheet.vm.onSave()
         runCurrent()
         assertEquals(BreastSide.LEFT, core.entry("sample-breast-0800")!!.breastSide)
@@ -167,6 +170,49 @@ class EditViewModelTest : CoreTestBase() {
     }
 
     @Test
+    fun theSideFollowsTheTickOrderAndIsOptional() = coreTest { core ->
+        val sheet = core.sheet()
+        sheet.vm.openEntry("sample-breast-0800")
+        sheet.vm.onSideTick(Breast.RIGHT)
+        sheet.vm.onSideTick(Breast.LEFT)
+        assertNull("nothing ticked", state(sheet).draft.side)
+        assertTrue("the side is optional", state(sheet).canSave)
+        sheet.vm.onSideTick(Breast.LEFT)
+        sheet.vm.onSideTick(Breast.RIGHT)
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, state(sheet).draft.side)
+        sheet.vm.onSideTick(Breast.LEFT)
+        sheet.vm.onSideTick(Breast.LEFT)
+        assertEquals("re-ticking appends", BreastSide.RIGHT_THEN_LEFT, state(sheet).draft.side)
+        sheet.vm.onSideTick(Breast.RIGHT)
+        sheet.vm.onSideTick(Breast.LEFT)
+        sheet.vm.onSave()
+        runCurrent()
+        val saved = core.entry("sample-breast-0800")!!
+        assertNull(saved.breastSide)
+        assertEquals(at(8, 14), saved.endMillis)
+    }
+
+    @Test
+    fun tappingTheSelectedFeedTypeClearsIt() = coreTest { core ->
+        val sheet = core.sheet()
+        sheet.vm.openEntry("sample-formula-1222")
+        sheet.vm.onFeedType(FeedType.FORMULA)
+        assertNull(state(sheet).draft.feedType)
+        assertTrue(state(sheet).canSave)
+        sheet.vm.onSave()
+        runCurrent()
+        val saved = core.entry("sample-formula-1222")!!
+        assertNull("a feed with just its time", saved.feedType)
+        assertEquals(at(12, 22), saved.startMillis)
+
+        // From no type, Breast makes it a timed feed again.
+        sheet.vm.openEntry("sample-formula-1222")
+        sheet.vm.onFeedType(FeedType.BREAST)
+        assertEquals(FeedType.BREAST, state(sheet).draft.feedType)
+        assertTrue(state(sheet).draft.end != null)
+    }
+
+    @Test
     fun aDiaperSavesPoopWithColourAndTextureAndNeedsAToggle() = coreTest { core ->
         val sheet = core.sheet()
         sheet.vm.openEntry("sample-pee-1344")
@@ -184,8 +230,12 @@ class EditViewModelTest : CoreTestBase() {
         sheet.vm.onPoop(false)
         assertNull("colour belongs to poop only", state(sheet).draft.color)
         sheet.vm.onPee(false)
-        assertFalse(state(sheet).complete)
-        assertFalse("Save stays disabled while both are off", state(sheet).canSave)
+        assertTrue("both are optional: a plain change", state(sheet).canSave)
+        sheet.vm.onSave()
+        runCurrent()
+        val plain = core.entry("sample-pee-1344")!!
+        assertFalse(plain.pee || plain.poop)
+        assertNull(plain.poopColor)
     }
 
     @Test
@@ -221,8 +271,8 @@ class EditViewModelTest : CoreTestBase() {
 
         sheet.vm.openNew(start)
         sheet.vm.onFeedType(FeedType.BREAST)
-        assertFalse("an ended breastfeed needs a side", state(sheet).canSave)
-        sheet.vm.onSide(BreastSide.RIGHT)
+        assertTrue("the side is optional", state(sheet).canSave)
+        sheet.vm.onSideTick(Breast.RIGHT)
         sheet.vm.onSave()
         runCurrent()
         val breast = core.entries().single { it.feedType == FeedType.BREAST && it.startMillis == at(14, 17) }
@@ -231,7 +281,7 @@ class EditViewModelTest : CoreTestBase() {
 
         sheet.vm.openNew(start)
         sheet.vm.onKind(EntryKind.DIAPER)
-        assertFalse(state(sheet).canSave)
+        assertTrue("pee and poop are optional", state(sheet).canSave)
         sheet.vm.onPee(true)
         sheet.vm.onSave()
         runCurrent()

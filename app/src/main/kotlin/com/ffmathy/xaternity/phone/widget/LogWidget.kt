@@ -39,7 +39,6 @@ import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.TextAlign
 import com.ffmathy.xaternity.core.model.DiaperKind
-import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.ui.icons.XDrawables
 import com.ffmathy.xaternity.phone.R
 import com.ffmathy.xaternity.phone.launch.DeepLinks
@@ -174,7 +173,7 @@ private fun RowScope.StatusFacts(snapshot: WidgetSnapshot, strings: WidgetString
         sleepStart != null && !layout.wide -> Fact(XDrawables.sleepRunning, colors.sleep.strong, strings.asleepSince(sleepStart), colors)
         else -> {
             val feedText = lastFeed?.let { strings.fedAt(it.startMillis) } ?: strings.noFeeds()
-            Fact(XDrawables.forFeedType(lastFeed?.feedType ?: FeedType.FORMULA), colors.feed.strong, feedText, colors)
+            Fact(XDrawables.forFeedType(lastFeed?.feedType), colors.feed.strong, feedText, colors)
             val diaper = snapshot.lastDiaper
             val kind = diaper?.let { DiaperKind.of(it.pee, it.poop) }
             if (diaper != null && kind != null) {
@@ -321,6 +320,8 @@ private fun DiaperButton(
             DiaperKind.PEE -> R.string.widget_cd_log_pee
             DiaperKind.POOP -> R.string.widget_cd_log_poop
             DiaperKind.BOTH -> R.string.widget_cd_log_both
+            // Not a widget button (the widget logs pee, poop or both in one tap); named for completeness.
+            DiaperKind.PLAIN -> CoreR.string.kind_diaper
         },
     )
     if (kind == DiaperKind.BOTH) {
@@ -347,6 +348,7 @@ private fun diaperLabel(kind: DiaperKind): Int = when (kind) {
     DiaperKind.PEE -> CoreR.string.diaper_pee
     DiaperKind.POOP -> CoreR.string.diaper_poop
     DiaperKind.BOTH -> CoreR.string.diaper_both
+    DiaperKind.PLAIN -> CoreR.string.kind_diaper
 }
 
 /** How a log button shows its label: icon 24 over 15 sp, the compact two-line face, or the icon alone (small widget). */

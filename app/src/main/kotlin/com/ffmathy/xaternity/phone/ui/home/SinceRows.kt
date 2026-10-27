@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.ffmathy.xaternity.core.format.Formatters
-import com.ffmathy.xaternity.core.model.FeedType
+import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.ui.icons.XIcon
 import com.ffmathy.xaternity.core.ui.icons.XIcons
 import com.ffmathy.xaternity.core.ui.tokens.LocalXPalette
@@ -124,31 +124,50 @@ private fun sinceRowText(row: SinceRow, zone: ZoneId, formatters: Formatters): S
             formatters = formatters,
         )
         is SinceRow.LastFed -> {
-            val type = row.feed.feedType ?: FeedType.FORMULA
+            val type = row.feed.feedType
             SinceRowText(
                 icon = TintedIcon(XIcons.forFeedType(type), events.feed.strong),
                 lead = stringResource(R.string.join_space, stringResource(CoreR.string.status_last_fed), relative.ago(row.elapsedMillis)),
                 meta = dotted(clock.format(row.feed.startMillis, zone)),
-                spoken = stringResource(
-                    R.string.spoken_last_entry,
-                    stringResource(CoreR.string.spoken_last_feed),
-                    feedTypeLabel(type).lowercase(clock.locale),
-                    relative.agoSpoken(row.elapsedMillis),
-                    relative.at(row.feed.startMillis, zone),
-                ),
+                spoken = if (type == null) {
+                    stringResource(
+                        R.string.spoken_running,
+                        stringResource(CoreR.string.spoken_last_feed),
+                        relative.agoSpoken(row.elapsedMillis),
+                        relative.at(row.feed.startMillis, zone),
+                    )
+                } else {
+                    stringResource(
+                        R.string.spoken_last_entry,
+                        stringResource(CoreR.string.spoken_last_feed),
+                        feedTypeLabel(type).lowercase(clock.locale),
+                        relative.agoSpoken(row.elapsedMillis),
+                        relative.at(row.feed.startMillis, zone),
+                    )
+                },
             )
         }
         is SinceRow.LastDiaper -> SinceRowText(
             icon = diaperIcon(row.kind, events),
             lead = stringResource(R.string.join_space, diaperStatusLabel(row.kind), relative.ago(row.elapsedMillis)),
             meta = dotted(clock.format(row.diaper.startMillis, zone)),
-            spoken = stringResource(
-                R.string.spoken_last_entry,
-                stringResource(CoreR.string.spoken_last_diaper),
-                spokenDiaperKind(row.kind).lowercase(clock.locale),
-                relative.agoSpoken(row.elapsedMillis),
-                relative.at(row.diaper.startMillis, zone),
-            ),
+            spoken = if (row.kind == DiaperKind.PLAIN) {
+                // "Last diaper, 48 minutes ago, at 13:44": a plain change has no kind to name.
+                stringResource(
+                    R.string.spoken_running,
+                    stringResource(CoreR.string.spoken_last_diaper),
+                    relative.agoSpoken(row.elapsedMillis),
+                    relative.at(row.diaper.startMillis, zone),
+                )
+            } else {
+                stringResource(
+                    R.string.spoken_last_entry,
+                    stringResource(CoreR.string.spoken_last_diaper),
+                    spokenDiaperKind(row.kind).lowercase(clock.locale),
+                    relative.agoSpoken(row.elapsedMillis),
+                    relative.at(row.diaper.startMillis, zone),
+                )
+            },
         )
     }
 }

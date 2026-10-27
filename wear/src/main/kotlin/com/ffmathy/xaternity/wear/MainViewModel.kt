@@ -16,6 +16,7 @@ import com.ffmathy.xaternity.core.domain.Summary
 import com.ffmathy.xaternity.core.domain.localDate
 import com.ffmathy.xaternity.core.domain.summarize
 import com.ffmathy.xaternity.core.model.AlreadyRunningException
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
@@ -178,15 +179,16 @@ class MainViewModel(
 
     /**
      * Breast starts the timer and returns to Main; a breastfeed already running shows the guard on "End feed".
-     * Formula and Food log an instant and show Logged ("Already logged" for a repeat within 5 s).
+     * Formula, Food and "Just the time" ([type] null) log an instant and show Logged ("Already logged" for a repeat
+     * within 5 s).
      */
-    fun chooseFeedType(type: FeedType): Job = action {
+    fun chooseFeedType(type: FeedType?): Job = action {
         // A second tap that reached the leaving screen finds the draft used and does nothing.
         val draft = _feedDraft.consume() ?: return@action
         restoreOnFailure(_feedDraft, draft) { logFeed(type, draft.at) }
     }
 
-    private suspend fun logFeed(type: FeedType, at: Long) {
+    private suspend fun logFeed(type: FeedType?, at: Long) {
         if (type == FeedType.BREAST) {
             val started = repository.startBreastfeed(at)
             val error = started.exceptionOrNull()
@@ -227,14 +229,22 @@ class MainViewModel(
         }
     }
 
-    /** A side on the Side screen ends the feed at the stamped time: "Feed ended" (or "Feed cancelled" under 60 s). */
-    fun endFeed(side: BreastSide): Job = action {
-        // Consumed: a second tap on the leaving Side screen must not end the (ended) feed again and close its receipt.
-        val draft = _sideDraft.consume() ?: return@action
-        restoreOnFailure(_sideDraft, draft) { endBreastfeed(draft, side) }
+    /** Ticks or unticks [breast] on the Side screen; the tick order is the order recorded (re-ticking appends). */
+    fun tickSide(breast: Breast) {
+        _sideDraft.update { it?.copy(ticks = BreastSide.toggle(it.ticks, breast)) }
     }
 
-    private suspend fun endBreastfeed(draft: SideDraft, side: BreastSide) {
+    /**
+     * "End feed" on the Side screen ends the feed at the stamped time with the ticked order (no side when nothing is
+     * ticked): "Feed ended" (or "Feed cancelled" under 60 s).
+     */
+    fun endFeed(): Job = action {
+        // Consumed: a second tap on the leaving Side screen must not end the (ended) feed again and close its receipt.
+        val draft = _sideDraft.consume() ?: return@action
+        restoreOnFailure(_sideDraft, draft) { endBreastfeed(draft, draft.side) }
+    }
+
+    private suspend fun endBreastfeed(draft: SideDraft, side: BreastSide?) {
         when (val result = repository.endBreastfeed(draft.feed.id, draft.endAt, side)) {
             is EndResult.Ended -> {
                 lastFeedToggleAt = clock.now()
@@ -335,14 +345,9 @@ class MainViewModel(
         haptic(XHaptic.SEGMENT_TICK)
     }
 
-    /** Save: logs the diaper at stamp + offset and shows Logged. Ignored (Reject) while both checkboxes are off. */
+    /** Save: logs the diaper at stamp + offset and shows Logged. With both checkboxes off it is a plain change. */
     fun saveDiaper(): Job = action {
         // A second tap that reached the leaving screen finds the draft used and does nothing.
-        val current = _diaperDraft.value ?: return@action
-        if (!current.canSave) {
-            haptic(XHaptic.REJECT)
-            return@action
-        }
         val draft = _diaperDraft.consume() ?: return@action
         restoreOnFailure(_diaperDraft, draft) {
             val result = repository.logDiaperChecked(draft.at, draft.pee, draft.poop, draft.color, draft.texture)

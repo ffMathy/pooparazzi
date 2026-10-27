@@ -44,6 +44,9 @@
     <string name="spoken_pee_and_poop">Pee and poop</string>
     <string name="spoken_side_left_then_right">left then right</string>
     <string name="spoken_side_right_then_left">right then left</string>
+    <!-- TalkBack, the place of a ticked side checkbox: "Left, first, checkbox, checked" -->
+    <string name="spoken_side_first">first</string>
+    <string name="spoken_side_second">second</string>
 
     <string name="action_ok">OK</string>
 

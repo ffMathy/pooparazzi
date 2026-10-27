@@ -11,6 +11,7 @@ import com.ffmathy.xaternity.core.data.RoomEntryRepository
 import com.ffmathy.xaternity.core.data.XaternityDatabase
 import com.ffmathy.xaternity.core.domain.epochMillis
 import com.ffmathy.xaternity.core.domain.summarize
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.FeedType
@@ -289,8 +290,11 @@ class MainViewModelTest {
         val draft = present(vm.sideDraft.value)
         assertEquals(SampleData.NOW_1450, draft.endAt)
 
-        clock.advanceBy(10_000) // Picking the side takes a moment; the end stays at the "End feed" tap.
-        vm.endFeed(BreastSide.LEFT_THEN_RIGHT).join()
+        clock.advanceBy(10_000) // Ticking the sides takes a moment; the end stays at the "End feed" tap.
+        vm.tickSide(Breast.LEFT)
+        vm.tickSide(Breast.RIGHT)
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, present(vm.sideDraft.value).side)
+        vm.endFeed().join()
         val receipt = present(vm.receipt.value)
         assertEquals(ReceiptKind.FEED_ENDED, receipt.kind)
         assertEquals(SampleData.NOW_1450, receipt.entry.endMillis)
@@ -321,7 +325,8 @@ class MainViewModelTest {
         vm.chooseFeedType(FeedType.BREAST).join()
         clock.advanceBy(30_000)
         vm.requestEndFeed().join()
-        vm.endFeed(BreastSide.LEFT).join()
+        vm.tickSide(Breast.LEFT)
+        vm.endFeed().join()
         assertEquals(ReceiptKind.FEED_CANCELLED, vm.receipt.value?.kind)
         assertTrue(stored().isEmpty())
     }
@@ -332,7 +337,8 @@ class MainViewModelTest {
         vm.chooseFeedType(FeedType.BREAST).join()
         clock.set(SampleData.NOW_1450)
         vm.requestEndFeed().join()
-        vm.endFeed(BreastSide.RIGHT).join()
+        vm.tickSide(Breast.RIGHT)
+        vm.endFeed().join()
         vm.undo().join()
 
         awaitEvent(WearEvent.ShowUndone)
@@ -351,8 +357,10 @@ class MainViewModelTest {
         vm.requestEndFeed().join()
         awaitEvent(WearEvent.ShowSide)
 
-        val first = vm.endFeed(BreastSide.LEFT_THEN_RIGHT)
-        val second = vm.endFeed(BreastSide.LEFT_THEN_RIGHT)
+        vm.tickSide(Breast.LEFT)
+        vm.tickSide(Breast.RIGHT)
+        val first = vm.endFeed()
+        val second = vm.endFeed()
         first.join()
         second.join()
 
@@ -364,12 +372,55 @@ class MainViewModelTest {
         assertEquals(BreastSide.LEFT_THEN_RIGHT, stored().single().breastSide)
     }
 
+    @Test
+    fun theSideIsTheTickOrderAndOptional() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BREAST).join()
+        clock.set(SampleData.NOW_1450)
+        vm.requestEndFeed().join()
+        vm.tickSide(Breast.RIGHT)
+        vm.tickSide(Breast.LEFT)
+        assertEquals(BreastSide.RIGHT_THEN_LEFT, present(vm.sideDraft.value).side)
+        vm.tickSide(Breast.RIGHT)
+        vm.tickSide(Breast.LEFT)
+        assertEquals(emptyList<Breast>(), present(vm.sideDraft.value).ticks)
+        vm.endFeed().join()
+
+        val receipt = present(vm.receipt.value)
+        assertEquals(ReceiptKind.FEED_ENDED, receipt.kind)
+        assertNull("nothing ticked: only the times", receipt.entry.breastSide)
+        assertEquals(SampleData.NOW_1450, stored().single().endMillis)
+    }
+
+    @Test
+    fun justTheTimeLogsAFeedWithNoType() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(null).join()
+        val receipt = present(vm.receipt.value)
+        assertEquals(ReceiptKind.FEED_LOGGED, receipt.kind)
+        val feed = stored().single()
+        assertNull(feed.feedType)
+        assertNull(feed.endMillis)
+        awaitEvent(WearEvent.ShowLogged)
+    }
+
+    @Test
+    fun aDiaperWithNothingTickedIsAPlainChange() = test {
+        vm.beginDiaper()
+        vm.saveDiaper().join()
+        val receipt = present(vm.receipt.value)
+        assertEquals(ReceiptKind.DIAPER_LOGGED, receipt.kind)
+        val diaper = stored().single()
+        assertFalse(diaper.pee || diaper.poop)
+        awaitEvent(WearEvent.ShowLogged)
+    }
+
     // ---- Diaper --------------------------------------------------------------------------------
 
     @Test
     fun diaperWithPoopColourAndTexture() = test {
         vm.beginDiaper()
-        assertFalse("both checkboxes start off", vm.diaperDraft.value!!.canSave)
+        assertFalse("both checkboxes start off", vm.diaperDraft.value!!.pee || vm.diaperDraft.value!!.poop)
         vm.setPee(true)
         vm.setPoop(true)
         vm.setPoopColor(PoopColor.YELLOW)
@@ -404,15 +455,6 @@ class MainViewModelTest {
         assertTrue(entry.pee)
         assertFalse(entry.poop)
         assertNull(entry.poopColor)
-    }
-
-    @Test
-    fun saveWithBothCheckboxesOffIsRejected() = test {
-        vm.beginDiaper()
-        vm.saveDiaper().join()
-        assertTrue(stored().isEmpty())
-        assertNull(vm.receipt.value)
-        assertEquals(listOf(XHaptic.REJECT), haptics())
     }
 
     @Test

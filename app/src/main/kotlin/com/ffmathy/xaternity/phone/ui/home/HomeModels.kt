@@ -1,5 +1,6 @@
 package com.ffmathy.xaternity.phone.ui.home
 
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.model.Entry
@@ -28,11 +29,13 @@ internal data class CardModel(
 
 /** What the card is about. Entry ids point at the entry that the offsets move. */
 internal sealed interface CardSpec {
-    data class FeedLogged(val entryId: String, val type: FeedType) : CardSpec
+    /** [type] null: a feed logged with just its time ("Feed logged"). */
+    data class FeedLogged(val entryId: String, val type: FeedType?) : CardSpec
     data class DiaperLogged(val entryId: String, val kind: DiaperKind) : CardSpec
     data class FeedStarted(val entryId: String) : CardSpec
-    data class FeedEnded(val entryId: String, val side: BreastSide) : CardSpec
-    data class FeedCancelled(val side: BreastSide) : CardSpec
+    /** [side] null: the feed ended with no side ticked. */
+    data class FeedEnded(val entryId: String, val side: BreastSide?) : CardSpec
+    data class FeedCancelled(val side: BreastSide?) : CardSpec
     data class SleepStarted(val entryId: String) : CardSpec
     data class WokeUp(val entryId: String) : CardSpec
     data object SleepCancelled : CardSpec
@@ -86,11 +89,13 @@ internal sealed interface SheetModel {
 
     data class Feed(override val stamp: Long, override val offsetMinutes: Int = 0) : SheetModel
 
+    /** [ticks]: the breasts ticked so far, in tick order (V1_ADDITIONS §2.1). */
     data class Side(
         val feedId: String,
         val startMillis: Long,
         override val stamp: Long,
         override val offsetMinutes: Int = 0,
+        val ticks: List<Breast> = emptyList(),
     ) : SheetModel
 
     data class Diaper(

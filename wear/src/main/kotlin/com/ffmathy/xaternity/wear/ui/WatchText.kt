@@ -14,7 +14,6 @@ import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
-import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.clockDurationMillis
 import com.ffmathy.xaternity.core.model.diaperKind
 import com.ffmathy.xaternity.wear.R
@@ -36,21 +35,21 @@ import com.ffmathy.xaternity.core.R as CoreR
 fun labelAtTime(label: String, millis: Long, f: Formatters): String =
     stringResource(CoreR.string.receipt_at_time, label, f.clock.format(millis, f.zone))
 
-/** The feed type word ("Formula"); [compact] adds the soft hyphen for tight places. */
+/** The feed type word ("Formula"), or "Feed" for a feed with no type; [compact] adds the soft hyphen for tight places. */
 @Composable
 @ReadOnlyComposable
 fun feedTypeLabel(entry: Entry, compact: Boolean = false): String =
-    stringResource(Labels.feedType(entry.feedType ?: FeedType.FORMULA, compact))
+    stringResource(Labels.feedType(entry.feedType, compact))
 
-/** Receipts and History: "Pee", "Poop", "Pee + poop". */
+/** Receipts and History: "Pee", "Poop", "Pee + poop", "Diaper" (a plain change). */
 @Composable
 @ReadOnlyComposable
-fun diaperLabel(entry: Entry): String = stringResource(Labels.diaperKind(entry.diaperKind ?: DiaperKind.PEE))
+fun diaperLabel(entry: Entry): String = stringResource(Labels.diaperKind(entry.diaperKind ?: DiaperKind.PLAIN))
 
-/** Status surfaces (cards): "Pee", "Poop", "Both". */
+/** Status surfaces (cards): "Pee", "Poop", "Both", "Diaper". */
 @Composable
 @ReadOnlyComposable
-fun diaperStatusLabel(entry: Entry): String = stringResource(Labels.diaperKindStatus(entry.diaperKind ?: DiaperKind.PEE))
+fun diaperStatusLabel(entry: Entry): String = stringResource(Labels.diaperKindStatus(entry.diaperKind ?: DiaperKind.PLAIN))
 
 /** "48m ago · 13:44" (relative + absolute, §7). */
 fun Formatters.agoAndClock(fromMillis: Long, now: Long): String =
@@ -78,6 +77,7 @@ object SpokenLabels {
         DiaperKind.PEE -> CoreR.string.diaper_pee
         DiaperKind.POOP -> CoreR.string.diaper_poop
         DiaperKind.BOTH -> R.string.spoken_pee_and_poop
+        DiaperKind.PLAIN -> CoreR.string.kind_diaper
     }
 }
 
@@ -164,7 +164,7 @@ fun entryWord(entry: Entry, compact: Boolean = false): String = when (entry.kind
 @Composable
 @ReadOnlyComposable
 fun spokenEntryWord(entry: Entry): String = when (entry.kind) {
-    EntryKind.DIAPER -> stringResource(SpokenLabels.diaperKind(entry.diaperKind ?: DiaperKind.PEE))
+    EntryKind.DIAPER -> stringResource(SpokenLabels.diaperKind(entry.diaperKind ?: DiaperKind.PLAIN))
     else -> entryWord(entry)
 }
 

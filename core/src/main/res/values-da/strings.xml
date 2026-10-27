@@ -12,6 +12,7 @@
     <string name="feed_type_formula_compact">Modermælks&#173;erstatning</string>
     <string name="feed_type_food">Mad</string>
     <string name="feed_breast_starts_timer">Starter tidtagning</string>
+    <string name="feed_type_none">Kun tidspunktet</string>
 
     <!-- Breast sides -->
     <string name="side_left">Venstre</string>
@@ -21,6 +22,8 @@
     <string name="side_letter_left">V</string>
     <string name="side_letter_right">H</string>
     <string name="side_question">Hvilken side?</string>
+    <string name="side_order_hint">Sæt flueben i den rækkefølge, du ammede. Valgfrit.</string>
+    <string name="side_none">Ingen side</string>
 
     <!-- Diapers -->
     <string name="diaper_pee">Tis</string>

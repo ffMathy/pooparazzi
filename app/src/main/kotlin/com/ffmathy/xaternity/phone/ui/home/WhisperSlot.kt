@@ -28,6 +28,7 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import com.ffmathy.xaternity.core.domain.DayCounts
 import com.ffmathy.xaternity.core.format.Formatters
 import com.ffmathy.xaternity.core.format.Labels
+import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.ui.icons.XIcon
 import com.ffmathy.xaternity.core.ui.icons.XIcons
 import com.ffmathy.xaternity.core.ui.time.rememberReducedMotion
@@ -378,6 +380,15 @@ private fun EditChip(onClick: () -> Unit) {
     }
 }
 
+/** "Left → Right · 18m" (spoken "Left then right, 18 minutes"), or just the duration when no side was recorded. */
+@Composable
+@ReadOnlyComposable
+private fun sideAndDuration(side: BreastSide?, duration: String, spoken: Boolean = false): String = when {
+    side == null -> duration
+    spoken -> stringResource(R.string.spoken_pair, spokenSideCapitalised(side), duration)
+    else -> stringResource(R.string.join_dot, stringResource(Labels.side(side)), duration)
+}
+
 /** Row 1 of a card: icon, title and optional sub-line, with the sub-line's spoken form. */
 private class CardContent(val icon: TintedIcon, val title: String, val sub: String?, val subSpoken: String? = null)
 
@@ -403,14 +414,14 @@ private fun cardContent(variant: CardVariant, formatters: Formatters): CardConte
         is CardVariant.FeedEnded -> CardContent(
             breast,
             stringResource(CoreR.string.receipt_feed_ended),
-            stringResource(R.string.join_dot, stringResource(Labels.side(variant.side)), duration.format(variant.durationMillis)),
-            stringResource(R.string.spoken_pair, spokenSideCapitalised(variant.side), duration.spoken(variant.durationMillis)),
+            sideAndDuration(variant.side, duration.format(variant.durationMillis)),
+            sideAndDuration(variant.side, duration.spoken(variant.durationMillis), spoken = true),
         )
         is CardVariant.FeedCancelled -> CardContent(
             breast,
             stringResource(CoreR.string.receipt_feed_cancelled),
-            stringResource(R.string.join_dot, stringResource(Labels.side(variant.side)), duration.format(0L)),
-            stringResource(R.string.spoken_pair, spokenSideCapitalised(variant.side), duration.spoken(0L)),
+            sideAndDuration(variant.side, duration.format(0L)),
+            sideAndDuration(variant.side, duration.spoken(0L), spoken = true),
         )
         CardVariant.SleepStarted -> CardContent(TintedIcon(XIcons.sleep, events.sleep.strong), stringResource(CoreR.string.receipt_sleep_started), null)
         is CardVariant.WokeUp -> CardContent(

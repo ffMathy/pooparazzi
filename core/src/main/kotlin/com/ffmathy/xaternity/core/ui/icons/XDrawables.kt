@@ -62,7 +62,8 @@ object XDrawables {
     @DrawableRes val bothDay: Int = R.drawable.x_both_day
 
     @DrawableRes
-    fun forFeedType(type: FeedType): Int = when (type) {
+    fun forFeedType(type: FeedType?): Int = when (type) {
+        null -> feed
         FeedType.BREAST -> breast
         FeedType.FORMULA -> feed
         FeedType.FOOD -> food
@@ -73,6 +74,7 @@ object XDrawables {
     fun forDiaperKind(kind: DiaperKind, twoTone: BothTone? = null): Int = when (kind) {
         DiaperKind.PEE -> pee
         DiaperKind.POOP -> poop
+        DiaperKind.PLAIN -> diaper
         DiaperKind.BOTH -> when (twoTone) {
             null -> both
             BothTone.NIGHT -> bothNight

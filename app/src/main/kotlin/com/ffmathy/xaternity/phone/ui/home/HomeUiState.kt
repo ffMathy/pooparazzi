@@ -3,6 +3,7 @@ package com.ffmathy.xaternity.phone.ui.home
 import androidx.compose.runtime.Immutable
 import com.ffmathy.xaternity.core.domain.DayCounts
 import com.ffmathy.xaternity.core.domain.LampState
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.model.Entry
@@ -99,20 +100,20 @@ enum class CardAction { UNDO, DONE, NONE }
 /** What the card says in row 1. */
 @Immutable
 sealed interface CardVariant {
-    /** "Formula logged" / "Food logged". */
-    data class FeedLogged(val type: FeedType) : CardVariant
+    /** "Formula logged" / "Food logged"; "Feed logged" for a feed with no type (null). */
+    data class FeedLogged(val type: FeedType?) : CardVariant
 
-    /** "Pee logged" / "Poop logged" / "Pee + poop logged". */
+    /** "Pee logged" / "Poop logged" / "Pee + poop logged" / "Diaper logged". */
     data class DiaperLogged(val kind: DiaperKind) : CardVariant
 
     /** "Feed started" (a breastfeed). */
     data object FeedStarted : CardVariant
 
-    /** "Feed ended" + "Left → Right · 18m". */
-    data class FeedEnded(val side: BreastSide, val durationMillis: Long) : CardVariant
+    /** "Feed ended" + "Left → Right · 18m" (just "18m" when no side was ticked). */
+    data class FeedEnded(val side: BreastSide?, val durationMillis: Long) : CardVariant
 
     /** "Feed cancelled" + "Left · <1m": a breastfeed ended under a minute after its start was discarded. */
-    data class FeedCancelled(val side: BreastSide) : CardVariant
+    data class FeedCancelled(val side: BreastSide?) : CardVariant
 
     /** "Sleep started". */
     data object SleepStarted : CardVariant
@@ -168,19 +169,28 @@ sealed interface HomeSheetUi {
     val chips: List<OffsetChipUi>
     val time: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
 
-    /** Feed sheet (V1_ADDITIONS §2.1): Breast / Formula / Food. */
+    /** Feed sheet (V1_ADDITIONS §2.1): Breast / Formula / Food / Just the time. */
     data class Feed(override val stamp: Long, override val offsetMinutes: Int, override val chips: List<OffsetChipUi>) : HomeSheetUi
 
-    /** Side sheet: ends the running breastfeed [feedId] with a side. */
+    /**
+     * Side sheet: ends the running breastfeed [feedId] with the optional side [ticks] (Left / Right checkboxes, in the
+     * order ticked; [side] is what that order records, null for none).
+     */
     data class Side(
         val feedId: String,
         val startMillis: Long,
         override val stamp: Long,
         override val offsetMinutes: Int,
         override val chips: List<OffsetChipUi>,
-    ) : HomeSheetUi
+        val ticks: List<Breast> = emptyList(),
+    ) : HomeSheetUi {
+        val side: BreastSide? get() = BreastSide.fromOrder(ticks)
+    }
 
-    /** Diaper sheet (V1_ADDITIONS §3.1): Pee / Poop checkboxes, optional colour and texture. */
+    /**
+     * Diaper sheet (V1_ADDITIONS §3.1): optional Pee / Poop checkboxes, optional colour and texture. Save is always
+     * allowed: nothing ticked logs a plain diaper change.
+     */
     data class Diaper(
         override val stamp: Long,
         override val offsetMinutes: Int,
@@ -189,9 +199,7 @@ sealed interface HomeSheetUi {
         val poop: Boolean,
         val color: PoopColor?,
         val texture: PoopTexture?,
-    ) : HomeSheetUi {
-        val canSave: Boolean get() = pee || poop
-    }
+    ) : HomeSheetUi
 }
 
 internal const val MINUTE_MILLIS = 60_000L

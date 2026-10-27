@@ -36,6 +36,7 @@ import com.ffmathy.xaternity.wear.diaper.colourOptions
 import com.ffmathy.xaternity.wear.diaper.textureOptions
 import com.ffmathy.xaternity.wear.feed.FeedTypeActions
 import com.ffmathy.xaternity.wear.feed.FeedTypeScreen
+import com.ffmathy.xaternity.wear.feed.SideActions
 import com.ffmathy.xaternity.wear.feed.SideScreen
 import com.ffmathy.xaternity.wear.logged.LoggedScreen
 import com.ffmathy.xaternity.wear.logged.UndoneScreen
@@ -201,7 +202,15 @@ fun WearNavHost(
         composable(WearRoutes.SIDE) { backStackEntry ->
             val gate = rememberTopGate(navController, backStackEntry)
             val draft by viewModel.sideDraft.collectAsStateWithLifecycle()
-            rememberLast(draft)?.let { SideScreen(it, onSide = gate.tapWith { side -> viewModel.endFeed(side) }) }
+            rememberLast(draft)?.let {
+                SideScreen(
+                    it,
+                    SideActions(
+                        onTick = gate.tapWith { breast -> viewModel.tickSide(breast) },
+                        onEnd = gate.tap { viewModel.endFeed() },
+                    ),
+                )
+            }
         }
         composable(WearRoutes.DIAPER) { backStackEntry ->
             val gate = rememberTopGate(navController, backStackEntry)

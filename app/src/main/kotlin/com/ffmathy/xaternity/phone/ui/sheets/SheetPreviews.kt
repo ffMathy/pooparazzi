@@ -35,7 +35,7 @@ private fun FeedSheetPreview() = SheetPreview(night = true) {
 @Composable
 private fun SideSheetPreview() = SheetPreview(night = false) {
     val formatters = rememberFormatters(SampleData.ZONE)
-    SideSheetContent(HomeSamples.sideSheet().sheet as HomeSheetUi.Side, SampleData.ZONE, formatters, {}, {}, {})
+    SideSheetContent(HomeSamples.sideSheet().sheet as HomeSheetUi.Side, SampleData.ZONE, formatters, {}, {}, {}, {})
 }
 
 @Preview(name = "Diaper sheet", widthDp = 390)

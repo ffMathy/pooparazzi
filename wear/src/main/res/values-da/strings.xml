@@ -66,4 +66,6 @@
     <string name="ongoing_channel_description">Viser igangværende søvn eller amning på urskiven.</string>
     <string name="ongoing_asleep_since">Sover siden kl. #start#</string>
     <string name="ongoing_breastfeeding_since">Ammer siden kl. #start#</string>
+    <string name="spoken_side_first">først</string>
+    <string name="spoken_side_second">bagefter</string>
 </resources>

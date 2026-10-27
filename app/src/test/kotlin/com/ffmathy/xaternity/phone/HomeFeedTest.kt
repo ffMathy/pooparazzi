@@ -2,6 +2,7 @@ package com.ffmathy.xaternity.phone
 
 import android.app.Application
 import com.ffmathy.xaternity.core.domain.LampState
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.isRunning
@@ -96,7 +97,10 @@ class HomeFeedTest : HomeViewModelTestBase() {
         val feed = home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
         home.clock.advanceBy(18 * MINUTE)
         home.tapFeed()
-        home.viewModel.onSide(BreastSide.LEFT_THEN_RIGHT)
+        home.viewModel.onSideTick(Breast.LEFT)
+        home.viewModel.onSideTick(Breast.RIGHT)
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, (home.settle().sheet as HomeSheetUi.Side).side)
+        home.viewModel.onEndFeed()
         val state = home.settle()
 
         val ended = home.repository.get(feed.id)!!
@@ -105,6 +109,47 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertNull(state.runningFeed)
         assertEquals(CardVariant.FeedEnded(BreastSide.LEFT_THEN_RIGHT, 18 * MINUTE), state.card!!.variant)
         assertTrue(state.lamp is LampState.FeedIdle)
+    }
+
+    @Test
+    fun theSideFollowsTheTickOrderAndUntickingRemovesIt() = homeTest { home ->
+        home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
+        home.clock.advanceBy(18 * MINUTE)
+        home.tapFeed()
+        home.viewModel.onSideTick(Breast.RIGHT)
+        home.viewModel.onSideTick(Breast.LEFT)
+        assertEquals(BreastSide.RIGHT_THEN_LEFT, (home.settle().sheet as HomeSheetUi.Side).side)
+        home.viewModel.onSideTick(Breast.RIGHT)
+        assertEquals(listOf(Breast.LEFT), (home.settle().sheet as HomeSheetUi.Side).ticks)
+        home.viewModel.onSideTick(Breast.RIGHT)
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, (home.settle().sheet as HomeSheetUi.Side).side)
+    }
+
+    @Test
+    fun endFeedWithNothingTickedRecordsNoSide() = homeTest { home ->
+        val feed = home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
+        home.clock.advanceBy(18 * MINUTE)
+        home.tapFeed()
+        home.viewModel.onEndFeed()
+        val state = home.settle()
+        val ended = home.repository.get(feed.id)!!
+        assertEquals(SampleData.NOW_1450, ended.endMillis)
+        assertNull(ended.breastSide)
+        assertEquals(CardVariant.FeedEnded(null, 18 * MINUTE), state.card!!.variant)
+    }
+
+    @Test
+    fun justTheTimeLogsAFeedWithNoType() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFeedType(null)
+        val state = home.settle()
+        val feed = home.entries().single()
+        assertNull(feed.feedType)
+        assertNull(feed.endMillis)
+        assertEquals(SampleData.NOW_1432, feed.startMillis)
+        assertEquals(CardVariant.FeedLogged(null), state.card!!.variant)
+        assertEquals(1, state.today.feeds)
+        assertEquals(feed.id, (state.lamp as LampState.FeedIdle).lastFeed!!.id)
     }
 
     @Test
@@ -139,7 +184,8 @@ class HomeFeedTest : HomeViewModelTestBase() {
         val feed = home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
         home.clock.advanceBy(30_000)
         home.tapFeed()
-        home.viewModel.onSide(BreastSide.LEFT)
+        home.viewModel.onSideTick(Breast.LEFT)
+        home.viewModel.onEndFeed()
         var state = home.settle()
         assertEquals(CardVariant.FeedCancelled(BreastSide.LEFT), state.card!!.variant)
         assertEquals(CardRow.None, state.card!!.row)

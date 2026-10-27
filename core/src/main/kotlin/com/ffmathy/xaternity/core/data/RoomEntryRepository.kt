@@ -60,12 +60,12 @@ class RoomEntryRepository(
 
     // ---- Feeds --------------------------------------------------------------------------------
 
-    override suspend fun logFeedChecked(type: FeedType, at: Long): LogResult {
+    override suspend fun logFeedChecked(type: FeedType?, at: Long): LogResult {
         require(type != FeedType.BREAST) { "A breastfeed is timed: use startBreastfeed()" }
         checkNotInFuture(at) { Entry.feed(type, at, updatedAtMillis = 0) }
         val result = database.withTransaction {
             val window = EntryRules.DEDUPE_WINDOW_MILLIS - 1
-            val duplicate = dao.feedsBetween(type, at - window, at + window).firstOrNull()
+            val duplicate = feedsBetween(type, at - window, at + window).firstOrNull()
             if (duplicate != null) {
                 LogResult.Duplicate(duplicate.toEntry())
             } else {
@@ -81,7 +81,7 @@ class RoomEntryRepository(
     override suspend fun startBreastfeed(at: Long): Result<Entry> =
         startInterval(at, running = { dao.runningBreastfeeds() }) { stamp -> Entry.breastfeed(at, updatedAtMillis = stamp) }
 
-    override suspend fun endBreastfeed(id: String, at: Long, side: BreastSide): EndResult =
+    override suspend fun endBreastfeed(id: String, at: Long, side: BreastSide?): EndResult =
         endInterval(id, at, side, matches = { it.isBreastfeed })
 
     // ---- Sleep --------------------------------------------------------------------------------
@@ -359,11 +359,15 @@ class RoomEntryRepository(
         val from = entry.startMillis - window
         val to = entry.startMillis + window
         return when (entry.kind) {
-            EntryKind.FEED -> entry.feedType?.let { dao.feedsBetween(it, from, to) }.orEmpty()
+            EntryKind.FEED -> feedsBetween(entry.feedType, from, to)
             EntryKind.DIAPER -> dao.diapersBetween(entry.pee, entry.poop, from, to)
             EntryKind.SLEEP -> emptyList()
         }
     }
+
+    /** Non-deleted instant feeds of [type] (null: untyped feeds) between the two times. */
+    private suspend fun feedsBetween(type: FeedType?, from: Long, to: Long): List<EntryEntity> =
+        if (type == null) dao.untypedFeedsBetween(from, to) else dao.feedsBetween(type, from, to)
 
     /** A strictly increasing write clock per row, even when the wall clock stands still or goes back. */
     private fun nextStamp(previous: Long?): Long = maxOf(clock.now(), (previous ?: Long.MIN_VALUE / 2) + 1)

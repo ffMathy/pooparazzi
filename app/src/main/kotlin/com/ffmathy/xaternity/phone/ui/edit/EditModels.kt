@@ -2,6 +2,7 @@ package com.ffmathy.xaternity.phone.ui.edit
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
@@ -45,7 +46,7 @@ data class EditDraft(
         EntryKind.FEED -> if (isBreastfeed) {
             Entry.breastfeed(start, end, side.takeIf { end != null }, id = id, updatedAtMillis = updatedAtMillis)
         } else {
-            Entry.feed(feedType ?: FeedType.FORMULA, start, id = id, updatedAtMillis = updatedAtMillis)
+            Entry.feed(feedType, start, id = id, updatedAtMillis = updatedAtMillis)
         }
         EntryKind.DIAPER -> Entry.diaper(start, pee, poop, color, texture, id = id, updatedAtMillis = updatedAtMillis)
     }
@@ -114,7 +115,6 @@ enum class EditConflict { CHANGED, DELETED }
  * @property wasEnd the original end, shown once the end's minute changed.
  * @property durationMillis the interval's displayed duration (to now while running); null for instants.
  * @property wasDurationMillis the original duration, shown once the duration changed.
- * @property complete everything required is set: a diaper has pee or poop; an ended breastfeed has a side.
  */
 @Immutable
 data class EditUiState(
@@ -130,9 +130,9 @@ data class EditUiState(
     val durationMillis: Long?,
     val wasDurationMillis: Long?,
     val issue: EditIssue?,
-    val complete: Boolean,
 ) {
-    val canSave: Boolean get() = complete && issue?.blocksSave != true
+    /** Nothing beyond the times is required (feed type, side, pee and poop are optional): only a blocking issue stops Save. */
+    val canSave: Boolean get() = issue?.blocksSave != true
 }
 
 /** Everything the edit sheet can ask for. Defaults do nothing, so previews and screenshots can pass [None]. */
@@ -148,8 +148,12 @@ interface EditActions {
 
     /** "Add past entry": Sleep | Feed | Diaper. */
     fun onKind(kind: EntryKind) {}
+
+    /** Selects [type]; tapping the selected type again clears it (a feed with just its time). */
     fun onFeedType(type: FeedType) {}
-    fun onSide(side: BreastSide) {}
+
+    /** Ticks or unticks [breast] on an ended breastfeed; the tick order is the side recorded. */
+    fun onSideTick(breast: Breast) {}
 
     /** ±1m / ±5m. */
     fun onNudge(field: TimeField, minutes: Int) {}

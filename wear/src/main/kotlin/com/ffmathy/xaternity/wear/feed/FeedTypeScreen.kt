@@ -1,5 +1,6 @@
 package com.ffmathy.xaternity.wear.feed
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
@@ -41,13 +43,15 @@ import com.ffmathy.xaternity.core.R as CoreR
 
 @Immutable
 data class FeedTypeActions(
-    val onType: (FeedType) -> Unit = {},
+    /** Breast / Formula / Food, or null for "Just the time" (a feed with no type). */
+    val onType: (FeedType?) -> Unit = {},
     val onEarlier: () -> Unit = {},
 )
 
 /**
  * Feed type (V1_ADDITIONS §2.2): "Feed · 14:32" (stamped on the Feed tap), three full-width FEED buttons
- * (Breast / Formula / Food) and an Earlier CompactButton that cycles the time through −5m / −10m / −15m.
+ * (Breast / Formula / Food), an outlined "Just the time" button (the type is optional: logs a feed with no type) and
+ * an Earlier CompactButton that cycles the time through −5m / −10m / −15m.
  * Taps are ignored for 500 ms after the screen appears (DESIGN_SPEC §5.9).
  */
 @Composable
@@ -81,6 +85,19 @@ fun FeedTypeScreen(draft: FeedDraft, actions: FeedTypeActions, modifier: Modifie
                         modifier = Modifier.transformedHeight(this, spec).alpha(cooldown.alpha),
                     )
                 }
+            }
+            item(key = "untyped") {
+                XListButton(
+                    label = stringResource(CoreR.string.feed_type_none),
+                    onClick = { actions.onType(null) },
+                    enabled = cooldown.ready,
+                    icon = {
+                        XIcon(XIcons.clock, null, tint = if (ambient) WatchAmbient.content else feed.strong, size = 24.dp)
+                    },
+                    border = BorderStroke(1.dp, if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.outline),
+                    transformation = SurfaceTransformation(spec),
+                    modifier = Modifier.transformedHeight(this, spec).alpha(cooldown.alpha),
+                )
             }
             item(key = "earlier") {
                 Box(Modifier.fillMaxWidth().transformedHeight(this, spec).padding(top = 2.dp), contentAlignment = Alignment.Center) {

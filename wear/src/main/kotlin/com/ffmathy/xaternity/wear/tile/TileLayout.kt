@@ -190,7 +190,7 @@ private class TileContent(
         is TileTitle.LastDiaper -> {
             {
                 val diaper = title.diaper
-                val kind = diaper.diaperKind ?: DiaperKind.PEE
+                val kind = diaper.diaperKind ?: DiaperKind.PLAIN
                 val word = res.getString(Labels.diaperKindStatus(kind))
                 val line = text.template(SurfaceText.Template(res.getString(R.string.tile_title_last_diaper, word, SurfaceText.Template.PLACEHOLDER)), text.ago(diaper.startMillis, now))
                 // Read as "pee and poop", never the status word "Both" or a "+".
@@ -218,7 +218,7 @@ private class TileContent(
         val atTime = { said: String, time: String -> res.getString(CoreR.string.receipt_at_time, said, time) }
         return when (feedback.kind) {
             TileFeedbackKind.DIAPER -> {
-                val kind = feedback.diaperKind ?: DiaperKind.PEE
+                val kind = feedback.diaperKind ?: DiaperKind.PLAIN
                 val time = text.clock(feedback.atMillis)
                 // Shown as the status word ("Both"), read as the receipt says it ("Pee and poop").
                 Confirmation(

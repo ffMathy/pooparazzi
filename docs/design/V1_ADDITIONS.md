@@ -2,10 +2,12 @@
 
 This document extends [`DESIGN_SPEC.md`](DESIGN_SPEC.md), which stays the source of truth for everything it covers: the Lamp, tokens, typography, icons, formatting grammar, night behaviour and accessibility. This file covers what the user asked for after approving the mockups:
 
-1. **Feed types**: Breast, Formula or Food.
-2. **Breastfeeding is a timed interval.** The side is picked **when the feed ends**: Left, Right, Left → Right or Right → Left.
-3. **Diaper Pee and Poop are independent toggles** (checkboxes). When Poop is on, the parent can also pick a **colour** and a **texture**.
+1. **Feed types**: Breast, Formula or Food. The type is **optional**: a feed can be logged with just its time.
+2. **Breastfeeding is a timed interval.** The side is ticked **when the feed ends**, with two checkboxes, Left and Right. The **order of the ticks is the order recorded** (Left then Right = Left → Right). The side is optional.
+3. **Diaper Pee and Poop are independent toggles** (checkboxes). When Poop is on, the parent can also pick a **colour** and a **texture**. All of these are **optional**: a diaper with nothing ticked is a plain diaper change.
 4. **The whole app is in English and Danish**, through Android string resources, with an in-app language choice.
+
+**Minimal data.** The user asked that the data required be minimal: only the times are ever required. Feed type, breast side, pee, poop, colour and texture are all optional extras.
 
 Where this file and `DESIGN_SPEC.md` disagree, this file wins.
 
@@ -16,7 +18,8 @@ Where this file and `DESIGN_SPEC.md` disagree, this file wins.
 ```kotlin
 enum class EntryKind { SLEEP, FEED, DIAPER }
 enum class FeedType { BREAST, FORMULA, FOOD }
-enum class BreastSide { LEFT, RIGHT, LEFT_THEN_RIGHT, RIGHT_THEN_LEFT }
+enum class Breast { LEFT, RIGHT }  // one ticked checkbox (UI only, not stored)
+enum class BreastSide { LEFT, RIGHT, LEFT_THEN_RIGHT, RIGHT_THEN_LEFT } // stored; = the tick order
 enum class PoopColor { YELLOW, GREEN, BROWN, BLACK, RED, PALE }
 enum class PoopTexture { WATERY, SEEDY, MUSHY, FORMED, HARD }
 
@@ -25,8 +28,8 @@ data class Entry(
     val kind: EntryKind,
     val startMillis: Long,          // epoch ms (UTC)
     val endMillis: Long? = null,    // SLEEP, and FEED with feedType == BREAST; null while running
-    val feedType: FeedType? = null, // FEED only
-    val breastSide: BreastSide? = null, // FEED+BREAST only, set when the feed ends
+    val feedType: FeedType? = null, // FEED only; optional (null = just the time)
+    val breastSide: BreastSide? = null, // FEED+BREAST only, optionally set when the feed ends
     val pee: Boolean = false,       // DIAPER only
     val poop: Boolean = false,      // DIAPER only
     val poopColor: PoopColor? = null,     // DIAPER with poop only (optional)
@@ -37,15 +40,19 @@ data class Entry(
 ```
 
 **Invariants.** All of these are enforced in the repository and covered by unit tests:
-- **Intervals:** an entry is an *interval* when `kind == SLEEP`, or when `kind == FEED && feedType == BREAST`. Every other entry is an *instant*, with `endMillis == null` always.
+- **Intervals:** an entry is an *interval* when `kind == SLEEP`, or when `kind == FEED && feedType == BREAST`. Every other entry is an *instant*, with `endMillis == null` always. That includes a FEED with no type (`feedType == null`).
 - **Running entries:** an interval is *running* when `endMillis == null && !deleted`. At most one sleep and at most one breastfeed run at a time. A second start is rejected and the UI shows the guard message.
-- **Diapers:** a DIAPER needs `pee || poop`. `poopColor` and `poopTexture` must be null when `!poop`.
-- **Breast side:** `breastSide` is null while a breastfeed runs. Ending a breastfeed always sets it; the end flow cannot finish without a side.
+- **Feed type:** optional. A FEED with `feedType == null` is an instant that records only its time; it can never carry a side.
+- **Diapers:** `pee` and `poop` are optional. A DIAPER with neither is a *plain change* (display kind `PLAIN`, label "Diaper"). `poopColor` and `poopTexture` must be null when `!poop`.
+- **Breast side:** `breastSide` is null while a breastfeed runs. Ending a breastfeed sets it **only if** a side was ticked; an ended breastfeed with `breastSide == null` is valid (only the times were recorded).
+- **Tick order → side:** `BreastSide.fromOrder(ticks)` maps the ticked `Breast`es, in tick order, to the stored value: `[]` → null, `[L]` → LEFT, `[R]` → RIGHT, `[L, R]` → LEFT_THEN_RIGHT, `[R, L]` → RIGHT_THEN_LEFT. `BreastSide.toggle(ticks, b)` unticks `b` when ticked, otherwise appends it (so re-ticking puts it last). `side.order` maps back for editing. The stored enum is unchanged, so storage and sync stay compatible.
 - **Mis-taps:** an interval that ends **less than 60 s** after its start is discarded as a mis-tap. The UI then shows "Sleep cancelled" or "Feed cancelled", with Undo.
 
 **Time since last feed** is measured from the feed's **start**, whatever its type. This is the convention midwives use.
 
-**Today counts:** **feeds** count every FEED of any type. **pee** counts diapers with `pee`, and **poop** counts diapers with `poop` (so a diaper with both counts once in each). **sleep** is the sleep minutes inside today, including a running sleep.
+**Today counts:** **feeds** count every FEED of any type, including feeds with no type. **pee** counts diapers with `pee`, and **poop** counts diapers with `poop` (so a diaper with both counts once in each; a plain change counts in neither, and the stats row deliberately has no diaper total). **sleep** is the sleep minutes inside today, including a running sleep.
+
+**Compatibility.** Validation was only relaxed (no violation was added), so every entry an older version wrote still decodes and validates. The removed violations are `FEED_TYPE_MISSING`, `SIDE_MISSING` and `DIAPER_EMPTY`. An older app that has not been updated will refuse the new minimal entries from the other device as invalid, so both apps ship together.
 
 ---
 
@@ -60,7 +67,8 @@ data class Entry(
     - **Breast**: icon `breast`, supporting line "Starts a timer".
     - **Formula**: icon `feed` (the bottle).
     - **Food**: icon `food` (bowl and spoon).
-  - Tapping **Formula** or **Food** logs an instant at `stamp + offset`, closes the sheet and shows the undo card "Formula logged" / "Food logged", with Earlier chips.
+  - A fourth row, **"Just the time"** ("Kun tidspunktet"): same size, but *outlined* (1 dp `outline`, no fill), icon `clock`, label in `on-surface`. It logs a feed with no type.
+  - Tapping **Formula** or **Food** logs an instant at `stamp + offset`, closes the sheet and shows the undo card "Formula logged" / "Food logged", with Earlier chips. **Just the time** does the same with "Feed logged" ("Måltid registreret").
   - Tapping **Breast** starts a breastfeed at `stamp + offset`, closes the sheet and shows the undo card "Feed started", with Earlier chips that move the start.
   - The rows are full width because the Danish labels are long ("Modermælkserstatning").
 - **Breastfeed running:**
@@ -70,27 +78,25 @@ data class Entry(
 - **Side sheet:**
   - Title "Which side?". Sub-line "Breastfeeding · 14:32–14:50 · 18m", which updates with the chips.
   - End-time chips: Now · −5m · −10m. A chip that would put the end before the start is disabled.
-  - A **2 × 2 grid** of option tiles, each 165 × 96 dp with radius 28 and `feed-container` fill:
-
-    | Tile | Glyph |
-    |---|---|
-    | Left | `sideLeft` |
-    | Right | `sideRight` |
-    | Left → Right | `sideLeftRight` |
-    | Right → Left | `sideRightLeft` |
-
-    The glyphs are two small circles labelled with the letters L/R (V/H in Danish come from text, not the icon). Each tile also shows its text label.
-  - **One tap ends the feed** at `stamp + offset` with that side. The undo card reads "Feed ended", sub "Left → Right · 18m".
+  - Hint (bodyMedium, `on-surface-variant`): "Tick the sides in the order you fed. Optional." / "Sæt flueben i den rækkefølge, du ammede. Valgfrit."
+  - **Two checkbox tiles side by side**, Left and Right, styled like the Diaper sheet's tiles but in FEED colours (min 112 dp tall, radius 28). Each shows the `sideLeft` / `sideRight` glyph with the L/R letters (V/H in Danish come from text), its label, and a checkbox glyph top-right.
+    - **Off:** `feed-container` fill, 1 dp `outline` border, empty checkbox.
+    - **On:** `feed-container-lit` fill, 2 dp `feed-strong` border, checked checkbox in `feed-strong`, and an **order badge** top-left: a 28 dp `feed-strong` circle with "1" or "2".
+    - **Order:** the first box ticked is 1, the second 2. Unticking removes a side from the order; ticking it again appends it.
+    - **Semantics:** `Role.Checkbox`; TalkBack reads "Left, first, checkbox, checked".
+  - A **summary line** under the tiles (titleMedium, live region): "Left → Right" in FEED text, or "No side" in `on-surface-variant` while nothing is ticked. TalkBack reads "Left then right".
+  - **"End feed"** ("Afslut amning"): the primary button bottom-right (as Save in the Diaper sheet). It is always enabled, because the side is optional. It ends the feed at `stamp + offset` with the ticked order. The undo card reads "Feed ended", sub "Left → Right · 18m" (just "18m" with no side).
   - "Cancel" (or a scrim tap) closes the sheet and the feed keeps running.
 - **Running sleep and a feed:** logging Formula or Food, or *starting* a breastfeed, while a sleep runs shows the running-sleep card variant with the "End sleep" chip (unchanged).
-- **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line: "ago · 12:22 · Formula". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, formula, 2 hours 10 minutes ago, at 12:22".
+- **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line: "ago · 12:22 · Formula". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, formula, 2 hours 10 minutes ago, at 12:22". A feed with no type shows the generic `feed` icon and no type word ("ago · 12:22"; TalkBack "Last feed, 2 hours 10 minutes ago, at 12:22").
 
 ### 2.2 Watch
 
 - **Main:** Feed opens the **Feed type** screen.
   - Three stacked buttons (full width, 52 dp tall, `feed-container`): Breast, Formula, Food.
+  - A fourth, outlined button: **"Just the time"** (icon `clock`), which logs a feed with no type.
   - A CompactButton "Earlier" cycles the stamp through −5m / −10m / −15m, as on the diaper picker.
-  - Formula and Food lead to **Logged** ("Formula at 14:32" + Undo).
+  - Formula, Food and Just the time lead to **Logged** ("Formula at 14:32" / "Feed at 14:32" + Undo).
   - Breast starts the timer and returns to **Main** in its running-feed state.
 - **Main while a breastfeed runs:**
   - The Lamp shows the feed: label "Breastfeeding", elapsed numeral, "since 14:32", FEED ring and ember.
@@ -98,9 +104,11 @@ data class Entry(
   - The sleep toggle moves into the scroll list as a full-width button ("Start sleep" / "Woke up").
   - If a sleep also runs, the list shows a status card for it.
 - **"End feed" leads to the Side screen:**
-  - Title "Which side?".
-  - Four full-width buttons, 52 dp each: Left, Right, Left → Right, Right → Left.
-  - Tapping one leads to **Logged** ("Feed ended", second line "Left → Right · 18m") + Undo.
+  - Title "Which side?", with "14:32–14:50 · 18m" under it.
+  - Two full-width **`CheckboxButton`s**, Left and Right, in FEED colours (`feed-container`, lit `feed-container-lit` with the box in `feed-strong`). A ticked button's icon slot shows its **order badge** ("1" / "2" in a `feed-strong` circle) instead of the side glyph. TalkBack: "Left, first, checkbox, checked".
+  - Under them, the order in words: "Left → Right", or "No side".
+  - **Pinned Medium EdgeButton "End feed"** (`feed-container-lit`, `feed-strong` border), **enabled with nothing ticked**. The end time stays the one stamped on Main's "End feed" tap.
+  - It leads to **Logged** ("Feed ended", second line "Left → Right · 18m", or just "18m") + Undo.
 - **Tile:**
   - **Row A, idle:** "Feed", which opens the app on the Feed type screen.
   - **Row A, while a breastfeed runs:** "End feed", which opens the app on the Side screen.
@@ -127,7 +135,7 @@ The sheet scrolls. It opens with `skipPartiallyExpanded`.
    - **Colour** (labelMedium heading): six chips in a wrapping row. Each is 48 dp tall with a 20 dp swatch dot and a label: Yellow, Green, Brown, Black, Red, Pale. They are single-select and **optional**: tapping the selected chip clears it.
    - **Texture**: five chips: Watery, Seedy, Mushy, Formed, Hard. Also single-select and optional.
    - **Health hint:** when Pale, Red or Black is selected, a bodySmall line in `on-surface-variant` with an `info` icon appears: "Pale, red or black poop can be a reason to call your doctor or health visitor." The app never diagnoses.
-5. **Save:** a primary button at the bottom right of the sheet, in the thumb zone, labelled "Save". It is **disabled until Pee or Poop is on**. Saving logs the entry at `stamp + offset`, closes the sheet and shows the undo card ("Pee logged" / "Poop logged" / "Pee + poop logged").
+5. **Save:** a primary button at the bottom right of the sheet, in the thumb zone, labelled "Save". It is **always enabled**: Pee, Poop, colour and texture are all optional. Saving logs the entry at `stamp + offset`, closes the sheet and shows the undo card ("Pee logged" / "Poop logged" / "Pee + poop logged", or "Diaper logged" for a plain change).
 
 **Swatch colours.** These are content colours, not theme colours, so they look the same in Night and Day. Every chip has a text label, so colour is never the only cue. Each swatch gets a 1 dp `outline` ring so Black and Pale stay visible on any surface.
 
@@ -147,15 +155,18 @@ The sheet scrolls. It opens with `skipPartiallyExpanded`.
 - **When Poop is on**, two more buttons appear:
   - "Colour" shows the current value or "Optional", and opens a list of 6 options (each with its swatch dot) plus "None".
   - "Texture" works the same way, with 5 options plus "None".
-- **Pinned Medium EdgeButton "Save"**, disabled until one checkbox is on, which leads to **Logged** ("Pee at 14:32" / "Poop at 14:32" / "Pee + poop at 14:32").
+- **Pinned Medium EdgeButton "Save"**, always enabled, which leads to **Logged** ("Pee at 14:32" / "Poop at 14:32" / "Pee + poop at 14:32", or "Diaper at 14:32" for a plain change).
+- The tile's one-tap Pee | Poop | Pee + poop buttons are unchanged.
 
 ### 3.3 Display strings
 
 | Where | Format | Example |
 |---|---|---|
-| History list | title + supporting line | "Pee + poop" / "13:44 · Yellow · Seedy" |
+| History list | title + supporting line | "Pee + poop" / "13:44 · Yellow · Seedy"; a plain change "Diaper" / "13:44" |
 | Edit sheet | | the same toggles and chips as the Diaper sheet |
-| Since-row 2 | kind-first, as before | "Poop 48m ago · 13:44" |
+| Since-row 2 | kind-first, as before | "Poop 48m ago · 13:44"; a plain change "Diaper 48m ago · 13:44" with the `diaper` icon |
+
+A plain change is drawn in the History ribbon as a small square in DIAPER strong.
 
 The since-row never shows colour or texture.
 
@@ -164,9 +175,9 @@ The since-row never shows colour or texture.
 ## 4. History and Edit changes
 
 **List rows:**
-- **Breastfeed:** title "Breast · Left → Right", supporting "12:00–12:18 · 18m". While running: "Breast · running", supporting "since 14:32".
-- **Formula / Food:** title "Formula" / "Food", supporting "12:22".
-- **Diaper:** title "Pee" / "Poop" / "Pee + poop", supporting "13:44" plus " · {colour}" and " · {texture}" when set.
+- **Breastfeed:** title "Breast · Left → Right" (just "Breast" with no side), supporting "12:00–12:18 · 18m". While running: "Breast · running", supporting "since 14:32".
+- **Formula / Food:** title "Formula" / "Food", supporting "12:22". A feed with no type: title "Feed" ("Måltid"), generic `feed` icon, and a formula-style tick in the ribbon.
+- **Diaper:** title "Pee" / "Poop" / "Pee + poop", or "Diaper" for a plain change, supporting "13:44" plus " · {colour}" and " · {texture}" when set.
 
 **Ribbon feed lane:**
 - **Breastfeeds** are bars (min 6 dp wide), like sleep but in `feed-strong`.
@@ -175,10 +186,11 @@ The since-row never shows colour or texture.
 
 **Edit sheet:**
 - **Feed:**
-  - Type selector: a connected button group, Breast | Formula | Food.
-  - Breast shows a start time block, an end time block (or "Still feeding" + End now) and a side selector: a connected group of the 4 sides, single-select.
-  - Formula / Food show one time block.
-- **Diaper:** the toggles, colour chips and texture chips from §3.1, plus one time block. Save stays disabled while both toggles are off.
+  - Type selector: a connected button group, Breast | Formula | Food, labelled "Type · Optional". Tapping the selected type again **clears it** (a feed with just its time).
+  - Breast shows a start time block, an end time block (or "Still feeding" + End now) and, once ended, "Side · Optional": the **same Left / Right checkboxes** as the Side sheet (order badges, tick order = side) and the summary line.
+  - Formula, Food and no type show one time block.
+- **Diaper:** the toggles, colour chips and texture chips from §3.1, plus one time block. Save is enabled with both toggles off (a plain change).
+- **Save** is disabled only by a blocking issue (end before start, a time in the future, the entry deleted elsewhere). Nothing beyond the times is required.
 
 **Stats row** stays the same: feeds · pee · poop · sleep.
 
@@ -224,6 +236,11 @@ The since-row never shows colour or texture.
 | Food (solids) | Food | Mad |
 | End feed | End feed | Afslut amning |
 | Which side? | Which side? | Hvilken side? |
+| Tick the sides in the order you fed. Optional. | — | Sæt flueben i den rækkefølge, du ammede. Valgfrit. |
+| No side | No side | Ingen side |
+| Just the time (untyped feed) | Just the time | Kun tidspunktet |
+| Feed (untyped feed, history title) | Feed | Måltid |
+| Diaper (plain change) | Diaper | Ble |
 | Left / Right | Left / Right | Venstre / Højre |
 | Left → Right | Left → Right | Venstre → Højre |
 | Diaper | Diaper | Ble |
@@ -297,19 +314,19 @@ The 01:52 pee falls *during* the 01:40 breastfeed. That is realistic and intende
 These names are what the apps code against.
 
 **`model/`**
-- `Entry` and the enums from §1, `@Serializable`.
+- `Entry` and the enums from §1, `@Serializable` (`Breast` is UI-only), plus `DiaperKind` (PEE, POOP, BOTH, PLAIN) derived from the flags, and `BreastSide.fromOrder` / `toggle` / `order` for the tick order.
 - Extensions: `isInterval`, `isRunning`, `durationMillis(now)`.
 
 **`data/`**
 - Room `XaternityDatabase` and `EntryDao`. Storage is LWW-friendly: `upsert` only replaces a row when the incoming `updatedAtMillis` is ≥ the stored one.
 - `EntryRepository` (interface) plus `RoomEntryRepository`:
   - `fun observeEntries(): Flow<List<Entry>>`: non-deleted entries.
-  - `suspend fun logFeed(type: FeedType, at: Long): Entry`: FORMULA/FOOD instants.
+  - `suspend fun logFeed(type: FeedType?, at: Long): Entry`: FORMULA/FOOD instants, or an untyped feed (`null`).
   - `suspend fun startBreastfeed(at: Long): Result<Entry>`: fails if one is running.
-  - `suspend fun endBreastfeed(id: String, at: Long, side: BreastSide): EndResult`: `Ended(entry)` or `Discarded(entry)` (under 60 s).
+  - `suspend fun endBreastfeed(id: String, at: Long, side: BreastSide?): EndResult`: `Ended(entry)` or `Discarded(entry)` (under 60 s). `side` null records no side.
   - `suspend fun startSleep(at: Long): Result<Entry>`.
   - `suspend fun endSleep(id: String, at: Long): EndResult`.
-  - `suspend fun logDiaper(at: Long, pee: Boolean, poop: Boolean, color: PoopColor?, texture: PoopTexture?): Entry`.
+  - `suspend fun logDiaper(at: Long, pee: Boolean, poop: Boolean, color: PoopColor?, texture: PoopTexture?): Entry`. Neither flag logs a plain change.
   - `suspend fun update(entry: Entry): Entry`: bumps `updatedAtMillis` and validates the invariants.
   - `suspend fun delete(id: String)`: soft delete.
   - `suspend fun restore(previous: Entry)`: undo; writes the old snapshot with a new `updatedAtMillis`.

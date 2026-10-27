@@ -63,7 +63,6 @@ import com.ffmathy.xaternity.core.format.SyncPeer
 import com.ffmathy.xaternity.core.format.rememberFormatters
 import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.model.Entry
-import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.clockDurationMillis
 import com.ffmathy.xaternity.core.model.diaperKind
 import com.ffmathy.xaternity.core.ui.icons.XIcon
@@ -265,7 +264,7 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
     ) {
         Row(Modifier.heightIn(min = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             XIcon(
-                XIcons.forFeedType(lastFeed?.feedType ?: FeedType.FORMULA),
+                XIcons.forFeedType(lastFeed?.feedType),
                 contentDescription = null,
                 tint = if (ambient) WatchAmbient.content else feed.strong,
                 size = 16.dp,
@@ -732,7 +731,7 @@ private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
     if (state.mode == MainMode.ASLEEP) {
         state.lastFeed?.let { feed ->
             cards += CardModel(
-                "last-feed", feed, TimeField.START, XIcons.forFeedType(feed.feedType ?: FeedType.FORMULA), events.feed.strong,
+                "last-feed", feed, TimeField.START, XIcons.forFeedType(feed.feedType), events.feed.strong,
                 lastFedWord, f.agoAndClock(feed.startMillis, now),
                 f.spokenAgo(lastFeedSpoken, feedTypeLabel(feed), feed.startMillis, now),
             )
@@ -749,11 +748,12 @@ private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
         }
     }
     state.lastDiaper?.let { diaper ->
-        val kind = diaper.diaperKind ?: DiaperKind.PEE
+        val kind = diaper.diaperKind ?: DiaperKind.PLAIN
         val (icon, tint) = when (kind) {
             DiaperKind.PEE -> XIcons.pee to events.pee.strong
             DiaperKind.POOP -> XIcons.poop to events.poop.strong
             DiaperKind.BOTH -> bothIcon to Color.Unspecified
+            DiaperKind.PLAIN -> XIcons.diaper to events.diaper.strong
         }
         cards += CardModel(
             "diaper", diaper, TimeField.START, icon, tint, diaperStatusLabel(diaper),

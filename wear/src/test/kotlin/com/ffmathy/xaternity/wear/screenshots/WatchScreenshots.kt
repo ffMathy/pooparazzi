@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.core.app.ApplicationProvider
 import androidx.wear.compose.material3.AppScaffold
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.format.ClockFormatter
 import com.ffmathy.xaternity.core.model.PoopColor
 import com.ffmathy.xaternity.core.sample.SampleData
@@ -22,6 +23,7 @@ import com.ffmathy.xaternity.wear.diaper.PoopOptionScreen
 import com.ffmathy.xaternity.wear.diaper.colourOptions
 import com.ffmathy.xaternity.wear.feed.FeedTypeActions
 import com.ffmathy.xaternity.wear.feed.FeedTypeScreen
+import com.ffmathy.xaternity.wear.feed.SideActions
 import com.ffmathy.xaternity.wear.feed.SideScreen
 import com.ffmathy.xaternity.wear.logged.LoggedScreen
 import com.ffmathy.xaternity.wear.logged.UndoneScreen
@@ -105,7 +107,13 @@ abstract class WatchScreenshots(private val lang: String) {
     fun s05_feedType() = capture("05-feed-type", SampleData.NOW_1432) { FeedTypeScreen(WearSamples.feedDraft(), FeedTypeActions()) }
 
     @Test
-    fun s06_side() = capture("06-side", SampleData.NOW_1450) { SideScreen(WearSamples.sideDraft(), onSide = {}) }
+    fun s06_side() = capture("06-side", SampleData.NOW_1450) { SideScreen(WearSamples.sideDraft(), SideActions()) }
+
+    /** Right ticked first, then Left: the "1" / "2" badges and "Right → Left". */
+    @Test
+    fun s06_sideTicked() = capture("06-side-ticked", SampleData.NOW_1450) {
+        SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.RIGHT, Breast.LEFT)), SideActions())
+    }
 
     /** As it opens: the title and the Pee and Poop checkboxes (V1_ADDITIONS §3.2), Poop on. */
     @Test

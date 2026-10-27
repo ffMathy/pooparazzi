@@ -65,7 +65,14 @@ internal class WidgetColors(val night: Boolean) {
     /** The two-tone "both" glyph in this palette's PEE and POOP strong (drawn untinted). */
     @DrawableRes val bothIcon: Int = if (night) XDrawables.bothNight else XDrawables.bothDay
 
-    fun diaper(kind: DiaperKind): EventColors = if (kind == DiaperKind.PEE) pee else poop
+    val diaper: EventColors = palette.events.diaper
+
+    /** PEE or POOP colours; a plain change (neither) takes the DIAPER colours. */
+    fun diaper(kind: DiaperKind): EventColors = when (kind) {
+        DiaperKind.PEE -> pee
+        DiaperKind.PLAIN -> diaper
+        DiaperKind.POOP, DiaperKind.BOTH -> poop
+    }
 }
 
 internal fun Color.provider(): ColorProvider = ColorProvider(this)
@@ -100,7 +107,7 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     fun sinceOnly(millis: Long): String = string(R.string.notification_since, time(millis))
 
     fun receipt(receipt: WidgetReceipt): String = when (receipt.kind) {
-        ReceiptKind.LOGGED -> atTime(string(CoreR.string.receipt_logged, labels.diaperKind(receipt.diaperKind ?: DiaperKind.PEE)), receipt.atMillis)
+        ReceiptKind.LOGGED -> atTime(string(CoreR.string.receipt_logged, labels.diaperKind(receipt.diaperKind ?: DiaperKind.PLAIN)), receipt.atMillis)
         ReceiptKind.SLEEP_STARTED -> atTime(string(CoreR.string.receipt_sleep_started), receipt.atMillis)
         ReceiptKind.WOKE_UP -> atTime(string(CoreR.string.action_woke_up), receipt.atMillis)
         ReceiptKind.SLEEP_CANCELLED -> string(CoreR.string.receipt_sleep_cancelled)
@@ -108,7 +115,7 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
 
     /** The receipt without its verb, where the full line does not fit beside Undo: "Pee + poop at 14:32". */
     fun receiptShort(receipt: WidgetReceipt): String = when (receipt.kind) {
-        ReceiptKind.LOGGED -> atTime(labels.diaperKind(receipt.diaperKind ?: DiaperKind.PEE), receipt.atMillis)
+        ReceiptKind.LOGGED -> atTime(labels.diaperKind(receipt.diaperKind ?: DiaperKind.PLAIN), receipt.atMillis)
         else -> receipt(receipt)
     }
 

@@ -19,6 +19,8 @@
     <string name="feed_type_formula_compact">Formula</string>
     <string name="feed_type_food">Food</string>
     <string name="feed_breast_starts_timer">Starts a timer</string>
+    <!-- Logs a feed with no type: only its time is recorded -->
+    <string name="feed_type_none">Just the time</string>
 
     <!-- Breast sides. The side glyphs carry no letters; the letters below come from text. -->
     <string name="side_left">Left</string>
@@ -28,6 +30,10 @@
     <string name="side_letter_left">L</string>
     <string name="side_letter_right">R</string>
     <string name="side_question">Which side?</string>
+    <!-- End-of-feed checkboxes: the order of the ticks is the order recorded; ticking nothing is fine -->
+    <string name="side_order_hint">Tick the sides in the order you fed. Optional.</string>
+    <!-- Summary line when no side is ticked -->
+    <string name="side_none">No side</string>
 
     <!-- Diapers -->
     <string name="diaper_pee">Pee</string>

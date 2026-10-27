@@ -2,6 +2,8 @@ package com.ffmathy.xaternity.wear.state
 
 import androidx.compose.runtime.Immutable
 import com.ffmathy.xaternity.core.domain.Summary
+import com.ffmathy.xaternity.core.model.Breast
+import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.PoopColor
 import com.ffmathy.xaternity.core.model.PoopTexture
@@ -94,11 +96,16 @@ data class FeedDraft(val stamp: Long, val offsetMinutes: Int = 0, val zone: Zone
     val at: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
 }
 
-/** The Side screen: the running breastfeed and the end time stamped on the "End feed" tap. */
+/**
+ * The Side screen: the running breastfeed, the end time stamped on the "End feed" tap, and the Left / Right
+ * checkboxes ticked so far, in tick order ([side] is what that order records; null = no side).
+ */
 @Immutable
-data class SideDraft(val feed: Entry, val endAt: Long, val zone: ZoneId)
+data class SideDraft(val feed: Entry, val endAt: Long, val zone: ZoneId, val ticks: List<Breast> = emptyList()) {
+    val side: BreastSide? get() = BreastSide.fromOrder(ticks)
+}
 
-/** The Diaper screen (V1_ADDITIONS §3.2). Both checkboxes start off; Save needs one. */
+/** The Diaper screen (V1_ADDITIONS §3.2). Both checkboxes start off and are optional: nothing ticked is a plain change. */
 @Immutable
 data class DiaperDraft(
     val stamp: Long,
@@ -110,7 +117,6 @@ data class DiaperDraft(
     val texture: PoopTexture? = null,
 ) {
     val at: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
-    val canSave: Boolean get() = pee || poop
 }
 
 /** What a Logged confirmation is for (DESIGN_SPEC §3.5.6, V1_ADDITIONS §2.2, §3.2). */

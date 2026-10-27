@@ -20,28 +20,32 @@ import com.ffmathy.xaternity.phone.R
 /** An icon with its colour; [tint] is `Color.Unspecified` for the two-tone `both`. */
 data class TintedIcon(val icon: ImageVector, val tint: Color)
 
-/** The kind glyph of a diaper: `pee`, `poop` or the two-tone `both` (never the generic `diaper`, DESIGN_SPEC §3.3.1). */
+/**
+ * The kind glyph of a diaper: `pee`, `poop` or the two-tone `both` (DESIGN_SPEC §3.3.1); the generic `diaper` only for
+ * a plain change logged with neither.
+ */
 @Composable
 fun diaperIcon(kind: DiaperKind, events: EventPalette): TintedIcon = when (kind) {
     DiaperKind.PEE -> TintedIcon(XIcons.pee, events.pee.strong)
     DiaperKind.POOP -> TintedIcon(XIcons.poop, events.poop.strong)
     DiaperKind.BOTH -> TintedIcon(rememberBothIcon(events.pee.strong, events.poop.strong), Color.Unspecified)
+    DiaperKind.PLAIN -> TintedIcon(XIcons.diaper, events.diaper.strong)
 }
 
 /** The icon of an entry, in its event's strong colour. */
 @Composable
 fun entryIcon(entry: Entry, events: EventPalette): TintedIcon = when (entry.kind) {
     EntryKind.SLEEP -> TintedIcon(XIcons.sleep, events.sleep.strong)
-    EntryKind.FEED -> TintedIcon(XIcons.forFeedType(entry.feedType ?: FeedType.FORMULA), events.feed.strong)
-    EntryKind.DIAPER -> diaperIcon(entry.diaperKind ?: DiaperKind.PEE, events)
+    EntryKind.FEED -> TintedIcon(XIcons.forFeedType(entry.feedType), events.feed.strong)
+    EntryKind.DIAPER -> diaperIcon(entry.diaperKind ?: DiaperKind.PLAIN, events)
 }
 
-/** "Formula" (with a soft hyphen in Danish where [compact]); "Breast"; "Food". */
+/** "Formula" (with a soft hyphen in Danish where [compact]); "Breast"; "Food"; "Feed" for no type (null). */
 @Composable
 @ReadOnlyComposable
-fun feedTypeLabel(type: FeedType, compact: Boolean = false): String = stringResource(Labels.feedType(type, compact))
+fun feedTypeLabel(type: FeedType?, compact: Boolean = false): String = stringResource(Labels.feedType(type, compact))
 
-/** "Pee", "Poop", "Pee + poop" (receipts). */
+/** "Pee", "Poop", "Pee + poop", "Diaper" (receipts). */
 @Composable
 @ReadOnlyComposable
 fun diaperLabel(kind: DiaperKind): String = stringResource(Labels.diaperKind(kind))

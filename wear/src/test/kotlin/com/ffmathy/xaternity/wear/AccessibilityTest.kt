@@ -20,9 +20,11 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import androidx.wear.compose.material3.AppScaffold
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.sample.SampleData
 import com.ffmathy.xaternity.wear.diaper.DiaperActions
 import com.ffmathy.xaternity.wear.diaper.DiaperScreen
+import com.ffmathy.xaternity.wear.feed.SideActions
 import com.ffmathy.xaternity.wear.feed.SideScreen
 import com.ffmathy.xaternity.wear.logged.LOGGED_INERT_MILLIS
 import com.ffmathy.xaternity.wear.logged.LoggedScreen
@@ -87,14 +89,15 @@ class AccessibilityTest {
     }
 
     @Test
-    fun diaperCheckboxesAreCheckboxesAndSaveWaitsForOne() {
+    fun diaperCheckboxesAreCheckboxesAndSaveIsAlwaysEnabled() {
         val empty = DiaperDraft(stamp = SampleData.NOW_1432, zone = WearSamples.zone)
         show { DiaperScreen(empty, DiaperActions()) }
         compose.mainClock.advanceTimeBy(600)
         compose.onNodeWithText("Pee")
             .assert(hasRole(Role.Checkbox))
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.Off))
-        compose.onNodeWithText("Save").assertIsNotEnabled()
+        // Both are optional: Save with nothing ticked logs a plain change.
+        compose.onNodeWithText("Save").assertIsEnabled()
     }
 
     @Test
@@ -114,12 +117,13 @@ class AccessibilityTest {
     }
 
     @Test
-    fun sidesAreReadInWordsInTheirOrder() {
-        show { SideScreen(WearSamples.sideDraft(), onSide = {}) }
-        // Never "Left → Right" with an arrow (DESIGN_SPEC §9.4); the order matters.
-        compose.onNodeWithContentDescription("Left then right").assert(hasRole(Role.Button))
+    fun sidesAreCheckboxesReadWithTheirPlaceInTheOrder() {
+        show { SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.RIGHT, Breast.LEFT)), SideActions()) }
+        // Never "Right → Left" with an arrow (DESIGN_SPEC §9.4); the order matters.
+        compose.onNodeWithContentDescription("Right, first").assert(hasRole(Role.Checkbox))
+        compose.onNodeWithContentDescription("Left, second").assert(hasRole(Role.Checkbox))
         compose.onNodeWithContentDescription("Right then left").assertExists()
-        compose.onNodeWithContentDescription("Left").assertExists()
+        compose.onNodeWithContentDescription("End feed").assertIsEnabled()
         // The feed being ended: no dash, no "18m".
         compose.onNodeWithContentDescription("14:32 to 14:50, 18 minutes").assertExists()
     }

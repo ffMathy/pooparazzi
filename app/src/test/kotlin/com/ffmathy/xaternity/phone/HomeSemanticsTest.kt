@@ -7,7 +7,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -18,6 +18,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.AnnotatedString
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.PoopColor
@@ -55,7 +56,8 @@ class HomeSemanticsTest {
         override fun onSleepToggle(shownRunning: Boolean) { calls += "toggle:$shownRunning" }
         override fun onOpenHistory() { calls += "history" }
         override fun onPoopColor(color: PoopColor?) { calls += "colour:$color" }
-        override fun onSide(side: BreastSide) { calls += "side:$side" }
+        override fun onSideTick(breast: Breast) { calls += "tick:$breast" }
+        override fun onEndFeed() { calls += "end" }
     }
 
     @Before
@@ -97,14 +99,15 @@ class HomeSemanticsTest {
     }
 
     @Test
-    fun diaperTilesAreCheckboxesAndSaveWaitsForOne() {
+    fun diaperTilesAreCheckboxesAndSaveIsAlwaysEnabled() {
         show(diaperSheet(SheetModel.Diaper(stamp = SampleData.NOW_1432)))
         compose.onNodeWithText("Pee")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
             .assertIsOff()
             .performClick()
         compose.onNodeWithText("Poop").assertIsOff()
-        compose.onNodeWithText("Save").assertIsNotEnabled()
+        // Both are optional: Save with nothing ticked logs a plain change.
+        compose.onNodeWithText("Save").assertIsEnabled()
         assertEquals(listOf("pee:true"), calls)
     }
 
@@ -194,12 +197,22 @@ class HomeSemanticsTest {
         sheet = sheet,
     )
 
-    /** The side tiles speak "Left then right", not the arrow, and still end the feed with that side. */
+    /** Left and Right are checkboxes; the ticked order is spoken ("Right, first") and summarised without the arrow. */
     @Test
-    fun sideTilesSpeakTheSideWithoutTheArrow() {
+    fun sideCheckboxesSpeakTheirTickOrder() {
         show(HomeSamples.sideSheet(), night = false)
-        compose.onNodeWithContentDescription("Left then right").assertHasClickAction().performClick()
-        compose.onNodeWithContentDescription("Right").assertHasClickAction()
-        assertTrue(calls.contains("side:LEFT_THEN_RIGHT"))
+        compose.onNodeWithContentDescription("No side").assertExists()
+        compose.onNodeWithContentDescription("Left").assertIsOff()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
+            .performClick()
+        assertTrue(calls.contains("tick:LEFT"))
+    }
+
+    @Test
+    fun tickedSidesSpeakTheirPlace() {
+        show(HomeSamples.sideSheet(listOf(Breast.RIGHT, Breast.LEFT)), night = false)
+        compose.onNodeWithContentDescription("Right, first").assertIsOn()
+        compose.onNodeWithContentDescription("Left, second").assertIsOn()
+        compose.onNodeWithContentDescription("Right then left").assertExists()
     }
 }

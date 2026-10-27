@@ -67,7 +67,7 @@ internal object HomeStateBuilder {
     }
 
     private fun row2(summary: Summary): SinceRow? = summary.lastDiaper?.let {
-        SinceRow.LastDiaper(it, it.diaperKind ?: DiaperKind.PEE, clockDurationMillis(it.startMillis, summary.now))
+        SinceRow.LastDiaper(it, it.diaperKind ?: DiaperKind.PLAIN, clockDurationMillis(it.startMillis, summary.now))
     }
 
     private fun cardUi(model: CardModel, entries: List<Entry>, summary: Summary, timings: HomeTimings): UndoCardUi {
@@ -153,6 +153,7 @@ internal object HomeStateBuilder {
                 stamp = sheet.stamp,
                 offsetMinutes = sheet.offsetMinutes,
                 chips = chips(SIDE_CHIPS) { sideEndAllowed(sheet.startMillis, sheet.stamp, it) },
+                ticks = sheet.ticks,
             )
             is SheetModel.Diaper -> HomeSheetUi.Diaper(
                 stamp = sheet.stamp,

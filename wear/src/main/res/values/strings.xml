@@ -111,4 +111,7 @@
     <!-- "Asleep since 02:05" (no ticking duration). Keep the #start# token: the system fills it in. -->
     <string name="ongoing_asleep_since">Asleep since #start#</string>
     <string name="ongoing_breastfeeding_since">Breastfeeding since #start#</string>
+    <!-- TalkBack, the place of a ticked side checkbox: "Left, first, checkbox, checked" -->
+    <string name="spoken_side_first">first</string>
+    <string name="spoken_side_second">second</string>
 </resources>

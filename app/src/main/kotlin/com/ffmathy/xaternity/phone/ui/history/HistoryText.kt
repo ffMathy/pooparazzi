@@ -12,7 +12,6 @@ import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
-import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.clockDurationMillis
 import com.ffmathy.xaternity.core.model.diaperKind
 import com.ffmathy.xaternity.core.model.isBreastfeed
@@ -51,7 +50,7 @@ internal fun dayLabel(day: LocalDate, today: LocalDate, formatters: Formatters):
 @ReadOnlyComposable
 internal fun historyTitle(entry: Entry, now: Long, formatters: Formatters): String =
     if (entry.kind == EntryKind.FEED && !entry.isBreastfeed) {
-        stringResource(Labels.feedType(entry.feedType ?: FeedType.FORMULA, compact = true))
+        stringResource(Labels.feedType(entry.feedType, compact = true))
     } else {
         formatters.labels.historyTitle(entry, formatters.duration, now)
     }
@@ -99,7 +98,7 @@ internal fun historySpoken(entry: Entry, day: LocalDate, zone: ZoneId, now: Long
 @ReadOnlyComposable
 internal fun spokenEntryName(entry: Entry): String = when (entry.kind) {
     EntryKind.SLEEP -> stringResource(CoreR.string.kind_sleep)
-    EntryKind.FEED -> stringResource(Labels.feedType(entry.feedType ?: FeedType.FORMULA))
+    EntryKind.FEED -> stringResource(Labels.feedType(entry.feedType))
     EntryKind.DIAPER -> entry.diaperKind?.let { spokenDiaperKind(it) } ?: stringResource(CoreR.string.kind_diaper)
 }
 
@@ -135,7 +134,7 @@ internal fun deletedLabel(entry: Entry): String = when (entry.kind) {
     EntryKind.FEED -> if (entry.isBreastfeed) {
         stringResource(CoreR.string.kind_feed)
     } else {
-        stringResource(Labels.feedType(entry.feedType ?: FeedType.FORMULA, compact = true))
+        stringResource(Labels.feedType(entry.feedType, compact = true))
     }
     EntryKind.DIAPER -> entry.diaperKind?.let { stringResource(Labels.diaperKind(it)) } ?: stringResource(CoreR.string.kind_diaper)
 }

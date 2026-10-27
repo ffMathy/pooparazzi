@@ -83,17 +83,20 @@ object XIcons {
 
     // ---- Lookups ------------------------------------------------------------------------------
 
-    fun forFeedType(type: FeedType): ImageVector = when (type) {
+    /** Type glyph; an untyped feed (null) uses the generic `feed` bottle. */
+    fun forFeedType(type: FeedType?): ImageVector = when (type) {
+        null -> feed
         FeedType.BREAST -> breast
         FeedType.FORMULA -> feed
         FeedType.FOOD -> food
     }
 
-    /** Kind glyph: `pee`, `poop` or (single-colour) `both`. */
+    /** Kind glyph: `pee`, `poop`, (single-colour) `both`, or `diaper` for a plain change. */
     fun forDiaperKind(kind: DiaperKind): ImageVector = when (kind) {
         DiaperKind.PEE -> pee
         DiaperKind.POOP -> poop
         DiaperKind.BOTH -> both
+        DiaperKind.PLAIN -> diaper
     }
 
     fun forSide(side: BreastSide): ImageVector = when (side) {

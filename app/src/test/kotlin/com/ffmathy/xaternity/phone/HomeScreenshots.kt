@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.phone.ui.home.HomeActions
 import com.ffmathy.xaternity.phone.ui.home.HomeScreen
 import com.ffmathy.xaternity.phone.ui.home.HomeUiState
@@ -63,6 +64,8 @@ abstract class HomeScreenshots(private val language: String) {
     @Test fun feedSheet() = sheet("06-feed-sheet", night = true, HomeSamples.feedSheet())
 
     @Test fun sideSheet() = sheet("07-side-sheet", night = false, HomeSamples.sideSheet())
+
+    @Test fun sideSheetTicked() = sheet("07-side-sheet-ticked", night = true, HomeSamples.sideSheet(listOf(Breast.RIGHT, Breast.LEFT)))
 
     @Test fun diaperSheet() = sheet("08-diaper-sheet", night = true, HomeSamples.diaperSheet())
 

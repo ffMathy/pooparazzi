@@ -14,6 +14,7 @@ import com.ffmathy.xaternity.core.data.LogResult
 import com.ffmathy.xaternity.core.domain.Summary
 import com.ffmathy.xaternity.core.domain.summarize
 import com.ffmathy.xaternity.core.model.AlreadyRunningException
+import com.ffmathy.xaternity.core.model.Breast
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.model.Entry
@@ -305,7 +306,7 @@ class HomeViewModel(
         haptic(HomeHaptic.SEGMENT_TICK)
     }
 
-    override fun onFeedType(type: FeedType) = act {
+    override fun onFeedType(type: FeedType?) = act {
         val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
         val at = feedSheet.stamp + feedSheet.offsetMinutes * MINUTE_MILLIS
         closeSheet(committed = true)
@@ -348,10 +349,16 @@ class HomeViewModel(
         }
     }
 
-    override fun onSide(side: BreastSide) = act {
+    override fun onSideTick(breast: Breast) = act {
+        val sideSheet = sheet.value as? SheetModel.Side ?: return@act
+        sheet.value = sideSheet.copy(ticks = BreastSide.toggle(sideSheet.ticks, breast))
+    }
+
+    override fun onEndFeed() = act {
         val sideSheet = sheet.value as? SheetModel.Side ?: return@act
         val at = sideSheet.stamp + sideSheet.offsetMinutes * MINUTE_MILLIS
         if (at < sideSheet.startMillis) return@act
+        val side = BreastSide.fromOrder(sideSheet.ticks)
         closeSheet(committed = true)
         attempt { repository.endBreastfeed(sideSheet.feedId, at, side) }
             .onSuccess { result ->
@@ -393,7 +400,6 @@ class HomeViewModel(
 
     override fun onDiaperSave() = act {
         val diaper = sheet.value as? SheetModel.Diaper ?: return@act
-        if (!diaper.pee && !diaper.poop) return@act
         val at = diaper.stamp + diaper.offsetMinutes * MINUTE_MILLIS
         closeSheet(committed = true)
         val duringSleep = summary().runningSleep != null
@@ -409,7 +415,7 @@ class HomeViewModel(
             .onSuccess { result ->
                 when (result) {
                     is LogResult.Logged -> {
-                        val kind = result.entry.diaperKind ?: DiaperKind.PEE
+                        val kind = result.entry.diaperKind ?: DiaperKind.PLAIN
                         showCard(
                             CardSpec.DiaperLogged(result.entry.id, kind),
                             baseTime = diaper.stamp,
@@ -465,9 +471,9 @@ class HomeViewModel(
             ReceiptKind.LOGGED -> {
                 if (entry.deleted) return
                 val spec = when (entry.kind) {
-                    EntryKind.DIAPER -> CardSpec.DiaperLogged(entry.id, entry.diaperKind ?: DiaperKind.PEE)
+                    EntryKind.DIAPER -> CardSpec.DiaperLogged(entry.id, entry.diaperKind ?: DiaperKind.PLAIN)
                     EntryKind.FEED ->
-                        if (entry.isBreastfeed) CardSpec.FeedStarted(entry.id) else CardSpec.FeedLogged(entry.id, entry.feedType ?: FeedType.FORMULA)
+                        if (entry.isBreastfeed) CardSpec.FeedStarted(entry.id) else CardSpec.FeedLogged(entry.id, entry.feedType)
                     EntryKind.SLEEP -> CardSpec.SleepStarted(entry.id)
                 }
                 val sleep = summary().runningSleep
@@ -570,8 +576,8 @@ class HomeViewModel(
             scheduleMessageEnd(current.key, message)
         } else {
             val spec = when (existing.kind) {
-                EntryKind.DIAPER -> CardSpec.DiaperLogged(existing.id, existing.diaperKind ?: DiaperKind.PEE)
-                else -> CardSpec.FeedLogged(existing.id, existing.feedType ?: FeedType.FORMULA)
+                EntryKind.DIAPER -> CardSpec.DiaperLogged(existing.id, existing.diaperKind ?: DiaperKind.PLAIN)
+                else -> CardSpec.FeedLogged(existing.id, existing.feedType)
             }
             showCard(spec, baseTime = existing.startMillis, duringSleep = duringSleep, undo = Undo.Delete(existing.id), message = message)
         }

@@ -1,5 +1,6 @@
 package com.ffmathy.xaternity.wear
 
+import android.os.Build
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import com.ffmathy.xaternity.wear.theme.AmbientSupport
@@ -24,7 +25,9 @@ class MainActivityLaunchTest {
 
     @Test
     fun startsWithoutTheWearSdk() {
-        assertEquals(AmbientSupport.NONE, AmbientSupport.detect())
+        // Robolectric's API 36 runtime ships the Wear SDK ambient classes; older ones have neither library.
+        val expected = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) AmbientSupport.WEAR_SDK else AmbientSupport.NONE
+        assertEquals(expected, AmbientSupport.detect())
         compose.waitUntil(5_000) { compose.onAllNodes(hasContentDescription("Start sleep")).fetchSemanticsNodes().isNotEmpty() }
     }
 }

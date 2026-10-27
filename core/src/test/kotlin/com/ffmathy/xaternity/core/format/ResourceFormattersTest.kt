@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.xaternity.core.R
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.DiaperKind
+import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
 import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.PoopColor
@@ -106,6 +107,22 @@ class EnglishResourceFormattersTest {
     }
 
     @Test
+    fun minimalEntriesReadPlainly() {
+        val l = f.labels
+        val untyped = Entry.feed(null, SampleData.at(12, 22))
+        assertEquals("Feed", l.historyTitle(untyped, f.duration, SampleData.NOW_1432))
+        assertEquals("12:22", l.historySupporting(untyped, TODAY, ZONE, SampleData.NOW_1432, f.clock, f.duration, f.relative))
+        val plain = Entry.diaper(SampleData.at(13, 44), pee = false, poop = false)
+        assertEquals("Diaper", l.historyTitle(plain, f.duration, SampleData.NOW_1432))
+        assertEquals("Diaper", l.diaperKindStatus(DiaperKind.PLAIN))
+        assertEquals("13:44", l.historySupporting(plain, TODAY, ZONE, SampleData.NOW_1432, f.clock, f.duration, f.relative))
+        val noSide = Entry.breastfeed(SampleData.at(12, 0), SampleData.at(12, 18))
+        assertEquals("Breast", l.historyTitle(noSide, f.duration, SampleData.NOW_1432))
+        assertEquals("No side", l.sideOrNone(null))
+        assertEquals("Left → Right", l.sideOrNone(BreastSide.LEFT_THEN_RIGHT))
+    }
+
+    @Test
     fun syncLines() {
         val l = f.labels
         assertEquals("Synced with watch · 14:31", l.syncLine(SyncStatus.Synced(SampleData.SYNCED_1431), SyncPeer.WATCH, f.clock, ZONE))
@@ -192,6 +209,9 @@ class DanishResourceFormattersTest {
         assertEquals("Amning · Venstre → Højre", l.historyTitle(entry("sample-breast-0140"), f.duration, SampleData.NOW_1432))
         assertEquals("Amning · i gang", l.historyTitle(SampleData.runningBreastfeed(), f.duration, SampleData.NOW_1450))
         assertEquals("Søvn · 47m", l.historyTitle(entry("sample-sleep-1240"), f.duration, SampleData.NOW_1432))
+        assertEquals("Måltid", l.historyTitle(Entry.feed(null, SampleData.at(12, 22)), f.duration, SampleData.NOW_1432))
+        assertEquals("Ble", l.historyTitle(Entry.diaper(SampleData.at(13, 44), pee = false, poop = false), f.duration, SampleData.NOW_1432))
+        assertEquals("Ingen side", l.sideOrNone(null))
         assertEquals(
             "Synkroniseret med ur · 14:31",
             l.syncLine(SyncStatus.Synced(SampleData.SYNCED_1431), SyncPeer.WATCH, f.clock, ZONE),

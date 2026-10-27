@@ -74,8 +74,9 @@ internal class DiaperSheetCallbacks(
 
 /**
  * The Diaper sheet (V1_ADDITIONS §3.1): "Diaper · 14:32", offset chips, Pee and Poop checkbox tiles (both off when
- * the sheet opens), Colour and Texture (optional, single-select; tap again clears) once Poop is on, the health hint
- * for Pale, Red or Black, and Save (disabled until a checkbox is on) at the bottom end, in the thumb zone.
+ * the sheet opens, both optional), Colour and Texture (optional, single-select; tap again clears) once Poop is on, the
+ * health hint for Pale, Red or Black, and Save at the bottom end, in the thumb zone. Save is always enabled: nothing
+ * ticked logs a plain diaper change.
  */
 @Composable
 internal fun DiaperSheetContent(sheet: HomeSheetUi.Diaper, zone: ZoneId, formatters: Formatters, callbacks: DiaperSheetCallbacks) {
@@ -105,7 +106,7 @@ internal fun DiaperSheetContent(sheet: HomeSheetUi.Diaper, zone: ZoneId, formatt
         )
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            SaveButton(enabled = sheet.canSave && readiness.ready, onClick = callbacks.onSave)
+            SaveButton(enabled = readiness.ready, onClick = callbacks.onSave)
         }
     }
 }
@@ -307,9 +308,12 @@ private fun HealthHint() {
     }
 }
 
-/** Save: 160 × 56, r 28, `check` 20 + 8 + labelLarge; Night primaryContainer, Day primary (DESIGN_SPEC §3.3.4). */
+/**
+ * Save: 160 × 56, r 28, `check` 20 + 8 + labelLarge; Night primaryContainer, Day primary (DESIGN_SPEC §3.3.4).
+ * [label] defaults to "Save" (the Side sheet passes "End feed").
+ */
 @Composable
-internal fun SaveButton(enabled: Boolean, onClick: () -> Unit) {
+internal fun SaveButton(enabled: Boolean, onClick: () -> Unit, label: String = stringResource(CoreR.string.action_save)) {
     val colors = MaterialTheme.colorScheme
     val night = LocalNightLight.current.isNight
     val container = if (night) colors.primaryContainer else colors.primary
@@ -331,6 +335,6 @@ internal fun SaveButton(enabled: Boolean, onClick: () -> Unit) {
         val tint = if (enabled) content else colors.onSurface.copy(alpha = 0.38f)
         XIcon(XIcons.check, contentDescription = null, tint = tint, size = 20.dp)
         Spacer(Modifier.size(8.dp))
-        Text(stringResource(CoreR.string.action_save), style = MaterialTheme.typography.labelLarge)
+        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
 }
