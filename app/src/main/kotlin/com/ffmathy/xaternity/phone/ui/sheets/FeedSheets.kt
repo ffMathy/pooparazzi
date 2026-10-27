@@ -30,8 +30,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
+import com.ffmathy.xaternity.phone.ui.history.spokenSide
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.Hyphens
@@ -166,12 +169,16 @@ internal fun SideSheetContent(
 private fun SideTile(side: BreastSide, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val feed = LocalXPalette.current.events.feed
     val shape = RoundedCornerShape(28.dp)
+    // TalkBack says "Left then right", not the arrow of the visible label (DESIGN_SPEC §9.4).
+    val spoken = spokenSide(side).replaceFirstChar { it.titlecase(LocalConfiguration.current.locales[0]) }
     Column(
         modifier
             .heightIn(min = 96.dp)
             .clip(shape)
             .background(feed.container)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            // The label and glyph letters are replaced by the spoken name; the click, role and enabled state stay.
+            .clearAndSetSemantics { contentDescription = spoken }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

@@ -27,7 +27,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import kotlin.math.ceil
 import com.ffmathy.xaternity.core.ui.icons.XIcon
 import com.ffmathy.xaternity.phone.ui.theme.LocalNightLightMotion
 
@@ -93,11 +97,20 @@ fun BigButton(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             XIcon(icon, contentDescription = null, tint = iconTint, size = BigButtonDefaults.IconSize)
+            val style = MaterialTheme.typography.headlineSmall.copy(hyphens = Hyphens.Auto, textAlign = TextAlign.Center)
+            val measurer = rememberTextMeasurer()
             Text(
                 label,
-                style = MaterialTheme.typography.headlineSmall.copy(hyphens = Hyphens.Auto),
+                style = style,
                 color = labelColor,
-                textAlign = TextAlign.Center,
+                // A wrapped label ("Afslut" / "amning") is as wide as its widest line, so icon and label stay
+                // centred together instead of the text taking all the remaining width.
+                modifier = Modifier.layout { measurable, constraints ->
+                    val lines = measurer.measure(label, style, constraints = Constraints(maxWidth = constraints.maxWidth))
+                    val widest = (0 until lines.lineCount).maxOf { ceil(lines.getLineRight(it) - lines.getLineLeft(it)).toInt() }
+                    val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = widest.coerceIn(0, constraints.maxWidth)))
+                    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+                },
             )
         }
     }

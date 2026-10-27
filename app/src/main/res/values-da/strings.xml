@@ -84,4 +84,12 @@
     <string name="notification_breastfeeding_title">%1$s ammes</string>
     <string name="notification_since">Siden kl. %1$s</string>
     <string name="notification_metric_since">Siden</string>
+    <!-- Indstillinger › Notifikationer -->
+    <string name="settings_section_notifications">Notifikationer</string>
+    <string name="settings_live_updates">Liveopdateringer</string>
+    <string name="settings_live_updates_summary">Vis en igangværende søvn eller amning i statuslinjen og på låseskærmen</string>
+    <string name="settings_notifications">Indstillinger for notifikationer</string>
+    <string name="settings_notifications_summary">En igangværende søvn eller amning vises som en notifikation med Vågnede eller Afslut amning</string>
+    <string name="settings_notifications_off">Notifikationer er slået fra</string>
+    <string name="settings_notifications_off_summary">Slå dem til for at se en igangværende søvn eller amning uden for appen</string>
 </resources>

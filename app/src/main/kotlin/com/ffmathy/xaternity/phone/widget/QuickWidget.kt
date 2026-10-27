@@ -46,8 +46,9 @@ class QuickWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val source = WidgetSource.from(context)
         val initial = source.current()
+        val snapshots = source.snapshots()
         provideContent {
-            val snapshot by source.snapshots().collectAsState(initial)
+            val snapshot by snapshots.collectAsState(initial)
             QuickWidgetContent(snapshot)
         }
     }

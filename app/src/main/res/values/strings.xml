@@ -124,4 +124,12 @@
     <string name="notification_since">Since %1$s</string>
     <!-- Metric label (Android 17), followed by a clock time -->
     <string name="notification_metric_since">Since</string>
+    <!-- Settings › Notifications (DESIGN_SPEC §10.5) -->
+    <string name="settings_section_notifications">Notifications</string>
+    <string name="settings_live_updates">Live Updates</string>
+    <string name="settings_live_updates_summary">Show a running sleep or breastfeed in the status bar and on the lock screen</string>
+    <string name="settings_notifications">Notification settings</string>
+    <string name="settings_notifications_summary">A running sleep or breastfeed shows a notification with Woke up or End feed</string>
+    <string name="settings_notifications_off">Notifications are off</string>
+    <string name="settings_notifications_off_summary">Turn them on to see a running sleep or breastfeed outside the app</string>
 </resources>

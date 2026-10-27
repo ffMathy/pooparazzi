@@ -60,8 +60,9 @@ class LogWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val source = WidgetSource.from(context)
         val initial = source.current()
+        val snapshots = source.snapshots()
         provideContent {
-            val snapshot by source.snapshots().collectAsState(initial)
+            val snapshot by snapshots.collectAsState(initial)
             LogWidgetContent(snapshot)
         }
     }
@@ -259,10 +260,14 @@ private fun LogButtons(
     modifier: GlanceModifier,
 ) {
     val context = LocalContext.current
-    // A label that needs two lines ("Afslut amning") gets the compact face so both lines fit the 68 dp button.
-    fun face(label: String, border: Boolean) = when {
+    val feedLabel = strings.string(if (snapshot.feeding) CoreR.string.action_end_feed else CoreR.string.kind_feed)
+    val diaperLabels = DiaperKind.entries.associateWith { strings.string(diaperLabel(it)) }
+    // One face for the whole row: when any label needs two lines ("Afslut amning", or a narrow widget) every button
+    // uses the compact face, so the icons and labels stay aligned and both lines fit the 68 dp button.
+    val style = when {
         !layout.labels -> FaceStyle.IconOnly
-        measure.fits(label, LabelSize, layout.buttonWidth - 8.dp - (if (border) 4.dp else 0.dp)) -> FaceStyle.Regular
+        measure.fits(feedLabel, LabelSize, layout.buttonWidth - 8.dp - (if (snapshot.feeding) 4.dp else 0.dp)) &&
+            diaperLabels.values.all { measure.fits(it, LabelSize, layout.buttonWidth - 8.dp) } -> FaceStyle.Regular
         else -> FaceStyle.Compact
     }
     Row(modifier) {
@@ -276,8 +281,7 @@ private fun LogButtons(
                 action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Side)),
                 description = strings.string(R.string.cd_end_feed_choose_side),
             ) {
-                val label = strings.string(CoreR.string.action_end_feed)
-                ButtonFace(XDrawables.breast, colors.feed.strong, label, colors.feed.onContainer, face(label, border = true))
+                ButtonFace(XDrawables.breast, colors.feed.strong, feedLabel, colors.feed.onContainer, style)
             }
         } else {
             WidgetButton(
@@ -287,26 +291,26 @@ private fun LogButtons(
                 action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Feed)),
                 description = strings.string(R.string.widget_cd_log_feed),
             ) {
-                val label = strings.string(CoreR.string.kind_feed)
-                ButtonFace(XDrawables.feed, colors.feed.strong, label, colors.feed.onContainer, face(label, border = false))
+                ButtonFace(XDrawables.feed, colors.feed.strong, feedLabel, colors.feed.onContainer, style)
             }
         }
         Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.PEE, strings, colors, cell, ::face)
+        DiaperButton(DiaperKind.PEE, diaperLabels.getValue(DiaperKind.PEE), strings, colors, cell, style)
         Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.POOP, strings, colors, cell, ::face)
+        DiaperButton(DiaperKind.POOP, diaperLabels.getValue(DiaperKind.POOP), strings, colors, cell, style)
         Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.BOTH, strings, colors, cell, ::face)
+        DiaperButton(DiaperKind.BOTH, diaperLabels.getValue(DiaperKind.BOTH), strings, colors, cell, style)
     }
 }
 
 @Composable
 private fun DiaperButton(
     kind: DiaperKind,
+    label: String,
     strings: WidgetStrings,
     colors: WidgetColors,
     modifier: GlanceModifier,
-    face: (label: String, border: Boolean) -> FaceStyle,
+    style: FaceStyle,
 ) {
     val action = actionRunCallback<LogDiaperAction>(actionParametersOf(LogDiaperAction.Kind to kind.name))
     val description = strings.string(
@@ -314,13 +318,6 @@ private fun DiaperButton(
             DiaperKind.PEE -> R.string.widget_cd_log_pee
             DiaperKind.POOP -> R.string.widget_cd_log_poop
             DiaperKind.BOTH -> R.string.widget_cd_log_both
-        },
-    )
-    val label = strings.string(
-        when (kind) {
-            DiaperKind.PEE -> CoreR.string.diaper_pee
-            DiaperKind.POOP -> CoreR.string.diaper_poop
-            DiaperKind.BOTH -> CoreR.string.diaper_both
         },
     )
     if (kind == DiaperKind.BOTH) {
@@ -331,15 +328,22 @@ private fun DiaperButton(
                 Box(GlanceModifier.defaultWeight().fillMaxHeight().background(colors.poop.container.provider())) {}
             }
             Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                ButtonFace(colors.bothIcon, null, label, colors.poop.onContainer, face(label, false))
+                ButtonFace(colors.bothIcon, null, label, colors.poop.onContainer, style)
             }
         }
     } else {
         val event = colors.diaper(kind)
         WidgetButton(modifier = modifier, fill = event.container, radius = 20.dp, action = action, description = description) {
-            ButtonFace(XDrawables.forDiaperKind(kind), event.strong, label, event.onContainer, face(label, false))
+            ButtonFace(XDrawables.forDiaperKind(kind), event.strong, label, event.onContainer, style)
         }
     }
+}
+
+/** The button labels: "Pee", "Poop" and the short status word "Both" (the 77 dp buttons have no room for "Pee + poop"). */
+private fun diaperLabel(kind: DiaperKind): Int = when (kind) {
+    DiaperKind.PEE -> CoreR.string.diaper_pee
+    DiaperKind.POOP -> CoreR.string.diaper_poop
+    DiaperKind.BOTH -> CoreR.string.diaper_both
 }
 
 /** How a log button shows its label: icon 24 over 15 sp, the compact two-line face, or the icon alone (small widget). */

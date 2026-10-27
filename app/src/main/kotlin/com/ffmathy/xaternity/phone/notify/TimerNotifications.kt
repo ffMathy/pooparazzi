@@ -172,13 +172,16 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setUsesChronometer(false)
-            .setCategory(Notification.CATEGORY_STOPWATCH)
+            .setCategory(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Notification.CATEGORY_STOPWATCH else Notification.CATEGORY_STATUS)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setContentIntent(DeepLinks.pendingIntent(context, HomeLaunch.Home))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
             // The status chip: a word, never a ticking value (DESIGN_SPEC §3.3.7).
             builder.setShortCriticalText(status)
-            if (canPostPromoted()) builder.setRequestPromotedOngoing(true)
+            // Promotion arrived in Android 16 QPR2 (36.1); on 36.0 the notification stays a normal ongoing one.
+            if (Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1 && canPostPromoted()) {
+                builder.setRequestPromotedOngoing(true)
+            }
         }
         return builder
     }

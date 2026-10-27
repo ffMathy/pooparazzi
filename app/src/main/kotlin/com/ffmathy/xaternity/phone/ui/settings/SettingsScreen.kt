@@ -31,11 +31,14 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -45,6 +48,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -57,6 +61,8 @@ import com.ffmathy.xaternity.core.ui.icons.XIcon
 import com.ffmathy.xaternity.core.ui.icons.XIcons
 import com.ffmathy.xaternity.core.ui.type.PhoneType
 import com.ffmathy.xaternity.phone.R
+import com.ffmathy.xaternity.phone.notify.NotificationLink
+import com.ffmathy.xaternity.phone.notify.openNotificationSettings
 import com.ffmathy.xaternity.phone.ui.components.ConnectedChoiceGroup
 import com.ffmathy.xaternity.phone.ui.components.XTopBar
 import com.ffmathy.xaternity.phone.ui.components.syncIcon
@@ -75,15 +81,24 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit) {
     // Only while this screen is resumed: a second tap during a transition must not pop Home or stack Licences twice.
     val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
     val licences by rememberUpdatedState(dropUnlessResumed(block = onOpenLicences))
-    val actions = remember(viewModel) {
+    val context = LocalContext.current
+    // The permission and the system switch can change in system settings: re-read them whenever Settings resumes.
+    var notifications by remember { mutableStateOf(NotificationLink.current(context)) }
+    LifecycleResumeEffect(context) {
+        notifications = NotificationLink.current(context)
+        onPauseOrDispose {}
+    }
+    val link by rememberUpdatedState(notifications)
+    val actions = remember(viewModel, context) {
         object : SettingsActions by viewModel {
             override fun onBack() = back()
             override fun onOpenLicences() = licences()
+            override fun onOpenNotificationSettings() = context.openNotificationSettings(link)
         }
     }
     val loaded = state
     if (loaded != null) {
-        SettingsScreen(loaded, actions)
+        SettingsScreen(loaded, actions, notifications = notifications)
     } else {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
     }
@@ -91,14 +106,18 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit) {
 
 /**
  * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the baby's name, Appearance
- * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry, and About (version, font
- * licences). Section headings are labelMedium; grouped rows use the History list's r 20 / r 6 corners.
+ * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry, Notifications (the link
+ * to the system's Live Update setting, §10.5) and About (version, font licences). Section headings are labelMedium;
+ * grouped rows use the History list's r 20 / r 6 corners.
+ *
+ * @param notifications what the Notifications row offers; the route reads it from the system.
  */
 @Composable
 fun SettingsScreen(
     state: SettingsUiState,
     actions: SettingsActions,
     modifier: Modifier = Modifier,
+    notifications: NotificationLink = NotificationLink.LIVE_UPDATES,
     windowInsets: WindowInsets = WindowInsets.safeDrawing,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -139,6 +158,9 @@ fun SettingsScreen(
             }
             Section(stringResource(CoreR.string.settings_language)) { LanguageGroup(state.language, actions::onLanguage) }
             Section(stringResource(R.string.settings_section_watch)) { SyncRow(state, actions) }
+            Section(stringResource(R.string.settings_section_notifications)) {
+                NotificationsRow(notifications, actions::onOpenNotificationSettings)
+            }
             Section(stringResource(R.string.settings_section_about)) { AboutGroup(state.versionName, actions::onOpenLicences) }
         }
     }
@@ -254,6 +276,43 @@ private fun SyncRow(state: SettingsUiState, actions: SettingsActions) {
     }
 }
 
+/**
+ * The way to the system's notification settings: Live Updates on Android 16+ (the running timer in the status bar and
+ * on the lock screen), the app's notification settings when notifications are off or on older Android.
+ */
+@Composable
+private fun NotificationsRow(link: NotificationLink, onOpen: () -> Unit) {
+    val (title, summary) = when (link) {
+        NotificationLink.OFF -> R.string.settings_notifications_off to R.string.settings_notifications_off_summary
+        NotificationLink.LIVE_UPDATES -> R.string.settings_live_updates to R.string.settings_live_updates_summary
+        NotificationLink.NOTIFICATIONS -> R.string.settings_notifications to R.string.settings_notifications_summary
+    }
+    GroupRow(first = true, last = true) {
+        LinkRow(stringResource(title), stringResource(summary), onOpen)
+    }
+}
+
+/** A tappable row: title and summary with a chevron (opens another screen). */
+@Composable
+private fun LinkRow(title: String, summary: String, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+            Text(summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(12.dp))
+        XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
+    }
+}
+
 /** "Xaternity · Version 0.1.0" and "Font licences" (opens the OFL texts). */
 @Composable
 private fun AboutGroup(versionName: String, onOpenLicences: () -> Unit) {
@@ -273,20 +332,7 @@ private fun AboutGroup(versionName: String, onOpenLicences: () -> Unit) {
             }
         }
         GroupRow(first = false, last = true) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp)
-                    .clickable(role = Role.Button, onClick = onOpenLicences)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.settings_font_licences), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
-                    Text(stringResource(R.string.settings_font_licences_summary), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-                }
-                XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
-            }
+            LinkRow(stringResource(R.string.settings_font_licences), stringResource(R.string.settings_font_licences_summary), onOpenLicences)
         }
     }
 }

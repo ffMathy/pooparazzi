@@ -59,6 +59,9 @@ interface SettingsActions {
     fun onRetrySync() {}
     fun onOpenLicences() {}
 
+    /** Settings › Notifications: the system setting for Live Updates or notifications. */
+    fun onOpenNotificationSettings() {}
+
     object None : SettingsActions
 }
 

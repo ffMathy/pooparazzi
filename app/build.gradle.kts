@@ -27,6 +27,9 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+    // The in-app language (Settings › Language, and the widgets and notifications that follow it) needs every
+    // language in the install, not only the device's: no per-language splits in the app bundle.
+    bundle { language { enableSplit = false } }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -51,6 +54,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.glance.appwidget)
+    implementation(libs.glance.preview)
+    debugImplementation(libs.glance.appwidget.preview)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.foundation)

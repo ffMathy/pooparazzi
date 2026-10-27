@@ -1,5 +1,8 @@
 package com.ffmathy.xaternity.phone
 
+import org.junit.Assert.assertTrue
+import androidx.compose.ui.test.assertHasClickAction
+import com.ffmathy.xaternity.core.model.BreastSide
 import android.app.Application
 import android.provider.Settings
 import androidx.compose.ui.semantics.Role
@@ -49,6 +52,7 @@ class HomeSemanticsTest {
         override fun onSleepToggle() { calls += "toggle" }
         override fun onOpenHistory() { calls += "history" }
         override fun onPoopColor(color: PoopColor?) { calls += "colour:$color" }
+        override fun onSide(side: BreastSide) { calls += "side:$side" }
     }
 
     @Before
@@ -134,4 +138,13 @@ class HomeSemanticsTest {
         zone = SampleData.ZONE,
         sheet = sheet,
     )
+
+    /** The side tiles speak "Left then right", not the arrow, and still end the feed with that side. */
+    @Test
+    fun sideTilesSpeakTheSideWithoutTheArrow() {
+        show(HomeSamples.sideSheet(), night = false)
+        compose.onNodeWithContentDescription("Left then right").assertHasClickAction().performClick()
+        compose.onNodeWithContentDescription("Right").assertHasClickAction()
+        assertTrue(calls.contains("side:LEFT_THEN_RIGHT"))
+    }
 }
