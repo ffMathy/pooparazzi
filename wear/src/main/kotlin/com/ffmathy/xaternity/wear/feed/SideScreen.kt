@@ -7,6 +7,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
@@ -29,11 +31,13 @@ import com.ffmathy.xaternity.wear.theme.WatchAmbient
 import com.ffmathy.xaternity.wear.theme.XWearTheme
 import com.ffmathy.xaternity.wear.theme.isAmbient
 import com.ffmathy.xaternity.wear.ui.ScreenTitle
+import com.ffmathy.xaternity.wear.ui.SpokenLabels
 import com.ffmathy.xaternity.wear.ui.XListButton
 import com.ffmathy.xaternity.wear.ui.ambientBorder
 import com.ffmathy.xaternity.wear.ui.eventButtonColors
 import com.ffmathy.xaternity.wear.ui.events
 import com.ffmathy.xaternity.wear.ui.rememberCooldown
+import com.ffmathy.xaternity.wear.ui.spokenText
 import com.ffmathy.xaternity.core.R as CoreR
 
 /**
@@ -52,6 +56,10 @@ fun SideScreen(draft: SideDraft, onSide: (BreastSide) -> Unit, modifier: Modifie
     // "14:32–14:50 · 18m": the feed being ended, so the parent can confirm it before picking a side.
     val summary = f.clock.range(draft.feed.startMillis, draft.endAt, f.zone, spaced = false) +
         DOT_SEPARATOR + f.duration.between(draft.feed.startMillis, draft.endAt)
+    // Read "14:32 to 14:50, 18 minutes", not the dash and "18m".
+    val spoken = spokenText().let {
+        it.pair(it.range(f, draft.feed.startMillis, draft.endAt), f.duration.spokenBetween(draft.feed.startMillis, draft.endAt))
+    }
     ScreenScaffold(scrollState = listState, modifier = modifier) { contentPadding ->
         TransformingLazyColumn(state = listState, contentPadding = contentPadding) {
             item(key = "title") {
@@ -62,6 +70,7 @@ fun SideScreen(draft: SideDraft, onSide: (BreastSide) -> Unit, modifier: Modifie
                         style = MaterialTheme.typography.bodySmall,
                         color = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
+                        modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
                     )
                 }
             }
@@ -69,6 +78,8 @@ fun SideScreen(draft: SideDraft, onSide: (BreastSide) -> Unit, modifier: Modifie
                 item(key = side.name) {
                     XListButton(
                         label = stringResource(Labels.side(side)),
+                        // "Left then right": the order matters, and TalkBack would read the arrow.
+                        contentDescription = stringResource(SpokenLabels.side(side)),
                         onClick = { onSide(side) },
                         enabled = cooldown.ready,
                         icon = {

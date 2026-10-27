@@ -18,17 +18,31 @@ import java.util.concurrent.ExecutionException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+/** Opens screens of the phone app from the watch ("More on phone", DESIGN_SPEC §3.5.8, §10.14). */
+interface PhoneLink {
+    /** Whether a phone can receive a remote activity now; Today hides "More on phone" otherwise. */
+    val available: Flow<Boolean>
+
+    /**
+     * Asks the phone to open History. Returns true when the phone opened it, false when it could not (not reachable,
+     * or the phone app cannot handle the link): the caller then says so instead of doing nothing.
+     */
+    suspend fun openHistory(): Boolean
+}
+
 /**
- * Opens screens of the phone app from the watch ("More on phone", DESIGN_SPEC §3.5.8, §10.14) through
- * [RemoteActivityHelper]. Everything degrades quietly: without Play Services or a paired phone, [available] is false
- * and the button is hidden.
+ * [PhoneLink] through [RemoteActivityHelper]. Everything degrades quietly: without Play Services or a paired phone,
+ * [available] is false and the button is hidden.
+ *
+ * The phone app must accept [HISTORY_URI] with `ACTION_VIEW` + `CATEGORY_BROWSABLE` (an intent filter on its
+ * activity); until it does, [openHistory] returns false.
  */
-class PhoneLink(context: Context) {
+class RemotePhoneLink(context: Context) : PhoneLink {
     private val appContext = context.applicationContext
     private val helper: RemoteActivityHelper by lazy { RemoteActivityHelper(appContext) }
 
-    /** Whether a phone can receive a remote activity now (unknown counts as available: older phones cannot say). */
-    val available: Flow<Boolean> = flow {
+    /** Unknown counts as available: older phones cannot say. */
+    override val available: Flow<Boolean> = flow {
         emitAll(
             helper.availabilityStatus.map {
                 it == RemoteActivityHelper.STATUS_AVAILABLE || it == RemoteActivityHelper.STATUS_UNKNOWN
@@ -39,8 +53,7 @@ class PhoneLink(context: Context) {
         emit(false)
     }
 
-    /** Asks the phone to open History. Returns true when the request reached the phone. */
-    suspend fun openHistory(): Boolean = try {
+    override suspend fun openHistory(): Boolean = try {
         val intent = Intent(Intent.ACTION_VIEW, HISTORY_URI).addCategory(Intent.CATEGORY_BROWSABLE)
         helper.startRemoteActivity(intent).awaitDone()
         true

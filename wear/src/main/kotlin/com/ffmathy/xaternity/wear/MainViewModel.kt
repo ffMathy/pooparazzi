@@ -2,6 +2,7 @@ package com.ffmathy.xaternity.wear
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -58,6 +59,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.getAndUpdate
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -77,15 +81,18 @@ import java.time.ZoneId
  * (DESIGN_SPEC §3.5, §5.11, §5.12; V1_ADDITIONS §2.2, §3.2).
  *
  * Writes run one at a time, so a double tap is handled after the first tap's write and sees its result
- * (the 2 s toggle guard, the repository's 5 s dedupe).
+ * (the 2 s toggle guard, the repository's 5 s dedupe). A picker's write consumes its draft, so a second tap that
+ * reached the leaving picker does nothing instead of writing again.
  *
+ * @param zone the device time zone, read again on every tick and refresh (the watch can change zone while the app
+ *   lives: travel, or a time-zone broadcast, see [WearApp]).
  * @param ticks emits once at start and then on every minute boundary (see [minuteTicks]).
  */
 class MainViewModel(
     private val repository: EntryRepository,
     private val sync: EntrySync,
     private val clock: Clock,
-    private val zone: ZoneId = ZoneId.systemDefault(),
+    private val zone: () -> ZoneId = ZoneId::systemDefault,
     ticks: Flow<Unit> = minuteTicks(clock),
 ) : ViewModel() {
 
@@ -101,17 +108,18 @@ class MainViewModel(
 
     val main: StateFlow<MainUiState> =
         combine(entries.filterNotNull(), nowTicks, guard, sync.status) { list, _, guard, status ->
-            MainUiState.from(summarize(list, clock.now(), zone), guard, status)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, MainUiState.loading(clock.now(), zone))
+            MainUiState.from(summarize(list, clock.now(), zone()), guard, status)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, MainUiState.loading(clock.now(), zone()))
 
     val today: StateFlow<TodayUiState> =
         combine(entries.filterNotNull(), nowTicks) { list, _ ->
+            val zone = zone()
             val summary = summarize(list, clock.now(), zone)
             TodayUiState(summary.now, zone, summary.todayDate, summary.dayEntries(summary.todayDate))
         }.stateIn(
             viewModelScope,
             SharingStarted.Eagerly,
-            TodayUiState(clock.now(), zone, localDate(clock.now(), zone), emptyList(), loaded = false),
+            zone().let { TodayUiState(clock.now(), it, localDate(clock.now(), it), emptyList(), loaded = false) },
         )
 
     private val _feedDraft = MutableStateFlow<FeedDraft?>(null)
@@ -126,12 +134,13 @@ class MainViewModel(
     private val _receipt = MutableStateFlow<Receipt?>(null)
     val receipt: StateFlow<Receipt?> = _receipt.asStateFlow()
 
+    /** What Adjust is open for; cleared once a choice is applied, so a second tap on the leaving screen does nothing. */
     private val adjustRequest = MutableStateFlow<AdjustRequest?>(null)
     val adjust: StateFlow<AdjustUiState?> =
         combine(entries.filterNotNull(), adjustRequest, nowTicks) { list, request, _ ->
             request ?: return@combine null
             val entry = list.firstOrNull { it.id == request.entryId } ?: return@combine null
-            AdjustUiState.build(entry, request.fields, request.allowSetTime, clock.now(), zone)
+            AdjustUiState.build(entry, request.fields, request.allowSetTime, clock.now(), zone())
         }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val setTimeField = MutableStateFlow<TimeField?>(null)
@@ -140,7 +149,7 @@ class MainViewModel(
             if (request == null || field == null) return@combine null
             val entry = list.firstOrNull { it.id == request.entryId } ?: return@combine null
             val base = entry.timeOf(field) ?: return@combine null
-            SetTimeUiState(entry, field, base, zone)
+            SetTimeUiState(entry, field, base, zone())
         }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _events = Channel<WearEvent>(Channel.BUFFERED)
@@ -158,7 +167,7 @@ class MainViewModel(
 
     /** Feed tapped on Main: stamps the time for the Feed type screen. */
     fun beginFeed() {
-        _feedDraft.value = FeedDraft(stamp = clock.now(), zone = zone)
+        _feedDraft.value = FeedDraft(stamp = clock.now(), zone = zone())
     }
 
     /** Earlier on the Feed type screen: 0 → −5 → −10 → −15 → 0 minutes. */
@@ -172,7 +181,12 @@ class MainViewModel(
      * Formula and Food log an instant and show Logged ("Already logged" for a repeat within 5 s).
      */
     fun chooseFeedType(type: FeedType): Job = action {
-        val at = (_feedDraft.value ?: FeedDraft(clock.now(), zone = zone)).at
+        // A second tap that reached the leaving screen finds the draft used and does nothing.
+        val draft = _feedDraft.consume() ?: return@action
+        restoreOnFailure(_feedDraft, draft) { logFeed(type, draft.at) }
+    }
+
+    private suspend fun logFeed(type: FeedType, at: Long) {
         if (type == FeedType.BREAST) {
             val started = repository.startBreastfeed(at)
             val error = started.exceptionOrNull()
@@ -207,7 +221,7 @@ class MainViewModel(
             }
             now - lastFeedToggleAt < GUARD_MILLIS -> showGuard(GuardKind.ALREADY_FEEDING, GuardTarget.END_FEED)
             else -> {
-                _sideDraft.value = SideDraft(running, endAt = now, zone = zone)
+                _sideDraft.value = SideDraft(running, endAt = now, zone = zone())
                 send(WearEvent.ShowSide)
             }
         }
@@ -215,7 +229,12 @@ class MainViewModel(
 
     /** A side on the Side screen ends the feed at the stamped time: "Feed ended" (or "Feed cancelled" under 60 s). */
     fun endFeed(side: BreastSide): Job = action {
-        val draft = _sideDraft.value ?: return@action
+        // Consumed: a second tap on the leaving Side screen must not end the (ended) feed again and close its receipt.
+        val draft = _sideDraft.consume() ?: return@action
+        restoreOnFailure(_sideDraft, draft) { endBreastfeed(draft, side) }
+    }
+
+    private suspend fun endBreastfeed(draft: SideDraft, side: BreastSide) {
         when (val result = repository.endBreastfeed(draft.feed.id, draft.endAt, side)) {
             is EndResult.Ended -> {
                 lastFeedToggleAt = clock.now()
@@ -236,14 +255,26 @@ class MainViewModel(
 
     /**
      * The sleep toggle (pinned EdgeButton, or the list button while a breastfeed runs). Start sleep stays on Main;
-     * Woke up shows Logged (or "Sleep cancelled" under 60 s). Within 2 s of a toggle, or when the other device
-     * already changed the state, it shows "Already asleep / awake" instead.
+     * Woke up shows Logged (or "Sleep cancelled" under 60 s).
+     *
+     * The tap carries what the button showed: [shownSleepId] is the running sleep behind "Woke up", or null for
+     * "Start sleep". When the other device changed the state in the meantime the tap does not flip it back: "Start
+     * sleep" while a sleep runs shows "Already asleep", "Woke up" for a sleep that already ended shows "Already
+     * awake" (DESIGN_SPEC §4.4, §3.5.11). Within 2 s of a toggle it shows the guard too.
      */
-    fun toggleSleep(): Job = action {
+    fun toggleSleep(shownSleepId: String?): Job = action {
         val now = clock.now()
         val running = currentSummary().runningSleep
         if (now - lastSleepToggleAt < GUARD_MILLIS) {
             showGuard(if (running != null) GuardKind.ALREADY_ASLEEP else GuardKind.ALREADY_AWAKE, GuardTarget.SLEEP_TOGGLE)
+            return@action
+        }
+        if (shownSleepId == null && running != null) {
+            showGuard(GuardKind.ALREADY_ASLEEP, GuardTarget.SLEEP_TOGGLE)
+            return@action
+        }
+        if (shownSleepId != null && running?.id != shownSleepId) {
+            showGuard(GuardKind.ALREADY_AWAKE, GuardTarget.SLEEP_TOGGLE)
             return@action
         }
         if (running == null) {
@@ -279,7 +310,7 @@ class MainViewModel(
 
     /** Diaper tapped on Main: stamps the time; both checkboxes start off. */
     fun beginDiaper() {
-        _diaperDraft.value = DiaperDraft(stamp = clock.now(), zone = zone)
+        _diaperDraft.value = DiaperDraft(stamp = clock.now(), zone = zone())
     }
 
     fun cycleDiaperOffset() {
@@ -306,23 +337,33 @@ class MainViewModel(
 
     /** Save: logs the diaper at stamp + offset and shows Logged. Ignored (Reject) while both checkboxes are off. */
     fun saveDiaper(): Job = action {
-        val draft = _diaperDraft.value
-        if (draft == null || !draft.canSave) {
+        // A second tap that reached the leaving screen finds the draft used and does nothing.
+        val current = _diaperDraft.value ?: return@action
+        if (!current.canSave) {
             haptic(XHaptic.REJECT)
             return@action
         }
-        val result = repository.logDiaperChecked(draft.at, draft.pee, draft.poop, draft.color, draft.texture)
-        showReceipt(ReceiptKind.DIAPER_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
+        val draft = _diaperDraft.consume() ?: return@action
+        restoreOnFailure(_diaperDraft, draft) {
+            val result = repository.logDiaperChecked(draft.at, draft.pee, draft.poop, draft.color, draft.texture)
+            showReceipt(ReceiptKind.DIAPER_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
+        }
     }
 
     // ---- Logged / Undo -----------------------------------------------------------------------
 
     /**
      * Opens Logged for an existing entry, e.g. from the Tile's undo path ([fromTile]: Undo is active at once).
-     * Instants undo by deletion; ended intervals by restoring them as running.
+     * Instants undo by deletion; ended intervals by restoring them as running, and so do intervals discarded as a
+     * mis-tap ("Sleep cancelled" on the tile, DESIGN_SPEC §4.4: with Undo on phone and watch).
      */
     fun openReceipt(entryId: String, fromTile: Boolean): Job = action {
-        val entry = repository.get(entryId)?.takeUnless { it.deleted } ?: return@action
+        val stored = repository.get(entryId) ?: return@action
+        if (stored.deleted) {
+            openCancelledReceipt(stored, fromTile)
+            return@action
+        }
+        val entry = stored
         val (kind, undo) = when {
             entry.kind == EntryKind.DIAPER -> ReceiptKind.DIAPER_LOGGED to Undo.Delete(entry.id)
             entry.isSleep && entry.endMillis != null -> ReceiptKind.WOKE_UP to Undo.Restore(entry.copy(endMillis = null))
@@ -331,7 +372,16 @@ class MainViewModel(
             !entry.isInterval -> ReceiptKind.FEED_LOGGED to Undo.Delete(entry.id)
             else -> return@action
         }
-        _receipt.value = Receipt(kind, entry, undo, zone, fromTile = fromTile, serial = ++receiptSerial)
+        _receipt.value = Receipt(kind, entry, undo, zone(), fromTile = fromTile, serial = ++receiptSerial)
+        send(WearEvent.ShowLogged)
+    }
+
+    /** A sleep or breastfeed ended under a minute (soft-deleted): "Sleep cancelled" / "Feed cancelled", Undo resumes it. */
+    private fun openCancelledReceipt(entry: Entry, fromTile: Boolean) {
+        if (!entry.isInterval || entry.endMillis == null) return
+        val kind = if (entry.isSleep) ReceiptKind.SLEEP_CANCELLED else ReceiptKind.FEED_CANCELLED
+        val running = entry.copy(deleted = false, endMillis = null, breastSide = null)
+        _receipt.value = Receipt(kind, entry, Undo.Restore(running), zone(), fromTile = fromTile, serial = ++receiptSerial)
         send(WearEvent.ShowLogged)
     }
 
@@ -367,19 +417,21 @@ class MainViewModel(
         adjustRequest.value = AdjustRequest(entryId, fields, allowSetTime)
     }
 
-    /** An Adjust choice: shifts [field] by [minutes], plays SegmentTick and returns. */
-    fun adjust(field: TimeField, minutes: Int): Job = action {
+    /**
+     * An Adjust choice: moves [field] to [at], the time the tapped button showed ("−5m · 02:00"), plays SegmentTick
+     * and returns. The target is absolute, so offsets are never cumulative (DESIGN_SPEC §4.4), and the request is used
+     * up: a second tap queued behind the first does nothing.
+     */
+    fun adjust(field: TimeField, at: Long): Job = action {
         val request = adjustRequest.value ?: return@action
         val entry = repository.get(request.entryId)?.takeUnless { it.deleted }
-        val base = entry?.timeOf(field)
-        val updated = if (entry != null && base != null) entry.withTime(field, base + minutes * MINUTE_MILLIS, clock.now()) else null
+        val updated = entry?.withTime(field, at, clock.now())
         if (updated == null) {
             haptic(XHaptic.REJECT)
             return@action
         }
         repository.update(updated)
-        haptic(XHaptic.SEGMENT_TICK)
-        send(WearEvent.Back())
+        closeAdjust()
     }
 
     /** "Set time" on Adjust: opens the time picker for [field]. */
@@ -392,15 +444,17 @@ class MainViewModel(
      * day or the day before. Returns to Adjust's caller.
      */
     fun setTime(time: LocalTime): Job = action {
-        val request = adjustRequest.value
-        val field = setTimeField.value
-        val entry = request?.let { repository.get(it.entryId) }?.takeUnless { it.deleted }
-        val base = field?.let { entry?.timeOf(it) }
-        if (entry == null || field == null || base == null) {
+        // Used up by an earlier confirm (a double tap): nothing to do.
+        val request = adjustRequest.value ?: return@action
+        val field = setTimeField.value ?: return@action
+        val entry = repository.get(request.entryId)?.takeUnless { it.deleted }
+        val base = entry?.timeOf(field)
+        if (entry == null || base == null) {
             haptic(XHaptic.REJECT)
             return@action
         }
         val now = clock.now()
+        val zone = zone()
         var at = localDate(base, zone).atTime(time).atZone(zone).toInstant().toEpochMilli()
         if (at > now) at = localDate(base, zone).minusDays(1).atTime(time).atZone(zone).toInstant().toEpochMilli()
         val updated = entry.withTime(field, at, now)
@@ -409,18 +463,38 @@ class MainViewModel(
             return@action
         }
         repository.update(updated)
+        closeAdjust()
+    }
+
+    /** After an applied choice: SegmentTick, then back to Adjust's caller; the request is used up. */
+    private fun closeAdjust() {
+        setTimeField.value = null
+        adjustRequest.value = null
         haptic(XHaptic.SEGMENT_TICK)
-        send(WearEvent.Back(count = 2))
+        send(WearEvent.CloseAdjust)
     }
 
     // ---- Ticks -------------------------------------------------------------------------------
 
-    /** Re-reads "now" (the ambient minute tick, or returning to the foreground). */
+    /** Re-reads "now" and the time zone (the ambient minute tick, returning to the foreground, a zone change). */
     fun refresh() = refreshes.update { it + 1 }
 
     // ---- Internals ---------------------------------------------------------------------------
 
-    private suspend fun currentSummary(): Summary = summarize(repository.observeEntries().first(), clock.now(), zone)
+    private suspend fun currentSummary(): Summary = summarize(repository.observeEntries().first(), clock.now(), zone())
+
+    /** Takes the draft for one write; null when another tap already took it. */
+    private fun <T : Any> MutableStateFlow<T?>.consume(): T? = getAndUpdate { null }
+
+    /** Runs [write] for a consumed [draft]; a failed write (nothing changed) puts the draft back for another try. */
+    private suspend fun <T : Any> restoreOnFailure(flow: MutableStateFlow<T?>, draft: T, write: suspend () -> Unit) {
+        try {
+            write()
+        } catch (e: Exception) {
+            flow.compareAndSet(null, draft)
+            throw e
+        }
+    }
 
     private fun action(block: suspend () -> Unit): Job = viewModelScope.launch {
         writes.withLock {
@@ -437,7 +511,7 @@ class MainViewModel(
     }
 
     private fun showReceipt(kind: ReceiptKind, entry: Entry, undo: Undo, duplicate: Boolean = false, haptic: XHaptic? = null) {
-        _receipt.value = Receipt(kind, entry, undo, zone, duplicate = duplicate, serial = ++receiptSerial)
+        _receipt.value = Receipt(kind, entry, undo, zone(), duplicate = duplicate, serial = ++receiptSerial)
         haptic(if (duplicate) XHaptic.REJECT else haptic ?: XHaptic.CONFIRM)
         send(WearEvent.ShowLogged)
     }
@@ -466,15 +540,21 @@ class MainViewModel(
 
     companion object {
         private const val TAG = "MainViewModel"
-        private const val MINUTE_MILLIS = 60_000L
         private const val NEVER = Long.MIN_VALUE / 2
 
         /** Double-toggle guard and guard message (DESIGN_SPEC §5.12). */
         const val GUARD_MILLIS = 2_000L
 
-        /** The production ViewModel on [Core]'s graph. */
+        /**
+         * The production ViewModel on [Core]'s graph. Besides the minute ticks it re-reads the time zone and the
+         * 12/24 h setting whenever the system says they changed ([WearApp.timeSettingsChanges]).
+         */
         val Factory = viewModelFactory {
-            initializer { MainViewModel(Core.repository, Core.sync, Core.clock) }
+            initializer {
+                val timeSettings = (this[APPLICATION_KEY] as? WearApp)?.timeSettingsChanges?.map { }
+                val ticks = listOfNotNull(minuteTicks(Core.clock), timeSettings).merge()
+                MainViewModel(Core.repository, Core.sync, Core.clock, ticks = ticks)
+            }
         }
     }
 }

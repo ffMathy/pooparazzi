@@ -246,6 +246,9 @@ sealed interface WearEvent {
     /** Return to Main (closing pickers). */
     data object BackToMain : WearEvent
 
-    /** Return [count] screens (Adjust → its caller; Set time → Adjust's caller). */
-    data class Back(val count: Int = 1) : WearEvent
+    /**
+     * An Adjust or Set time choice was applied: close Adjust (and Set time above it), back to the screen that opened
+     * it. Popping by route makes a repeat harmless: once Adjust is gone there is nothing left to close.
+     */
+    data object CloseAdjust : WearEvent
 }

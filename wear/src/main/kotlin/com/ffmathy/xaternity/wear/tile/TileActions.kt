@@ -20,25 +20,41 @@ import java.time.ZoneId
 /**
  * The tile's one-tap actions (DESIGN_SPEC §10.9: `loadAction` clickables handled in `onTileRequest`). Feed and
  * End feed open the app instead (V1_ADDITIONS §2.2), so they are not here.
+ *
+ * The sleep toggle is two actions, so a tap says what the button showed: the tile may still show "Start sleep" a
+ * few seconds after the phone started a sleep (or "Woke up" after it ended one), and the tap must then not flip the
+ * state back (DESIGN_SPEC §4.4).
  */
 enum class TileAction(val id: String) {
     LOG_PEE("log_pee"),
     LOG_POOP("log_poop"),
     LOG_BOTH("log_both"),
-    SLEEP_TOGGLE("sleep_toggle"),
+
+    /** "Start sleep" as shown: no sleep ran when the layout was built. */
+    SLEEP_START("sleep_start"),
+
+    /** "Woke up" as shown, for the sleep the layout showed (its id is the click id's target). */
+    SLEEP_END("sleep_end"),
     ;
 
-    /** The clickable id for a layout built with [token]: "log_pee#12". Each layout gets new ids (see [TileMemory.claim]). */
-    fun clickId(token: Long): String = id + TOKEN_SEPARATOR + token
+    /**
+     * The clickable id for a layout built with [token]: "log_pee#12", or "sleep_end#12#<sleep id>" with a [target].
+     * Each layout gets new ids (see [TileMemory.claim]).
+     */
+    fun clickId(token: Long, target: String? = null): String =
+        id + SEPARATOR + token + (target?.let { SEPARATOR + it } ?: "")
 
     companion object {
-        private const val TOKEN_SEPARATOR = "#"
+        private const val SEPARATOR = "#"
 
         /** The action of a clickable id, or null for an empty id (a refresh, not a tap) or any other clickable. */
         fun fromClickId(clickId: String?): TileAction? {
-            val id = clickId?.substringBefore(TOKEN_SEPARATOR)?.takeIf { it.isNotEmpty() } ?: return null
+            val id = clickId?.substringBefore(SEPARATOR)?.takeIf { it.isNotEmpty() } ?: return null
             return entries.firstOrNull { it.id == id }
         }
+
+        /** The entry a clickable id names after its token (the sleep behind "Woke up"), if any. */
+        fun targetOf(clickId: String?): String? = clickId?.split(SEPARATOR)?.getOrNull(2)?.takeIf { it.isNotEmpty() }
     }
 }
 
@@ -65,7 +81,8 @@ class TileActions(
                     TileAction.LOG_PEE -> logDiaper(DiaperKind.PEE, now)
                     TileAction.LOG_POOP -> logDiaper(DiaperKind.POOP, now)
                     TileAction.LOG_BOTH -> logDiaper(DiaperKind.BOTH, now)
-                    TileAction.SLEEP_TOGGLE -> toggleSleep(now)
+                    TileAction.SLEEP_START -> toggleSleep(shownSleepId = null, now)
+                    TileAction.SLEEP_END -> toggleSleep(shownSleepId = TileAction.targetOf(clickId), now)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -93,7 +110,12 @@ class TileActions(
         return if (result is LogResult.Duplicate) XHaptic.REJECT else XHaptic.CONFIRM
     }
 
-    private suspend fun toggleSleep(now: Long): XHaptic {
+    /**
+     * "Start sleep" ([shownSleepId] null) or "Woke up" for [shownSleepId], as the tapped layout showed it. When the
+     * state changed since (the app or the phone started or ended a sleep), the tap shows "Already asleep" /
+     * "Already awake" and writes nothing (DESIGN_SPEC §4.4: the first toggle wins).
+     */
+    private suspend fun toggleSleep(shownSleepId: String?, now: Long): XHaptic {
         val summary = summarize(repository.observeEntries().first(), now, zone)
         val running = summary.runningSleep
         // The double-toggle guard covers every surface: the tile's own last toggle, and any sleep written in the
@@ -103,6 +125,8 @@ class TileActions(
         if (now - recent in 0 until TILE_GUARD_MILLIS) {
             return guard(if (running != null) GuardKind.ALREADY_ASLEEP else GuardKind.ALREADY_AWAKE, now)
         }
+        if (shownSleepId == null && running != null) return guard(GuardKind.ALREADY_ASLEEP, now)
+        if (shownSleepId != null && running?.id != shownSleepId) return guard(GuardKind.ALREADY_AWAKE, now)
         if (running == null) {
             val error = repository.startSleep(now).exceptionOrNull()
             return when {

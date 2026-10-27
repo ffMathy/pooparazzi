@@ -1,5 +1,8 @@
 package com.ffmathy.xaternity.wear.surface
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.xaternity.core.data.FixedClock
@@ -10,6 +13,7 @@ import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.sample.SampleData
 import com.ffmathy.xaternity.core.settings.AppLanguage
 import com.ffmathy.xaternity.core.settings.Appearance
+import com.ffmathy.xaternity.wear.SurfacesRestoreReceiver
 import com.ffmathy.xaternity.wear.testing.FakeSettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,11 +21,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -103,5 +109,37 @@ class SurfaceUpdaterTest {
         runBlocking { delay(200) }
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals(3, updates.size)
+    }
+
+    @Test
+    fun updateNowBringsTheSurfacesUpToDateBeforeReturning() {
+        awaitUpdates(1)
+        val sleep = runBlocking { repo.startSleep(clock.now()).getOrThrow() }
+        awaitUpdates(2)
+        val before = updates.size
+        val updater = SurfaceUpdater(ApplicationProvider.getApplicationContext(), repo, settings, clock, surfaces = { updates += it })
+        val job = scope.launch { updater.updateNow() }
+        runBlocking {
+            withTimeout(5_000) {
+                while (!job.isCompleted) {
+                    shadowOf(Looper.getMainLooper()).idle()
+                    delay(10)
+                }
+            }
+        }
+        assertEquals(before + 1, updates.size)
+        assertEquals(sleep.id, updates.last().runningSleep?.id)
+    }
+
+    @Test
+    fun aRebootOrAnUpdateRestartsTheAppToPutTheOngoingActivityBack() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val packages = context.packageManager
+        for (action in listOf(Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED)) {
+            val receivers = packages.queryBroadcastReceivers(Intent(action).setPackage(context.packageName), 0)
+            assertTrue(action, receivers.any { it.activityInfo.name == SurfacesRestoreReceiver::class.java.name && !it.activityInfo.exported })
+        }
+        val requested = packages.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS).requestedPermissions.orEmpty()
+        assertTrue(Manifest.permission.RECEIVE_BOOT_COMPLETED in requested)
     }
 }

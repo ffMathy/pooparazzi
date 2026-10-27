@@ -82,11 +82,13 @@ import com.ffmathy.xaternity.wear.theme.WatchAmbient
 import com.ffmathy.xaternity.wear.theme.XWearTheme
 import com.ffmathy.xaternity.wear.theme.isAmbient
 import com.ffmathy.xaternity.wear.ui.AutoSizeLine
+import com.ffmathy.xaternity.wear.ui.SpokenLabels
 import com.ffmathy.xaternity.wear.ui.SyncLine
 import com.ffmathy.xaternity.wear.ui.events
 import com.ffmathy.xaternity.wear.ui.feedTypeLabel
 import com.ffmathy.xaternity.wear.ui.keepSidesTogether
 import com.ffmathy.xaternity.wear.ui.rememberCooldown
+import com.ffmathy.xaternity.wear.ui.spokenText
 import kotlinx.coroutines.delay
 import com.ffmathy.xaternity.core.R as CoreR
 
@@ -135,8 +137,15 @@ fun LoggedScreen(
         timeout()
     }
 
-    // A large font scale grows the title: tighten the top so the sync line stays clear of Undo.
+    // A large font scale grows the title: tighten the top so the sync line stays clear of Undo. A second line
+    // ("Left → Right · 18m") moves the block up a little for the same reason (§3.5.6: sync line at y 148–162).
     val compact = LocalConfiguration.current.fontScale > 1.15f
+    val line2 = receiptLine2(receipt, f)
+    val top = when {
+        compact -> 0.08f
+        line2 != null -> 0.12f
+        else -> 0.149f
+    }
     ScreenScaffold(timeText = {}, modifier = modifier) { _ ->
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val height = maxHeight
@@ -159,27 +168,29 @@ fun LoggedScreen(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = height * if (compact) 0.08f else 0.149f, start = 8.dp, end = 8.dp),
+                    .padding(top = height * top, start = 8.dp, end = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 ReceiptCircle(receipt, ambient, size = if (compact) 48.dp else 64.dp)
-                Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
+                Spacer(Modifier.height(if (compact || line2 != null) 4.dp else 8.dp))
                 ReceiptTitle(receipt, f, ambient)
-                receiptLine2(receipt, f)?.let { line ->
+                line2?.let { line ->
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        line,
+                        line.shown,
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         textAlign = TextAlign.Center,
+                        modifier = Modifier.semantics { contentDescription = line.spoken },
                     )
                 }
                 val syncText = if (sync == SyncStatus.Pending) null else f.labels.syncLine(sync, SyncPeer.PHONE, f.clock, f.zone)
                 if (syncText != null) {
                     Spacer(Modifier.height(2.dp))
-                    // The round screen is wider higher up, where a large font scale moves the line.
-                    SyncLine(sync, syncText, maxWidth = if (compact) 200.dp else 186.dp)
+                    // The round screen is wider higher up, where a large font scale moves the line; lower down it
+                    // keeps clear of the drain arc (Danish "Synkroniseret med telefon · 14:31" steps down a size).
+                    SyncLine(sync, syncText, maxWidth = if (compact) 200.dp else 166.dp)
                 }
             }
             UndoEdgeButton(
@@ -265,11 +276,24 @@ private fun ReceiptTitle(receipt: Receipt, f: Formatters, ambient: Boolean) {
         ReceiptKind.FEED_CANCELLED -> AnnotatedString(stringResource(CoreR.string.receipt_feed_cancelled))
         ReceiptKind.SLEEP_CANCELLED -> AnnotatedString(stringResource(CoreR.string.receipt_sleep_cancelled))
     }
+    // "Pee and poop at 14:32": never the "+" (DESIGN_SPEC §9.4).
+    val spoken = if (receipt.kind == ReceiptKind.DIAPER_LOGGED) {
+        stringResource(
+            CoreR.string.receipt_at_time,
+            stringResource(SpokenLabels.diaperKind(entry.diaperKind ?: DiaperKind.PEE)),
+            f.clock.format(entry.startMillis, f.zone),
+        )
+    } else {
+        title.text
+    }
     BasicText(
         text = title,
         modifier = Modifier
             .fillMaxWidth()
-            .semantics { liveRegion = LiveRegionMode.Polite },
+            .semantics {
+                liveRegion = LiveRegionMode.Polite
+                contentDescription = spoken
+            },
         style = MaterialTheme.typography.titleLarge.copy(color = onSurface, textAlign = TextAlign.Center, hyphens = Hyphens.Auto),
         maxLines = 2,
         autoSize = TextAutoSize.StepBased(minFontSize = 15.sp, maxFontSize = 20.sp),
@@ -293,19 +317,33 @@ private fun withTime(label: String, millis: Long, f: Formatters, timeColor: Colo
     }
 }
 
+/** A line as shown ("Left → Right · 18m") and as read ("Left then right, 18 minutes"). */
+private class Line(val shown: String, val spoken: String)
+
 /** Line 2: "Slept 1h 07m", "Left → Right · 18m", "Already logged". */
 @Composable
-private fun receiptLine2(receipt: Receipt, f: Formatters): String? {
+private fun receiptLine2(receipt: Receipt, f: Formatters): Line? {
     val entry = receipt.entry
     val end = entry.endMillis
-    if (receipt.duplicate) return stringResource(R.string.logged_already_logged)
+    if (receipt.duplicate) return stringResource(R.string.logged_already_logged).let { Line(it, it) }
     return when (receipt.kind) {
-        ReceiptKind.WOKE_UP, ReceiptKind.SLEEP_CANCELLED ->
-            end?.let { stringResource(CoreR.string.receipt_slept, f.duration.between(entry.startMillis, it)) }
+        ReceiptKind.WOKE_UP, ReceiptKind.SLEEP_CANCELLED -> end?.let {
+            Line(
+                stringResource(CoreR.string.receipt_slept, f.duration.between(entry.startMillis, it)),
+                stringResource(CoreR.string.receipt_slept, f.duration.spokenBetween(entry.startMillis, it)),
+            )
+        }
         ReceiptKind.FEED_ENDED, ReceiptKind.FEED_CANCELLED -> {
-            val duration = end?.let { f.duration.between(entry.startMillis, it) }
-            listOfNotNull(entry.breastSide?.let { stringResource(Labels.side(it)).keepSidesTogether() }, duration).joinToString(DOT_SEPARATOR)
-                .ifEmpty { null }
+            val side = entry.breastSide
+            val shown = listOfNotNull(
+                side?.let { stringResource(Labels.side(it)).keepSidesTogether() },
+                end?.let { f.duration.between(entry.startMillis, it) },
+            )
+            val spoken = listOfNotNull(
+                side?.let { stringResource(SpokenLabels.side(it)) },
+                end?.let { f.duration.spokenBetween(entry.startMillis, it) },
+            )
+            if (shown.isEmpty()) null else Line(shown.joinToString(DOT_SEPARATOR), spokenText().all(spoken))
         }
         ReceiptKind.FEED_LOGGED, ReceiptKind.DIAPER_LOGGED -> null
     }

@@ -20,7 +20,7 @@ enum class TileFeedbackKind {
     /** A sleep ended from the tile: "Woke up 14:40 · Undo". */
     WOKE_UP,
 
-    /** A sleep stopped under a minute was discarded: "Sleep cancelled" (nothing left to undo from the tile). */
+    /** A sleep stopped under a minute was discarded: "Sleep cancelled · Undo" (Undo resumes it, DESIGN_SPEC §4.4). */
     SLEEP_CANCELLED,
 }
 
@@ -38,8 +38,11 @@ data class TileFeedback(
     val diaperKind: DiaperKind?,
     val untilMillis: Long,
 ) {
-    /** Whether the background tap can open Logged with Undo for this log. */
-    val undoable: Boolean get() = kind != TileFeedbackKind.SLEEP_CANCELLED
+    /**
+     * Whether the background tap can open Logged with Undo for this log: always, including "Sleep cancelled"
+     * (DESIGN_SPEC §4.4: "with Undo, on phone and watch"), whose Undo resumes the discarded sleep.
+     */
+    val undoable: Boolean get() = true
 }
 
 /** A rejected tile toggle: "Already asleep" / "Already awake" in the title until [untilMillis]. */
@@ -112,9 +115,13 @@ data class TileUiState(
          * so the title never offers Undo for nothing.
          */
         private fun TileFeedback.stillStands(summary: Summary): Boolean {
-            if (kind == TileFeedbackKind.SLEEP_CANCELLED) return true
-            val entry = summary.entries.firstOrNull { it.id == entryId } ?: return false
-            return kind != TileFeedbackKind.WOKE_UP || entry.endMillis != null
+            val entry = summary.entries.firstOrNull { it.id == entryId }
+            return when (kind) {
+                // The discarded sleep is soft-deleted, so it is missing from the entries until Undo restores it.
+                TileFeedbackKind.SLEEP_CANCELLED -> entry == null
+                TileFeedbackKind.WOKE_UP -> entry?.endMillis != null
+                TileFeedbackKind.DIAPER -> entry != null
+            }
         }
 
         fun from(summary: Summary, babyName: String, feedback: TileFeedback?, guard: TileGuard?) = TileUiState(

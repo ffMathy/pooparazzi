@@ -34,6 +34,31 @@
     <string name="action_more_on_phone">More on phone</string>
     <!-- OpenOnPhoneDialog curved text -->
     <string name="open_on_phone">Continue on phone</string>
+    <!-- Failure confirmation when the phone could not open History (not reachable, or an old phone app) -->
+    <string name="open_on_phone_failed">Couldn\'t open on phone</string>
+
+    <!-- ===== Spoken forms (TalkBack, DESIGN_SPEC §9.4–9.5): never arrows, "+" or dashes ===== -->
+    <!-- Breast sides with an order, read without the arrow ("Left → Right") -->
+    <string name="spoken_side_left_then_right">Left then right</string>
+    <string name="spoken_side_right_then_left">Right then left</string>
+    <!-- Both diaper flags, read without the plus sign ("Pee + poop") -->
+    <string name="spoken_pee_and_poop">Pee and poop</string>
+    <!-- A time range, read without the dash: "14:32 to 14:50". %1$s and %2$s are clock times. -->
+    <string name="spoken_range">%1$s to %2$s</string>
+    <!-- A range on another day: "Sun 22:40 to 01:35". %1$s weekday, %2$s spoken_range. -->
+    <string name="spoken_range_on_day">%1$s %2$s</string>
+    <!-- Two spoken facts in a row: "Left then right, 18 minutes" -->
+    <string name="spoken_pair">%1$s, %2$s</string>
+    <!-- A status with its duration and start: "Awake 1 hour 5 minutes, since 13:27" -->
+    <string name="spoken_status_since">%1$s %2$s, %3$s</string>
+    <!-- A running interval read on its own: "Asleep, 1 hour 7 minutes, since 02:05" -->
+    <string name="spoken_running">%1$s, %2$s, %3$s</string>
+    <!-- Time since the last feed: "Last feed 2 hours 10 minutes ago". %1$s is a spoken "… ago". -->
+    <string name="spoken_last_feed_ago">Last feed %1$s</string>
+    <!-- A row read aloud, then what a tap does: "Pee, 13:44. Adjust" -->
+    <string name="spoken_then_action">%1$s. %2$s</string>
+    <!-- A status word with its start, shown and read: "Asleep since 02:05". %2$s is "since 02:05". -->
+    <string name="status_since">%1$s %2$s</string>
 
     <!-- ===== Tile (DESIGN_SPEC §3.6, V1_ADDITIONS §2.2) ===== -->
     <string name="tile_description">Log diapers and sleep in one tap; see the time since the last feed.</string>

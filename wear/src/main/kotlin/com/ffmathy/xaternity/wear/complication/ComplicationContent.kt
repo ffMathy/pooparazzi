@@ -30,6 +30,7 @@ import com.ffmathy.xaternity.core.ui.icons.XDrawables
 import com.ffmathy.xaternity.wear.R
 import com.ffmathy.xaternity.wear.surface.SurfaceText
 import com.ffmathy.xaternity.wear.surface.TimeText
+import com.ffmathy.xaternity.wear.ui.SpokenLabels
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import com.ffmathy.xaternity.core.R as CoreR
@@ -83,10 +84,7 @@ class ComplicationContent(
             return empty(XDrawables.feed, R.string.complication_cd_no_feed, tapAction)
         }
         // "Last feed 2 hours 10 minutes ago" (DESIGN_SPEC §9.5).
-        val spoken = text.template(
-            SurfaceText.Template(res.getString(CoreR.string.spoken_last_feed) + " " + SurfaceText.Template.PLACEHOLDER),
-            text.spokenAgo(feed.startMillis, now),
-        )
+        val spoken = text.template(SurfaceText.Template.of(res, R.string.spoken_last_feed_ago), text.spokenAgo(feed.startMillis, now))
         return shortText(
             value = text.duration(feed.startMillis, now),
             since = feed.startMillis,
@@ -105,8 +103,10 @@ class ComplicationContent(
         }
         val kind = diaper.diaperKind ?: DiaperKind.PEE
         val word = res.getString(Labels.diaperKindStatus(kind))
-        val spokenPrefix = res.getString(CoreR.string.spoken_last_diaper) + ", " + word.lowercase(text.formatters.clock.locale) + ", "
-        val spoken = text.template(SurfaceText.Template(spokenPrefix + SurfaceText.Template.PLACEHOLDER), text.spokenAgo(diaper.startMillis, now))
+        // "Last diaper, pee and poop, 48 minutes ago": the spoken word, never the status word "Both".
+        val spokenWord = res.getString(SpokenLabels.diaperKind(kind)).lowercase(text.formatters.clock.locale)
+        val spokenTemplate = res.getString(R.string.tile_cd_last_diaper, spokenWord, SurfaceText.Template.PLACEHOLDER)
+        val spoken = text.template(SurfaceText.Template(spokenTemplate), text.spokenAgo(diaper.startMillis, now))
         return shortText(
             value = text.duration(diaper.startMillis, now),
             since = diaper.startMillis,
@@ -162,8 +162,9 @@ class ComplicationContent(
             )
             else -> return empty(XDrawables.sleep, R.string.complication_cd_no_sleep, tapAction, ComplicationType.LONG_TEXT)
         }
-        // Title: "since 13:27" while awake; while asleep the last feed, "Fed 1h 32m ago" (DESIGN_SPEC §3.7).
-        val fedTemplate = res.getString(R.string.complication_fed_ago, TIME_TOKEN)
+        // Title: "since 13:27" while awake; while asleep the last feed, "Fed 1h 32m ago" (DESIGN_SPEC §3.7). The system
+        // time difference fills only "1h 32m", so its template carries the "ago" phrase too ("Fed ^1 ago").
+        val fedTemplate = res.getString(R.string.complication_fed_ago, res.getString(CoreR.string.rel_ago_format, TIME_TOKEN))
         val title: ComplicationText? = when {
             running == null -> plain(text.formatters.relative.since(from, text.zone))
             lastFeed != null -> complicationText(

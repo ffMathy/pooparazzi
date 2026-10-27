@@ -1,23 +1,33 @@
 package com.ffmathy.xaternity.wear.ui
 
+import android.content.res.Resources
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import com.ffmathy.xaternity.core.domain.localDate
 import com.ffmathy.xaternity.core.format.DOT_SEPARATOR
 import com.ffmathy.xaternity.core.format.Formatters
 import com.ffmathy.xaternity.core.format.Labels
+import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
 import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.clockDurationMillis
 import com.ffmathy.xaternity.core.model.diaperKind
+import com.ffmathy.xaternity.wear.R
+import java.time.Instant
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import com.ffmathy.xaternity.core.R as CoreR
 
 /*
  * Copy built from :core's shared strings and formatters (DESIGN_SPEC §7, V1_ADDITIONS §5). Spoken forms read
- * durations in words (§9.5) and join facts with ", ".
+ * durations in words (§9.5), never arrows, "+" or dashes, and are put together with resource templates
+ * ([SpokenText]), so word order and punctuation belong to each language.
  */
 
 /** "Fed at 12:22", "Formula at 14:32", "Pee + poop at 14:32" (receipt_at_time). */
@@ -50,22 +60,96 @@ fun Formatters.agoAndClock(fromMillis: Long, now: Long): String =
 fun Formatters.durationAndSince(fromMillis: Long, now: Long): String =
     duration.format(clockDurationMillis(fromMillis, now)) + DOT_SEPARATOR + relative.since(fromMillis, zone)
 
-/** Spoken "{prefix}, {detail}, 48 minutes ago, at 13:44". */
-fun Formatters.spokenAgo(prefix: String, detail: String?, fromMillis: Long, now: Long): String =
-    listOfNotNull(
-        prefix,
-        detail?.lowercase(clock.locale),
-        relative.agoSpoken(clockDurationMillis(fromMillis, now)),
-        relative.at(fromMillis, zone),
-    ).joinToString(", ")
+/**
+ * The words TalkBack reads where the screen shows a symbol (DESIGN_SPEC §9.4): "Left then right" for "Left → Right",
+ * "Pee and poop" for "Pee + poop".
+ */
+object SpokenLabels {
+    @StringRes
+    fun side(side: BreastSide): Int = when (side) {
+        BreastSide.LEFT -> CoreR.string.side_left
+        BreastSide.RIGHT -> CoreR.string.side_right
+        BreastSide.LEFT_THEN_RIGHT -> R.string.spoken_side_left_then_right
+        BreastSide.RIGHT_THEN_LEFT -> R.string.spoken_side_right_then_left
+    }
 
-/** Spoken "{prefix} 1 hour 5 minutes, since 13:27". */
-fun Formatters.spokenDurationSince(prefix: String, fromMillis: Long, now: Long): String =
-    prefix + " " + duration.spoken(clockDurationMillis(fromMillis, now)) + ", " + relative.since(fromMillis, zone)
+    @StringRes
+    fun diaperKind(kind: DiaperKind): Int = when (kind) {
+        DiaperKind.PEE -> CoreR.string.diaper_pee
+        DiaperKind.POOP -> CoreR.string.diaper_poop
+        DiaperKind.BOTH -> R.string.spoken_pee_and_poop
+    }
+}
+
+/** Spoken sentences from the watch's resource templates (V1_ADDITIONS §5: no sentence glued together in Kotlin). */
+class SpokenText(private val res: Resources) {
+    /** "{first}, {second}". */
+    fun pair(first: String, second: String): String = res.getString(R.string.spoken_pair, first, second)
+
+    /** Facts read in a row: "Last feed, formula, 2 hours 10 minutes ago, at 12:22". */
+    fun all(facts: List<String>): String = facts.reduce(::pair)
+
+    /** "Awake 1 hour 5 minutes, since 13:27". */
+    fun statusSince(status: String, duration: String, since: String): String =
+        res.getString(R.string.spoken_status_since, status, duration, since)
+
+    /** "Asleep, 1 hour 7 minutes, since 02:05". */
+    fun running(status: String, duration: String, since: String): String =
+        res.getString(R.string.spoken_running, status, duration, since)
+
+    /** "{what}. {action}": a row, then what a tap does. */
+    fun thenAction(what: String, action: String): String = res.getString(R.string.spoken_then_action, what, action)
+
+    /** "14:32 to 14:50"; "Sunday 22:40 to 01:35" for a range that starts before [day]. */
+    fun range(f: Formatters, startMillis: Long, endMillis: Long, day: LocalDate? = null): String {
+        val range = res.getString(R.string.spoken_range, f.clock.format(startMillis, f.zone), f.clock.format(endMillis, f.zone))
+        if (day == null || localDate(startMillis, f.zone) == day) return range
+        val weekday = DateTimeFormatter.ofPattern("EEEE", f.clock.locale).format(Instant.ofEpochMilli(startMillis).atZone(f.zone))
+        return res.getString(R.string.spoken_range_on_day, weekday, range)
+    }
+}
+
+/** [SpokenText] in the composition's language (follows configuration changes, as stringResource does). */
+@Composable
+@ReadOnlyComposable
+fun spokenText(): SpokenText = SpokenText(LocalResources.current)
+
+/** Spoken "{prefix}, {detail}, 48 minutes ago, at 13:44". */
+@Composable
+@ReadOnlyComposable
+fun Formatters.spokenAgo(prefix: String, detail: String?, fromMillis: Long, now: Long): String =
+    spokenText().all(
+        listOfNotNull(
+            prefix,
+            detail?.lowercase(clock.locale),
+            relative.agoSpoken(clockDurationMillis(fromMillis, now)),
+            relative.at(fromMillis, zone),
+        ),
+    )
+
+/** Spoken "{status} 1 hour 5 minutes, since 13:27" (a status card). */
+@Composable
+@ReadOnlyComposable
+fun Formatters.spokenDurationSince(status: String, fromMillis: Long, now: Long): String =
+    spokenText().statusSince(status, duration.spoken(clockDurationMillis(fromMillis, now)), relative.since(fromMillis, zone))
+
+/** Spoken "{status}, 1 hour 7 minutes, since 02:05" (a running sleep or breastfeed read on its own). */
+@Composable
+@ReadOnlyComposable
+fun Formatters.spokenRunning(status: String, fromMillis: Long, now: Long): String =
+    spokenText().running(status, duration.spoken(clockDurationMillis(fromMillis, now)), relative.since(fromMillis, zone))
 
 /** Spoken offset choice: "5 minutes earlier, 14:27" (§9.5). */
+@Composable
+@ReadOnlyComposable
 fun Formatters.spokenOffset(minutes: Int, atMillis: Long): String =
-    relative.offsetSpoken(minutes) + ", " + clock.format(atMillis, zone)
+    spokenText().pair(relative.offsetSpoken(minutes), clock.format(atMillis, zone))
+
+/** "Asleep since 02:05" (shown and read). */
+@Composable
+@ReadOnlyComposable
+fun Formatters.statusSince(status: String, millis: Long): String =
+    stringResource(R.string.status_since, status, relative.since(millis, zone))
 
 /** The title word of an entry for Adjust and Today rows ("Sleep", "Breast", "Formula", "Pee + poop"). */
 @Composable
@@ -76,11 +160,19 @@ fun entryWord(entry: Entry, compact: Boolean = false): String = when (entry.kind
     EntryKind.DIAPER -> diaperLabel(entry)
 }
 
+/** [entryWord] as TalkBack reads it ("Pee and poop"). */
+@Composable
+@ReadOnlyComposable
+fun spokenEntryWord(entry: Entry): String = when (entry.kind) {
+    EntryKind.DIAPER -> stringResource(SpokenLabels.diaperKind(entry.diaperKind ?: DiaperKind.PEE))
+    else -> entryWord(entry)
+}
+
 /**
  * Keeps a two-side label ("Left → Right", "Venstre → Højre") on one line: a wrapping title then breaks after the
  * preceding "·" instead of leaving the arrow at a line end ("Breast · Left →" / "Right").
  */
-fun String.keepSidesTogether(): String = replace(" $SIDE_ARROW ", "\u00A0$SIDE_ARROW\u00A0")
+fun String.keepSidesTogether(): String = replace(" $SIDE_ARROW ", " $SIDE_ARROW ")
 
 private const val SIDE_ARROW = "→"
 
