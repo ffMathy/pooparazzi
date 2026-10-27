@@ -11,8 +11,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.ffmathy.xaternity.core.Core
+import com.ffmathy.xaternity.phone.app.AppLocales
 import com.ffmathy.xaternity.phone.app.AppViewModel
+import kotlinx.coroutines.launch
 import com.ffmathy.xaternity.phone.navigation.XaternityPhoneApp
 
 /**
@@ -31,6 +34,17 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val inputs by appViewModel.appearance.collectAsStateWithLifecycle()
             inputs?.let { XaternityPhoneApp(inputs = it, clock = Core.clock, onNightResolved = ::applyNight) }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // The language the app runs in is the platform's per-app choice (the parent may change it in system settings
+        // on API 33+). Mirror it into the settings, which sync it to the watch (V1_ADDITIONS §5).
+        val running = AppLocales.current()
+        lifecycleScope.launch {
+            val settings = Core.settings
+            if (settings.current().language != running) settings.setLanguage(running)
         }
     }
 

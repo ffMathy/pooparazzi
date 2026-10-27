@@ -6,13 +6,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import com.ffmathy.xaternity.core.data.Clock
 import com.ffmathy.xaternity.phone.app.AppearanceInputs
+import com.ffmathy.xaternity.phone.ui.history.HistoryRoute
 import com.ffmathy.xaternity.phone.ui.home.HomeRoute
-import com.ffmathy.xaternity.phone.ui.stubs.EditStubScreen
-import com.ffmathy.xaternity.phone.ui.stubs.HistoryStubScreen
-import com.ffmathy.xaternity.phone.ui.stubs.SettingsStubScreen
+import com.ffmathy.xaternity.phone.ui.settings.LicencesRoute
+import com.ffmathy.xaternity.phone.ui.settings.SettingsRoute
 import com.ffmathy.xaternity.phone.ui.theme.LocalNightLight
 import com.ffmathy.xaternity.phone.ui.theme.NightLightTheme
 import kotlinx.serialization.Serializable
@@ -29,9 +28,9 @@ data object History
 @Serializable
 data object Settings
 
-/** The edit sheet (P4) for one entry. */
+/** The font licences (Settings › About). */
 @Serializable
-data class Edit(val entryId: String)
+data object Licences
 
 /** The phone app: the resolved Night Light theme around the navigation graph. */
 @Composable
@@ -43,6 +42,10 @@ fun XaternityPhoneApp(inputs: AppearanceInputs, clock: Clock, onNightResolved: (
     }
 }
 
+/**
+ * Home, History, Settings and the font licences. The edit sheet (P4) is not a destination: it opens over the screen
+ * that asked for it (Home's since-rows and Adjust card, History's rows and FAB), with its scrim over that screen.
+ */
 @Composable
 fun XaternityNavHost(navController: NavHostController = rememberNavController()) {
     fun open(route: Any) = navController.navigate(route) { launchSingleTop = true }
@@ -52,11 +55,10 @@ fun XaternityNavHost(navController: NavHostController = rememberNavController())
             HomeRoute(
                 onOpenHistory = { open(History) },
                 onOpenSettings = { open(Settings) },
-                onEditEntry = { id -> open(Edit(id)) },
             )
         }
-        composable<History> { HistoryStubScreen(onBack = back) }
-        composable<Settings> { SettingsStubScreen(onBack = back) }
-        composable<Edit> { entry -> EditStubScreen(entryId = entry.toRoute<Edit>().entryId, onClose = back) }
+        composable<History> { HistoryRoute(onBack = back) }
+        composable<Settings> { SettingsRoute(onBack = back, onOpenLicences = { open(Licences) }) }
+        composable<Licences> { LicencesRoute(onBack = back) }
     }
 }

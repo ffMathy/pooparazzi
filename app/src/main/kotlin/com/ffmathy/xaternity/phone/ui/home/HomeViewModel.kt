@@ -254,6 +254,11 @@ class HomeViewModel(
         clearCard()
     }
 
+    /** A delete in the edit sheet over Home: the "… deleted" card, whose Undo writes [previous] back. */
+    fun onEntryDeleted(previous: Entry) = act {
+        showCard(CardSpec.Deleted(previous), baseTime = clock.now(), undo = Undo.Restore(previous))
+    }
+
     // ---- Sheets -------------------------------------------------------------------------------
 
     override fun onSheetOffset(minutes: Int) = act {

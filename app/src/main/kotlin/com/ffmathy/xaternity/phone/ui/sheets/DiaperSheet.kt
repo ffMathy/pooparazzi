@@ -77,83 +77,128 @@ internal class DiaperSheetCallbacks(
  * the sheet opens), Colour and Texture (optional, single-select; tap again clears) once Poop is on, the health hint
  * for Pale, Red or Black, and Save (disabled until a checkbox is on) at the bottom end, in the thumb zone.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun DiaperSheetContent(sheet: HomeSheetUi.Diaper, zone: ZoneId, formatters: Formatters, callbacks: DiaperSheetCallbacks) {
     val readiness = rememberPickerReadiness()
-    val events = LocalXPalette.current.events
-    val reducedMotion = rememberReducedMotion()
     val title = titleWithTime(CoreR.string.kind_diaper, formatters.clock.format(sheet.time, zone))
     SheetColumn(title) {
         SheetHeader(title, callbacks.onCancel)
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
         Spacer(Modifier.height(12.dp))
-        Row(Modifier.alpha(readiness.alpha), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DiaperTile(
-                checked = sheet.pee,
-                onCheckedChange = callbacks.onPee,
-                kind = DiaperKind.PEE,
-                eventColors = events.pee,
-                litColor = events.diaper.containerLit,
-                enabled = readiness.ready,
-                modifier = Modifier.weight(1f),
-            )
-            DiaperTile(
-                checked = sheet.poop,
-                onCheckedChange = callbacks.onPoop,
-                kind = DiaperKind.POOP,
-                eventColors = events.poop,
-                litColor = events.diaper.containerLit,
-                enabled = readiness.ready,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        AnimatedVisibility(
+        DiaperToggleTiles(
+            pee = sheet.pee,
+            poop = sheet.poop,
+            onPee = callbacks.onPee,
+            onPoop = callbacks.onPoop,
+            enabled = readiness.ready,
+            modifier = Modifier.alpha(readiness.alpha),
+        )
+        PoopDetails(
             visible = sheet.poop,
-            enter = if (reducedMotion) EnterTransition.None else expandVertically() + fadeIn(),
-            exit = if (reducedMotion) ExitTransition.None else shrinkVertically() + fadeOut(),
-        ) {
-            Column(Modifier.alpha(readiness.alpha)) {
-                SectionHeading(stringResource(CoreR.string.poop_colour))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PoopColor.entries.forEach { color ->
-                        val selected = sheet.color == color
-                        XChip(
-                            selected = selected,
-                            onClick = { callbacks.onColor(if (selected) null else color) },
-                            label = stringResource(Labels.poopColor(color)),
-                            showCheck = false,
-                            acceptsTaps = readiness.ready,
-                            leading = { Swatch(PoopSwatches.color(color), selected) },
-                        )
-                    }
-                }
-                SectionHeading(stringResource(CoreR.string.poop_texture))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PoopTexture.entries.forEach { texture ->
-                        val selected = sheet.texture == texture
-                        XChip(
-                            selected = selected,
-                            onClick = { callbacks.onTexture(if (selected) null else texture) },
-                            label = stringResource(Labels.poopTexture(texture)),
-                            reserveCheck = true,
-                            acceptsTaps = readiness.ready,
-                        )
-                    }
-                }
-                AnimatedVisibility(
-                    visible = sheet.color in PoopSwatches.needsHint,
-                    enter = if (reducedMotion) EnterTransition.None else expandVertically() + fadeIn(),
-                    exit = if (reducedMotion) ExitTransition.None else shrinkVertically() + fadeOut(),
-                ) {
-                    HealthHint()
-                }
-            }
-        }
+            color = sheet.color,
+            texture = sheet.texture,
+            onColor = callbacks.onColor,
+            onTexture = callbacks.onTexture,
+            acceptsTaps = readiness.ready,
+            modifier = Modifier.alpha(readiness.alpha),
+        )
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             SaveButton(enabled = sheet.canSave && readiness.ready, onClick = callbacks.onSave)
+        }
+    }
+}
+
+/** Pee and Poop checkbox tiles side by side (V1_ADDITIONS §3.1), shared by the Diaper sheet and the edit sheet. */
+@Composable
+internal fun DiaperToggleTiles(
+    pee: Boolean,
+    poop: Boolean,
+    onPee: (Boolean) -> Unit,
+    onPoop: (Boolean) -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val events = LocalXPalette.current.events
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        DiaperTile(
+            checked = pee,
+            onCheckedChange = onPee,
+            kind = DiaperKind.PEE,
+            eventColors = events.pee,
+            litColor = events.diaper.containerLit,
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+        )
+        DiaperTile(
+            checked = poop,
+            onCheckedChange = onPoop,
+            kind = DiaperKind.POOP,
+            eventColors = events.poop,
+            litColor = events.diaper.containerLit,
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/**
+ * Colour and Texture (optional, single-select; tapping the selected chip clears it) and the health hint for Pale, Red
+ * or Black. Expands below the tiles while [visible] (Poop is on); reduced motion makes it instant.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun PoopDetails(
+    visible: Boolean,
+    color: PoopColor?,
+    texture: PoopTexture?,
+    onColor: (PoopColor?) -> Unit,
+    onTexture: (PoopTexture?) -> Unit,
+    acceptsTaps: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val reducedMotion = rememberReducedMotion()
+    AnimatedVisibility(
+        visible = visible,
+        enter = if (reducedMotion) EnterTransition.None else expandVertically() + fadeIn(),
+        exit = if (reducedMotion) ExitTransition.None else shrinkVertically() + fadeOut(),
+    ) {
+        Column(modifier) {
+            SectionHeading(stringResource(CoreR.string.poop_colour))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PoopColor.entries.forEach { option ->
+                    val selected = color == option
+                    XChip(
+                        selected = selected,
+                        onClick = { onColor(if (selected) null else option) },
+                        label = stringResource(Labels.poopColor(option)),
+                        showCheck = false,
+                        acceptsTaps = acceptsTaps,
+                        leading = { Swatch(PoopSwatches.color(option), selected) },
+                    )
+                }
+            }
+            SectionHeading(stringResource(CoreR.string.poop_texture))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PoopTexture.entries.forEach { option ->
+                    val selected = texture == option
+                    XChip(
+                        selected = selected,
+                        onClick = { onTexture(if (selected) null else option) },
+                        label = stringResource(Labels.poopTexture(option)),
+                        reserveCheck = true,
+                        acceptsTaps = acceptsTaps,
+                    )
+                }
+            }
+            AnimatedVisibility(
+                visible = color in PoopSwatches.needsHint,
+                enter = if (reducedMotion) EnterTransition.None else expandVertically() + fadeIn(),
+                exit = if (reducedMotion) ExitTransition.None else shrinkVertically() + fadeOut(),
+            ) {
+                HealthHint()
+            }
         }
     }
 }
@@ -213,12 +258,12 @@ private fun DiaperTile(
 }
 
 @Composable
-private fun SectionHeading(text: String) {
+internal fun SectionHeading(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
+        modifier = modifier
             .padding(top = 16.dp, bottom = 4.dp)
             .semantics { heading() },
     )

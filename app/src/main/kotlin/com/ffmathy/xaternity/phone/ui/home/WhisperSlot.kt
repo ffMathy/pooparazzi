@@ -61,6 +61,7 @@ import com.ffmathy.xaternity.core.ui.time.rememberReducedMotion
 import com.ffmathy.xaternity.core.ui.tokens.LocalXPalette
 import com.ffmathy.xaternity.core.ui.type.PhoneType
 import com.ffmathy.xaternity.phone.R
+import com.ffmathy.xaternity.phone.ui.history.deletedLabel
 import com.ffmathy.xaternity.phone.ui.components.ChipDefaults
 import com.ffmathy.xaternity.phone.ui.components.OffsetChip
 import com.ffmathy.xaternity.phone.ui.components.XChip
@@ -421,6 +422,11 @@ private fun cardContent(variant: CardVariant, formatters: Formatters): CardConte
             GuardKind.AWAKE -> CardContent(TintedIcon(XIcons.awake, events.sleep.strong), stringResource(CoreR.string.status_awake), null)
             GuardKind.FEEDING -> CardContent(breast, stringResource(CoreR.string.status_breastfeeding), null)
         }
+        is CardVariant.Deleted -> CardContent(
+            entryIcon(variant.entry, events),
+            stringResource(CoreR.string.receipt_deleted, deletedLabel(variant.entry)),
+            null,
+        )
         CardVariant.Undone -> CardContent(TintedIcon(XIcons.undo, colors.onSurfaceVariant), stringResource(CoreR.string.receipt_undone), null)
     }
 }

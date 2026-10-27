@@ -8,5 +8,56 @@
 
     <string name="lamp_no_feed">Ingen måltider endnu</string>
 
-    <string name="stub_coming_next">Denne skærm kommer i næste version.</string>
+    <string name="spoken_range">%1$s til %2$s</string>
+    <string name="spoken_pee_and_poop">Tis og bæ</string>
+    <string name="spoken_side_left_then_right">venstre, så højre</string>
+    <string name="spoken_side_right_then_left">højre, så venstre</string>
+
+    <string name="action_ok">OK</string>
+
+    <!-- Historik -->
+    <string name="history_previous_day">Forrige dag</string>
+    <string name="history_next_day">Næste dag</string>
+    <string name="history_add_entry">Tilføj</string>
+    <string name="history_empty">Intet registreret denne dag.</string>
+    <string name="action_edit_time">Ret tid</string>
+
+    <!-- Redigering -->
+    <string name="edit_title_sleep">Rediger søvn</string>
+    <string name="edit_title_feed">Rediger måltid</string>
+    <string name="edit_title_diaper">Rediger ble</string>
+    <string name="edit_title_add">Tilføj registrering</string>
+    <string name="edit_fell_asleep">Faldt i søvn</string>
+    <string name="edit_started">Startede</string>
+    <string name="edit_ended">Sluttede</string>
+    <string name="edit_time">Tidspunkt</string>
+    <string name="edit_type">Type</string>
+    <string name="edit_side">Side</string>
+    <string name="edit_still_asleep">Sover stadig</string>
+    <string name="edit_still_feeding">Ammer stadig</string>
+    <string name="edit_end_now">Afslut nu</string>
+    <string name="edit_duration">Varighed %1$s</string>
+    <string name="edit_was">var %1$s</string>
+    <string name="edit_earlier_date">Tidligere dato…</string>
+    <string name="edit_change_time">Skift tidspunkt</string>
+    <string name="edit_change_day">Skift dag</string>
+    <string name="edit_spoken_day">%1$s, dag: %2$s</string>
+    <string name="edit_error_wake_before_sleep">Vågnede skal ligge efter Faldt i søvn.</string>
+    <string name="edit_error_feed_end_before_start">Amningen skal slutte efter den startede.</string>
+    <string name="edit_error_future">Kl. %1$s er ikke kommet endnu. Skal den registreres i går?</string>
+    <string name="edit_use_yesterday">Brug i går</string>
+    <string name="edit_warning_overlap_sleep">Overlapper søvnen kl. %1$s. Gem alligevel?</string>
+    <string name="edit_warning_overlap_feed">Overlapper amningen kl. %1$s. Gem alligevel?</string>
+    <string name="edit_error_save_failed">Ændringen blev ikke gemt. Prøv igen.</string>
+
+    <!-- Indstillinger -->
+    <string name="settings_section_baby">Barn</string>
+    <string name="settings_appearance_hint">Auto bruger Nat om aftenen og natten, mens barnet sover, og når telefonen bruger mørkt tema.</string>
+    <string name="settings_section_watch">Ur</string>
+    <string name="settings_sync_now">Synkroniser nu</string>
+    <string name="settings_sync_unavailable">Intet ur forbundet. Alt gemmes på telefonen.</string>
+    <string name="settings_section_about">Om</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_font_licences">Skrifttypelicenser</string>
+    <string name="settings_font_licences_summary">Google Sans Flex og Atkinson Hyperlegible Next, SIL Open Font License 1.1</string>
 </resources>

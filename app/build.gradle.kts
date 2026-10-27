@@ -20,7 +20,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        // The version shown in Settings › About.
+        buildConfig = true
+    }
+    // The font licences shown in Settings › About › Font licences, packaged from the single copy in third_party/
+    // (assets/fonts/*-OFL.txt).
+    sourceSets.getByName("main").assets.directories.add(rootProject.file("third_party").path)
     testOptions { unitTests.isIncludeAndroidResources = true }
 }
 

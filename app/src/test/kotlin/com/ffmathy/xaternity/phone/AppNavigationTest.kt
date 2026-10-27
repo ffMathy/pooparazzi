@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.ffmathy.xaternity.core.Core
 import org.junit.After
 import org.junit.Rule
@@ -43,6 +44,26 @@ class AppNavigationTest {
         compose.onNodeWithContentDescription("Settings").performClick()
         compose.waitUntilAtLeastOneExists(hasContentDescription("Back"), timeoutMillis = 5_000)
         compose.onNodeWithText("Settings").assertExists()
+    }
+
+    @Test
+    fun historyAddsAPastEntryAndSettingsShowTheFontLicences() {
+        compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
+        compose.onNodeWithText("History").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
+        compose.onNodeWithText("Add entry").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Add past entry"), timeoutMillis = 5_000)
+        compose.onNodeWithText("Cancel").performClick()
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Add past entry")).fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithContentDescription("Back").performClick()
+
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Settings"), timeoutMillis = 5_000)
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Font licences"), timeoutMillis = 5_000)
+        compose.onNodeWithText("Font licences").performScrollTo().performClick()
+        // The OFL texts are packaged from third_party/fonts.
+        compose.waitUntilAtLeastOneExists(hasText("SIL OPEN FONT LICENSE", substring = true), timeoutMillis = 5_000)
+        compose.onNodeWithText("Google Sans Flex").assertExists()
     }
 
     @Test

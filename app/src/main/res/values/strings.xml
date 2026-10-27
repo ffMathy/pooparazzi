@@ -35,6 +35,65 @@
     <!-- TalkBack, Today grid: "Today: 5 feeds, 4 pee, 2 poop, 7 hours 57 minutes sleep" -->
     <string name="spoken_today" translatable="false">%1$s: %2$s %3$s, %4$s %5$s, %6$s %7$s, %8$s %9$s</string>
 
-    <!-- Stub screens of the next stage -->
-    <string name="stub_coming_next">This screen is part of the next build.</string>
+    <!-- TalkBack: "12:40 to 13:27" -->
+    <string name="spoken_range">%1$s to %2$s</string>
+    <!-- TalkBack names where the visible text reads badly ("+", "→") -->
+    <string name="spoken_pee_and_poop">Pee and poop</string>
+    <string name="spoken_side_left_then_right">left then right</string>
+    <string name="spoken_side_right_then_left">right then left</string>
+
+    <string name="action_ok">OK</string>
+
+    <!-- History (P3) -->
+    <string name="history_previous_day">Previous day</string>
+    <string name="history_next_day">Next day</string>
+    <string name="history_add_entry">Add entry</string>
+    <string name="history_empty">Nothing logged on this day.</string>
+    <!-- Custom accessibility action on a History row (DESIGN_SPEC §9.4) -->
+    <string name="action_edit_time">Edit time</string>
+
+    <!-- Edit sheet (P4) -->
+    <string name="edit_title_sleep">Edit sleep</string>
+    <string name="edit_title_feed">Edit feed</string>
+    <string name="edit_title_diaper">Edit diaper</string>
+    <string name="edit_title_add">Add past entry</string>
+    <string name="edit_fell_asleep">Fell asleep</string>
+    <string name="edit_started">Started</string>
+    <string name="edit_ended">Ended</string>
+    <string name="edit_time">Time</string>
+    <string name="edit_type">Type</string>
+    <string name="edit_side">Side</string>
+    <string name="edit_still_asleep">Still asleep</string>
+    <string name="edit_still_feeding">Still feeding</string>
+    <string name="edit_end_now">End now</string>
+    <!-- "Duration 52m" -->
+    <string name="edit_duration">Duration %1$s</string>
+    <!-- "was 12:40", "was 47m" -->
+    <string name="edit_was">was %1$s</string>
+    <string name="edit_earlier_date">Earlier date…</string>
+    <!-- Click labels and TalkBack names -->
+    <string name="edit_change_time">Change time</string>
+    <string name="edit_change_day">Change day</string>
+    <!-- "Fell asleep day, Today" -->
+    <string name="edit_spoken_day">%1$s day, %2$s</string>
+    <!-- Validation slot. %1$s is a clock time. -->
+    <string name="edit_error_wake_before_sleep">Woke up must be after fell asleep.</string>
+    <string name="edit_error_feed_end_before_start">The feed must end after it started.</string>
+    <string name="edit_error_future">%1$s hasn\'t happened yet. Log it for yesterday?</string>
+    <string name="edit_use_yesterday">Use yesterday</string>
+    <string name="edit_warning_overlap_sleep">Overlaps the %1$s sleep. Save anyway?</string>
+    <string name="edit_warning_overlap_feed">Overlaps the %1$s feed. Save anyway?</string>
+    <string name="edit_error_save_failed">Couldn\'t save this change. Try again.</string>
+
+    <!-- Settings -->
+    <string name="settings_section_baby">Baby</string>
+    <string name="settings_appearance_hint">Auto uses Night in the evening and at night, while a sleep runs, and when the phone is in dark theme.</string>
+    <string name="settings_section_watch">Watch</string>
+    <string name="settings_sync_now">Sync now</string>
+    <string name="settings_sync_unavailable">No watch connected. Everything is saved on this phone.</string>
+    <string name="settings_section_about">About</string>
+    <!-- "Version 0.1.0" -->
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_font_licences">Font licences</string>
+    <string name="settings_font_licences_summary">Google Sans Flex and Atkinson Hyperlegible Next, SIL Open Font License 1.1</string>
 </resources>

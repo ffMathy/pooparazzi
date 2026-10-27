@@ -38,6 +38,7 @@ import com.ffmathy.xaternity.core.sync.SyncStatus
 import com.ffmathy.xaternity.core.ui.icons.XIcon
 import com.ffmathy.xaternity.core.ui.icons.XIcons
 import com.ffmathy.xaternity.core.ui.type.PhoneType
+import com.ffmathy.xaternity.phone.ui.components.SyncLine
 import java.time.ZoneId
 import com.ffmathy.xaternity.core.R as CoreR
 
@@ -133,28 +134,6 @@ private fun historyPillStyle(syncLine: String?, maxWidth: Dp): PillStyle {
                 else -> PillStyle.ICON
             }
         }
-    }
-}
-
-/** "Synced with watch · 14:31" and friends (DESIGN_SPEC §4.5); hidden when sync is unavailable. Error uses the error colour. */
-@Composable
-private fun SyncLine(sync: SyncStatus, zone: ZoneId, formatters: Formatters) {
-    val colors = MaterialTheme.colorScheme
-    val text = formatters.labels.syncLine(sync, SyncPeer.WATCH, formatters.clock, zone) ?: return
-    val icon = when (sync) {
-        is SyncStatus.Synced -> XIcons.synced
-        SyncStatus.Pending -> XIcons.pending
-        else -> XIcons.offline
-    }
-    val color = if (sync is SyncStatus.Error) colors.error else colors.onSurfaceVariant
-    Row(
-        Modifier.padding(top = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        XIcon(icon, contentDescription = null, tint = color, size = 14.dp)
-        val lines = if (LocalDensity.current.fontScale >= LARGE_FONT_SCALE) 2 else 1
-        Text(text, style = PhoneType.syncLabel, color = color, maxLines = lines, overflow = TextOverflow.Ellipsis)
     }
 }
 

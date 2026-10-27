@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ffmathy.xaternity.core.ui.tokens.LocalXPalette
 import com.ffmathy.xaternity.core.R as CoreR
@@ -52,7 +53,10 @@ internal object SheetDefaults {
 /**
  * A modal bottom sheet that opens fully (`skipPartiallyExpanded`) while [value] is non-null and animates closed when it
  * becomes null, then reports [onClosed]. Cancel, a scrim tap, back or a swipe call [onDismissRequest].
- * Dialog semantics come from the window; [paneTitle] labels it.
+ * Dialog semantics come from the window; the content labels it with a pane title.
+ *
+ * @param sheetModifier applied to the sheet surface (the edit sheet uses it to stop 24 dp below the status bar).
+ * @param handleTop the drag handle's distance from the sheet's top; the same space separates it from the content.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +65,8 @@ internal fun <T : Any> XModalSheet(
     onDismissRequest: () -> Unit,
     onClosed: () -> Unit,
     windowInsets: WindowInsets,
+    sheetModifier: Modifier = Modifier,
+    handleTop: Dp = 12.dp,
     content: @Composable ColumnScope.(T) -> Unit,
 ) {
     val last = remember { mutableStateOf<T?>(null) }
@@ -79,25 +85,26 @@ internal fun <T : Any> XModalSheet(
     val palette = LocalXPalette.current
     ModalBottomSheet(
         onDismissRequest = { if (!closing) onDismissRequest() },
+        modifier = sheetModifier,
         sheetState = sheetState,
         shape = SheetDefaults.Shape,
         containerColor = palette.colors.surfaceContainerLow,
         contentColor = palette.colors.onSurface,
         tonalElevation = 0.dp,
         scrimColor = palette.colors.scrim,
-        dragHandle = { DragHandle() },
+        dragHandle = { DragHandle(handleTop) },
         contentWindowInsets = { windowInsets },
     ) {
         content(shown)
     }
 }
 
-/** Handle 32 × 4, r 2, onSurfaceVariant at 0.4, 12 from the top. Decorative: the sheet has no partial state. */
+/** Handle 32 × 4, r 2, onSurfaceVariant at 0.4, [top] from the top. Decorative: the sheet has no partial state. */
 @Composable
-private fun DragHandle() {
+private fun DragHandle(top: Dp) {
     Box(
         Modifier
-            .padding(top = 12.dp, bottom = 12.dp)
+            .padding(top = top, bottom = top)
             .size(width = 32.dp, height = 4.dp)
             .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(2.dp)),
     )

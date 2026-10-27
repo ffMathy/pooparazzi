@@ -84,6 +84,7 @@ internal object HomeStateBuilder {
             is CardSpec.SleepCancelled -> CardVariant.SleepCancelled
             is CardSpec.AdjustStart -> CardVariant.AdjustStart(spec.sleep)
             is CardSpec.Notice -> CardVariant.Notice(spec.guard)
+            is CardSpec.Deleted -> CardVariant.Deleted(spec.previous)
             is CardSpec.Undone -> CardVariant.Undone
         }
         val action = when {

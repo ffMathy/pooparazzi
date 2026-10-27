@@ -38,6 +38,9 @@ internal sealed interface CardSpec {
     data object SleepCancelled : CardSpec
     data class AdjustStart(val entryId: String, val sleep: Boolean) : CardSpec
     data class Notice(val guard: GuardKind) : CardSpec
+
+    /** "Sleep deleted" after a delete in the edit sheet; Undo writes [previous] back. */
+    data class Deleted(val previous: Entry) : CardSpec
     data object Undone : CardSpec
 }
 
@@ -54,7 +57,7 @@ internal val CardSpec.subject: Pair<String, MoveField>?
         is CardSpec.AdjustStart -> entryId to MoveField.START
         is CardSpec.FeedEnded -> entryId to MoveField.END
         is CardSpec.WokeUp -> entryId to MoveField.END
-        is CardSpec.FeedCancelled, CardSpec.SleepCancelled, is CardSpec.Notice, CardSpec.Undone -> null
+        is CardSpec.FeedCancelled, CardSpec.SleepCancelled, is CardSpec.Notice, is CardSpec.Deleted, CardSpec.Undone -> null
     }
 
 /** A feed or diaper log (or a breastfeed start) may offer "End sleep" while a sleep runs. */

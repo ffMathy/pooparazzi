@@ -129,6 +129,9 @@ sealed interface CardVariant {
     /** A guard with no card to attach to: shows the current state ("Asleep", "Awake", "Breastfeeding"). */
     data class Notice(val guard: GuardKind) : CardVariant
 
+    /** "Sleep deleted" / "Pee + poop deleted" (DESIGN_SPEC §3.3.4), with Undo. */
+    data class Deleted(val entry: Entry) : CardVariant
+
     /** "Undone" (2 s, no drain line). */
     data object Undone : CardVariant
 }

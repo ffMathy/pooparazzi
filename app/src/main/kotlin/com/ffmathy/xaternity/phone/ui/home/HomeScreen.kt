@@ -34,6 +34,9 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ffmathy.xaternity.core.format.rememberFormatters
+import com.ffmathy.xaternity.phone.ui.edit.EditSheet
+import com.ffmathy.xaternity.phone.ui.edit.EditViewModel
+import com.ffmathy.xaternity.phone.ui.edit.rememberEditEffects
 import com.ffmathy.xaternity.phone.ui.preview.HomeSamples
 import com.ffmathy.xaternity.phone.ui.sheets.HomeSheets
 import com.ffmathy.xaternity.phone.ui.theme.LocalNightLight
@@ -44,9 +47,12 @@ internal object HomeDefaults {
     val Gutter = 20.dp
 }
 
-/** Home wired to its view model and to navigation. */
+/**
+ * Home wired to its view model and to navigation. Since-rows and the Adjust card's Edit chip open the edit sheet over
+ * Home; a delete there shows the "… deleted" card with Undo.
+ */
 @Composable
-fun HomeRoute(onOpenHistory: () -> Unit, onOpenSettings: () -> Unit, onEditEntry: (String) -> Unit) {
+fun HomeRoute(onOpenHistory: () -> Unit, onOpenSettings: () -> Unit) {
     val accessibility = LocalAccessibilityManager.current
     val timings = remember(accessibility) {
         val window = HomeTimings().undoWindowMillis
@@ -60,19 +66,21 @@ fun HomeRoute(onOpenHistory: () -> Unit, onOpenSettings: () -> Unit, onEditEntry
         )
     }
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.factory(timings))
+    val editViewModel: EditViewModel = viewModel(factory = EditViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val edit by editViewModel.state.collectAsStateWithLifecycle()
+    rememberEditEffects(editViewModel, onDeleted = viewModel::onEntryDeleted)
     val haptics = LocalHapticFeedback.current
     LaunchedEffect(viewModel, haptics) {
         viewModel.effects.collect { haptics.performHapticFeedback(it.feedbackType()) }
     }
     val history by rememberUpdatedState(onOpenHistory)
     val settings by rememberUpdatedState(onOpenSettings)
-    val edit by rememberUpdatedState(onEditEntry)
-    val actions = remember(viewModel) {
+    val actions = remember(viewModel, editViewModel) {
         object : HomeActions by viewModel {
             override fun onOpenHistory() = history()
             override fun onOpenSettings() = settings()
-            override fun onEditEntry(entryId: String) = edit(entryId)
+            override fun onEditEntry(entryId: String) = editViewModel.openEntry(entryId)
         }
     }
     val loaded = state
@@ -81,9 +89,11 @@ fun HomeRoute(onOpenHistory: () -> Unit, onOpenSettings: () -> Unit, onEditEntry
     } else {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
     }
+    EditSheet(edit, editViewModel)
 }
 
-private fun HomeHaptic.feedbackType(): HapticFeedbackType = when (this) {
+/** The Compose haptic for a [HomeHaptic] (also used by the edit sheet). */
+internal fun HomeHaptic.feedbackType(): HapticFeedbackType = when (this) {
     HomeHaptic.CONFIRM -> HapticFeedbackType.Confirm
     HomeHaptic.TOGGLE_ON -> HapticFeedbackType.ToggleOn
     HomeHaptic.TOGGLE_OFF -> HapticFeedbackType.ToggleOff
