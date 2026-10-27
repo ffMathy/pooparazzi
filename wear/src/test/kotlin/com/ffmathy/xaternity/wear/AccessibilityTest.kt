@@ -73,6 +73,14 @@ class AccessibilityTest {
     }
 
     @Test
+    fun anUntypedFeedIsNotReadAsLastFeedFeed() {
+        // As the phone: "Last feed, 2 hours 10 minutes ago, at 12:22", not "Last feed, feed, …".
+        val idle = WearSamples.mainIdle()
+        show { MainScreen(idle.copy(lastFeed = idle.lastFeed!!.copy(feedType = null)), MainActions()) }
+        compose.onNode(hasContentDescription("Last feed, 2 hours 10 minutes ago, at 12:22")).assertExists()
+    }
+
+    @Test
     fun asleepMainReadsTheLampOnceAndNamesWokeUp() {
         show { MainScreen(WearSamples.mainAsleep(), MainActions()) }
         compose.onNode(hasContentDescription("Asleep, 1 hour 7 minutes, since 02:05")).assertExists()

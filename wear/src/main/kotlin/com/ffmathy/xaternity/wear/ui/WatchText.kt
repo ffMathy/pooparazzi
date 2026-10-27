@@ -41,6 +41,14 @@ fun labelAtTime(label: String, millis: Long, f: Formatters): String =
 fun feedTypeLabel(entry: Entry, compact: Boolean = false): String =
     stringResource(Labels.feedType(entry.feedType, compact))
 
+/**
+ * The feed type for a spoken sentence, or null for a feed logged without one, so TalkBack reads
+ * "Last feed, 2 hours ago" rather than "Last feed, feed, 2 hours ago" (as the phone does).
+ */
+@Composable
+@ReadOnlyComposable
+fun spokenFeedType(entry: Entry): String? = entry.feedType?.let { stringResource(Labels.feedType(it)) }
+
 /** Receipts and History: "Pee", "Poop", "Pee + poop", "Diaper" (a plain change). */
 @Composable
 @ReadOnlyComposable

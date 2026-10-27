@@ -98,7 +98,7 @@ import com.ffmathy.xaternity.wear.ui.diaperStatusLabel
 import com.ffmathy.xaternity.wear.ui.durationAndSince
 import com.ffmathy.xaternity.wear.ui.eventButtonColors
 import com.ffmathy.xaternity.wear.ui.events
-import com.ffmathy.xaternity.wear.ui.feedTypeLabel
+import com.ffmathy.xaternity.wear.ui.spokenFeedType
 import com.ffmathy.xaternity.wear.ui.isSmallWatch
 import com.ffmathy.xaternity.wear.ui.labelAtTime
 import com.ffmathy.xaternity.wear.ui.SpokenLabels
@@ -254,7 +254,7 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
     val label = if (lastFeed != null) labelAtTime(stringResource(CoreR.string.status_fed), lastFeed.startMillis, f)
     else stringResource(R.string.status_no_feed_yet)
     val spoken = if (lastFeed != null) {
-        f.spokenAgo(stringResource(CoreR.string.spoken_last_feed), feedTypeLabel(lastFeed), lastFeed.startMillis, state.now)
+        f.spokenAgo(stringResource(CoreR.string.spoken_last_feed), spokenFeedType(lastFeed), lastFeed.startMillis, state.now)
     } else {
         label
     }
@@ -733,7 +733,7 @@ private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
             cards += CardModel(
                 "last-feed", feed, TimeField.START, XIcons.forFeedType(feed.feedType), events.feed.strong,
                 lastFedWord, f.agoAndClock(feed.startMillis, now),
-                f.spokenAgo(lastFeedSpoken, feedTypeLabel(feed), feed.startMillis, now),
+                f.spokenAgo(lastFeedSpoken, spokenFeedType(feed), feed.startMillis, now),
             )
         }
     }

@@ -3,11 +3,13 @@ package com.ffmathy.xaternity.wear.feed
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -62,6 +64,7 @@ import com.ffmathy.xaternity.wear.ui.ScreenTitle
 import com.ffmathy.xaternity.wear.ui.SpokenLabels
 import com.ffmathy.xaternity.wear.ui.WatchShapes
 import com.ffmathy.xaternity.wear.ui.events
+import com.ffmathy.xaternity.wear.ui.isSmallWatch
 import com.ffmathy.xaternity.wear.ui.rememberCooldown
 import com.ffmathy.xaternity.wear.ui.spokenText
 import com.ffmathy.xaternity.core.R as CoreR
@@ -84,6 +87,7 @@ fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modi
     val spec = rememberTransformationSpec()
     val cooldown = rememberCooldown()
     val ambient = isAmbient()
+    val small = isSmallWatch()
     val f = rememberFormatters(draft.zone)
     // "14:32–14:50 · 18m": the feed being ended, so the parent can confirm it before ending it.
     val summary = f.clock.range(draft.feed.startMillis, draft.endAt, f.zone, spaced = false) +
@@ -98,15 +102,22 @@ fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modi
             TransformingLazyColumn(
                 state = listState,
                 flingBehavior = TransformingLazyColumnDefaults.snapFlingBehavior(listState),
+                // Tighter than the default list so the title, summary and BOTH checkboxes sit above the pinned Medium
+                // "End feed" EdgeButton at rest on a 227 dp watch (its top edge is ~154 dp down). A small watch can't
+                // fit both anyway, so it keeps the full top padding (the title stays clear of the time) and the bottom
+                // padding lets Right scroll clear of the button.
+                verticalArrangement = Arrangement.spacedBy(2.dp),
                 contentPadding = PaddingValues(
-                    top = contentPadding.calculateTopPadding(),
+                    top = if (small) contentPadding.calculateTopPadding()
+                    else (contentPadding.calculateTopPadding() - 8.dp).coerceAtLeast(0.dp),
                     bottom = 84.dp,
                     start = 10.dp,
                     end = 10.dp,
                 ),
             ) {
                 item(key = "title") {
-                    Column(Modifier.fillMaxWidth().transformedHeight(this, spec), horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Not morphed: a shrinking title item let the summary line slide under the Left checkbox.
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                         ScreenTitle(stringResource(CoreR.string.side_question))
                         Text(
                             summary,
@@ -186,6 +197,8 @@ private fun SideCheckbox(
         onCheckedChange = { onToggle() },
         modifier = modifier
             .fillMaxWidth()
+            // 48 dp (the minimum touch target) instead of the default 52 dp, so both rows clear the EdgeButton.
+            .height(48.dp)
             .semantics {
                 role = Role.Checkbox
                 contentDescription = if (placeSpoken != null) "$label, $placeSpoken" else label
@@ -249,9 +262,21 @@ private fun EndFeedEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Bo
         ),
         border = BorderStroke(if (ambient) 2.dp else 1.5.dp, feed.strong),
     ) {
-        Column(Modifier.clearAndSetSemantics { }, horizontalAlignment = Alignment.CenterHorizontally) {
-            XIcon(XIcons.check, null, tint = if (ambient) WatchAmbient.content else feed.strong, size = 24.dp)
-            AutoSizeLine(label, MaterialTheme.typography.labelMedium, content, minSize = 12, modifier = Modifier.width(96.dp))
+        if (isSmallWatch()) {
+            // A 192 dp watch's EdgeButton is too narrow for "Afslut amning" on one line: wrap it in place of the icon.
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = content,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                modifier = Modifier.clearAndSetSemantics { },
+            )
+        } else {
+            Column(Modifier.clearAndSetSemantics { }, horizontalAlignment = Alignment.CenterHorizontally) {
+                XIcon(XIcons.check, null, tint = if (ambient) WatchAmbient.content else feed.strong, size = 24.dp)
+                AutoSizeLine(label, MaterialTheme.typography.labelMedium, content, minSize = 12, modifier = Modifier.width(96.dp))
+            }
         }
     }
 }
