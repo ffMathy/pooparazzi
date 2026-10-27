@@ -1,0 +1,105 @@
+package com.ffmathy.xaternity.phone
+
+import android.app.Application
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.xaternity.core.Core
+import com.ffmathy.xaternity.core.CoreGraph
+import com.ffmathy.xaternity.core.data.FixedClock
+import com.ffmathy.xaternity.core.data.RoomEntryRepository
+import com.ffmathy.xaternity.core.data.XaternityDatabase
+import com.ffmathy.xaternity.core.model.Entry
+import com.ffmathy.xaternity.core.sample.SampleData
+import com.ffmathy.xaternity.core.settings.AppLanguage
+import com.ffmathy.xaternity.core.settings.Appearance
+import com.ffmathy.xaternity.core.settings.Settings
+import com.ffmathy.xaternity.core.settings.SettingsRepository
+import com.ffmathy.xaternity.core.sync.NoopEntrySync
+import com.ffmathy.xaternity.phone.ui.home.HomeHaptic
+import com.ffmathy.xaternity.phone.ui.home.HomeTimings
+import com.ffmathy.xaternity.phone.ui.home.HomeUiState
+import com.ffmathy.xaternity.phone.ui.home.HomeViewModel
+import kotlin.coroutines.ContinuationInterceptor
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
+
+/** Settings held in memory. */
+class InMemorySettings(initial: Settings = SampleData.settings) : SettingsRepository {
+    private val state = MutableStateFlow(initial)
+    override val settings: Flow<Settings> = state
+    override suspend fun setBabyName(name: String): Settings = update { it.copy(babyName = Settings.sanitizeName(name)) }
+    override suspend fun setAppearance(appearance: Appearance): Settings = update { it.copy(appearance = appearance) }
+    override suspend fun setLanguage(language: AppLanguage): Settings = update { it.copy(language = language) }
+    override suspend fun applyRemote(remote: Settings): Boolean {
+        state.value = remote
+        return true
+    }
+
+    private fun update(transform: (Settings) -> Settings): Settings = transform(state.value).also { state.value = it }
+}
+
+/**
+ * Home's view model on a real core graph: an in-memory Room database driven by the test dispatcher (so writes, the
+ * entry flow and the card timers all run in virtual time), a [FixedClock] and [NoopEntrySync], installed with
+ * [Core.install]. Monotonic time for the guards and cooldowns is the scheduler's virtual time.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class HomeTestRig(val scope: TestScope, now: Long = SampleData.NOW_1432) {
+    val clock = FixedClock(now)
+    private val dispatcher = scope.coroutineContext[ContinuationInterceptor] as CoroutineDispatcher
+    private val database: XaternityDatabase = Room
+        .inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Application>(), XaternityDatabase::class.java)
+        .allowMainThreadQueries()
+        .setQueryCoroutineContext(dispatcher)
+        .build()
+    val repository = RoomEntryRepository(database, clock)
+
+    init {
+        Core.install(CoreGraph(clock, repository, InMemorySettings(), NoopEntrySync, CoroutineScope(SupervisorJob() + dispatcher)))
+    }
+
+    val viewModel = HomeViewModel(
+        repository = Core.repository,
+        settings = Core.settings,
+        sync = Core.sync,
+        clock = Core.clock,
+        zone = SampleData.ZONE,
+        timings = HomeTimings(),
+        elapsedRealtime = { scope.testScheduler.currentTime },
+    )
+
+    val haptics = mutableListOf<HomeHaptic>()
+
+    /** Keeps the state flow subscribed and records haptics. Call first in each test. */
+    fun start() {
+        scope.backgroundScope.launch { viewModel.state.collect { } }
+        scope.backgroundScope.launch { viewModel.effects.collect { haptics += it } }
+        scope.runCurrent()
+    }
+
+    /** Runs the queued work (without moving virtual time) and returns the state. */
+    fun settle(): HomeUiState {
+        scope.runCurrent()
+        return checkNotNull(viewModel.state.value) { "Home has not loaded" }
+    }
+
+    suspend fun entries(): List<Entry> = repository.observeEntries().first()
+
+    suspend fun seed(entries: List<Entry>) {
+        entries.forEach { repository.add(it) }
+        scope.runCurrent()
+    }
+
+    fun close() {
+        Core.reset()
+        database.close()
+    }
+}

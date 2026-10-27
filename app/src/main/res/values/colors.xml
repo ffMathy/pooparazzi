@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fixed colours for the system surfaces drawn before Compose (DESIGN_SPEC §3.3.8, §5.6). Night twins in values-night. -->
+<resources>
+    <!-- Follow the configuration's night mode: the system splash and the window behind the first frame. -->
+    <color name="splash_background">#FBF6F0</color>
+    <color name="splash_glyph">#3A332C</color>
+    <color name="window_background">#FBF6F0</color>
+
+    <!-- Explicit Night / Day splashes, chosen for the next launch from the app's own Appearance (API 33+). -->
+    <color name="splash_night_background">#0C0A08</color>
+    <color name="splash_night_glyph">#E8D8C3</color>
+    <color name="splash_day_background">#FBF6F0</color>
+    <color name="splash_day_glyph">#3A332C</color>
+
+    <!-- Launcher icon: parchment lamp on the night background (amber would mean FEED). -->
+    <color name="launcher_background">#0C0A08</color>
+    <color name="launcher_glyph">#E8D8C3</color>
+</resources>
