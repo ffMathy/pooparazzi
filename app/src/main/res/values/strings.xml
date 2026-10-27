@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Phone-app strings. Shared words (kinds, feed types, sides, actions, receipts, guards, units, relative phrases,
+    sync lines) come from :core (com.ffmathy.xaternity.core.R). Danish twins live in values-da/strings.xml.
+    Pure format strings that only join localised parts are not translatable.
+-->
+<resources>
+    <string name="app_name" translatable="false">Xaternity</string>
+
+    <!-- Content descriptions (DESIGN_SPEC §9.4) -->
+    <string name="cd_back">Back</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_edit_start_time">Edit start time</string>
+    <!-- Name of the checked sleep toggle: the visible label plus what a tap does -->
+    <string name="cd_woke_up_end_sleep">Woke up, end sleep</string>
+
+    <!-- Lamp before the first feed is logged -->
+    <string name="lamp_no_feed">No feeds yet</string>
+    <!-- Hero placeholder before the first feed (a dash, not a number) -->
+    <string name="lamp_no_feed_hero" translatable="false">–</string>
+
+    <!-- Joins of localised parts -->
+    <!-- Since-row lead: "Awake 1h 05m", "Pee 48m ago", "Last fed 1h 32m ago" -->
+    <string name="join_space" translatable="false">%1$s %2$s</string>
+    <!-- Sheet titles: "Diaper · 14:32", "Feed · 14:32" -->
+    <string name="join_dot" translatable="false">%1$s · %2$s</string>
+    <!-- TalkBack, two parts: "Last fed, No feeds yet" -->
+    <string name="spoken_pair" translatable="false">%1$s, %2$s</string>
+    <!-- TalkBack, running Lamp: "Asleep, 1 hour 7 minutes, since 02:05" -->
+    <string name="spoken_running" translatable="false">%1$s, %2$s, %3$s</string>
+    <!-- TalkBack, last entry: "Last feed, formula, 2 hours 10 minutes ago, at 12:22" -->
+    <string name="spoken_last_entry" translatable="false">%1$s, %2$s, %3$s, %4$s</string>
+    <!-- TalkBack, status since: "Awake 1 hour 5 minutes, since 13:27" -->
+    <string name="spoken_status_since" translatable="false">%1$s %2$s, %3$s</string>
+    <!-- TalkBack, Today grid: "Today: 5 feeds, 4 pee, 2 poop, 7 hours 57 minutes sleep" -->
+    <string name="spoken_today" translatable="false">%1$s: %2$s %3$s, %4$s %5$s, %6$s %7$s, %8$s %9$s</string>
+
+    <!-- Stub screens of the next stage -->
+    <string name="stub_coming_next">This screen is part of the next build.</string>
+</resources>

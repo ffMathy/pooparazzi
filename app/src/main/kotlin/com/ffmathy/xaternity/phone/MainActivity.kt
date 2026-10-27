@@ -1,0 +1,50 @@
+package com.ffmathy.xaternity.phone
+
+import android.graphics.Color
+import android.os.Build
+import android.os.Bundle
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.getValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ffmathy.xaternity.core.Core
+import com.ffmathy.xaternity.phone.app.AppViewModel
+import com.ffmathy.xaternity.phone.navigation.XaternityPhoneApp
+
+/**
+ * The single activity. An [AppCompatActivity] so the in-app language works on API < 33 (V1_ADDITIONS §5).
+ * Draws edge to edge; the system bar icons follow the app's own Night/Day, not the system theme.
+ */
+class MainActivity : AppCompatActivity() {
+    private val appViewModel: AppViewModel by viewModels { AppViewModel.Factory }
+    private var appliedNight: Boolean? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        val splash = installSplashScreen()
+        super.onCreate(savedInstanceState)
+        splash.setKeepOnScreenCondition { appViewModel.appearance.value == null }
+        enableEdgeToEdge()
+        setContent {
+            val inputs by appViewModel.appearance.collectAsStateWithLifecycle()
+            inputs?.let { XaternityPhoneApp(inputs = it, clock = Core.clock, onNightResolved = ::applyNight) }
+        }
+    }
+
+    /** System bars and the next launch's splash follow the resolved appearance (DESIGN_SPEC §3.3.8, §8.3). */
+    private fun applyNight(night: Boolean) {
+        if (appliedNight == night) return
+        appliedNight = night
+        val transparent = Color.TRANSPARENT
+        val style = if (night) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent)
+        enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Persisted by the system for the next cold start: a dark splash after a night-time session even when the
+            // system theme is light.
+            splashScreen.setSplashScreenTheme(if (night) R.style.Theme_Xaternity_Starting_Night else R.style.Theme_Xaternity_Starting_Day)
+        }
+    }
+}

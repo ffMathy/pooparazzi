@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The activity theme after the splash. Compose draws everything; the window only shows before the first frame. -->
+    <style name="Theme.Xaternity" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+
+    <!-- System splash (DESIGN_SPEC §3.3.8): dark at night, light by day, never always-black. -->
+    <style name="Theme.Xaternity.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_lamp</item>
+        <item name="postSplashScreenTheme">@style/Theme.Xaternity</item>
+    </style>
+
+    <!-- Explicit variants for SplashScreen.setSplashScreenTheme (API 33+), following the app's resolved Appearance. -->
+    <style name="Theme.Xaternity.Starting.Night">
+        <item name="windowSplashScreenBackground">@color/splash_night_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_lamp_night</item>
+    </style>
+
+    <style name="Theme.Xaternity.Starting.Day">
+        <item name="windowSplashScreenBackground">@color/splash_day_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_lamp_day</item>
+    </style>
+</resources>

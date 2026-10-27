@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Danish twins of values/strings.xml. -->
+<resources>
+    <string name="cd_back">Tilbage</string>
+    <string name="cd_close">Luk</string>
+    <string name="cd_edit_start_time">Ret starttidspunkt</string>
+    <string name="cd_woke_up_end_sleep">Vågnede, afslut søvn</string>
+
+    <string name="lamp_no_feed">Ingen måltider endnu</string>
+
+    <string name="stub_coming_next">Denne skærm kommer i næste version.</string>
+</resources>

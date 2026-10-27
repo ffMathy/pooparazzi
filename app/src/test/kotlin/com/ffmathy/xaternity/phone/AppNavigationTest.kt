@@ -1,0 +1,57 @@
+package com.ffmathy.xaternity.phone
+
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import com.ffmathy.xaternity.core.Core
+import org.junit.After
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/**
+ * The real app: [XaternityApp] builds the core graph (Room, DataStore, sync without Play Services), [MainActivity]
+ * waits for the appearance inputs, then Home opens History and Settings and comes back.
+ */
+@OptIn(ExperimentalTestApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36], qualifiers = "w390dp-h844dp-xxhdpi")
+class AppNavigationTest {
+    @get:Rule
+    val compose = createAndroidComposeRule<MainActivity>()
+
+    @After
+    fun tearDown() = Core.reset()
+
+    @Test
+    fun homeOpensHistoryAndSettingsAndComesBack() {
+        compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
+        compose.onNodeWithText("Diaper").assertExists()
+        compose.onNodeWithText("Start sleep").assertExists()
+
+        compose.onNodeWithText("History").performClick()
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Back"), timeoutMillis = 5_000)
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 5_000)
+
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.waitUntilAtLeastOneExists(hasContentDescription("Back"), timeoutMillis = 5_000)
+        compose.onNodeWithText("Settings").assertExists()
+    }
+
+    @Test
+    fun feedOpensTheFeedSheet() {
+        compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
+        compose.onNodeWithText("Feed").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Starts a timer"), timeoutMillis = 5_000)
+        compose.onNodeWithText("Formula").assertExists()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Starts a timer")).fetchSemanticsNodes().isEmpty() }
+    }
+}

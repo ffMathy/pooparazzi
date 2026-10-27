@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The lamp glyph (DESIGN_SPEC §6.2 `lamp`), centred: a 288-unit splash icon whose glyph stays inside the 192-unit circle.
+     The system scales it to its splash icon size. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="192dp"
+    android:height="192dp"
+    android:viewportWidth="288"
+    android:viewportHeight="288">
+    <group
+        android:scaleX="4"
+        android:scaleY="4"
+        android:translateX="96"
+        android:translateY="96">
+        <path
+            android:pathData="M8.5 3.5h7l3.5 8h-14z"
+            android:strokeColor="@color/splash_day_glyph"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M12 11.5v6.5"
+            android:strokeColor="@color/splash_day_glyph"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M8.5 20.5h7"
+            android:strokeColor="@color/splash_day_glyph"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>
