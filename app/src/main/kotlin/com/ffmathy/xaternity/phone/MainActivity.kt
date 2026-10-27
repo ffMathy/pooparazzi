@@ -1,5 +1,6 @@
 package com.ffmathy.xaternity.phone
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -15,12 +16,14 @@ import androidx.lifecycle.lifecycleScope
 import com.ffmathy.xaternity.core.Core
 import com.ffmathy.xaternity.phone.app.AppLocales
 import com.ffmathy.xaternity.phone.app.AppViewModel
-import kotlinx.coroutines.launch
+import com.ffmathy.xaternity.phone.launch.DeepLinks
 import com.ffmathy.xaternity.phone.navigation.XaternityPhoneApp
+import kotlinx.coroutines.launch
 
 /**
  * The single activity. An [AppCompatActivity] so the in-app language works on API < 33 (V1_ADDITIONS §5).
- * Draws edge to edge; the system bar icons follow the app's own Night/Day, not the system theme.
+ * Draws edge to edge; the system bar icons follow the app's own Night/Day, not the system theme. Deep links from the
+ * widgets and notifications (`xaternity://home/…`) open Home with a sheet or an undo card.
  */
 class MainActivity : AppCompatActivity() {
     private val appViewModel: AppViewModel by viewModels { AppViewModel.Factory }
@@ -31,10 +34,31 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         splash.setKeepOnScreenCondition { appViewModel.appearance.value == null }
         enableEdgeToEdge()
+        // A recreated activity (language change, process restore) gets its old intent again: handle it once only.
+        if (savedInstanceState == null) handle(intent)
         setContent {
             val inputs by appViewModel.appearance.collectAsStateWithLifecycle()
-            inputs?.let { XaternityPhoneApp(inputs = it, clock = Core.clock, onNightResolved = ::applyNight) }
+            val launch by appViewModel.launch.collectAsStateWithLifecycle()
+            inputs?.let {
+                XaternityPhoneApp(
+                    inputs = it,
+                    clock = Core.clock,
+                    onNightResolved = ::applyNight,
+                    launch = launch,
+                    onLaunchHandled = appViewModel::consume,
+                )
+            }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handle(intent)
+    }
+
+    private fun handle(intent: Intent?) {
+        DeepLinks.parse(intent?.data)?.let(appViewModel::request)
     }
 
     override fun onResume() {

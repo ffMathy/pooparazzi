@@ -16,6 +16,17 @@ android {
         versionCode = 1
         versionName = "0.1.0"
     }
+    buildTypes {
+        release {
+            // R8 and resource shrinking (the watch's fonts and unused Material resources stay out of the APK).
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // This repository has no release key: release builds are signed with the debug key so they install for
+            // testing. A real key belongs in a local, uncommitted signing config.
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -39,6 +50,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.glance.appwidget)
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)
@@ -53,5 +66,6 @@ dependencies {
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.work.testing)
     debugImplementation(libs.compose.ui.test.manifest)
 }

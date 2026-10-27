@@ -34,6 +34,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ffmathy.xaternity.core.format.rememberFormatters
+import com.ffmathy.xaternity.phone.launch.HomeLaunch
+import com.ffmathy.xaternity.phone.notify.rememberNotificationPermissionPrompt
 import com.ffmathy.xaternity.phone.ui.edit.EditSheet
 import com.ffmathy.xaternity.phone.ui.edit.EditViewModel
 import com.ffmathy.xaternity.phone.ui.edit.rememberEditEffects
@@ -50,9 +52,18 @@ internal object HomeDefaults {
 /**
  * Home wired to its view model and to navigation. Since-rows and the Adjust card's Edit chip open the edit sheet over
  * Home; a delete there shows the "… deleted" card with Undo.
+ *
+ * [launch] is a deep link from a widget or notification (DESIGN_SPEC §3.1): Home opens the sheet or undo card it asks
+ * for and reports it through [onLaunchHandled]. The first sleep or breastfeed started here asks for the notification
+ * permission, so the running timer can show its ongoing notification (§3.3.1, §10.5).
  */
 @Composable
-fun HomeRoute(onOpenHistory: () -> Unit, onOpenSettings: () -> Unit) {
+fun HomeRoute(
+    onOpenHistory: () -> Unit,
+    onOpenSettings: () -> Unit,
+    launch: HomeLaunch? = null,
+    onLaunchHandled: (HomeLaunch) -> Unit = {},
+) {
     val accessibility = LocalAccessibilityManager.current
     val timings = remember(accessibility) {
         val window = HomeTimings().undoWindowMillis
@@ -73,6 +84,18 @@ fun HomeRoute(onOpenHistory: () -> Unit, onOpenSettings: () -> Unit) {
     val haptics = LocalHapticFeedback.current
     LaunchedEffect(viewModel, haptics) {
         viewModel.effects.collect { haptics.performHapticFeedback(it.feedbackType()) }
+    }
+    val askForNotifications = rememberNotificationPermissionPrompt()
+    LaunchedEffect(viewModel) {
+        viewModel.timerStarted.collect { askForNotifications() }
+    }
+    val handled by rememberUpdatedState(onLaunchHandled)
+    LaunchedEffect(launch) {
+        if (launch == null) return@LaunchedEffect
+        // A sheet from a widget or notification replaces the edit sheet rather than stacking on it.
+        if (launch.opensSheet) editViewModel.onDismiss()
+        viewModel.onLaunch(launch)
+        handled(launch)
     }
     val history by rememberUpdatedState(onOpenHistory)
     val settings by rememberUpdatedState(onOpenSettings)

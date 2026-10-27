@@ -22,9 +22,13 @@ import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.PoopColor
 import com.ffmathy.xaternity.core.model.PoopTexture
 import com.ffmathy.xaternity.core.model.diaperKind
+import com.ffmathy.xaternity.core.model.isBreastfeed
+import com.ffmathy.xaternity.core.model.isRunning
 import com.ffmathy.xaternity.core.model.isSleep
 import com.ffmathy.xaternity.core.settings.SettingsRepository
 import com.ffmathy.xaternity.core.sync.EntrySync
+import com.ffmathy.xaternity.phone.launch.HomeLaunch
+import com.ffmathy.xaternity.phone.launch.ReceiptKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -69,9 +73,16 @@ class HomeViewModel(
     private val card = MutableStateFlow<CardModel?>(null)
     private val sheet = MutableStateFlow<SheetModel?>(null)
     private val haptics = Channel<HomeHaptic>(Channel.BUFFERED)
+    private val timerStarts = Channel<Unit>(Channel.CONFLATED)
 
     /** Haptics to play, one per parent-triggered action. */
     val effects: Flow<HomeHaptic> = haptics.receiveAsFlow()
+
+    /**
+     * A sleep or breastfeed was started here: the moment to ask for the notification permission in context, so the
+     * running timer can show its ongoing notification (DESIGN_SPEC §3.3.1, §10.5).
+     */
+    val timerStarted: Flow<Unit> = timerStarts.receiveAsFlow()
 
     /** Null until the entries and settings have loaded, so Home never flashes an empty "No feeds yet" state. */
     val state: StateFlow<HomeUiState?> = combine(
@@ -153,6 +164,7 @@ class HomeViewModel(
             .onSuccess { sleep ->
                 showCard(CardSpec.SleepStarted(sleep.id), baseTime = sleep.startMillis, undo = Undo.Delete(sleep.id))
                 haptic(HomeHaptic.TOGGLE_ON)
+                timerStarts.trySend(Unit)
             }
             .onFailure { e ->
                 if (e is AlreadyRunningException) showGuard(GuardKind.ASLEEP, e.running.startMillis)
@@ -292,6 +304,7 @@ class HomeViewModel(
                         undo = Undo.Delete(feed.id),
                     )
                     haptic(HomeHaptic.CONFIRM)
+                    timerStarts.trySend(Unit)
                 }
                 .onFailure { e ->
                     if (e is AlreadyRunningException) showGuard(GuardKind.FEEDING, e.running.startMillis)
@@ -404,6 +417,61 @@ class HomeViewModel(
         if (cooldownPending) {
             cooldownPending = false
             homeReadyAt = elapsedRealtime() + timings.homeCooldownMillis
+        }
+    }
+
+    // ---- Deep links (widgets, notifications) --------------------------------------------------
+
+    /**
+     * A widget or notification opened Home ([HomeLaunch]): the sheet it asks for, replacing any open one, or the undo
+     * card for a widget log. Stale requests (the feed already ended, the log already undone) show nothing.
+     */
+    fun onLaunch(launch: HomeLaunch) = act {
+        when (launch) {
+            HomeLaunch.Home -> Unit
+            HomeLaunch.Feed -> {
+                val stamp = clock.now()
+                val running = summary().runningFeed
+                sheet.value = if (running != null) SheetModel.Side(running.id, running.startMillis, stamp) else SheetModel.Feed(stamp)
+            }
+            HomeLaunch.Side -> summary().runningFeed?.let { sheet.value = SheetModel.Side(it.id, it.startMillis, clock.now()) }
+            HomeLaunch.Diaper -> sheet.value = SheetModel.Diaper(stamp = clock.now())
+            is HomeLaunch.Receipt -> showReceipt(launch)
+        }
+    }
+
+    /** The undo card for a log made on the widget, as if it had been made here (DESIGN_SPEC §3.3.6). */
+    private suspend fun showReceipt(receipt: HomeLaunch.Receipt) {
+        val entry = repository.get(receipt.entryId) ?: return
+        when (receipt.kind) {
+            ReceiptKind.LOGGED -> {
+                if (entry.deleted) return
+                val spec = when (entry.kind) {
+                    EntryKind.DIAPER -> CardSpec.DiaperLogged(entry.id, entry.diaperKind ?: DiaperKind.PEE)
+                    EntryKind.FEED ->
+                        if (entry.isBreastfeed) CardSpec.FeedStarted(entry.id) else CardSpec.FeedLogged(entry.id, entry.feedType ?: FeedType.FORMULA)
+                    EntryKind.SLEEP -> CardSpec.SleepStarted(entry.id)
+                }
+                val sleep = summary().runningSleep
+                val duringSleep = sleep != null && entry.kind != EntryKind.SLEEP && entry.startMillis >= sleep.startMillis
+                showCard(spec, baseTime = entry.startMillis, duringSleep = duringSleep, undo = Undo.Delete(entry.id))
+            }
+            ReceiptKind.SLEEP_STARTED -> if (entry.isSleep && entry.isRunning) {
+                showCard(CardSpec.SleepStarted(entry.id), baseTime = entry.startMillis, undo = Undo.Delete(entry.id))
+            }
+            ReceiptKind.WOKE_UP -> {
+                val end = entry.endMillis
+                if (entry.isSleep && !entry.deleted && end != null) {
+                    showCard(CardSpec.WokeUp(entry.id), baseTime = end, undo = Undo.Restore(entry.copy(endMillis = null)))
+                }
+            }
+            ReceiptKind.SLEEP_CANCELLED -> if (entry.isSleep && entry.deleted) {
+                showCard(
+                    CardSpec.SleepCancelled,
+                    baseTime = entry.endMillis ?: clock.now(),
+                    undo = Undo.Restore(entry.copy(endMillis = null, deleted = false)),
+                )
+            }
         }
     }
 

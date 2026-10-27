@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- The ongoing notification of a running sleep or breastfeed (DESIGN_SPEC §10.5); asked for on the first timer. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Lets that notification be promoted to a Live Update (Android 16+). -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+
     <application
         android:name=".XaternityApp"
         android:allowBackup="true"
@@ -27,6 +32,35 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Home-screen widgets (P5, DESIGN_SPEC §3.3.6): 4×2 and 2×1. -->
+        <receiver
+            android:name=".widget.LogWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_log_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_log_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.QuickWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_quick_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_info" />
+        </receiver>
+
+        <!-- The timer notifications' "Woke up" action and dismissal (P6). Not exported: only our PendingIntents. -->
+        <receiver
+            android:name=".notify.TimerActionReceiver"
+            android:exported="false" />
 
         <!-- Stores the in-app language on API < 33, where the system has no per-app language setting (V1_ADDITIONS §5). -->
         <service
