@@ -368,7 +368,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 | Stats 264–312 | 4 columns: numbers titleLarge onSurface ("5", "4", "2", "7h 57m"), captions labelSmall onSurfaceVariant ("feeds", "pee", "poop", "sleep") |
 | Heading 332–350 | "Today" labelMedium onSurfaceVariant (a heading) |
 | List from 360 | one row per entry, newest first |
-| FAB | extended FAB "Add entry", bottom end: 138 × 56, r 16, primaryContainer, `plus` 24 + 8 + labelLarge onPrimaryContainer |
+| FAB | extended FAB "Add entry", bottom end: 138 × 56, r 16, primaryContainer, `plus` 24 + 8 + labelLarge onPrimaryContainer. Flat (§5.9), so while rows scroll under it, it collapses to the 56 × 56 icon FAB (still named "Add entry"); at the end of the list, where the list's bottom padding keeps it clear of the rows, it shows its label |
 
 **Ribbon** (coordinates inside the card). Plot x = 12 + 326 × hours / 24 (00 to 24).
 - Night bands: ribbon-night-band colour, rx 6, y 8–74. In the reference they span 00:00–07:00 and 19:00–24:00.
@@ -404,9 +404,10 @@ Behaviour:
 - Day chip menu: Today / Yesterday / "Earlier date…" (DatePicker).
 - Running sleep: the Woke up block reads "Still asleep" with "End now". Changing the start keeps the timer running.
 - Validation copy. The slot uses the error colour only when the rule blocks Save.
-  - "Woke up must be after fell asleep." (blocks Save)
+  - "Waking up must come after falling asleep." (blocks Save)
   - "13:50 hasn't happened yet. Log it for yesterday?" with "Use yesterday"
   - "Overlaps the 12:10 sleep. Save anyway?" (non-blocking)
+  - "Changed on the watch meanwhile. Check and save again." (non-blocking): Save found the entry changed on the watch since the sheet opened (e.g. Woke up on a sleep whose start is being corrected). Nothing is overwritten; the sheet now shows the watch's version with the sheet's own changes on top. "Deleted on the watch meanwhile." blocks Save.
 - Delete closes the sheet and shows the card "Sleep deleted" with Undo (soft delete, §4.4).
 - **Add past entry** mode (from the FAB): title "Add past entry"; connected button group Sleep | Feed | Diaper with Feed preselected; defaults to now − 15m.
 

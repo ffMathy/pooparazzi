@@ -46,8 +46,10 @@ class HistoryViewModel(
     private val actions = Mutex()
 
     /** Null until the entries have loaded. */
-    val state: StateFlow<HistoryUiState?> = combine(repository.observeEntries(), sync.status, now, day, receipt) { entries, status, t, d, r ->
-        HistoryStateBuilder.build(entries, status, t, zone, d, r)
+    val state: StateFlow<HistoryUiState?> = combine(repository.observeEntries(), sync.status, now, day, receipt) { entries, status, _, d, r ->
+        // [now] only re-runs this each minute; the time is read fresh, so an entry logged elsewhere within the current
+        // minute (the watch, a widget) is listed at once.
+        HistoryStateBuilder.build(entries, status, clock.now(), zone, d, r)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {

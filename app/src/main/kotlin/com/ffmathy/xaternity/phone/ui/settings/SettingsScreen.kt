@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
@@ -32,13 +34,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -121,11 +124,13 @@ fun SettingsScreen(
     windowInsets: WindowInsets = WindowInsets.safeDrawing,
 ) {
     val colors = MaterialTheme.colorScheme
+    val bottomInset = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
+    // Edge to edge like History: the content scrolls behind the navigation bar and its end clears it.
     Column(
         modifier
             .fillMaxSize()
             .background(colors.background)
-            .windowInsetsPadding(windowInsets),
+            .windowInsetsPadding(windowInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
     ) {
         XTopBar(
             title = stringResource(CoreR.string.nav_settings),
@@ -139,7 +144,7 @@ fun SettingsScreen(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
+                .padding(bottom = 24.dp + bottomInset),
         ) {
             Section(stringResource(R.string.settings_section_baby)) { NameField(state.babyName, actions) }
             Section(stringResource(CoreR.string.settings_appearance)) {
@@ -252,13 +257,12 @@ private fun SyncRow(state: SettingsUiState, actions: SettingsActions) {
     val formatters = rememberFormatters(state.zone)
     val line = syncLineText(state.sync, state.zone, formatters)
     GroupRow(first = true, last = true) {
-        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 4.dp)) {
+        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)) {
             if (line == null) {
                 Text(
                     stringResource(R.string.settings_sync_unavailable),
                     style = MaterialTheme.typography.bodyMedium,
                     color = colors.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp),
                 )
             } else {
                 // The line first (Danish "Synkroniseret med ur · 14:31" needs the full width), "Sync now" under it.

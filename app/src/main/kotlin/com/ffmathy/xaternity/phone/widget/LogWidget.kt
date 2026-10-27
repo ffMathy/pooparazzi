@@ -262,14 +262,17 @@ private fun LogButtons(
     val context = LocalContext.current
     val feedLabel = strings.string(if (snapshot.feeding) CoreR.string.action_end_feed else CoreR.string.kind_feed)
     val diaperLabels = DiaperKind.entries.associateWith { strings.string(diaperLabel(it)) }
-    // One face for the whole row: when any label needs two lines ("Afslut amning", or a narrow widget) every button
-    // uses the compact face, so the icons and labels stay aligned and both lines fit the 68 dp button.
-    val style = when {
+    // Each button picks its own face: only a label that needs two lines ("Afslut amning", or a narrow widget) takes the
+    // compact one, so Pee, Poop and Both look the same in every state. The compact face is laid out so that its icon
+    // sits where the regular face's does, keeping the row's icons aligned.
+    fun styleFor(label: String, inset: Dp): FaceStyle = when {
         !layout.labels -> FaceStyle.IconOnly
-        measure.fits(feedLabel, LabelSize, layout.buttonWidth - 8.dp - (if (snapshot.feeding) 4.dp else 0.dp)) &&
-            diaperLabels.values.all { measure.fits(it, LabelSize, layout.buttonWidth - 8.dp) } -> FaceStyle.Regular
+        measure.fits(label, LabelSize, layout.buttonWidth - 8.dp - inset) -> FaceStyle.Regular
         else -> FaceStyle.Compact
     }
+    val feedStyle = styleFor(feedLabel, inset = if (snapshot.feeding) 4.dp else 0.dp)
+    // The three diaper buttons share one face (their labels are short; a narrow widget compacts all three).
+    val diaperStyle = diaperLabels.values.map { styleFor(it, 0.dp) }.maxBy { it.ordinal }
     Row(modifier) {
         val cell = GlanceModifier.defaultWeight().fillMaxHeight()
         if (snapshot.feeding) {
@@ -281,7 +284,7 @@ private fun LogButtons(
                 action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Side)),
                 description = strings.string(R.string.cd_end_feed_choose_side),
             ) {
-                ButtonFace(XDrawables.breast, colors.feed.strong, feedLabel, colors.feed.onContainer, style)
+                ButtonFace(XDrawables.breast, colors.feed.strong, feedLabel, colors.feed.onContainer, feedStyle)
             }
         } else {
             WidgetButton(
@@ -291,15 +294,15 @@ private fun LogButtons(
                 action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Feed)),
                 description = strings.string(R.string.widget_cd_log_feed),
             ) {
-                ButtonFace(XDrawables.feed, colors.feed.strong, feedLabel, colors.feed.onContainer, style)
+                ButtonFace(XDrawables.feed, colors.feed.strong, feedLabel, colors.feed.onContainer, feedStyle)
             }
         }
         Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.PEE, diaperLabels.getValue(DiaperKind.PEE), strings, colors, cell, style)
+        DiaperButton(DiaperKind.PEE, diaperLabels.getValue(DiaperKind.PEE), strings, colors, cell, diaperStyle)
         Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.POOP, diaperLabels.getValue(DiaperKind.POOP), strings, colors, cell, style)
+        DiaperButton(DiaperKind.POOP, diaperLabels.getValue(DiaperKind.POOP), strings, colors, cell, diaperStyle)
         Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.BOTH, diaperLabels.getValue(DiaperKind.BOTH), strings, colors, cell, style)
+        DiaperButton(DiaperKind.BOTH, diaperLabels.getValue(DiaperKind.BOTH), strings, colors, cell, diaperStyle)
     }
 }
 
@@ -351,13 +354,21 @@ internal enum class FaceStyle { Regular, Compact, IconOnly }
 
 private val LabelSize = 15.sp
 
-/** Icon over label, centred: 24 dp + 6 + 15 sp, or 20 dp + 2 + two lines of 13 sp ("Afslut" / "amning"). */
+/** Pushes the compact face's icon down to the regular face's icon line (checked on the widget screenshots). */
+private val CompactTopSpace = 10.dp
+
+/**
+ * Icon over label, centred: 24 dp + 6 + 15 sp, or the compact 20 dp + two lines of 13 sp ("Afslut" / "amning").
+ * The compact face starts with [CompactTopSpace], so that, centred in the same button, its icon's centre lines up with
+ * the regular face's.
+ */
 @Composable
 private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
+        if (style == FaceStyle.Compact) Spacer(GlanceModifier.height(CompactTopSpace))
         WidgetIcon(icon, iconColor, if (style == FaceStyle.Compact) 20.dp else 24.dp)
         if (style != FaceStyle.IconOnly) {
-            Spacer(GlanceModifier.height(if (style == FaceStyle.Compact) 2.dp else 6.dp))
+            Spacer(GlanceModifier.height(if (style == FaceStyle.Compact) 0.dp else 6.dp))
             WidgetText(
                 text = label,
                 color = labelColor,

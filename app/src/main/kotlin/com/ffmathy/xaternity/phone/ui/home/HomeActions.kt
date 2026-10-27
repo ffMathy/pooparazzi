@@ -21,10 +21,19 @@ interface HomeActions {
     fun onEditEntry(entryId: String) {}
 
     // Big buttons
-    /** Idle: opens the Feed sheet. While a breastfeed runs ("End feed"): opens the Side sheet. */
-    fun onFeed() {}
+    /**
+     * Idle ("Feed"): opens the Feed sheet. While a breastfeed runs ("End feed"): opens the Side sheet. [shownRunning]
+     * is the form the button showed (true for "End feed"): when the feed has started or ended elsewhere since (the
+     * watch, a widget), the tap is answered with the guard instead of the other sheet (DESIGN_SPEC §4.4).
+     */
+    fun onFeed(shownRunning: Boolean) {}
     fun onDiaper() {}
-    fun onSleepToggle() {}
+
+    /**
+     * "Start sleep" ([shownRunning] false) or "Woke up" (true), as the button showed it. A sleep started or ended
+     * elsewhere since then is not toggled back: the tap shows "Already asleep …" / "Already awake …" (DESIGN_SPEC §4.4).
+     */
+    fun onSleepToggle(shownRunning: Boolean) {}
 
     // Lamp
     fun onAdjustStart() {}

@@ -175,6 +175,9 @@
     <!-- Phone error state, followed by action_retry: "Couldn't save · Tap to retry" -->
     <string name="sync_error">Couldn\'t save</string>
 
+    <!-- The language of this file (BCP 47): dates and times are formatted in it when the device language is not shipped -->
+    <string name="format_language">en</string>
+
     <!-- java.time pattern for dates such as "Mon 26 Oct" -->
     <string name="pattern_weekday_day_month">EEE d MMM</string>
 </resources>

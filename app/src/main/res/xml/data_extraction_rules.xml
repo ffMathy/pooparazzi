@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup and device-to-device transfer (API 31+). The log and the settings travel; the device-local flags of the
+    system surfaces do not: the widget previews must be published again on the new phone, the notification
+    permission is that phone's own, and the widget memo and dismissed timers describe this phone's widgets and
+    notifications (see SurfacePrefs, WidgetMemo). Keep in step with backup_rules_legacy.xml.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="system_surfaces.xml" />
+        <exclude domain="sharedpref" path="widget_memo.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="system_surfaces.xml" />
+        <exclude domain="sharedpref" path="widget_memo.xml" />
+    </device-transfer>
+</data-extraction-rules>

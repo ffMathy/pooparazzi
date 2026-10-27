@@ -9,6 +9,8 @@
     <application
         android:name=".XaternityApp"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules_legacy"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -19,17 +21,33 @@
 
         <!--
             uiMode is handled in Compose: the app resolves Night/Day itself (DESIGN_SPEC §8.1), so a system theme change
-            only recomposes instead of recreating the activity.
+            only recomposes instead of recreating the activity. singleTop: a link that arrives while the app runs (the
+            watch's "More on phone", a widget, a notification) reaches the open activity in onNewIntent instead of
+            stacking a second one.
         -->
         <activity
             android:name=".MainActivity"
             android:configChanges="uiMode"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Xaternity.Starting"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!--
+                The watch's "More on phone" opens History here (RemoteActivityHelper, VIEW + BROWSABLE). Only
+                xaternity://history is exposed: the xaternity://home links that open the logging sheets stay explicit
+                intents of the app's own widgets and notifications.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="history"
+                    android:scheme="xaternity" />
             </intent-filter>
         </activity>
 

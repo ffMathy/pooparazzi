@@ -82,13 +82,18 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
     WidgetSurface(colors, snapshot.backgroundLaunch, GlanceModifier.padding(12.dp)) {
         Row(GlanceModifier.fillMaxSize()) {
             // The mockup's Feed is the narrower button (52 of 147 dp), widened to its label ("Måltid") so the word
-            // never breaks; End feed needs the room of an equal half.
+            // never breaks. End feed may take two lines ("End" / "feed"), so it is as wide as its longest word: the
+            // sleep button keeps the rest of the row and its one-line label.
             val feedLabel = strings.string(CoreR.string.kind_feed)
-            val feedWidth = if (layout.narrowFeed && !snapshot.feeding) {
-                GlanceModifier.width(maxOf(52.dp, measure.width(feedLabel, QuickLabelSize) + 16.dp))
-            } else {
-                GlanceModifier.defaultWeight()
+            val endFeedLabel = strings.string(CoreR.string.action_end_feed)
+            val feedDp: Dp? = when {
+                !layout.narrowFeed -> null
+                snapshot.feeding -> maxOf(52.dp, endFeedLabel.split(' ').maxOf { measure.width(it, QuickLabelSize) } + 8.dp + 12.dp)
+                else -> maxOf(52.dp, measure.width(feedLabel, QuickLabelSize) + 16.dp)
             }
+            val feedWidth = feedDp?.let { GlanceModifier.width(it) } ?: GlanceModifier.defaultWeight()
+            // The sleep button's room beside a fixed-width Feed (12 dp padding each side, 8 dp gap).
+            val sleepRoom = feedDp?.let { LocalSize.current.width - 24.dp - 8.dp - it }
             val feed = colors.feed
             if (snapshot.feeding) {
                 WidgetButton(
@@ -99,7 +104,7 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
                     action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Side)),
                     description = strings.string(R.string.cd_end_feed_choose_side),
                 ) {
-                    QuickFace(XDrawables.breast, feed.strong, strings.string(CoreR.string.action_end_feed), feed.onContainer, layout.labels)
+                    QuickFace(XDrawables.breast, feed.strong, endFeedLabel, feed.onContainer, layout.labels, labelPadding = 4.dp)
                 }
             } else {
                 WidgetButton(
@@ -115,10 +120,13 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
             Spacer(GlanceModifier.width(8.dp))
             val sleep = colors.sleep
             val asleep = snapshot.asleep
+            val startSleep = strings.string(CoreR.string.action_start_sleep)
             val label = when {
                 asleep -> strings.string(CoreR.string.action_woke_up)
                 layout.shortSleepLabel -> strings.string(CoreR.string.kind_sleep)
-                else -> strings.string(CoreR.string.action_start_sleep)
+                // Beside "Afslut amning" there is no room for "Start søvn" on one line: "Søvn", like a narrow widget.
+                sleepRoom != null && !measure.fits(startSleep, QuickLabelSize, sleepRoom - 16.dp) -> strings.string(CoreR.string.kind_sleep)
+                else -> startSleep
             }
             WidgetButton(
                 modifier = GlanceModifier.defaultWeight().fillMaxHeight(),

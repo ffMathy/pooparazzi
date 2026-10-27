@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static widget preview (layout/widget_*_preview.xml). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_preview_feed_c" />
+    <corners android:radius="20dp" />
+</shape>

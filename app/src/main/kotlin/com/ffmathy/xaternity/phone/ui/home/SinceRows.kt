@@ -37,6 +37,7 @@ import com.ffmathy.xaternity.core.ui.icons.XIcon
 import com.ffmathy.xaternity.core.ui.icons.XIcons
 import com.ffmathy.xaternity.core.ui.tokens.LocalXPalette
 import com.ffmathy.xaternity.phone.R
+import com.ffmathy.xaternity.phone.ui.history.spokenDiaperKind
 import java.time.ZoneId
 import com.ffmathy.xaternity.core.R as CoreR
 
@@ -144,7 +145,7 @@ private fun sinceRowText(row: SinceRow, zone: ZoneId, formatters: Formatters): S
             spoken = stringResource(
                 R.string.spoken_last_entry,
                 stringResource(CoreR.string.spoken_last_diaper),
-                diaperLabel(row.kind).lowercase(clock.locale),
+                spokenDiaperKind(row.kind).lowercase(clock.locale),
                 relative.agoSpoken(row.elapsedMillis),
                 relative.at(row.diaper.startMillis, zone),
             ),

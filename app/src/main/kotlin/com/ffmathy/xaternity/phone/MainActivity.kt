@@ -18,6 +18,7 @@ import com.ffmathy.xaternity.phone.app.AppLocales
 import com.ffmathy.xaternity.phone.app.AppViewModel
 import com.ffmathy.xaternity.phone.launch.DeepLinks
 import com.ffmathy.xaternity.phone.navigation.XaternityPhoneApp
+import com.ffmathy.xaternity.phone.system.SystemSurfaces
 import kotlinx.coroutines.launch
 
 /**
@@ -63,6 +64,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Notifications may have been turned on in system settings while the app was away.
+        SystemSurfaces.onAppResumed(this)
         // The language the app runs in is the platform's per-app choice (the parent may change it in system settings
         // on API 33+). Mirror it into the settings, which sync it to the watch (V1_ADDITIONS §5).
         val running = AppLocales.current()

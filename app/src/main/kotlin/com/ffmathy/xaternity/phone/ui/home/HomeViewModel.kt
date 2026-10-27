@@ -91,8 +91,10 @@ class HomeViewModel(
         sync.status,
         now,
         combine(card, sheet) { c, s -> c to s },
-    ) { entries, s, syncStatus, now, (c, sh) ->
-        HomeStateBuilder.build(entries, s.babyName, syncStatus, now, zone, c, sh, timings)
+    ) { entries, s, syncStatus, _, (c, sh) ->
+        // [now] only re-runs this each minute; the time itself is read fresh, so an entry written elsewhere within the
+        // current minute (the watch, a widget, the lock-screen notification) shows at once instead of at the next tick.
+        HomeStateBuilder.build(entries, s.babyName, syncStatus, clock.now(), zone, c, sh, timings)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -128,11 +130,21 @@ class HomeViewModel(
 
     // ---- Big buttons --------------------------------------------------------------------------
 
-    override fun onFeed() = act {
+    override fun onFeed(shownRunning: Boolean) = act {
         if (homeBlocked()) return@act
         val stamp = clock.now()
         val running = summary().runningFeed
-        sheet.value = if (running != null) SheetModel.Side(running.id, running.startMillis, stamp) else SheetModel.Feed(stamp)
+        when {
+            // A breastfeed started elsewhere since the button was drawn: "Already breastfeeding since …", no Side sheet.
+            running != null && !shownRunning -> {
+                showGuard(GuardKind.FEEDING, running.startMillis)
+                haptic(HomeHaptic.REJECT)
+            }
+            // "End feed" on a feed that has already ended elsewhere: nothing to end, and no Feed sheet either.
+            running == null && shownRunning -> haptic(HomeHaptic.REJECT)
+            running != null -> sheet.value = SheetModel.Side(running.id, running.startMillis, stamp)
+            else -> sheet.value = SheetModel.Feed(stamp)
+        }
     }
 
     override fun onDiaper() = act {
@@ -140,13 +152,18 @@ class HomeViewModel(
         sheet.value = SheetModel.Diaper(stamp = clock.now())
     }
 
-    override fun onSleepToggle() = act {
+    override fun onSleepToggle(shownRunning: Boolean) = act {
         if (homeBlocked()) return@act
         val summary = summary()
         val running = summary.runningSleep
         val tapAt = elapsedRealtime()
         val last = lastToggleAt
-        if (last != null && tapAt - last < timings.toggleGuardMillis) {
+        val guarded = last != null && tapAt - last < timings.toggleGuardMillis
+        // The sleep was started or ended elsewhere (the watch, a widget, the notification) after the button was drawn:
+        // the parent asked for what has already happened, so the tap is idempotent (DESIGN_SPEC §4.4) and never undoes
+        // the other device's toggle.
+        val stale = (running != null) != shownRunning
+        if (guarded || stale) {
             if (running != null) {
                 showGuard(GuardKind.ASLEEP, running.startMillis)
             } else {
@@ -428,7 +445,8 @@ class HomeViewModel(
      */
     fun onLaunch(launch: HomeLaunch) = act {
         when (launch) {
-            HomeLaunch.Home -> Unit
+            // History is opened by the navigation (XaternityNavHost); Home has nothing to show for it.
+            HomeLaunch.Home, HomeLaunch.History -> Unit
             HomeLaunch.Feed -> {
                 val stamp = clock.now()
                 val running = summary().runningFeed

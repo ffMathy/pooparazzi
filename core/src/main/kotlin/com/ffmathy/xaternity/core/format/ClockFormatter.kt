@@ -64,8 +64,16 @@ class ClockFormatter(
         fun shortTimePattern(locale: Locale): String =
             DateTimeFormatterBuilder.getLocalizedDateTimePattern(null, FormatStyle.SHORT, IsoChronology.INSTANCE, locale)
 
-        /** The UI locale of [context]. */
-        fun locale(context: Context): Locale = context.resources.configuration.locales[0] ?: Locale.getDefault()
+        /**
+         * The locale dates, 12-hour markers and lower-casing use: the UI locale of [context] when the app ships its
+         * language, otherwise the language the strings fell back to (English). A Swedish or German device then reads
+         * "Today · Mon 26 Oct", not English text around "mån 26 okt.".
+         */
+        fun locale(context: Context): Locale {
+            val ui = context.resources.configuration.locales[0] ?: Locale.getDefault()
+            val shipped = context.getString(R.string.format_language)
+            return if (ui.language == shipped) ui else Locale.forLanguageTag(shipped)
+        }
 
         /**
          * Whether clock times use 24 h: always in Danish (V1_ADDITIONS §5), otherwise the device setting.

@@ -27,10 +27,11 @@ class SurfacePrefs(context: Context) {
         get() = prefs.getLong(KEY_PREVIEWS_VERSION, -1L)
         set(value) = prefs.edit { putLong(KEY_PREVIEWS_VERSION, value) }
 
-    private companion object {
+    internal companion object {
+        /** The preferences file; excluded from backup and device transfer (res/xml/data_extraction_rules.xml). */
         const val FILE = "system_surfaces"
-        const val KEY_PERMISSION_ASKED = "notification_permission_asked"
-        const val KEY_DISMISSED = "dismissed_timers"
-        const val KEY_PREVIEWS_VERSION = "widget_previews_version"
+        private const val KEY_PERMISSION_ASKED = "notification_permission_asked"
+        private const val KEY_DISMISSED = "dismissed_timers"
+        private const val KEY_PREVIEWS_VERSION = "widget_previews_version"
     }
 }

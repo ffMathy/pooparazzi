@@ -172,4 +172,50 @@ class TimerNotificationsTest : CoreTestBase() {
         assertFalse(rig.entry(sleep.id)!!.isRunning)
         assertNull(posted(TimerNotifications.SLEEP_ID))
     }
+
+    /**
+     * The first timer asks for the permission (Android 13+); once it is granted, that timer's notification is posted at
+     * once, without waiting for the next entry change.
+     */
+    @Test
+    fun grantingThePermissionPostsTheRunningTimer() = coreTest { rig ->
+        val deviceZone = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone(SampleData.ZONE))
+        try {
+            shadowOf(app).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
+            SystemSurfaces.start(app, Core.graph)
+            rig.repository.startSleep(SampleData.NOW_1432).getOrThrow()
+            runCurrent()
+            assertNull("no permission yet", posted(TimerNotifications.SLEEP_ID))
+
+            shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+            SystemSurfaces.refreshNotifications()
+            runCurrent()
+            assertNotNull("posted as soon as it is allowed", posted(TimerNotifications.SLEEP_ID))
+        } finally {
+            TimeZone.setDefault(deviceZone)
+        }
+    }
+
+    /** Notifications turned on in system settings while the app was away: the running timer is posted on return. */
+    @Test
+    fun turningNotificationsOnInSystemSettingsPostsTheRunningTimer() = coreTest { rig ->
+        val deviceZone = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone(SampleData.ZONE))
+        try {
+            shadowOf(app).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
+            SystemSurfaces.start(app, Core.graph)
+            rig.repository.startSleep(SampleData.NOW_1432).getOrThrow()
+            SystemSurfaces.onAppResumed(app)
+            runCurrent()
+            assertNull(posted(TimerNotifications.SLEEP_ID))
+
+            shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+            SystemSurfaces.onAppResumed(app)
+            runCurrent()
+            assertNotNull(posted(TimerNotifications.SLEEP_ID))
+        } finally {
+            TimeZone.setDefault(deviceZone)
+        }
+    }
 }

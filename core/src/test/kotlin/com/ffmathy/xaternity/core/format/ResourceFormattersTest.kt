@@ -200,8 +200,8 @@ class DanishResourceFormattersTest {
             "Synkroniseret med telefon · 14:31",
             l.syncLine(SyncStatus.Synced(SampleData.SYNCED_1431), SyncPeer.PHONE, f.clock, ZONE),
         )
-        assertEquals("Gemt på uret · synkes senere", l.syncLine(SyncStatus.Offline, SyncPeer.PHONE, f.clock, ZONE))
-        assertEquals("Gemt lokalt · synkes senere", l.syncLine(SyncStatus.Offline, SyncPeer.WATCH, f.clock, ZONE))
+        assertEquals("Gemt på uret · synkroniseres", l.syncLine(SyncStatus.Offline, SyncPeer.PHONE, f.clock, ZONE))
+        assertEquals("Gemt · synkroniseres senere", l.syncLine(SyncStatus.Offline, SyncPeer.WATCH, f.clock, ZONE))
         assertEquals("Synkroniserer med ur…", l.syncLine(SyncStatus.Pending, SyncPeer.WATCH, f.clock, ZONE))
         assertEquals("Ikke gemt · Prøv igen", l.syncLine(SyncStatus.Error, SyncPeer.WATCH, f.clock, ZONE))
     }
@@ -282,3 +282,20 @@ class EnglishOnTwelveHourDeviceTest {
         assertEquals("2:32 PM", clock.format(SampleData.NOW_1432, ZONE).replace(' ', ' ').replace(' ', ' '))
     }
 }
+
+/**
+ * A device language the app does not ship (Swedish): the strings fall back to English, and so do the dates and the
+ * 12-hour markers, instead of "mån 26 okt." or "2:32 em" inside English text.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36], qualifiers = "sv-rSE")
+class UnsupportedDeviceLanguageTest {
+    @Test
+    fun formatsFollowTheLanguageOfTheStrings() {
+        assertEquals("en", ClockFormatter.locale(context).language)
+        val f = Formatters.from(context, ZONE)
+        assertEquals("Mon 26 Oct", f.clock.dayMonth(TODAY))
+        assertEquals("Mon", f.clock.weekdayShort(SampleData.NOW_1432, ZONE))
+    }
+}
+

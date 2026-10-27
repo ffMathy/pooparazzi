@@ -90,7 +90,20 @@ sealed interface EditIssue {
     data object SaveFailed : EditIssue {
         override val blocksSave: Boolean get() = false
     }
+
+    /**
+     * The entry changed on the watch while the sheet was open, so Save did not overwrite it. The sheet now shows the
+     * watch's version with this sheet's changes on top ("Changed on the watch. Check and save again."); [deleted]: it
+     * was deleted there and can no longer be saved.
+     */
+    data class ChangedElsewhere(val deleted: Boolean) : EditIssue {
+        override val blocksSave: Boolean get() = deleted
+    }
 }
+
+/** How the stored entry moved away from the one the sheet opened with (see [EditIssue.ChangedElsewhere]). */
+@Serializable
+enum class EditConflict { CHANGED, DELETED }
 
 /**
  * Everything the edit sheet shows (DESIGN_SPEC §3.3.4, V1_ADDITIONS §4), as data.

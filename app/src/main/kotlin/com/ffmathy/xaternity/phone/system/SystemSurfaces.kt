@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.ffmathy.xaternity.core.CoreGraph
 import com.ffmathy.xaternity.phone.BuildConfig
+import com.ffmathy.xaternity.phone.notify.NotificationLink
 import com.ffmathy.xaternity.phone.notify.TimerNotifications
 import com.ffmathy.xaternity.phone.notify.TimerState
 import com.ffmathy.xaternity.phone.widget.LogWidgetReceiver
@@ -41,10 +42,11 @@ object SystemSurfaces {
         val app = context.applicationContext
         val notifications = TimerNotifications(app)
         graph.scope.launch {
-            combine(graph.repository.observeEntries(), graph.settings.settings, notificationRefreshes) { entries, settings, _ ->
+            val states = combine(graph.repository.observeEntries(), graph.settings.settings) { entries, settings ->
                 TimerState.of(entries, settings, graph.clock.now(), ZoneId.systemDefault())
-            }
-                .distinctUntilChanged()
+            }.distinctUntilChanged()
+            // Equal states post nothing new, but a refresh (the permission was just granted) always renders again.
+            combine(states, notificationRefreshes) { state, _ -> state }
                 .collect { state -> guard("notifications") { notifications.render(state) } }
         }
         graph.scope.launch {
@@ -62,6 +64,22 @@ object SystemSurfaces {
     /** Re-renders the timer notifications (e.g. once the permission is granted). */
     fun refreshNotifications() {
         notificationRefreshes.value++
+    }
+
+    /** Whether notifications could be posted when the app last came to the foreground; null before that. */
+    @Volatile
+    private var notificationsAllowed: Boolean? = null
+
+    /**
+     * The app came to the foreground. When notifications were turned on meanwhile (the permission in system settings,
+     * the app's notification switch, or the in-context permission dialog), the running timers' notifications are
+     * posted now rather than at the next entry change.
+     */
+    fun onAppResumed(context: Context) {
+        val allowed = NotificationLink.current(context) != NotificationLink.OFF
+        val before = notificationsAllowed
+        notificationsAllowed = allowed
+        if (allowed && before == false) refreshNotifications()
     }
 
     /** Re-renders the widgets after a configuration change (system dark theme, language) while the process runs. */

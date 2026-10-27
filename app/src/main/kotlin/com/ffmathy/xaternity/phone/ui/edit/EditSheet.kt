@@ -423,6 +423,9 @@ private fun ValidationSlot(state: EditUiState, formatters: Formatters, actions: 
                 formatters.clock.format(issue.other.startMillis, state.zone),
             ) to true
             EditIssue.SaveFailed -> stringResource(R.string.edit_error_save_failed) to false
+            is EditIssue.ChangedElsewhere -> stringResource(
+                if (issue.deleted) R.string.edit_error_deleted_on_watch else R.string.edit_notice_changed_on_watch,
+            ) to false
         }
         Text(
             text,

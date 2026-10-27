@@ -1,16 +1,13 @@
 package com.ffmathy.xaternity.phone
 
-import org.junit.Assert.assertTrue
-import androidx.compose.ui.test.assertHasClickAction
-import com.ffmathy.xaternity.core.model.BreastSide
 import android.app.Application
 import android.provider.Settings
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -19,9 +16,15 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.text.AnnotatedString
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.xaternity.core.model.BreastSide
+import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.PoopColor
 import com.ffmathy.xaternity.core.sample.SampleData
+import com.ffmathy.xaternity.core.sync.SyncStatus
+import com.ffmathy.xaternity.phone.ui.home.CardModel
+import com.ffmathy.xaternity.phone.ui.home.CardSpec
 import com.ffmathy.xaternity.phone.ui.home.HomeActions
 import com.ffmathy.xaternity.phone.ui.home.HomeScreen
 import com.ffmathy.xaternity.phone.ui.home.HomeStateBuilder
@@ -29,8 +32,8 @@ import com.ffmathy.xaternity.phone.ui.home.HomeUiState
 import com.ffmathy.xaternity.phone.ui.home.SheetModel
 import com.ffmathy.xaternity.phone.ui.preview.HomeSamples
 import com.ffmathy.xaternity.phone.ui.theme.NightLightTheme
-import com.ffmathy.xaternity.core.sync.SyncStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -49,7 +52,7 @@ class HomeSemanticsTest {
     private val actions = object : HomeActions {
         override fun onEditEntry(entryId: String) { calls += "edit:$entryId" }
         override fun onDiaperPee(checked: Boolean) { calls += "pee:$checked" }
-        override fun onSleepToggle() { calls += "toggle" }
+        override fun onSleepToggle(shownRunning: Boolean) { calls += "toggle:$shownRunning" }
         override fun onOpenHistory() { calls += "history" }
         override fun onPoopColor(color: PoopColor?) { calls += "colour:$color" }
         override fun onSide(side: BreastSide) { calls += "side:$side" }
@@ -83,7 +86,7 @@ class HomeSemanticsTest {
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Asleep since 02:05"))
             .assert(SemanticsMatcher("click label End sleep") { it.config[SemanticsActions.OnClick].label == "End sleep" })
             .performClick()
-        assertEquals(listOf("toggle"), calls)
+        assertEquals(listOf("toggle:true"), calls)
     }
 
     @Test
@@ -129,6 +132,58 @@ class HomeSemanticsTest {
         show(diaperSheet(SheetModel.Diaper(stamp = SampleData.NOW_1432, poop = true, color = PoopColor.PALE)))
         compose.onNodeWithText("Pale, red or black poop can be a reason to call your doctor or health visitor.").assertExists()
     }
+
+    /** The receipt sub-lines have spoken forms: no "→", "m" or "<1m" read out (DESIGN_SPEC §9.5). */
+    @Test
+    fun receiptSubLinesHaveSpokenForms() {
+        val feed = Entry.breastfeed(SampleData.NOW_1432, SampleData.NOW_1450, BreastSide.LEFT_THEN_RIGHT, id = "ended-feed")
+        show(card(feed, CardSpec.FeedEnded(feed.id, BreastSide.LEFT_THEN_RIGHT), now = SampleData.NOW_1450))
+        compose.onNodeWithText("Left → Right · 18m").assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Left then right, 18 minutes")))
+    }
+
+    @Test
+    fun cancelledFeedAndWokeUpSubLinesHaveSpokenForms() {
+        show(card(null, CardSpec.FeedCancelled(BreastSide.LEFT)))
+        compose.onNodeWithText("Left · <1m").assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Left, less than a minute")))
+    }
+
+    @Test
+    fun wokeUpSubLineHasASpokenForm() {
+        val sleep = Entry.sleep(SampleData.at(13, 25), SampleData.NOW_1432, id = "ended-sleep")
+        show(card(sleep, CardSpec.WokeUp(sleep.id)))
+        compose.onNodeWithText("Slept 1h 07m").assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Slept 1 hour 7 minutes")))
+    }
+
+    @Test
+    fun theSideSheetSubLineHasASpokenForm() {
+        show(HomeSamples.sideSheet(), night = false)
+        compose.onNodeWithText("Breastfeeding · 14:32–14:50 · 18m")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Breastfeeding, 14:32 to 14:50, 18 minutes")))
+    }
+
+    @Test
+    fun aPeeAndPoopDiaperIsSpokenWithoutThePlus() {
+        val both = Entry.diaper(SampleData.at(14, 0), pee = true, poop = true, id = "both-1400")
+        show(
+            HomeStateBuilder.build(
+                entries = SampleData.scenario() + both,
+                babyName = SampleData.BABY_NAME,
+                sync = SyncStatus.Synced(SampleData.SYNCED_1431),
+                now = SampleData.NOW_1432,
+                zone = SampleData.ZONE,
+            ),
+        )
+        compose.onNodeWithContentDescription("Last diaper, pee and poop, 32 minutes ago, at 14:00").assertExists()
+    }
+
+    private fun card(entry: Entry?, spec: CardSpec, now: Long = SampleData.NOW_1432) = HomeStateBuilder.build(
+        entries = SampleData.scenario() + listOfNotNull(entry),
+        babyName = SampleData.BABY_NAME,
+        sync = SyncStatus.Synced(SampleData.SYNCED_1431),
+        now = now,
+        zone = SampleData.ZONE,
+        card = CardModel(key = 1, spec = spec, baseTime = now),
+    )
 
     private fun diaperSheet(sheet: SheetModel.Diaper) = HomeStateBuilder.build(
         entries = SampleData.scenario(),

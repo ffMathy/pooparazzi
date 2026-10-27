@@ -98,13 +98,17 @@ object XIconSpecs {
 
     // ---- v1 additions (V1_ADDITIONS §7) -------------------------------------------------------
 
-    /** Breastfeeding: a parent's head and shoulder cradling a baby's head at the chest. */
+    /**
+     * Breastfeeding: a seated parent (head, back down to the lap, the front of the shoulder) whose arm cradles a
+     * swaddled baby, the baby's small head at the chest. Drawn to read at 16 dp: one figure, not loose glyphs.
+     */
     val breast = icon(
         "breast",
-        "M8 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
-        "M4.5 21v-5.5a5 5 0 0 1 3.5-4.8",
-        "M15.5 15a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
-        "M8.5 13c0 4.5 3 7.5 7 7.5 2.4 0 4-1.2 4.5-3.5",
+        "M7.5 6.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
+        "M7.5 9C5 9 3.5 11 3.5 14v7",
+        "M7.5 9c1 0 1.8.5 2.3 1.3",
+        "M12.75 12a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5z",
+        "M7.5 12.5c0 3 2.2 5 5.5 5h5a2.5 2.5 0 0 0 0-5h-1.5",
     )
 
     /** Food (solids): a bowl with a spoon. */

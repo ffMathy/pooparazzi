@@ -62,6 +62,7 @@ import com.ffmathy.xaternity.core.ui.tokens.LocalXPalette
 import com.ffmathy.xaternity.core.ui.type.PhoneType
 import com.ffmathy.xaternity.phone.R
 import com.ffmathy.xaternity.phone.ui.history.deletedLabel
+import com.ffmathy.xaternity.phone.ui.history.spokenSideCapitalised
 import com.ffmathy.xaternity.phone.ui.components.ChipDefaults
 import com.ffmathy.xaternity.phone.ui.components.OffsetChip
 import com.ffmathy.xaternity.phone.ui.components.XChip
@@ -199,8 +200,16 @@ private fun UndoCard(card: UndoCardUi, zone: ZoneId, formatters: Formatters, act
                     maxLines = if (content.sub != null) 1 else 2,
                     autoSize = TextAutoSize.StepBased(minFontSize = 14.sp, maxFontSize = 18.sp, stepSize = 0.5.sp),
                 )
-                content.sub?.let {
-                    Text(it, style = PhoneType.dataSmall, color = colors.onSurfaceVariant, maxLines = 1)
+                content.sub?.let { sub ->
+                    // TalkBack reads the spoken form ("Left then right, 18 minutes"), not "→" and "18m" (§9.5).
+                    val spoken = content.subSpoken ?: sub
+                    Text(
+                        sub,
+                        style = PhoneType.dataSmall,
+                        color = colors.onSurfaceVariant,
+                        maxLines = 1,
+                        modifier = Modifier.semantics { contentDescription = spoken },
+                    )
                 }
             }
             when (card.action) {
@@ -369,8 +378,8 @@ private fun EditChip(onClick: () -> Unit) {
     }
 }
 
-/** Row 1 of a card: icon, title and optional sub-line. */
-private class CardContent(val icon: TintedIcon, val title: String, val sub: String?)
+/** Row 1 of a card: icon, title and optional sub-line, with the sub-line's spoken form. */
+private class CardContent(val icon: TintedIcon, val title: String, val sub: String?, val subSpoken: String? = null)
 
 @Composable
 private fun cardContent(variant: CardVariant, formatters: Formatters): CardContent {
@@ -395,22 +404,26 @@ private fun cardContent(variant: CardVariant, formatters: Formatters): CardConte
             breast,
             stringResource(CoreR.string.receipt_feed_ended),
             stringResource(R.string.join_dot, stringResource(Labels.side(variant.side)), duration.format(variant.durationMillis)),
+            stringResource(R.string.spoken_pair, spokenSideCapitalised(variant.side), duration.spoken(variant.durationMillis)),
         )
         is CardVariant.FeedCancelled -> CardContent(
             breast,
             stringResource(CoreR.string.receipt_feed_cancelled),
             stringResource(R.string.join_dot, stringResource(Labels.side(variant.side)), duration.format(0L)),
+            stringResource(R.string.spoken_pair, spokenSideCapitalised(variant.side), duration.spoken(0L)),
         )
         CardVariant.SleepStarted -> CardContent(TintedIcon(XIcons.sleep, events.sleep.strong), stringResource(CoreR.string.receipt_sleep_started), null)
         is CardVariant.WokeUp -> CardContent(
             wake,
             stringResource(CoreR.string.action_woke_up),
             stringResource(CoreR.string.receipt_slept, duration.format(variant.sleptMillis)),
+            stringResource(CoreR.string.receipt_slept, duration.spoken(variant.sleptMillis)),
         )
         CardVariant.SleepCancelled -> CardContent(
             wake,
             stringResource(CoreR.string.receipt_sleep_cancelled),
             stringResource(CoreR.string.receipt_slept, duration.format(0L)),
+            stringResource(CoreR.string.receipt_slept, duration.spoken(0L)),
         )
         is CardVariant.AdjustStart -> CardContent(
             if (variant.sleep) TintedIcon(XIcons.sleep, events.sleep.strong) else breast,

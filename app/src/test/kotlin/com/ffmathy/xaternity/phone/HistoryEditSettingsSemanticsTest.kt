@@ -9,22 +9,24 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.xaternity.core.model.BreastSide
 import com.ffmathy.xaternity.core.settings.AppLanguage
@@ -123,8 +125,19 @@ class HistoryEditSettingsSemanticsTest {
         compose.onNodeWithContentDescription("Previous day").assertIsEnabled().performClick()
         compose.onNodeWithContentDescription("Today: 5 feeds, 4 pee, 2 poop, 7 hours 57 minutes sleep").assertExists()
         compose.onNodeWithContentDescription("7 hours 57 minutes sleep").assertExists()
-        compose.onNodeWithText("Add entry").performClick()
+        // Rows sit under the FAB, so it is the 56 × 56 icon FAB, still named "Add entry" for TalkBack.
+        compose.onNodeWithText("Add entry").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Add entry").assertHasClickAction().performClick()
         assertEquals(listOf("previous", "add"), calls)
+    }
+
+    /** At the end of the list the bottom padding keeps the FAB clear of the rows: it shows its label again. */
+    @Test
+    fun theAddEntryFabShowsItsLabelAtTheEndOfTheList() {
+        compose.setContent { NightLightTheme(night = false) { HistoryScreen(HistorySamples.today(), history) } }
+        compose.onNode(hasScrollAction()).performScrollToIndex(HistorySamples.today().entries.size + 3)
+        compose.waitForIdle()
+        compose.onNodeWithText("Add entry").assertExists()
     }
 
     private fun showSheet(state: EditUiState) {
@@ -175,7 +188,7 @@ class HistoryEditSettingsSemanticsTest {
     @Test
     fun aBlockingRuleDisablesSave() {
         showSheet(EditSamples.sleepEndBeforeStart())
-        compose.onNodeWithText("Woke up must be after fell asleep.").assertExists()
+        compose.onNodeWithText("Waking up must come after falling asleep.").assertExists()
         compose.onNodeWithText("Save").assertIsNotEnabled()
     }
 

@@ -116,6 +116,25 @@ abstract class WidgetScreenshots(private val language: String) {
         compose.onNodeWithTag(TAG).captureRoboImage("build/outputs/roborazzi/widget-breakpoints-$language.png")
     }
 
+    /**
+     * Not part of the tour: the static picker previews (`previewLayout`, Android 12–14) inflated as RemoteViews, as a
+     * launcher does, so a view RemoteViews does not allow fails here. Night configuration (values-night palette).
+     */
+    @Test
+    @Config(qualifiers = "+night")
+    fun staticPickerPreviews() {
+        val log = RemoteViews(context.packageName, R.layout.widget_log_preview)
+        val quick = RemoteViews(context.packageName, R.layout.widget_quick_preview)
+        compose.setContent {
+            Column(Modifier.testTag(TAG).background(NightBackdrop).padding(16.dp)) {
+                AndroidView(factory = { log.apply(it, FrameLayout(it)) }, modifier = Modifier.size(358.dp, 208.dp))
+                Box(Modifier.size(16.dp))
+                AndroidView(factory = { quick.apply(it, FrameLayout(it)) }, modifier = Modifier.size(171.dp, 100.dp))
+            }
+        }
+        compose.onNodeWithTag(TAG).captureRoboImage("build/outputs/roborazzi/widget-static-previews-$language.png")
+    }
+
     /** One widget on a panel of its theme's wallpaper tone (mockup backdrops). */
     @Composable
     private fun Panel(state: WidgetSnapshot, size: DpSize, view: RemoteViews, padding: androidx.compose.ui.unit.Dp = 16.dp) {

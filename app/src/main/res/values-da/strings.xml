@@ -8,6 +8,8 @@
 
     <string name="lamp_no_feed">Ingen måltider endnu</string>
 
+    <string name="side_sheet_feed">Amning</string>
+
     <string name="spoken_range">%1$s til %2$s</string>
     <string name="spoken_pee_and_poop">Tis og bæ</string>
     <string name="spoken_side_left_then_right">venstre, så højre</string>
@@ -42,13 +44,15 @@
     <string name="edit_change_time">Skift tidspunkt</string>
     <string name="edit_change_day">Skift dag</string>
     <string name="edit_spoken_day">%1$s, dag: %2$s</string>
-    <string name="edit_error_wake_before_sleep">Vågnede skal ligge efter Faldt i søvn.</string>
+    <string name="edit_error_wake_before_sleep">Opvågningen skal ligge efter, at barnet faldt i søvn.</string>
     <string name="edit_error_feed_end_before_start">Amningen skal slutte efter den startede.</string>
-    <string name="edit_error_future">Kl. %1$s er ikke kommet endnu. Skal den registreres i går?</string>
+    <string name="edit_error_future">Kl. %1$s er ikke kommet endnu. Registrér den i går i stedet?</string>
     <string name="edit_use_yesterday">Brug i går</string>
     <string name="edit_warning_overlap_sleep">Overlapper søvnen kl. %1$s. Gem alligevel?</string>
     <string name="edit_warning_overlap_feed">Overlapper amningen kl. %1$s. Gem alligevel?</string>
     <string name="edit_error_save_failed">Ændringen blev ikke gemt. Prøv igen.</string>
+    <string name="edit_notice_changed_on_watch">Ændret på uret imens. Tjek og gem igen.</string>
+    <string name="edit_error_deleted_on_watch">Slettet på uret imens.</string>
 
     <!-- Indstillinger -->
     <string name="settings_section_baby">Barn</string>
@@ -81,7 +85,7 @@
     <string name="notification_channel_timers">Søvn og amning i gang</string>
     <string name="notification_channel_timers_description">Viser en igangværende søvn eller amning med Vågnede og Afslut amning</string>
     <string name="notification_asleep_title">%1$s sover</string>
-    <string name="notification_breastfeeding_title">%1$s ammes</string>
+    <string name="notification_breastfeeding_title">%1$s bliver ammet</string>
     <string name="notification_since">Siden kl. %1$s</string>
     <string name="notification_metric_since">Siden</string>
     <!-- Indstillinger › Notifikationer -->

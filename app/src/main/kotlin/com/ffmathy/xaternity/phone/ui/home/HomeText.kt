@@ -6,7 +6,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.ffmathy.xaternity.core.format.DOT_SEPARATOR
-import com.ffmathy.xaternity.core.format.Formatters
 import com.ffmathy.xaternity.core.format.Labels
 import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.model.Entry
@@ -17,7 +16,6 @@ import com.ffmathy.xaternity.core.ui.icons.XIcons
 import com.ffmathy.xaternity.core.ui.icons.rememberBothIcon
 import com.ffmathy.xaternity.core.ui.tokens.EventPalette
 import com.ffmathy.xaternity.phone.R
-import com.ffmathy.xaternity.core.R as CoreR
 
 /** An icon with its colour; [tint] is `Color.Unspecified` for the two-tone `both`. */
 data class TintedIcon(val icon: ImageVector, val tint: Color)
@@ -58,18 +56,6 @@ fun diaperStatusLabel(kind: DiaperKind): String = stringResource(Labels.diaperKi
 @ReadOnlyComposable
 fun titleWithTime(@androidx.annotation.StringRes kind: Int, time: String): String =
     stringResource(R.string.join_dot, stringResource(kind), time)
-
-/** The label of an entry for TalkBack: "formula", "pee", "pee + poop" (lower case inside a sentence). */
-@Composable
-@ReadOnlyComposable
-fun spokenEntryLabel(entry: Entry, formatters: Formatters): String {
-    val label = when (entry.kind) {
-        EntryKind.SLEEP -> stringResource(CoreR.string.kind_sleep)
-        EntryKind.FEED -> feedTypeLabel(entry.feedType ?: FeedType.FORMULA)
-        EntryKind.DIAPER -> diaperLabel(entry.diaperKind ?: DiaperKind.PEE)
-    }
-    return label.lowercase(formatters.clock.locale)
-}
 
 /** " · 13:44" style suffix. */
 fun dotted(text: String): String = DOT_SEPARATOR + text
