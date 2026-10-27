@@ -22,3 +22,30 @@ subprojects {
         )
     }
 }
+
+// Release version and upload signing, shared by :app and :wear (docs/RELEASING.md). Each value comes from a Gradle
+// property (-P or ~/.gradle/gradle.properties) or, failing that, an environment variable; CI sets them.
+fun releaseValue(property: String, env: String): String? =
+    providers.gradleProperty(property).orElse(providers.environmentVariable(env)).orNull?.trim()?.takeIf { it.isNotEmpty() }
+
+/** The version code base: the phone ships `base * 10`, the watch `base * 10 + 1` (one applicationId, two bundles). */
+val versionBase: Int = releaseValue("pooparazzi.versionCode", "POOPARAZZI_VERSION_CODE")?.toInt()
+    ?: libs.versions.pooparazziVersionCode.get().toInt()
+require(versionBase in 1..209_999_999) { "pooparazzi.versionCode must be between 1 and 209999999, was $versionBase" }
+extra["pooparazzi.versionBase"] = versionBase
+extra["pooparazzi.versionName"] = releaseValue("pooparazzi.versionName", "POOPARAZZI_VERSION_NAME")
+    ?: libs.versions.pooparazziVersionName.get()
+
+// The upload key. Without any of these, release builds fall back to the debug key (installable local builds); with
+// only some of them the build stops rather than produce a bundle Google Play would reject.
+val uploadSigning: Map<String, String?> = mapOf(
+    "storeFile" to releaseValue("pooparazzi.upload.storeFile", "POOPARAZZI_UPLOAD_STORE_FILE"),
+    "storePassword" to releaseValue("pooparazzi.upload.storePassword", "POOPARAZZI_UPLOAD_STORE_PASSWORD"),
+    "keyAlias" to releaseValue("pooparazzi.upload.keyAlias", "POOPARAZZI_UPLOAD_KEY_ALIAS"),
+    "keyPassword" to releaseValue("pooparazzi.upload.keyPassword", "POOPARAZZI_UPLOAD_KEY_PASSWORD"),
+)
+val missingSigning = uploadSigning.filterValues { it == null }.keys
+if (missingSigning.isNotEmpty() && missingSigning.size < uploadSigning.size) {
+    throw GradleException("Upload signing is partly configured; missing: ${missingSigning.joinToString()} (docs/RELEASING.md)")
+}
+extra["pooparazzi.uploadSigning"] = if (missingSigning.isEmpty()) uploadSigning.mapValues { it.value!! } else null

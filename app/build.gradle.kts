@@ -7,14 +7,27 @@ plugins {
 
 android {
     // R class namespace (V1_ADDITIONS §7); the applicationId stays shared with the watch for the Data Layer.
-    namespace = "com.ffmathy.xaternity.phone"
+    namespace = "com.ffmathy.pooparazzi.phone"
     compileSdk = 37
     defaultConfig {
-        applicationId = "com.ffmathy.xaternity"
+        applicationId = "com.ffmathy.pooparazzi"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // One version base for both apps (root build script): the phone takes base * 10, the watch base * 10 + 1.
+        versionCode = rootProject.extra["pooparazzi.versionBase"] as Int * 10
+        versionName = rootProject.extra["pooparazzi.versionName"] as String
+    }
+    signingConfigs {
+        // The upload key from the root build script, when configured (CI); docs/RELEASING.md.
+        @Suppress("UNCHECKED_CAST")
+        (rootProject.extra["pooparazzi.uploadSigning"] as Map<String, String>?)?.let { upload ->
+            create("upload") {
+                storeFile = rootProject.file(upload.getValue("storeFile"))
+                storePassword = upload.getValue("storePassword")
+                keyAlias = upload.getValue("keyAlias")
+                keyPassword = upload.getValue("keyPassword")
+            }
+        }
     }
     buildTypes {
         release {
@@ -22,9 +35,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // This repository has no release key: release builds are signed with the debug key so they install for
-            // testing. A real key belongs in a local, uncommitted signing config.
-            signingConfig = signingConfigs.getByName("debug")
+            // The upload key when one is configured (CI, docs/RELEASING.md); otherwise the debug key, so a local
+            // release build still installs for testing.
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
         }
     }
     // The in-app language (Settings › Language, and the widgets and notifications that follow it) needs every

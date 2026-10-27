@@ -20,7 +20,7 @@
         android:label="@string/app_name"
         android:localeConfig="@xml/locales_config"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Xaternity"
+        android:theme="@style/Theme.Pooparazzi"
         tools:targetApi="33">
 
         <uses-library
@@ -66,7 +66,7 @@
 
         <!-- W9 Tile (DESIGN_SPEC §3.6, §10.9) -->
         <service
-            android:name=".tile.XaternityTileService"
+            android:name=".tile.PooparazziTileService"
             android:description="@string/tile_description"
             android:exported="true"
             android:icon="@drawable/x_lamp"

@@ -1,5 +1,7 @@
 # Xaternity Tracker — Design Specification
 
+> **Renamed:** the product is now called **Pooparazzi**. This design document predates the rename and keeps the working name "Xaternity"; in code, read `com.ffmathy.xaternity` as `com.ffmathy.pooparazzi`, `xaternity://` as `pooparazzi://` and `Xaternity*` classes as `Pooparazzi*`.
+
 Design: "Night Light" (final) · Spec date: Mon 26 Oct 2026 · Status: **pending the user's approval of the mockups**
 
 This document defines the product as designed in the approved-for-review mockups. It is written for the developers who will build:

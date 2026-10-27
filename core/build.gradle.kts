@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ffmathy.xaternity.core"
+    namespace = "com.ffmathy.pooparazzi.core"
     compileSdk = 37
     defaultConfig {
         minSdk = 30

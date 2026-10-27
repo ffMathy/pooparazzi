@@ -3,7 +3,7 @@
 
 # Navigation routes, the widget memo and the edit-sheet draft are kotlinx.serialization classes: keep their generated
 # serializers reachable (route objects are looked up through their serializer).
--keepclassmembers @kotlinx.serialization.Serializable class com.ffmathy.xaternity.phone.** {
+-keepclassmembers @kotlinx.serialization.Serializable class com.ffmathy.pooparazzi.phone.** {
     *** Companion;
     *** INSTANCE;
     kotlinx.serialization.KSerializer serializer(...);
@@ -13,7 +13,7 @@
 -keep class * implements androidx.glance.appwidget.action.ActionCallback { <init>(); }
 
 # WorkManager instantiates the widget refresh worker by class name.
--keep class com.ffmathy.xaternity.phone.widget.WidgetRefreshWorker { <init>(android.content.Context, androidx.work.WorkerParameters); }
+-keep class com.ffmathy.pooparazzi.phone.widget.WidgetRefreshWorker { <init>(android.content.Context, androidx.work.WorkerParameters); }
 
 # Readable crash traces without shipping the mapping inside the APK.
 -keepattributes SourceFile,LineNumberTable

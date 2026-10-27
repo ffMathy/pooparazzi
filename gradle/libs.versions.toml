@@ -1,8 +1,9 @@
 [versions]
-# The release both apps ship as. The phone and the watch share one applicationId, so Google Play needs a different
-# version code for each artifact: the watch adds 1 000 000 to this one (wear/build.gradle.kts). Bump it once for both.
-xaternityVersionCode = "1"
-xaternityVersionName = "0.1.0"
+# The release both apps ship as, for local builds. CI overrides both with -Ppooparazzi.versionCode / versionName
+# (docs/RELEASING.md). This is a base: the phone ships base * 10 and the watch base * 10 + 1, because they share one
+# applicationId and Google Play needs a version code of its own for every bundle under it.
+pooparazziVersionCode = "1"
+pooparazziVersionName = "0.1.0"
 agp = "9.4.1"
 kotlin = "2.4.21"
 ksp = "2.3.12"
