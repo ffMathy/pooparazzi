@@ -72,16 +72,22 @@ fun DurationNumeral(
             if (index > 0) Spacer(Modifier.width(gapBetween))
             Text(part.number, style = numberStyle.scaled(scale), color = color, maxLines = 1, modifier = Modifier.alignByBaseline())
             Spacer(Modifier.width(gapAfterNumber))
-            Text(part.unit, style = unitStyle.scaled(scale), color = color, maxLines = 1, modifier = Modifier.alignByBaseline())
+            Text(part.unit, style = unitStyle.scaled(scale).baselineOnly(), color = color, maxLines = 1, modifier = Modifier.alignByBaseline())
         }
         if (trailing != null) {
             Spacer(Modifier.width(TRAILING_GAP))
-            Text(trailing, style = trailingStyle, color = trailingColor, maxLines = 1, modifier = Modifier.alignByBaseline())
+            Text(trailing, style = trailingStyle.baselineOnly(), color = trailingColor, maxLines = 1, modifier = Modifier.alignByBaseline())
         }
     }
 }
 
 private val TRAILING_GAP = 4.dp
+
+/**
+ * The smaller texts beside the number sit on its baseline; their own (tall) line height would push the row below
+ * the number's line box (an 18 sp unit on a 36 sp line ends ~6 dp lower), so they keep only the font's own height.
+ */
+private fun TextStyle.baselineOnly(): TextStyle = copy(lineHeight = TextUnit.Unspecified)
 
 private fun TextStyle.scaled(factor: Float): TextStyle {
     if (factor == 1f) return this

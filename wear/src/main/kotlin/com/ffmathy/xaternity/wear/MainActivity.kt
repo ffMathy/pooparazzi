@@ -7,18 +7,23 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.LocalAmbientModeManager
 import androidx.wear.compose.foundation.rememberAmbientModeManager
 import androidx.wear.compose.material3.AppScaffold
 import com.ffmathy.xaternity.core.Core
+import com.ffmathy.xaternity.wear.ongoing.NotificationPermissionRequest
 import com.ffmathy.xaternity.wear.phone.PhoneLink
+import com.ffmathy.xaternity.wear.state.MainMode
 import com.ffmathy.xaternity.wear.theme.XWearTheme
 import com.ffmathy.xaternity.wear.ui.XTimeText
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * The watch app's only activity: Material 3 for Wear in the fixed dark theme, the system TimeText and the
- * navigation graph. External entry points (the Tile) pass [EXTRA_OPEN] (and [EXTRA_ENTRY_ID]).
+ * navigation graph. External entry points (the Tile, complications, the Ongoing Activity) pass [EXTRA_OPEN] (and
+ * [EXTRA_ENTRY_ID]).
  */
 class MainActivity : ComponentActivity() {
 
@@ -41,6 +46,8 @@ class MainActivity : ComponentActivity() {
                             onDeepLinkHandled = { deepLinks.value = null },
                         )
                     }
+                    val main by viewModel.main.collectAsStateWithLifecycle()
+                    NotificationPermissionRequest(timerRunning = main.mode != MainMode.IDLE)
                 }
             }
         }
@@ -52,12 +59,14 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        /** One of [OPEN_FEED_TYPE], [OPEN_END_FEED], [OPEN_LOGGED], [OPEN_TODAY]. */
+        /** One of [OPEN_MAIN], [OPEN_FEED_TYPE], [OPEN_END_FEED], [OPEN_LOGGED], [OPEN_TODAY]. */
         const val EXTRA_OPEN = "com.ffmathy.xaternity.wear.extra.OPEN"
 
         /** The entry for [OPEN_LOGGED]. */
         const val EXTRA_ENTRY_ID = "com.ffmathy.xaternity.wear.extra.ENTRY_ID"
 
+        /** Main, closing any picker (complications, the Ongoing Activity). */
+        const val OPEN_MAIN = "main"
         const val OPEN_FEED_TYPE = "feed_type"
         const val OPEN_END_FEED = "end_feed"
         const val OPEN_LOGGED = "logged"
@@ -70,6 +79,7 @@ class MainActivity : ComponentActivity() {
                 .apply { if (entryId != null) putExtra(EXTRA_ENTRY_ID, entryId) }
 
         internal fun deepLinkOf(intent: Intent?): WearDeepLink? = when (intent?.getStringExtra(EXTRA_OPEN)) {
+            OPEN_MAIN -> WearDeepLink.Main
             OPEN_FEED_TYPE -> WearDeepLink.FeedType
             OPEN_END_FEED -> WearDeepLink.EndFeed
             OPEN_TODAY -> WearDeepLink.Today

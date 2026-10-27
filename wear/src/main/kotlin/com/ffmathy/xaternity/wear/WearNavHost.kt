@@ -61,6 +61,9 @@ object WearRoutes {
 
 /** Where an external entry point (Tile, complication, notification) asks the app to open. */
 sealed interface WearDeepLink {
+    /** Main (complication and Ongoing Activity taps). */
+    data object Main : WearDeepLink
+
     /** Feed type screen (Tile row A, idle). */
     data object FeedType : WearDeepLink
 
@@ -112,11 +115,12 @@ fun WearNavHost(
         }
     }
 
-    // External entry points (the Tile), once each.
+    // External entry points (the Tile, complications, the Ongoing Activity), once each.
     val deepLink = deepLinks?.collectAsStateWithLifecycle()?.value
     LaunchedEffect(deepLink) {
         when (deepLink) {
             null -> return@LaunchedEffect
+            WearDeepLink.Main -> backToMain()
             WearDeepLink.FeedType -> {
                 viewModel.beginFeed()
                 go(WearRoutes.FEED_TYPE)

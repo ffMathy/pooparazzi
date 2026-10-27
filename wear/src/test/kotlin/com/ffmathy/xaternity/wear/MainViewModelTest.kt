@@ -74,6 +74,11 @@ class MainViewModelTest {
     private val zone = SampleData.ZONE
     private val minute = 60_000L
 
+    private companion object {
+        /** How long the event stream must stay unchanged before haptics are read. */
+        const val QUIET_MILLIS = 50L
+    }
+
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -122,7 +127,20 @@ class MainViewModelTest {
 
     private fun <T : Any> present(value: T?): T = checkNotNull(value)
 
-    private fun haptics(): List<XHaptic> = events.toList().filterIsInstance<WearEvent.Haptic>().map { it.type }
+    /**
+     * The haptics sent so far. Events travel through a channel to a collector on another thread, so this first waits
+     * until no new event has arrived for a moment (an assertion right after an action must not race the delivery).
+     */
+    private suspend fun haptics(): List<XHaptic> {
+        withTimeout(5_000) {
+            var seen = -1
+            while (events.size != seen) {
+                seen = events.size
+                delay(QUIET_MILLIS)
+            }
+        }
+        return events.toList().filterIsInstance<WearEvent.Haptic>().map { it.type }
+    }
 
     private suspend fun stored(): List<Entry> = repo.observeEntries().first()
 
@@ -145,7 +163,8 @@ class MainViewModelTest {
     @Test
     fun todayListsTodaysEntriesNewestFirst() = test {
         seed(SampleData.scenario())
-        val today = await(vm.today) { it.loaded && it.entries.isNotEmpty() }
+        // Room may emit the merge in steps: wait for the whole day.
+        val today = await(vm.today) { it.loaded && it.entries.size == SampleData.scenario().size }
         assertEquals(SampleData.TODAY, today.day)
         assertEquals("sample-pee-1344", today.entries.first().id)
         // The sleep that started on Sunday 22:40 overlaps today and is listed last.

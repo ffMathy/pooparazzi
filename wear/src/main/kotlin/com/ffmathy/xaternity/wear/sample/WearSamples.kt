@@ -2,6 +2,7 @@ package com.ffmathy.xaternity.wear.sample
 
 import com.ffmathy.xaternity.core.domain.summarize
 import com.ffmathy.xaternity.core.model.BreastSide
+import com.ffmathy.xaternity.core.model.DiaperKind
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.FeedType
 import com.ffmathy.xaternity.core.model.PoopColor
@@ -11,6 +12,7 @@ import com.ffmathy.xaternity.core.sync.SyncStatus
 import com.ffmathy.xaternity.wear.state.AdjustUiState
 import com.ffmathy.xaternity.wear.state.DiaperDraft
 import com.ffmathy.xaternity.wear.state.FeedDraft
+import com.ffmathy.xaternity.wear.state.GuardKind
 import com.ffmathy.xaternity.wear.state.MainUiState
 import com.ffmathy.xaternity.wear.state.Receipt
 import com.ffmathy.xaternity.wear.state.ReceiptKind
@@ -18,6 +20,12 @@ import com.ffmathy.xaternity.wear.state.SideDraft
 import com.ffmathy.xaternity.wear.state.TimeField
 import com.ffmathy.xaternity.wear.state.TodayUiState
 import com.ffmathy.xaternity.wear.state.Undo
+import com.ffmathy.xaternity.wear.tile.TILE_FEEDBACK_MILLIS
+import com.ffmathy.xaternity.wear.tile.TILE_GUARD_MILLIS
+import com.ffmathy.xaternity.wear.tile.TileFeedback
+import com.ffmathy.xaternity.wear.tile.TileFeedbackKind
+import com.ffmathy.xaternity.wear.tile.TileGuard
+import com.ffmathy.xaternity.wear.tile.TileUiState
 
 /**
  * Screen states for the reference scenario (V1_ADDITIONS §6) at its snapshots: 14:32 idle, 03:12 asleep,
@@ -79,6 +87,32 @@ object WearSamples {
         val sleep = SampleData.scenarioAt0312().first { it.id == "sample-sleep-0205" }
         return AdjustUiState.build(sleep, listOf(TimeField.START), allowSetTime = false, now = SampleData.NOW_0312, zone = zone)
     }
+
+    // ---- Tile (DESIGN_SPEC §3.6) ------------------------------------------------------------------
+
+    /** Idle at 14:32 with the baby's name in the title. */
+    fun tileIdle(babyName: String = SampleData.BABY_NAME): TileUiState =
+        TileUiState.from(summarize(SampleData.scenario(), SampleData.NOW_1432, zone), babyName, feedback = null, guard = null)
+
+    /** Asleep at 03:12: "Asleep 1h 07m", Woke up on the edge. */
+    fun tileAsleep(): TileUiState =
+        TileUiState.from(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, zone), SampleData.BABY_NAME, feedback = null, guard = null)
+
+    /** Breastfeeding since 14:32, seen at 14:50: Row A is "End feed · 18m". */
+    fun tileBreastfeeding(): TileUiState =
+        TileUiState.from(summarize(SampleData.scenarioWithRunningFeed(), SampleData.NOW_1450, zone), SampleData.BABY_NAME, feedback = null, guard = null)
+
+    /** Just logged Pee + poop from the tile at 14:32: "Both 14:32 · Undo" for 10 s. */
+    fun tileJustLogged(): TileUiState {
+        val logged = Entry.diaper(SampleData.NOW_1432, pee = true, poop = true, id = "sample-both-1432")
+        val summary = summarize(SampleData.scenario() + logged, SampleData.NOW_1432, zone)
+        val feedback = TileFeedback(TileFeedbackKind.DIAPER, logged.id, logged.startMillis, DiaperKind.BOTH, SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS)
+        return TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null)
+    }
+
+    /** A Start sleep tap within 2 s of the last toggle at 03:12: "Already asleep". */
+    fun tileGuard(): TileUiState =
+        tileAsleep().copy(guard = TileGuard(GuardKind.ALREADY_ASLEEP, SampleData.NOW_0312 + TILE_GUARD_MILLIS))
 
     /** Today at 14:32, newest first. */
     fun today(): TodayUiState {

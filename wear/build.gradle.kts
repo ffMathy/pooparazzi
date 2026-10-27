@@ -21,6 +21,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            // Installable from a local build; a store build replaces this with the upload key.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -46,7 +48,12 @@ dependencies {
     implementation(libs.wear.remote.interactions)
     implementation(libs.wear.tiles)
     implementation(libs.wear.protolayout.material3)
+    implementation(libs.wear.tiles.tooling.preview)
+    implementation(libs.wear.complications.data.source.ktx)
+    implementation(libs.wear.ongoing)
+    implementation(libs.androidx.core.ktx)
     debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.wear.tiles.tooling)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
@@ -55,5 +62,7 @@ dependencies {
     testImplementation(libs.roborazzi)
     testImplementation(libs.roborazzi.compose)
     testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.wear.tiles.renderer)
+    testImplementation(libs.wear.protolayout.expression.pipeline)
     debugImplementation(libs.compose.ui.test.manifest)
 }

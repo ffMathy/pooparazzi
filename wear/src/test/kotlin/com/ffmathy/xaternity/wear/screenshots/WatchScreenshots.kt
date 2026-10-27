@@ -160,11 +160,20 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s15_undone() = capture("15-undone", SampleData.NOW_1432, timeText = false) { UndoneScreen(onDone = {}) }
 
-    /** Above 1.15 font scale Feed | Diaper stack (DESIGN_SPEC §3.5.10); long words wrap instead of clipping. */
+    /**
+     * Above 1.15 font scale Feed | Diaper stay side by side while their labels fit (they stack once they do not, see
+     * 16b); long words wrap instead of clipping.
+     */
     @Test
     @Config(fontScale = 1.3f)
     fun s16_mainIdleLargeFont() =
         capture("16-main-idle-large-font", SampleData.NOW_1432) { MainScreen(WearSamples.mainIdle(), MainActions()) }
+
+    /** At 200 % the labels no longer fit side by side, so Feed and Diaper stack (and the hero scrolls). */
+    @Test
+    @Config(fontScale = 2.0f)
+    fun s16b_mainIdleHugeFont() =
+        capture("16b-main-idle-font-200", SampleData.NOW_1432) { MainScreen(WearSamples.mainIdle(), MainActions()) }
 
     @Test
     @Config(fontScale = 1.3f)

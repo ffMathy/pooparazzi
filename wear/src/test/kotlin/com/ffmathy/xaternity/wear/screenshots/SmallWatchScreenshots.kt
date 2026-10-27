@@ -51,10 +51,10 @@ abstract class SmallWatchScreenshots(private val lang: String) {
     }
 
     @Test
-    fun s12_mainIdleSmall() = capture("12-main-idle-small", SampleData.NOW_1432, WearSamples.mainIdle())
+    fun s19_mainIdleSmall() = capture("19-main-idle-small", SampleData.NOW_1432, WearSamples.mainIdle())
 
     @Test
-    fun s13_mainAsleepSmall() = capture("13-main-asleep-small", SampleData.NOW_0312, WearSamples.mainAsleep())
+    fun s20_mainAsleepSmall() = capture("20-main-asleep-small", SampleData.NOW_0312, WearSamples.mainAsleep())
 }
 
 @Config(qualifiers = "w192dp-h192dp-round-watch-xhdpi")

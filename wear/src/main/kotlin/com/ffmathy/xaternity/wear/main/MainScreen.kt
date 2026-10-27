@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
@@ -23,12 +24,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -208,8 +214,10 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
 
 @Composable
 private fun IdleHero(state: MainUiState, f: Formatters, actions: MainActions, small: Boolean) {
+    // The system TimeText grows with the font scale; the status label moves down with it instead of touching it.
+    val timeTextGrowth = TIME_TEXT_GROWTH_PER_SCALE * (LocalDensity.current.fontScale - 1f).coerceAtLeast(0f)
     Column(
-        Modifier.fillMaxWidth().padding(top = if (small) 20.dp else 30.dp),
+        Modifier.fillMaxWidth().padding(top = (if (small) 20.dp else 30.dp) + timeTextGrowth),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Before the first read the block stays empty rather than flashing "No feeds yet".
@@ -245,15 +253,19 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
                 size = 16.dp,
             )
             Spacer(Modifier.width(4.dp))
-            Text(label, style = MaterialTheme.typography.titleSmall, color = textColor, maxLines = 1)
+            // Steps down rather than running past the round edge at very large font scales.
+            AutoSizeLine(label, MaterialTheme.typography.titleSmall, textColor, minSize = 8, modifier = Modifier.widthIn(max = STATUS_LABEL_MAX_WIDTH))
         }
         if (lastFeed != null) {
             val since = clockDurationMillis(lastFeed.startMillis, state.now)
             val numeralHeight = if (small) 30.dp else 36.dp
-            Box(Modifier.heightIn(min = numeralHeight), contentAlignment = Alignment.Center) {
+            // Exactly the numeral's line height (§3.5.1: y 46–82), whatever the font's own ascent and descent: the
+            // numeral is centred on it and may overhang it, so the buttons below never move.
+            Box(Modifier.height(numeralHeight), contentAlignment = Alignment.Center) {
                 val onSurface = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurface
+                val unbounded = Modifier.wrapContentHeight(unbounded = true)
                 if (DurationFormatter.isUnderAMinute(since)) {
-                    Text(f.relative.justNow, style = WatchType.statusWord, color = onSurface, maxLines = 1)
+                    Text(f.relative.justNow, style = WatchType.statusWord, color = onSurface, maxLines = 1, modifier = unbounded)
                 } else {
                     val scale = if (small) 30f / 36f else 1f
                     DurationNumeral(
@@ -267,6 +279,7 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
                         trailingColor = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxWidth = 180.dp,
                         minNumberSize = 24.sp,
+                        modifier = unbounded,
                     )
                 }
             }
@@ -276,7 +289,8 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
 
 /**
  * Feed | Diaper (§3.5.1): two buttons 98 × 60 (small: 83 × 56), gap 6, r 26; icon 26 + 2 + label. Above 1.15 font
- * scale they stack as two 56 dp buttons.
+ * scale they stack as two 56 dp buttons (§3.5.10) when a label would not fit its half; while both still fit they
+ * stay side by side, so Diaper is not pushed under the pinned EdgeButton.
  */
 @Composable
 private fun FeedDiaperGroup(actions: MainActions, small: Boolean, modifier: Modifier = Modifier) {
@@ -285,7 +299,9 @@ private fun FeedDiaperGroup(actions: MainActions, small: Boolean, modifier: Modi
     val feedLabel = stringResource(CoreR.string.kind_feed)
     val diaperLabel = stringResource(CoreR.string.kind_diaper)
     val sidePadding = if (small) 10.dp else 13.dp
-    if (isLargeFont()) {
+    val largeFont = isLargeFont()
+    val labelsFit = labelsFitSideBySide(listOf(feedLabel, diaperLabel), sidePadding, enabled = largeFont)
+    if (largeFont && !labelsFit) {
         Column(modifier.fillMaxWidth().padding(horizontal = sidePadding), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             EventTileButton(feedLabel, XIcons.feed, feed, actions.onFeed, Modifier.fillMaxWidth().height(56.dp), stacked = false)
             EventTileButton(diaperLabel, XIcons.diaper, diaper, actions.onDiaper, Modifier.fillMaxWidth().height(56.dp), stacked = false)
@@ -310,6 +326,72 @@ private fun FeedDiaperGroup(actions: MainActions, small: Boolean, modifier: Modi
         )
     }
 }
+
+/** How much lower the TimeText reaches per +1.0 of font scale (its 15 sp line). */
+private val TIME_TEXT_GROWTH_PER_SCALE = 14.dp
+
+/** The status label's room at y 30–46 on the reference screen (the chord there, less the 20 dp icon). */
+private val STATUS_LABEL_MAX_WIDTH = 164.dp
+
+/** Whether [text] fits on one line of [width] in [style] at the current font scale. */
+@Composable
+private fun fitsOneLine(text: String, style: TextStyle, width: Dp): Boolean {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(text, style, density, width) { with(density) { measurer.measure(text, style, maxLines = 1).size.width.toDp() } <= width }
+}
+
+/**
+ * [style] stepped down (to 12 sp at most) until [text] fits [width] × [height] in [maxLines] without breaking a word,
+ * so a long label wraps instead of being cut by the button's curve.
+ */
+@Composable
+private fun fittingStyle(text: String, style: TextStyle, width: Dp, height: Dp, maxLines: Int): TextStyle {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(text, style, density, width, height, maxLines) {
+        val constraints = with(density) { Constraints(maxWidth = width.roundToPx()) }
+        val maxHeight = with(density) { height.toPx() }
+        fun sized(size: Float) = style.copy(fontSize = size.sp, lineHeight = (size * LINE_RATIO).sp)
+        fun fits(candidate: TextStyle): Boolean {
+            val result = measurer.measure(text, candidate, maxLines = maxLines, constraints = constraints, softWrap = true)
+            val wordsWhole = text.split(' ').all { measurer.measure(it, candidate, maxLines = 1).size.width <= constraints.maxWidth }
+            return !result.hasVisualOverflow && result.size.height <= maxHeight && wordsWhole
+        }
+        val floor = minOf(MIN_LABEL_SP, style.fontSize.value)
+        generateSequence(style.fontSize.value) { it - 1f }
+            .takeWhile { it > floor }
+            .map(::sized)
+            .firstOrNull(::fits)
+            ?: sized(floor)
+    }
+}
+
+private const val LINE_RATIO = 1.15f
+private const val MIN_LABEL_SP = 12f
+
+/** The EdgeButton's content width (Medium: ≈ 99 dp, §5.8). */
+private val EDGE_LABEL_WIDTH = 96.dp
+
+/** Room for a two-line label inside the Medium EdgeButton's content area (≈ 56 dp tall) above its curve. */
+private val EDGE_TWO_LINES_HEIGHT = 46.dp
+
+/** Whether each label fits on one line in half the row (a button's width less its 8 dp side padding). */
+@Composable
+private fun labelsFitSideBySide(labels: List<String>, sidePadding: Dp, enabled: Boolean): Boolean {
+    if (!enabled) return true
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.labelMedium
+    val density = LocalDensity.current
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    return remember(labels, style, density, screenWidth, sidePadding) {
+        val available = (screenWidth - sidePadding * 2 - GROUP_GAP) / 2 - LABEL_SIDE_PADDING * 2
+        labels.all { label -> with(density) { measurer.measure(label, style, maxLines = 1).size.width.toDp() } <= available }
+    }
+}
+
+private val GROUP_GAP = 6.dp
+private val LABEL_SIDE_PADDING = 8.dp
 
 @Composable
 private fun EventTileButton(
@@ -526,7 +608,7 @@ private fun PinnedEdgeButton(state: MainUiState, actions: MainActions, size: Edg
                     textAlign = TextAlign.Center,
                     maxLines = 2,
                 )
-            } else {
+            } else if (fitsOneLine(label, MaterialTheme.typography.labelMedium, EDGE_LABEL_WIDTH)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     val icon = when {
                         feeding -> XIcons.breast
@@ -539,8 +621,12 @@ private fun PinnedEdgeButton(state: MainUiState, actions: MainActions, size: Edg
                         tint = if (ambient) WatchAmbient.content else colors.strong,
                         size = if (size == EdgeButtonSize.Small) 20.dp else 24.dp,
                     )
-                    AutoSizeLine(label, MaterialTheme.typography.labelMedium, content, minSize = 12, modifier = Modifier.width(96.dp))
+                    AutoSizeLine(label, MaterialTheme.typography.labelMedium, content, minSize = 12, modifier = Modifier.width(EDGE_LABEL_WIDTH))
                 }
+            } else {
+                // Very large text (e.g. 200 %): the label wraps onto two lines in place of the icon, never clipped.
+                val style = fittingStyle(label, MaterialTheme.typography.labelMedium, EDGE_LABEL_WIDTH, EDGE_TWO_LINES_HEIGHT, maxLines = 2)
+                Text(label, style = style, color = content, textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.width(EDGE_LABEL_WIDTH))
             }
         }
     }

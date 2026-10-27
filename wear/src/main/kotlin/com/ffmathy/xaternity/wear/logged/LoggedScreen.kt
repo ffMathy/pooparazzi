@@ -85,6 +85,7 @@ import com.ffmathy.xaternity.wear.ui.AutoSizeLine
 import com.ffmathy.xaternity.wear.ui.SyncLine
 import com.ffmathy.xaternity.wear.ui.events
 import com.ffmathy.xaternity.wear.ui.feedTypeLabel
+import com.ffmathy.xaternity.wear.ui.keepSidesTogether
 import com.ffmathy.xaternity.wear.ui.rememberCooldown
 import kotlinx.coroutines.delay
 import com.ffmathy.xaternity.core.R as CoreR
@@ -303,7 +304,7 @@ private fun receiptLine2(receipt: Receipt, f: Formatters): String? {
             end?.let { stringResource(CoreR.string.receipt_slept, f.duration.between(entry.startMillis, it)) }
         ReceiptKind.FEED_ENDED, ReceiptKind.FEED_CANCELLED -> {
             val duration = end?.let { f.duration.between(entry.startMillis, it) }
-            listOfNotNull(entry.breastSide?.let { stringResource(Labels.side(it)) }, duration).joinToString(DOT_SEPARATOR)
+            listOfNotNull(entry.breastSide?.let { stringResource(Labels.side(it)).keepSidesTogether() }, duration).joinToString(DOT_SEPARATOR)
                 .ifEmpty { null }
         }
         ReceiptKind.FEED_LOGGED, ReceiptKind.DIAPER_LOGGED -> null

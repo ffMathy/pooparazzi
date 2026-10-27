@@ -76,5 +76,13 @@ fun entryWord(entry: Entry, compact: Boolean = false): String = when (entry.kind
     EntryKind.DIAPER -> diaperLabel(entry)
 }
 
+/**
+ * Keeps a two-side label ("Left → Right", "Venstre → Højre") on one line: a wrapping title then breaks after the
+ * preceding "·" instead of leaving the arrow at a line end ("Breast · Left →" / "Right").
+ */
+fun String.keepSidesTogether(): String = replace(" $SIDE_ARROW ", "\u00A0$SIDE_ARROW\u00A0")
+
+private const val SIDE_ARROW = "→"
+
 /** Lower-cases the first letter for use inside a spoken sentence. */
 fun String.inSentence(locale: Locale): String = replaceFirstChar { it.lowercase(locale) }

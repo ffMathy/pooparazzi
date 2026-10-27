@@ -162,7 +162,8 @@ class WearNavHostTest {
         compose.onNodeWithText("Left → Right").performClick()
 
         waitFor("Feed ended")
-        waitFor("Left → Right · 18m")
+        // The side label is kept on one line with no-break spaces around the arrow.
+        waitFor("Left\u00A0→\u00A0Right · 18m")
         assertTrue(!entries().single().isRunning)
     }
 

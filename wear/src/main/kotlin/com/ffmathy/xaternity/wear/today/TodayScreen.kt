@@ -51,6 +51,7 @@ import com.ffmathy.xaternity.wear.ui.ScreenTitle
 import com.ffmathy.xaternity.wear.ui.WatchShapes
 import com.ffmathy.xaternity.wear.ui.ambientBorder
 import com.ffmathy.xaternity.wear.ui.entryWord
+import com.ffmathy.xaternity.wear.ui.keepSidesTogether
 import com.ffmathy.xaternity.wear.ui.tonalButtonColors
 import com.ffmathy.xaternity.core.R as CoreR
 
@@ -173,7 +174,7 @@ private fun TodayRow(
 @Composable
 private fun rowTitle(entry: Entry, now: Long, f: Formatters): String =
     if (entry.kind == EntryKind.FEED && !entry.isBreastfeed) entryWord(entry, compact = true)
-    else f.labels.historyTitle(entry, f.duration, now)
+    else f.labels.historyTitle(entry, f.duration, now).keepSidesTogether()
 
 /** The row read aloud: words for durations (§9.5) and commas between facts. */
 @Composable

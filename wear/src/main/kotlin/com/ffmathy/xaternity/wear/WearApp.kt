@@ -3,11 +3,13 @@ package com.ffmathy.xaternity.wear
 import android.app.Application
 import android.app.LocaleManager
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.os.LocaleList
 import androidx.annotation.RequiresApi
 import com.ffmathy.xaternity.core.Core
 import com.ffmathy.xaternity.core.settings.SettingsRepository
+import com.ffmathy.xaternity.wear.surface.SurfaceUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -16,14 +18,31 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** The watch application: builds the shared [Core] graph and follows the language chosen on the phone. */
+/**
+ * The watch application: builds the shared [Core] graph, follows the language chosen on the phone, and keeps the
+ * tile, complications and Ongoing Activities in step with the data ([SurfaceUpdater]).
+ */
 class WearApp : Application() {
+    private var surfaces: SurfaceUpdater? = null
+
     override fun onCreate() {
         super.onCreate()
         val graph = Core.init(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             SyncedLanguage.follow(this, graph.settings, graph.scope)
         }
+        surfaces = SurfaceUpdater(this, graph.repository, graph.settings, graph.clock).also { it.start(graph.scope) }
+    }
+
+    /** A new language (synced or system), time zone or 12/24 h setting changes the text on every surface. */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        refreshSurfaces()
+    }
+
+    /** Rebuilds the tile, complications and Ongoing Activities (e.g. once notifications are allowed). */
+    fun refreshSurfaces() {
+        surfaces?.refresh()
     }
 }
 
