@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Watch-only strings. Shared words (glossary, units, relative phrases, receipts, sync lines) come from :core
+    (com.ffmathy.xaternity.core.R) and are not redefined here. Every string has a Danish twin in values-da.
+-->
+<resources>
+    <string name="app_name" translatable="false">Xaternity</string>
+
+    <!-- Main: idle status block before the first feed is logged -->
+    <string name="status_no_feed_yet">No feeds yet</string>
+
+    <!-- Pinned EdgeButton guard (DESIGN_SPEC §3.5.2): two centred lines, so keep the line break. -->
+    <string name="edge_guard_already_asleep">Already\nasleep</string>
+    <string name="edge_guard_already_awake">Already\nawake</string>
+    <string name="edge_guard_already_feeding">Already\nfeeding</string>
+
+    <!-- TalkBack name of the running-sleep EdgeButton (DESIGN_SPEC §9.4) -->
+    <string name="cd_woke_up_end_sleep">Woke up, end sleep</string>
+    <!-- Click label of status cards and Today rows: they open Adjust -->
+    <string name="action_adjust">Adjust</string>
+
+    <!-- Logged -->
+    <string name="logged_already_logged">Already logged</string>
+    <!-- TalkBack name of the full-screen dismiss target behind the Logged confirmation -->
+    <string name="logged_dismiss">Dismiss</string>
+
+    <!-- Adjust: group headers for the start and end of a completed interval. %1$s is a clock time. -->
+    <string name="adjust_start_at">Start · %1$s</string>
+    <string name="adjust_end_at">End · %1$s</string>
+    <string name="action_set_time">Set time</string>
+
+    <!-- Today -->
+    <string name="today_empty">Nothing logged today yet</string>
+    <string name="action_more_on_phone">More on phone</string>
+    <!-- OpenOnPhoneDialog curved text -->
+    <string name="open_on_phone">Continue on phone</string>
+</resources>

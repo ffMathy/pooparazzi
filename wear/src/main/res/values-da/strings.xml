@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Danish twins of values/strings.xml. -->
+<resources>
+    <string name="status_no_feed_yet">Ingen måltider endnu</string>
+
+    <string name="edge_guard_already_asleep">Sover\nallerede</string>
+    <string name="edge_guard_already_awake">Allerede\nvågen</string>
+    <string name="edge_guard_already_feeding">Ammer\nallerede</string>
+
+    <string name="cd_woke_up_end_sleep">Vågnede, afslut søvn</string>
+    <string name="action_adjust">Juster</string>
+
+    <string name="logged_already_logged">Allerede registreret</string>
+    <string name="logged_dismiss">Luk</string>
+
+    <string name="adjust_start_at">Start · %1$s</string>
+    <string name="adjust_end_at">Slut · %1$s</string>
+    <string name="action_set_time">Indstil tid</string>
+
+    <string name="today_empty">Intet registreret i dag endnu</string>
+    <string name="action_more_on_phone">Mere på telefonen</string>
+    <string name="open_on_phone">Fortsæt på telefonen</string>
+</resources>
