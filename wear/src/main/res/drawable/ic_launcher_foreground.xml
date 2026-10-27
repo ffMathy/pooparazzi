@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Adaptive-icon foreground: the `lamp` glyph (DESIGN_SPEC §6.2) scaled ×2.25 into the 66 dp safe zone of the
+    108 dp canvas (54 dp glyph, offset 27). Stroke width 2 in glyph units, round caps and joins.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="2.25"
+        android:scaleY="2.25"
+        android:translateX="27"
+        android:translateY="27">
+        <path
+            android:pathData="M8.5 3.5h7l3.5 8h-14z"
+            android:strokeWidth="2"
+            android:strokeColor="@color/launcher_glyph"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M12 11.5v6.5"
+            android:strokeWidth="2"
+            android:strokeColor="@color/launcher_glyph"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M8.5 20.5h7"
+            android:strokeWidth="2"
+            android:strokeColor="@color/launcher_glyph"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

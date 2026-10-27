@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Danish twins of values/strings.xml. -->
+<resources>
+    <string name="status_no_feed_yet">Ingen måltider endnu</string>
+
+    <string name="edge_guard_already_asleep">Sover\nallerede</string>
+    <string name="edge_guard_already_awake">Allerede\nvågen</string>
+    <string name="edge_guard_already_feeding">Ammer\nallerede</string>
+
+    <string name="cd_woke_up_end_sleep">Vågnede, afslut søvn</string>
+    <string name="action_adjust">Juster</string>
+
+    <string name="logged_already_logged">Allerede registreret</string>
+    <string name="logged_dismiss">Luk</string>
+
+    <string name="adjust_start_at">Start · %1$s</string>
+    <string name="adjust_end_at">Slut · %1$s</string>
+    <string name="action_set_time">Indstil tid</string>
+
+    <string name="today_empty">Intet registreret i dag endnu</string>
+    <string name="action_more_on_phone">Mere på telefonen</string>
+    <string name="open_on_phone">Fortsæt på telefonen</string>
+
+    <string name="tile_description">Registrér bleer og søvn med ét tryk, og se tiden siden sidste måltid.</string>
+    <string name="tile_title_asleep">Sover %1$s</string>
+    <string name="tile_guard_already_asleep">Sover allerede</string>
+    <string name="tile_guard_already_awake">Allerede vågen</string>
+    <string name="tile_cd_logged">%1$s. Tryk på flisen for at fortryde</string>
+    <string name="tile_cd_last_diaper">Sidste bleskift, %1$s, %2$s</string>
+    <string name="tile_cd_asleep">Sover, %1$s</string>
+    <string name="tile_cd_feed">Måltid. Sidste måltid %1$s</string>
+    <string name="tile_cd_feed_none">Måltid. Ingen måltider endnu</string>
+    <string name="tile_cd_end_feed">Afslut amning. Ammer i %1$s</string>
+    <string name="tile_cd_log_pee">Registrér tis</string>
+    <string name="tile_cd_log_poop">Registrér bæ</string>
+    <string name="tile_cd_log_both">Registrér begge, tis og bæ</string>
+
+    <string name="complication_since_feed">Siden sidste måltid</string>
+    <string name="complication_last_diaper">Sidste ble</string>
+    <string name="complication_sleep">Sover eller vågen</string>
+    <string name="complication_sleep_long">Søvn og sidste måltid</string>
+    <string name="complication_awake_for">Vågen %1$s</string>
+    <string name="complication_asleep_for">Sover %1$s</string>
+    <string name="complication_fed_ago">Spiste %1$s</string>
+    <string name="complication_cd_awake">Vågen %1$s, siden kl. %2$s</string>
+    <string name="complication_cd_asleep">Sover %1$s, siden kl. %2$s</string>
+    <string name="complication_cd_no_feed">Ingen måltider endnu</string>
+    <string name="complication_cd_no_diaper">Ingen bleskift endnu</string>
+    <string name="complication_cd_no_sleep">Ingen søvn endnu</string>
+    <string name="complication_preview_caption">Forhåndsvisning af komplikationsdata</string>
+
+    <string name="ongoing_channel_name">Igangværende tidtagning</string>
+    <string name="ongoing_channel_description">Viser igangværende søvn eller amning på urskiven.</string>
+    <string name="ongoing_asleep_since">Sover siden kl. #start#</string>
+    <string name="ongoing_breastfeeding_since">Ammer siden kl. #start#</string>
+</resources>
