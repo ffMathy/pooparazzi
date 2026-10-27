@@ -12,6 +12,7 @@ import androidx.wear.watchface.complications.data.ShortTextComplicationData
 import androidx.wear.watchface.complications.data.TimeDifferenceComplicationText
 import com.ffmathy.xaternity.core.domain.Summary
 import com.ffmathy.xaternity.core.domain.summarize
+import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.sample.SampleData
 import com.ffmathy.xaternity.core.ui.icons.XDrawables
 import com.ffmathy.xaternity.wear.surface.SurfaceText
@@ -94,6 +95,26 @@ class ComplicationContentTest {
     fun beforeWearOs4TheSystemTimeDifferenceIsUsed() {
         val data = content(sdk = Build.VERSION_CODES.S).build(XComplication.SINCE_FEED, idle, tapAction = null) as ShortTextComplicationData
         assertTrue(data.text is TimeDifferenceComplicationText)
+    }
+
+    @Test
+    fun beforeWearOs4TheLongTitleStillSaysAgo() {
+        // The system time difference fills only "1h 32m": the "ago" must come from the template.
+        val sleeping = ComplicationParts.read(XComplication.SLEEP_LONG, asleep, sdk = Build.VERSION_CODES.S)
+        assertEquals("Fed 1h 32m ago", sleeping.title)
+    }
+
+    @Test
+    fun theLastDiaperIsReadInWords() {
+        val both = summarize(
+            SampleData.scenario() + Entry.diaper(SampleData.at(14, 0), pee = true, poop = true, id = "both-1400"),
+            SampleData.NOW_1432,
+            SampleData.ZONE,
+        )
+        val parts = ComplicationParts.read(XComplication.LAST_DIAPER, both)
+        assertEquals("Both", parts.title)
+        // Never the status word "Both" (DESIGN_SPEC §9.4).
+        assertTrue(parts.description, parts.description.orEmpty().startsWith("Last diaper, pee and poop, "))
     }
 
     @Test

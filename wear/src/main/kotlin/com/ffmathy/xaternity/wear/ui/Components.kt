@@ -83,9 +83,15 @@ const val SMALL_WATCH_DP = 225
 /** Previews and screenshots pin the TimeText to the scenario's clock ("14:32"). Null shows the real time. */
 val LocalFixedTimeText = staticCompositionLocalOf<String?> { null }
 
-/** The system TimeText (DESIGN_SPEC §3.5): 15 sp, weight 600, tabular, onSurface; ambient onSurfaceVariant. */
+/**
+ * The system TimeText (DESIGN_SPEC §3.5): 15 sp, weight 600, tabular, onSurface; ambient onSurfaceVariant.
+ *
+ * [masked] keeps Wear's backing pill, which hides whatever list content rests under the time (lists also come to
+ * rest on an item and shrink and fade items at the edge). Main drops it while its hero is at rest at the top, where
+ * nothing scrolls under the time and the pill would cut a dark notch into the Lamp's glow.
+ */
 @Composable
-fun XTimeText() {
+fun XTimeText(masked: Boolean = true) {
     val fixed = LocalFixedTimeText.current
     val color = if (isAmbient()) WatchAmbient.content else MaterialTheme.colorScheme.onSurface
     val style = CurvedTextStyle(WatchType.timeText.copy(color = color))
@@ -99,8 +105,10 @@ fun XTimeText() {
     } else {
         TimeTextDefaults.rememberTimeSource(TimeTextDefaults.timeFormat())
     }
-    // Keeps the default backing pill: list content scrolls under the TimeText and must not collide with it.
-    TimeText(timeSource = timeSource) { time -> timeTextCurvedText(time, style) }
+    TimeText(
+        backgroundColor = if (masked) TimeTextDefaults.backgroundColor() else Color.Transparent,
+        timeSource = timeSource,
+    ) { time -> timeTextCurvedText(time, style) }
 }
 
 /** Container colours of an event button, resolved for ambient (outline in the strong colour, no fill). */
@@ -155,10 +163,14 @@ fun XListButton(
     enabled: Boolean = true,
     transformation: SurfaceTransformation? = null,
     labelStyle: TextStyle = MaterialTheme.typography.labelMedium,
+    /** What TalkBack reads instead of the labels, where they show symbols ("Left → Right"). */
+    contentDescription: String? = null,
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (contentDescription != null) Modifier.semantics { this.contentDescription = contentDescription } else Modifier),
         enabled = enabled,
         shape = WatchShapes.Button,
         colors = colors,
@@ -181,6 +193,7 @@ fun XListButton(
                 style = labelStyle.copy(hyphens = Hyphens.Auto, lineBreak = LineBreak.Paragraph),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = if (contentDescription != null) Modifier.clearAndSetSemantics { } else Modifier,
             )
         },
     )
@@ -207,7 +220,8 @@ fun StatusCard(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp)
+            // A minimum, not a fixed height: the list's edge transformation must be able to squish it.
+            .heightIn(min = 52.dp)
             .semantics { contentDescription = spoken },
         shape = WatchShapes.Button,
         colors = tonalButtonColors(),

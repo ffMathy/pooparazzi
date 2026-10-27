@@ -47,7 +47,7 @@ abstract class SmallWatchScreenshots(private val lang: String) {
             }
         }
         compose.waitForIdle()
-        compose.onRoot().captureRoboImage(filePath = "screenshots/$lang/$name.png")
+        compose.onRoot().captureRoboImage(filePath = "screenshots/$lang/$name.png", roborazziOptions = RoundWatch)
     }
 
     @Test

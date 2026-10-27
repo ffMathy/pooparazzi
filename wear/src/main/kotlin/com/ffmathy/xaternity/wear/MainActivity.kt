@@ -9,13 +9,17 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.ambient.AmbientLifecycleObserver
+import androidx.wear.compose.foundation.AmbientModeManager
 import androidx.wear.compose.foundation.LocalAmbientModeManager
 import androidx.wear.compose.foundation.rememberAmbientModeManager
 import androidx.wear.compose.material3.AppScaffold
 import com.ffmathy.xaternity.core.Core
 import com.ffmathy.xaternity.wear.ongoing.NotificationPermissionRequest
-import com.ffmathy.xaternity.wear.phone.PhoneLink
+import com.ffmathy.xaternity.wear.phone.RemotePhoneLink
 import com.ffmathy.xaternity.wear.state.MainMode
+import com.ffmathy.xaternity.wear.theme.AmbientSupport
+import com.ffmathy.xaternity.wear.theme.WearableAmbientModeManager
 import com.ffmathy.xaternity.wear.theme.XWearTheme
 import com.ffmathy.xaternity.wear.ui.XTimeText
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,13 +34,29 @@ class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels { MainViewModel.Factory }
     private val deepLinks = MutableStateFlow<WearDeepLink?>(null)
 
+    /** Constant for the process, so the composition below always takes the same branch. */
+    private val ambientSupport = AmbientSupport.detect()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Core.init(applicationContext)
         if (savedInstanceState == null) deepLinks.value = deepLinkOf(intent)
-        val phoneLink = PhoneLink(applicationContext)
+        val phoneLink = RemotePhoneLink(applicationContext)
+        // Wear OS 3–5: always-on through the wearable library's observer, registered while the activity is created.
+        val wearableAmbient = if (ambientSupport == AmbientSupport.WEARABLE_LIBRARY) {
+            WearableAmbientModeManager().also { lifecycle.addObserver(AmbientLifecycleObserver(this, it)) }
+        } else {
+            null
+        }
         setContent {
-            CompositionLocalProvider(LocalAmbientModeManager provides rememberAmbientModeManager()) {
+            // Only Wear OS 6+ has the Wear SDK ambient service that rememberAmbientModeManager() needs (it throws
+            // NoClassDefFoundError elsewhere); every screen handles a missing manager as "interactive".
+            val ambient: AmbientModeManager? = when (ambientSupport) {
+                AmbientSupport.WEAR_SDK -> rememberAmbientModeManager()
+                AmbientSupport.WEARABLE_LIBRARY -> wearableAmbient
+                AmbientSupport.NONE -> null
+            }
+            CompositionLocalProvider(LocalAmbientModeManager provides ambient) {
                 XWearTheme {
                     AppScaffold(timeText = { XTimeText() }) {
                         WearNavHost(

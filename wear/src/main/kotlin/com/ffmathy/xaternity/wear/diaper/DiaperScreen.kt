@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CheckboxButton
@@ -85,6 +86,8 @@ fun DiaperScreen(draft: DiaperDraft, actions: DiaperActions, modifier: Modifier 
         Box(Modifier.fillMaxSize()) {
             TransformingLazyColumn(
                 state = listState,
+                // Comes to rest on an item, never half under the time.
+                flingBehavior = TransformingLazyColumnDefaults.snapFlingBehavior(listState),
                 contentPadding = PaddingValues(
                     top = contentPadding.calculateTopPadding(),
                     bottom = 84.dp,
@@ -108,7 +111,8 @@ fun DiaperScreen(draft: DiaperDraft, actions: DiaperActions, modifier: Modifier 
                         lit = events.diaper.containerLit,
                         outline = events.diaper.strong,
                         enabled = cooldown.ready,
-                        modifier = Modifier.alpha(cooldown.alpha),
+                        transformation = SurfaceTransformation(spec),
+                        modifier = Modifier.transformedHeight(this, spec).alpha(cooldown.alpha),
                     )
                 }
                 item(key = "poop") {
@@ -121,7 +125,8 @@ fun DiaperScreen(draft: DiaperDraft, actions: DiaperActions, modifier: Modifier 
                         lit = events.diaper.containerLit,
                         outline = events.diaper.strong,
                         enabled = cooldown.ready,
-                        modifier = Modifier.alpha(cooldown.alpha),
+                        transformation = SurfaceTransformation(spec),
+                        modifier = Modifier.transformedHeight(this, spec).alpha(cooldown.alpha),
                     )
                 }
                 if (draft.poop) {
@@ -167,9 +172,10 @@ fun DiaperScreen(draft: DiaperDraft, actions: DiaperActions, modifier: Modifier 
 }
 
 /**
- * A Pee / Poop checkbox: the kind's container when off; the DIAPER lit fill with a 2 dp DIAPER strong border when
- * on (V1_ADDITIONS §3.1, carried to the watch). Announced as a checkbox with its state. It does not take part in
- * the list's edge morph: the border would not follow the morphed container.
+ * A Pee / Poop checkbox: the kind's container when off; the DIAPER lit fill with the checked box in DIAPER strong
+ * when on (V1_ADDITIONS §3.2: `CheckboxButton`s). The state is in the button's own colours, so it morphs and fades
+ * at the screen edge like every other list item (an outer border could not follow that shape); the checkbox glyph
+ * keeps it from being colour alone. Announced as a checkbox with its state.
  */
 @Composable
 private fun DiaperCheckbox(
@@ -181,15 +187,11 @@ private fun DiaperCheckbox(
     lit: Color,
     outline: Color,
     enabled: Boolean,
+    transformation: SurfaceTransformation,
     modifier: Modifier,
 ) {
     val ambient = isAmbient()
     val content = if (ambient) WatchAmbient.content else colors.onContainer
-    val border = when {
-        ambient -> BorderStroke(2.dp, colors.strong)
-        checked -> BorderStroke(2.dp, outline)
-        else -> null
-    }
     CheckboxButton(
         checked = checked,
         onCheckedChange = onCheckedChange,
@@ -197,8 +199,10 @@ private fun DiaperCheckbox(
             .fillMaxWidth()
             // "Pee, checkbox, not checked" (V1_ADDITIONS §3.1); the Wear CheckboxButton sets no role of its own.
             .semantics { role = Role.Checkbox }
-            .then(if (border != null) Modifier.border(border, WatchShapes.Button) else Modifier),
+            // Ambient has no fills: the outline carries the shape (the list does not scroll in ambient).
+            .then(if (ambient) Modifier.border(BorderStroke(2.dp, colors.strong), WatchShapes.Button) else Modifier),
         enabled = enabled,
+        transformation = transformation,
         shape = WatchShapes.Button,
         colors = CheckboxButtonDefaults.checkboxButtonColors(
             checkedContainerColor = if (ambient) Color.Transparent else lit,

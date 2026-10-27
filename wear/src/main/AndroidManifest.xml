@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Haptics for the tile's one-tap logs (DESIGN_SPEC §5.11). -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Puts the Ongoing Activity of a running sleep back after a reboot (SurfacesRestoreReceiver). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".WearApp"
@@ -48,6 +50,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            After a reboot or an app update nothing restarts the process, and notifications are gone: this puts the
+            Ongoing Activity of a running sleep or breastfeed back (DESIGN_SPEC §3.8). Only the system sends these.
+        -->
+        <receiver
+            android:name=".SurfacesRestoreReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!-- W9 Tile (DESIGN_SPEC §3.6, §10.9) -->
         <service

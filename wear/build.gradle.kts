@@ -4,6 +4,9 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
+/** The watch's version codes sit above the phone's (1 000 001 for the phone's 1). */
+val wearVersionCodeOffset = 1_000_000
+
 android {
     namespace = "com.ffmathy.xaternity.wear"
     compileSdk = 37
@@ -12,8 +15,10 @@ android {
         applicationId = "com.ffmathy.xaternity"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // Same applicationId as the phone app: Google Play needs a version code of its own for every upload under it,
+        // so the watch takes the phone's code (one shared property) in a range of its own.
+        versionCode = wearVersionCodeOffset + libs.versions.xaternityVersionCode.get().toInt()
+        versionName = libs.versions.xaternityVersionName.get()
     }
     buildTypes {
         release {
@@ -46,6 +51,8 @@ dependencies {
     implementation(libs.wear.compose.navigation)
     implementation(libs.wear.compose.ui.tooling)
     implementation(libs.wear.remote.interactions)
+    // Always-on (ambient) on Wear OS 3–5 watches, which have no Wear SDK ambient service.
+    implementation(libs.wear.ambient)
     implementation(libs.wear.tiles)
     implementation(libs.wear.protolayout.material3)
     implementation(libs.wear.tiles.tooling.preview)

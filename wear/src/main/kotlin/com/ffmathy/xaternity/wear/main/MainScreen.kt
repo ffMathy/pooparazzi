@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,12 +35,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
@@ -54,7 +59,6 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import com.ffmathy.xaternity.core.format.DurationFormatter
 import com.ffmathy.xaternity.core.format.Formatters
-import com.ffmathy.xaternity.core.format.Labels
 import com.ffmathy.xaternity.core.format.SyncPeer
 import com.ffmathy.xaternity.core.format.rememberFormatters
 import com.ffmathy.xaternity.core.model.DiaperKind
@@ -88,6 +92,7 @@ import com.ffmathy.xaternity.wear.ui.SyncLine
 import com.ffmathy.xaternity.wear.ui.WatchShapes
 import com.ffmathy.xaternity.wear.ui.XCompactButton
 import com.ffmathy.xaternity.wear.ui.XListButton
+import com.ffmathy.xaternity.wear.ui.XTimeText
 import com.ffmathy.xaternity.wear.ui.agoAndClock
 import com.ffmathy.xaternity.wear.ui.ambientBorder
 import com.ffmathy.xaternity.wear.ui.diaperStatusLabel
@@ -95,11 +100,13 @@ import com.ffmathy.xaternity.wear.ui.durationAndSince
 import com.ffmathy.xaternity.wear.ui.eventButtonColors
 import com.ffmathy.xaternity.wear.ui.events
 import com.ffmathy.xaternity.wear.ui.feedTypeLabel
-import com.ffmathy.xaternity.wear.ui.isLargeFont
 import com.ffmathy.xaternity.wear.ui.isSmallWatch
 import com.ffmathy.xaternity.wear.ui.labelAtTime
+import com.ffmathy.xaternity.wear.ui.SpokenLabels
 import com.ffmathy.xaternity.wear.ui.spokenAgo
 import com.ffmathy.xaternity.wear.ui.spokenDurationSince
+import com.ffmathy.xaternity.wear.ui.spokenRunning
+import com.ffmathy.xaternity.wear.ui.statusSince
 import com.ffmathy.xaternity.core.R as CoreR
 
 /** What Main can do. Every callback is a user intent; the ViewModel decides the outcome. */
@@ -107,7 +114,11 @@ import com.ffmathy.xaternity.core.R as CoreR
 data class MainActions(
     val onFeed: () -> Unit = {},
     val onDiaper: () -> Unit = {},
-    val onSleepToggle: () -> Unit = {},
+    /**
+     * The sleep toggle, with what it showed: the running sleep behind "Woke up", or null for "Start sleep" (so a tap
+     * that crossed a change made on the phone is not taken the other way).
+     */
+    val onSleepToggle: (shownSleepId: String?) -> Unit = {},
     val onEndFeed: () -> Unit = {},
     /** Adjust a time of an entry (status cards, "Adjust start"). */
     val onAdjust: (entry: Entry, field: TimeField) -> Unit = { _, _ -> },
@@ -130,19 +141,26 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
     val cards = statusCards(state, f)
     val syncText = f.labels.syncLine(state.sync, SyncPeer.PHONE, f.clock, f.zone)
 
-    ScreenScaffold(scrollState = listState, modifier = modifier) { _ ->
+    // Unscrolled, only the hero is under the time: no backing pill there (no notch in the Lamp's glow).
+    val atTop by remember(listState) { derivedStateOf { !listState.canScrollBackward } }
+    ScreenScaffold(scrollState = listState, modifier = modifier, timeText = { XTimeText(masked = !atTop) }) { _ ->
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val screenHeight = maxHeight
             TransformingLazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
+                // Comes to rest on an item, never half under the time.
+                flingBehavior = TransformingLazyColumnDefaults.snapFlingBehavior(listState),
                 contentPadding = PaddingValues(bottom = edgeReserve),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 // The hero fills the first screen, so the list below starts under the fold (mockup "margin-top").
                 item(key = "hero") {
-                    // At least one screen tall; taller only when a large font scale needs it (then it scrolls).
-                    Box(Modifier.fillMaxWidth().heightIn(min = screenHeight)) {
+                    // At least one screen tall; taller only when a large font scale needs it (then it scrolls). The
+                    // idle hero's own content keeps clear of the pinned EdgeButton: what does not fit above it
+                    // scrolls up from under it instead of resting there.
+                    val idle = state.mode == MainMode.IDLE
+                    Box(Modifier.fillMaxWidth().heightIn(min = screenHeight).padding(bottom = if (idle) edgeReserve else 0.dp)) {
                         when (state.mode) {
                             MainMode.IDLE -> IdleHero(state, f, actions, small)
                             MainMode.ASLEEP, MainMode.FEEDING -> LampHero(state, f, small)
@@ -259,6 +277,9 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
         if (lastFeed != null) {
             val since = clockDurationMillis(lastFeed.startMillis, state.now)
             val numeralHeight = if (small) 30.dp else 36.dp
+            // The numeral is decorative (its spoken form is the block's description) and already large: it keeps its
+            // 1.0× size at every font scale, so a large scale grows the words, not the hero past the EdgeButton.
+            val fixed = LocalDensity.current.fontScale
             // Exactly the numeral's line height (§3.5.1: y 46–82), whatever the font's own ascent and descent: the
             // numeral is centred on it and may overhang it, so the buttons below never move.
             Box(Modifier.height(numeralHeight), contentAlignment = Alignment.Center) {
@@ -267,7 +288,7 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
                 if (DurationFormatter.isUnderAMinute(since)) {
                     Text(f.relative.justNow, style = WatchType.statusWord, color = onSurface, maxLines = 1, modifier = unbounded)
                 } else {
-                    val scale = if (small) 30f / 36f else 1f
+                    val scale = (if (small) 30f / 36f else 1f) / fixed
                     DurationNumeral(
                         parts = f.duration.parts(since),
                         numberStyle = WatchType.statusNumeral.let { it.copy(fontSize = it.fontSize * scale, lineHeight = it.lineHeight * scale) },
@@ -278,7 +299,7 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
                         trailingStyle = MaterialTheme.typography.bodyMedium,
                         trailingColor = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxWidth = 180.dp,
-                        minNumberSize = 24.sp,
+                        minNumberSize = (24f / fixed).sp,
                         modifier = unbounded,
                     )
                 }
@@ -288,9 +309,9 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
 }
 
 /**
- * Feed | Diaper (§3.5.1): two buttons 98 × 60 (small: 83 × 56), gap 6, r 26; icon 26 + 2 + label. Above 1.15 font
- * scale they stack as two 56 dp buttons (§3.5.10) when a label would not fit its half; while both still fit they
- * stay side by side, so Diaper is not pushed under the pinned EdgeButton.
+ * Feed | Diaper (§3.5.1): two buttons 98 × 60 (small: 83 × 56), gap 6, r 26; icon 26 + 2 + label. They stay side by
+ * side at every font scale: a label that does not fit its half steps down and wraps (two lines, hyphenated). Stacking
+ * them (§3.5.10's rule above 1.15) pushed Diaper under the pinned EdgeButton, which V1_ADDITIONS §5 rules out.
  */
 @Composable
 private fun FeedDiaperGroup(actions: MainActions, small: Boolean, modifier: Modifier = Modifier) {
@@ -299,36 +320,36 @@ private fun FeedDiaperGroup(actions: MainActions, small: Boolean, modifier: Modi
     val feedLabel = stringResource(CoreR.string.kind_feed)
     val diaperLabel = stringResource(CoreR.string.kind_diaper)
     val sidePadding = if (small) 10.dp else 13.dp
-    val largeFont = isLargeFont()
-    val labelsFit = labelsFitSideBySide(listOf(feedLabel, diaperLabel), sidePadding, enabled = largeFont)
-    if (largeFont && !labelsFit) {
-        Column(modifier.fillMaxWidth().padding(horizontal = sidePadding), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            EventTileButton(feedLabel, XIcons.feed, feed, actions.onFeed, Modifier.fillMaxWidth().height(56.dp), stacked = false)
-            EventTileButton(diaperLabel, XIcons.diaper, diaper, actions.onDiaper, Modifier.fillMaxWidth().height(56.dp), stacked = false)
-        }
-        return
-    }
+    val height = if (small) 56.dp else 60.dp
+    val labelStyle = groupLabelStyle(listOf(feedLabel, diaperLabel), sidePadding, height)
     val feedInteraction = remember { MutableInteractionSource() }
     val diaperInteraction = remember { MutableInteractionSource() }
     ButtonGroup(
         modifier = modifier.fillMaxWidth().padding(horizontal = sidePadding).height(if (small) 56.dp else 60.dp),
         spacing = 6.dp,
+        // Only the side padding above (§3.5.1: 98 dp buttons, 13 dp margins); the group's default adds 5.2 % more.
+        contentPadding = PaddingValues(0.dp),
     ) {
         EventTileButton(
             feedLabel, XIcons.feed, feed, actions.onFeed,
             Modifier.weight(1f).animateWidth(feedInteraction).fillMaxSize(),
+            labelStyle = labelStyle,
             interactionSource = feedInteraction,
         )
         EventTileButton(
             diaperLabel, XIcons.diaper, diaper, actions.onDiaper,
             Modifier.weight(1f).animateWidth(diaperInteraction).fillMaxSize(),
+            labelStyle = labelStyle,
             interactionSource = diaperInteraction,
         )
     }
 }
 
-/** How much lower the TimeText reaches per +1.0 of font scale (its 15 sp line). */
-private val TIME_TEXT_GROWTH_PER_SCALE = 14.dp
+/**
+ * How much the status block moves down per +1.0 of font scale, as the TimeText grows (measured at 200 %: the time
+ * ends at 35 dp, the label starts at 41 dp).
+ */
+private val TIME_TEXT_GROWTH_PER_SCALE = 8.dp
 
 /** The status label's room at y 30–46 on the reference screen (the chord there, less the 20 dp icon). */
 private val STATUS_LABEL_MAX_WIDTH = 164.dp
@@ -376,22 +397,25 @@ private val EDGE_LABEL_WIDTH = 96.dp
 /** Room for a two-line label inside the Medium EdgeButton's content area (≈ 56 dp tall) above its curve. */
 private val EDGE_TWO_LINES_HEIGHT = 46.dp
 
-/** Whether each label fits on one line in half the row (a button's width less its 8 dp side padding). */
+/**
+ * The label style both Feed | Diaper buttons share: labelMedium while every label fits its half on one line (always
+ * at 1.0×), otherwise stepped down until each fits two lines under the icon (large font scales).
+ */
 @Composable
-private fun labelsFitSideBySide(labels: List<String>, sidePadding: Dp, enabled: Boolean): Boolean {
-    if (!enabled) return true
-    val measurer = rememberTextMeasurer()
-    val style = MaterialTheme.typography.labelMedium
-    val density = LocalDensity.current
+private fun groupLabelStyle(labels: List<String>, sidePadding: Dp, buttonHeight: Dp): TextStyle {
+    val style = MaterialTheme.typography.labelMedium.copy(hyphens = Hyphens.Auto, lineBreak = LineBreak.Paragraph)
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    return remember(labels, style, density, screenWidth, sidePadding) {
-        val available = (screenWidth - sidePadding * 2 - GROUP_GAP) / 2 - LABEL_SIDE_PADDING * 2
-        labels.all { label -> with(density) { measurer.measure(label, style, maxLines = 1).size.width.toDp() } <= available }
-    }
+    val width = (screenWidth - sidePadding * 2 - GROUP_GAP) / 2 - LABEL_SIDE_PADDING * 2
+    val height = buttonHeight - GROUP_ICON - GROUP_ICON_GAP - GROUP_VERTICAL_PADDING * 2
+    // The smallest of the labels' fitting sizes, so both buttons read alike.
+    return labels.map { fittingStyle(it, style, width, height, maxLines = 2) }.minBy { it.fontSize.value }
 }
 
 private val GROUP_GAP = 6.dp
 private val LABEL_SIDE_PADDING = 8.dp
+private val GROUP_ICON = 26.dp
+private val GROUP_ICON_GAP = 2.dp
+private val GROUP_VERTICAL_PADDING = 2.dp
 
 @Composable
 private fun EventTileButton(
@@ -400,7 +424,7 @@ private fun EventTileButton(
     colors: EventColors,
     onClick: () -> Unit,
     modifier: Modifier,
-    stacked: Boolean = true,
+    labelStyle: TextStyle,
     interactionSource: MutableInteractionSource? = null,
 ) {
     val ambient = isAmbient()
@@ -415,18 +439,14 @@ private fun EventTileButton(
     ) {
         val iconTint = if (ambient) WatchAmbient.content else colors.strong
         val textColor = if (ambient) WatchAmbient.content else colors.onContainer
-        if (stacked) {
-            Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                XIcon(icon, null, tint = iconTint, size = 26.dp)
-                Spacer(Modifier.height(2.dp))
-                Text(label, style = MaterialTheme.typography.labelMedium, color = textColor, maxLines = 1)
-            }
-        } else {
-            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                XIcon(icon, null, tint = iconTint, size = 26.dp)
-                Spacer(Modifier.width(8.dp))
-                Text(label, style = MaterialTheme.typography.labelMedium, color = textColor, maxLines = 1)
-            }
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = LABEL_SIDE_PADDING),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            XIcon(icon, null, tint = iconTint, size = GROUP_ICON)
+            Spacer(Modifier.height(GROUP_ICON_GAP))
+            Text(label, style = labelStyle, color = textColor, maxLines = 2, textAlign = TextAlign.Center)
         }
     }
 }
@@ -448,7 +468,7 @@ private fun LampHero(state: MainUiState, f: Formatters, small: Boolean) {
     val geometry = if (small) LampGeometry.WatchSmall else LampGeometry.Watch
     val top = if (small) 21.dp else 25.dp
     val title = stringResource(if (feeding) CoreR.string.status_breastfeeding else CoreR.string.status_asleep)
-    val spoken = f.spokenDurationSince(title + ",", running.startMillis, state.now)
+    val spoken = f.spokenRunning(title, running.startMillis, state.now)
     val onSurface = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurface
 
     Box(Modifier.fillMaxWidth().padding(top = top), contentAlignment = Alignment.TopCenter) {
@@ -547,7 +567,7 @@ private fun runningSince(state: MainUiState, f: Formatters): String? {
     val feeding = state.mode == MainMode.FEEDING
     val running = (if (feeding) state.runningFeed else state.runningSleep) ?: return null
     val word = stringResource(if (feeding) CoreR.string.status_breastfeeding else CoreR.string.status_asleep)
-    return word + " " + f.relative.since(running.startMillis, f.zone)
+    return f.statusSince(word, running.startMillis)
 }
 
 // ---- Pinned EdgeButton -----------------------------------------------------------------------
@@ -590,7 +610,7 @@ private fun PinnedEdgeButton(state: MainUiState, actions: MainActions, size: Edg
     }
     val content = if (ambient) WatchAmbient.content else colors.onContainer
     EdgeButton(
-        onClick = if (feeding) actions.onEndFeed else actions.onSleepToggle,
+        onClick = if (feeding) actions.onEndFeed else ({ actions.onSleepToggle(state.runningSleep?.id) }),
         modifier = modifier.semantics {
             contentDescription = guardText?.replace('\n', ' ') ?: name
             if (sleepState != null) stateDescription = sleepState
@@ -641,9 +661,9 @@ private fun GuardKind.edgeText(): Int = when (this) {
 /** §9.4: "Asleep since 02:05" / "Awake since 13:27" as the sleep toggle's state. */
 @Composable
 private fun sleepStateDescription(state: MainUiState, f: Formatters): String? {
-    state.runningSleep?.let { return stringResource(CoreR.string.status_asleep) + " " + f.relative.since(it.startMillis, f.zone) }
+    state.runningSleep?.let { return f.statusSince(stringResource(CoreR.string.status_asleep), it.startMillis) }
     val end = state.lastSleep?.endMillis ?: return null
-    return stringResource(CoreR.string.status_awake) + " " + f.relative.since(end, f.zone)
+    return f.statusSince(stringResource(CoreR.string.status_awake), end)
 }
 
 /** The sleep toggle as a list button while a breastfeed holds the EdgeButton (V1_ADDITIONS §2.2). */
@@ -657,7 +677,7 @@ private fun SleepListButton(state: MainUiState, actions: MainActions, transforma
     val sleepState = sleepStateDescription(state, f)
     XListButton(
         label = label,
-        onClick = actions.onSleepToggle,
+        onClick = { actions.onSleepToggle(state.runningSleep?.id) },
         modifier = modifier
             .padding(horizontal = 13.dp)
             .semantics { if (sleepState != null) stateDescription = sleepState },
@@ -705,7 +725,7 @@ private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
         state.runningSleep?.let { sleep ->
             cards += CardModel(
                 "sleep", sleep, TimeField.START, XIcons.sleep, events.sleep.strong, asleepWord,
-                f.durationAndSince(sleep.startMillis, now), f.spokenDurationSince("$asleepWord,", sleep.startMillis, now),
+                f.durationAndSince(sleep.startMillis, now), f.spokenRunning(asleepWord, sleep.startMillis, now),
             )
         }
     }
@@ -738,7 +758,8 @@ private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
         cards += CardModel(
             "diaper", diaper, TimeField.START, icon, tint, diaperStatusLabel(diaper),
             f.agoAndClock(diaper.startMillis, now),
-            f.spokenAgo(lastDiaperSpoken, stringResource(Labels.diaperKind(kind)), diaper.startMillis, now),
+            // "Pee and poop", never the status word "Both" or a "+".
+            f.spokenAgo(lastDiaperSpoken, stringResource(SpokenLabels.diaperKind(kind)), diaper.startMillis, now),
         )
     }
     return cards

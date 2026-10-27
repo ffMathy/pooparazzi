@@ -3,6 +3,7 @@ package com.ffmathy.xaternity.wear
 import android.content.Context
 import android.provider.Settings
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
@@ -20,13 +21,17 @@ import androidx.wear.compose.material3.AppScaffold
 import com.ffmathy.xaternity.core.data.FixedClock
 import com.ffmathy.xaternity.core.data.RoomEntryRepository
 import com.ffmathy.xaternity.core.data.XaternityDatabase
+import com.ffmathy.xaternity.core.domain.epochMillis
 import com.ffmathy.xaternity.core.model.Entry
+import com.ffmathy.xaternity.core.model.PoopColor
 import com.ffmathy.xaternity.core.model.isRunning
 import com.ffmathy.xaternity.core.sample.SampleData
 import com.ffmathy.xaternity.core.sync.NoopEntrySync
 import com.ffmathy.xaternity.wear.logged.LOGGED_INERT_MILLIS
 import com.ffmathy.xaternity.wear.logged.UNDONE_MILLIS
+import com.ffmathy.xaternity.wear.phone.PhoneLink
 import com.ffmathy.xaternity.wear.theme.XWearTheme
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -52,6 +57,19 @@ class WearNavHostTest {
     private lateinit var repo: RoomEntryRepository
     private lateinit var vm: MainViewModel
     private val store = ViewModelStore()
+    private val phone = FakePhoneLink()
+
+    /** A phone that is not reachable unless a test says so, and that cannot open History unless told it can. */
+    private class FakePhoneLink : PhoneLink {
+        override val available = MutableStateFlow(false)
+        var opens = false
+        var requests = 0
+
+        override suspend fun openHistory(): Boolean {
+            requests++
+            return opens
+        }
+    }
 
     @Before
     fun setUp() {
@@ -61,11 +79,11 @@ class WearNavHostTest {
         clock = FixedClock(SampleData.NOW_1432)
         repo = RoomEntryRepository(db, clock)
         val factory = viewModelFactory {
-            initializer { MainViewModel(repo, NoopEntrySync, clock, SampleData.ZONE, ticks = flowOf(Unit)) }
+            initializer { MainViewModel(repo, NoopEntrySync, clock, zone = { SampleData.ZONE }, ticks = flowOf(Unit)) }
         }
         vm = ViewModelProvider.create(store, factory)[MainViewModel::class]
         compose.mainClock.autoAdvance = false
-        compose.setContent { XWearTheme { AppScaffold { WearNavHost(vm, phoneLink = null) } } }
+        compose.setContent { XWearTheme { AppScaffold { WearNavHost(vm, phoneLink = phone) } } }
         settle()
     }
 
@@ -98,6 +116,8 @@ class WearNavHostTest {
     }
 
     private fun entries(): List<Entry> = runBlocking { repo.observeEntries().first() }
+
+    private fun at(hour: Int, minute: Int) = epochMillis(SampleData.TODAY, hour, minute, SampleData.ZONE)
 
     @Test
     fun formulaThenUndo() {
@@ -159,7 +179,8 @@ class WearNavHostTest {
         compose.onNodeWithContentDescription("End feed").performClick()
         waitFor("Which side?")
         settle(600)
-        compose.onNodeWithText("Left → Right").performClick()
+        // Read as "Left then right" (the label shows an arrow).
+        compose.onNodeWithContentDescription("Left then right").performClick()
 
         waitFor("Feed ended")
         // The side label is kept on one line with no-break spaces around the arrow.
@@ -175,8 +196,71 @@ class WearNavHostTest {
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
         waitFor("History").performClick()
         waitFor("Today")
+        settle(600) // Past the screen transition: a tap only counts on a settled screen.
         waitForDescription("Pee, 13:44").performClick()
         waitFor("Pee · 13:44")
         waitForDescription("5 minutes earlier, 13:39")
+    }
+
+    @Test
+    fun aDoubleTapOnAnAdjustChoiceMovesTheTimeOnceAndReturnsToMain() {
+        runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
+        waitForDescription("Last feed, formula")
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+        // The Awake card adjusts the end of the last sleep (13:27).
+        waitForDescription("Awake 1 hour 5 minutes").performClick()
+        waitFor("Woke up · 13:27")
+        settle(600)
+        val minusFive = compose.onNodeWithContentDescription("5 minutes earlier, 13:22")
+        minusFive.performClick()
+        minusFive.performClick()
+        settle(600)
+
+        assertEquals("once, not −10m", at(13, 22), runBlocking { repo.get("sample-sleep-1240") }?.endMillis)
+        // Back on Main (a second pop used to remove Main itself and leave a blank screen).
+        waitForDescription("Start sleep")
+        waitForDescription("Last feed, formula")
+    }
+
+    @Test
+    fun aDoubleTapOnAColourReturnsToTheDiaperScreenOnce() {
+        waitFor("Diaper").performClick()
+        waitFor("Diaper · 14:32")
+        settle(600)
+        compose.onNodeWithText("Poop").performClick()
+        settle()
+        // Colour sits below the fold, under the pinned Save button: bring it into view first.
+        compose.onNode(hasScrollToIndexAction() and hasAnyDescendant(hasText("Diaper · 14:32"))).performScrollToIndex(3)
+        settle(600)
+        waitFor("Colour").performClick()
+        waitFor("Yellow")
+        settle(600)
+        val yellow = compose.onNodeWithText("Yellow")
+        yellow.performClick()
+        yellow.performClick()
+        settle(600)
+
+        // Still on Diaper with its unsaved choices (its Texture row is in view), not popped back to Main.
+        waitFor("Texture")
+        assertEquals(PoopColor.YELLOW, vm.diaperDraft.value?.color)
+        assertTrue(vm.diaperDraft.value?.poop == true)
+    }
+
+    @Test
+    fun moreOnPhoneSaysSoWhenThePhoneCannotOpenHistory() {
+        phone.available.value = true
+        runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
+        waitForDescription("Last feed, formula")
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
+        waitFor("History").performClick()
+        waitFor("Today")
+        settle(600)
+        // Main stays composed behind Today (for swipe-to-dismiss): scroll Today's own list.
+        compose.onNode(hasScrollToIndexAction() and hasAnyDescendant(hasText("Today"))).performScrollToIndex(SampleData.scenario().size)
+        settle(600)
+        waitFor("More on phone").performClick()
+
+        waitForDescription("Couldn't open on phone")
+        assertEquals(1, phone.requests)
     }
 }

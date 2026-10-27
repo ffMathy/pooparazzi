@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,6 +61,12 @@ class SurfaceUpdater(
     fun refresh() {
         RunningActivities.invalidate()
         refreshes.value++
+    }
+
+    /** Brings every surface up to date now and returns when done (after a reboot, before the process may end). */
+    suspend fun updateNow() {
+        val summary = summarize(repository.observeEntries().first(), clock.now(), ZoneId.systemDefault())
+        withContext(Dispatchers.Main) { surfaces.update(summary) }
     }
 
     /** Where updates go; replaced in tests. */

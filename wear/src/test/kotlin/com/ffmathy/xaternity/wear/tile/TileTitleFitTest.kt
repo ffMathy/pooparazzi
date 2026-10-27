@@ -83,6 +83,47 @@ class TileTitleFitTest {
         }.toString()
         assertTrue(proto.contains("value=Begge 14:32 · ,"))
         assertTrue(proto.contains("value=Fortryd,"))
-        assertTrue(proto.contains("value=Tis + bæ kl. 14:32. Tryk på flisen for at fortryde,"))
+        assertTrue(proto.contains("value=Tis og bæ kl. 14:32. Tryk på flisen for at fortryde,"))
+    }
+
+    private fun device(sizeDp: Int, fontScale: Float = 1f) = DeviceParameters.Builder()
+        .setScreenWidthDp(sizeDp)
+        .setScreenHeightDp(sizeDp)
+        .setScreenDensity(2f)
+        .setFontScale(fontScale)
+        .setScreenShape(SCREEN_SHAPE_ROUND)
+        .setDevicePlatform(DEVICE_PLATFORM_WEAR_OS)
+        .setRendererSchemaVersion(VersionInfo.Builder().setMajor(1).setMinor(500).build())
+        .build()
+
+    private fun rowB(labels: List<String>, sizeDp: Int, withTitle: Boolean, fontScale: Float = 1f) = RowBLabels.fitting(
+        labels,
+        TileTextMeasure.rowBLabelWidthDp(device(sizeDp, fontScale), withTitle, gapDp = 6f, horizontalPaddingDp = 6f),
+        fontScale,
+    )
+
+    @Test
+    fun rowBKeepsItsWordsWhereTheyFitClearOfTheRoundedEdges() {
+        val english = listOf("Pee", "Poop", "Both")
+        val danish = listOf("Tis", "Bæ", "Begge")
+        assertEquals(RowBLabels.LABEL_SMALL, rowB(english, 227, withTitle = true))
+        assertEquals(RowBLabels.LABEL_SMALL, rowB(danish, 227, withTitle = true))
+        // Narrow buttons: a size smaller rather than "Po…".
+        assertEquals(RowBLabels.BODY_SMALL, rowB(english, 192, withTitle = false))
+        // "Begge" would touch the curved edges (DESIGN_SPEC §3.6 tile at 192 dp, or at 1.3× font): icons only.
+        assertEquals(RowBLabels.ICONS_ONLY, rowB(danish, 192, withTitle = false))
+        assertEquals(RowBLabels.ICONS_ONLY, rowB(danish, 227, withTitle = true, fontScale = 1.3f))
+    }
+
+    @Test
+    fun onSmallWatchesTheRowAConfirmationFitsItsLine() {
+        val small = device(192)
+        val width = TileTextMeasure.rowATextWidthDp(small, withTitle = false)
+        val measure = TileTextMeasure.labelSmall(1f)
+        val english = RowAConfirmation.text("Both", "Both 14:32", DOT_SEPARATOR, "Undo", width, measure)
+        assertTrue(english, english.endsWith("Undo"))
+        val danish = RowAConfirmation.text("Begge", "Begge 14:32", DOT_SEPARATOR, "Fortryd", width, measure)
+        assertTrue(danish, measure.widthDp(danish) <= width)
+        assertTrue(danish, danish.startsWith("Begge"))
     }
 }

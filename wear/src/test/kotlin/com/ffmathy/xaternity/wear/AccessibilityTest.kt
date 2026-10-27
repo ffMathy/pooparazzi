@@ -5,12 +5,15 @@ import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -20,6 +23,7 @@ import androidx.wear.compose.material3.AppScaffold
 import com.ffmathy.xaternity.core.sample.SampleData
 import com.ffmathy.xaternity.wear.diaper.DiaperActions
 import com.ffmathy.xaternity.wear.diaper.DiaperScreen
+import com.ffmathy.xaternity.wear.feed.SideScreen
 import com.ffmathy.xaternity.wear.logged.LOGGED_INERT_MILLIS
 import com.ffmathy.xaternity.wear.logged.LoggedScreen
 import com.ffmathy.xaternity.wear.main.MainActions
@@ -27,6 +31,7 @@ import com.ffmathy.xaternity.wear.main.MainScreen
 import com.ffmathy.xaternity.wear.sample.WearSamples
 import com.ffmathy.xaternity.wear.state.DiaperDraft
 import com.ffmathy.xaternity.wear.theme.XWearTheme
+import com.ffmathy.xaternity.wear.today.TodayScreen
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -106,6 +111,51 @@ class AccessibilityTest {
         compose.mainClock.advanceTimeBy(LOGGED_INERT_MILLIS + 50L)
         compose.onNodeWithText("Undo").assertIsEnabled()
         compose.onNodeWithContentDescription("Dismiss").assertIsEnabled()
+    }
+
+    @Test
+    fun sidesAreReadInWordsInTheirOrder() {
+        show { SideScreen(WearSamples.sideDraft(), onSide = {}) }
+        // Never "Left → Right" with an arrow (DESIGN_SPEC §9.4); the order matters.
+        compose.onNodeWithContentDescription("Left then right").assert(hasRole(Role.Button))
+        compose.onNodeWithContentDescription("Right then left").assertExists()
+        compose.onNodeWithContentDescription("Left").assertExists()
+        // The feed being ended: no dash, no "18m".
+        compose.onNodeWithContentDescription("14:32 to 14:50, 18 minutes").assertExists()
+    }
+
+    @Test
+    fun feedEndedReadsTheSideAndTheLengthInWords() {
+        compose.mainClock.autoAdvance = false
+        show { LoggedScreen(WearSamples.receiptFeedEnded(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {}) }
+        compose.onNodeWithContentDescription("Left then right, 18 minutes").assertExists()
+    }
+
+    @Test
+    fun aDiaperReceiptReadsPeeAndPoopInWords() {
+        compose.mainClock.autoAdvance = false
+        show { LoggedScreen(WearSamples.receiptDiaper(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {}) }
+        compose.onNodeWithContentDescription("Pee and poop at 14:32").assertExists()
+    }
+
+    @Test
+    fun theLastDiaperCardReadsBothInWords() {
+        val idle = WearSamples.mainIdle()
+        show { MainScreen(idle.copy(lastDiaper = idle.lastDiaper?.copy(poop = true)), MainActions()) }
+        // Hero, Awake, then the last diaper.
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(2)
+        compose.onNode(hasContentDescription("Last diaper, pee and poop, 48 minutes ago, at 13:44")).assertExists()
+    }
+
+    @Test
+    fun todayRowsReadSidesAndRangesInWords() {
+        show { TodayScreen(WearSamples.today(), phoneAvailable = false, onRow = {}, onMoreOnPhone = {}) }
+        val rows = compose.onAllNodes(hasContentDescription("Adjust", substring = true)).fetchSemanticsNodes()
+            .mapNotNull { it.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull() }
+        // The newest rows are in view: a diaper and a sleep range.
+        assert(rows.any { it == "Pee, 13:44. Adjust" }) { rows.toString() }
+        assert(rows.any { it == "Sleep, 47 minutes, 12:40 to 13:27. Adjust" }) { rows.toString() }
+        assert(rows.none { it.contains("–") || it.contains("→") || it.contains("+") }) { rows.toString() }
     }
 
     @Test

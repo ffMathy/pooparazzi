@@ -48,13 +48,15 @@ import com.ffmathy.xaternity.wear.ui.ambientBorder
 import com.ffmathy.xaternity.wear.ui.entryWord
 import com.ffmathy.xaternity.wear.ui.rememberCooldown
 import com.ffmathy.xaternity.wear.ui.spokenOffset
+import com.ffmathy.xaternity.wear.ui.spokenText
 import com.ffmathy.xaternity.wear.ui.tonalButtonColors
 import java.time.Instant
 import com.ffmathy.xaternity.core.R as CoreR
 
 @Immutable
 data class AdjustActions(
-    val onOption: (field: TimeField, minutes: Int) -> Unit = { _, _ -> },
+    /** A choice: move [field] to [at], the time the button shows (absolute, so a repeat never adds up). */
+    val onOption: (field: TimeField, at: Long) -> Unit = { _, _ -> },
     val onSetTime: (field: TimeField) -> Unit = {},
 )
 
@@ -90,7 +92,7 @@ fun AdjustScreen(state: AdjustUiState, actions: AdjustActions, modifier: Modifie
                         val label = f.duration.offset(option.minutes) + DOT_SEPARATOR + f.clock.format(option.at, f.zone)
                         val spoken = f.spokenOffset(option.minutes, option.at)
                         Button(
-                            onClick = { actions.onOption(group.field, option.minutes) },
+                            onClick = { actions.onOption(group.field, option.at) },
                             enabled = option.enabled && cooldown.ready,
                             shape = WatchShapes.Button,
                             colors = tonalButtonColors(),
@@ -122,7 +124,7 @@ fun AdjustScreen(state: AdjustUiState, actions: AdjustActions, modifier: Modifie
                                 icon = XIcons.clock,
                                 onClick = { actions.onSetTime(group.field) },
                                 enabled = cooldown.ready,
-                                contentDescription = stringResource(R.string.action_set_time) + ", " + groupHeader(group, f),
+                                contentDescription = spokenText().pair(stringResource(R.string.action_set_time), groupHeader(group, f)),
                                 modifier = Modifier.alpha(cooldown.alpha),
                             )
                         }

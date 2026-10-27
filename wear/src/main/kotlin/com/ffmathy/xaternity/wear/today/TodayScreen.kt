@@ -10,10 +10,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.layout.IntrinsicMeasurable
+import androidx.compose.ui.layout.IntrinsicMeasureScope
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.MultiContentMeasurePolicy
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Button
@@ -30,7 +40,6 @@ import androidx.wear.compose.material3.lazy.transformedHeight
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import com.ffmathy.xaternity.core.format.DOT_SEPARATOR
 import com.ffmathy.xaternity.core.format.Formatters
-import com.ffmathy.xaternity.core.format.Labels
 import com.ffmathy.xaternity.core.format.rememberFormatters
 import com.ffmathy.xaternity.core.model.Entry
 import com.ffmathy.xaternity.core.model.EntryKind
@@ -48,10 +57,13 @@ import com.ffmathy.xaternity.wear.theme.XWearTheme
 import com.ffmathy.xaternity.wear.theme.isAmbient
 import com.ffmathy.xaternity.wear.ui.AutoSizeLine
 import com.ffmathy.xaternity.wear.ui.ScreenTitle
+import com.ffmathy.xaternity.wear.ui.SpokenLabels
 import com.ffmathy.xaternity.wear.ui.WatchShapes
 import com.ffmathy.xaternity.wear.ui.ambientBorder
 import com.ffmathy.xaternity.wear.ui.entryWord
 import com.ffmathy.xaternity.wear.ui.keepSidesTogether
+import com.ffmathy.xaternity.wear.ui.spokenEntryWord
+import com.ffmathy.xaternity.wear.ui.spokenText
 import com.ffmathy.xaternity.wear.ui.tonalButtonColors
 import com.ffmathy.xaternity.core.R as CoreR
 
@@ -93,7 +105,12 @@ private fun TodayList(
 ) {
     val f = rememberFormatters(state.zone)
     val ambient = isAmbient()
-    TransformingLazyColumn(state = listState, contentPadding = contentPadding) {
+    TransformingLazyColumn(
+        state = listState,
+        contentPadding = contentPadding,
+        // Comes to rest on a row, never half under the time.
+        flingBehavior = TransformingLazyColumnDefaults.snapFlingBehavior(listState),
+    ) {
         item(key = "header") {
             ScreenTitle(stringResource(CoreR.string.nav_today), Modifier.transformedHeight(this, spec))
         }
@@ -138,7 +155,7 @@ private fun TodayRow(
     val supporting = f.labels.historySupporting(
         entry, state.day, f.zone, state.now, f.clock, f.duration, f.relative, spacedRange = false,
     )
-    val spoken = rowSpoken(entry, state, f, supporting) + ". " + stringResource(R.string.action_adjust)
+    val spoken = spokenText().thenAction(rowSpoken(entry, state, f, supporting), stringResource(R.string.action_adjust))
     Button(
         onClick = onClick,
         modifier = modifier
@@ -151,12 +168,7 @@ private fun TodayRow(
         transformation = transformation,
         icon = { EventAvatar(entry, Modifier.clearAndSetSemantics { }, size = XAvatars.WatchSize) },
         label = {
-            Text(
-                title,
-                style = MaterialTheme.typography.labelMedium.copy(hyphens = Hyphens.Auto),
-                maxLines = 2,
-                modifier = Modifier.clearAndSetSemantics { },
-            )
+            RowTitle(title, MaterialTheme.typography.labelMedium.copy(hyphens = Hyphens.Auto), Modifier.clearAndSetSemantics { })
         },
         secondaryLabel = {
             AutoSizeLine(
@@ -176,23 +188,72 @@ private fun rowTitle(entry: Entry, now: Long, f: Formatters): String =
     if (entry.kind == EntryKind.FEED && !entry.isBreastfeed) entryWord(entry, compact = true)
     else f.labels.historyTitle(entry, f.duration, now).keepSidesTogether()
 
-/** The row read aloud: words for durations (§9.5) and commas between facts. */
+/**
+ * A row title on one line when it fits; otherwise broken at its first "·" with the separator dropped ("Breast" /
+ * "Left → Right"), so it never dangles at a line end ("Breast ·" / "Left → Right"). Both forms are laid out and the
+ * one that fits is placed, so the buttons' intrinsic measurement keeps working.
+ */
+@Composable
+private fun RowTitle(title: String, style: TextStyle, modifier: Modifier) {
+    val split = title.indexOf(DOT_SEPARATOR)
+    if (split < 0) {
+        Text(title, style = style, maxLines = 2, modifier = modifier)
+        return
+    }
+    val broken = title.substring(0, split) + "\n" + title.substring(split + DOT_SEPARATOR.length)
+    Layout(
+        contents = listOf(
+            { Text(title, style = style, maxLines = 1, softWrap = false) },
+            { Text(broken, style = style, maxLines = 2) },
+        ),
+        modifier = modifier,
+        measurePolicy = OneLineOrBroken,
+    )
+}
+
+/** Places the first content (one line) when its full width fits, otherwise the second (broken at the separator). */
+private object OneLineOrBroken : MultiContentMeasurePolicy {
+    private fun <T : IntrinsicMeasurable> choose(contents: List<List<T>>, maxWidth: Int): T {
+        val oneLine = contents[0].single()
+        return if (oneLine.maxIntrinsicWidth(Constraints.Infinity) <= maxWidth) oneLine else contents[1].single()
+    }
+
+    override fun MeasureScope.measure(measurables: List<List<Measurable>>, constraints: Constraints): MeasureResult {
+        val placeable = choose(measurables, constraints.maxWidth).measure(constraints)
+        return layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }
+
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<List<IntrinsicMeasurable>>, width: Int): Int =
+        choose(measurables, width).maxIntrinsicHeight(width)
+
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<List<IntrinsicMeasurable>>, width: Int): Int =
+        choose(measurables, width).minIntrinsicHeight(width)
+
+    override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurables: List<List<IntrinsicMeasurable>>, height: Int): Int =
+        measurables[0].single().maxIntrinsicWidth(height)
+
+    override fun IntrinsicMeasureScope.minIntrinsicWidth(measurables: List<List<IntrinsicMeasurable>>, height: Int): Int =
+        measurables[1].single().minIntrinsicWidth(height)
+}
+
+/** The row read aloud: words for durations (§9.5), sides and ranges in words, facts joined by the templates. */
 @Composable
 private fun rowSpoken(entry: Entry, state: TodayUiState, f: Formatters, supporting: String): String {
-    val parts = mutableListOf(entryWord(entry))
+    val spoken = spokenText()
+    val parts = mutableListOf(spokenEntryWord(entry))
     when {
         entry.isRunning -> {
             parts += stringResource(CoreR.string.status_running)
             parts += f.relative.since(entry.startMillis, f.zone)
         }
         entry.isInterval -> {
-            entry.breastSide?.let { parts += stringResource(Labels.side(it)) }
+            entry.breastSide?.let { parts += stringResource(SpokenLabels.side(it)) }
             parts += f.duration.spoken(clockDurationMillis(entry.startMillis, entry.endMillis ?: state.now))
-            parts += f.clock.rangeOnDay(entry.startMillis, entry.endMillis ?: state.now, state.day, f.zone, spaced = false)
+            parts += spoken.range(f, entry.startMillis, entry.endMillis ?: state.now, state.day)
         }
         else -> parts += supporting.split(DOT_SEPARATOR)
     }
-    return parts.joinToString(", ")
+    return spoken.all(parts)
 }
 
 /** "More on phone": the stock collapsing EdgeButton (collapsed at the top of the list). */

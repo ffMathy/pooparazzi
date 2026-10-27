@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.xaternity.core.data.EndResult
 import com.ffmathy.xaternity.core.data.FixedClock
 import com.ffmathy.xaternity.core.data.RoomEntryRepository
 import com.ffmathy.xaternity.core.data.XaternityDatabase
@@ -53,6 +54,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.time.LocalTime
+import java.time.ZoneId
 import java.util.Collections
 
 /**
@@ -85,7 +87,7 @@ class MainViewModelTest {
         db = XaternityDatabase.inMemory(ApplicationProvider.getApplicationContext())
         clock = FixedClock(SampleData.NOW_1432)
         repo = RoomEntryRepository(db, clock)
-        val factory = viewModelFactory { initializer { MainViewModel(repo, NoopEntrySync, clock, zone, ticks = flowOf(Unit)) } }
+        val factory = viewModelFactory { initializer { MainViewModel(repo, NoopEntrySync, clock, zone = { zone }, ticks = flowOf(Unit)) } }
         vm = ViewModelProvider.create(store, factory)[MainViewModel::class]
         collector = CoroutineScope(Dispatchers.Unconfined).launch { vm.events.collect { events += it } }
     }
@@ -249,6 +251,32 @@ class MainViewModelTest {
         assertEquals(XHaptic.REJECT, haptics().last())
     }
 
+    @Test
+    fun aDoubleTapOnFormulaLogsOnceWithoutAlreadyLogged() = test {
+        vm.beginFeed()
+        // The second tap lands on the leaving screen and waits for the first write.
+        val first = vm.chooseFeedType(FeedType.FORMULA)
+        val second = vm.chooseFeedType(FeedType.FORMULA)
+        first.join()
+        second.join()
+        assertEquals(1, stored().size)
+        assertFalse(present(vm.receipt.value).duplicate)
+        assertEquals(listOf(XHaptic.CONFIRM), haptics())
+        assertEquals(1, events.count { it == WearEvent.ShowLogged })
+    }
+
+    @Test
+    fun aDoubleTapOnBreastStartsOneFeedWithoutTheGuard() = test {
+        vm.beginFeed()
+        val first = vm.chooseFeedType(FeedType.BREAST)
+        val second = vm.chooseFeedType(FeedType.BREAST)
+        first.join()
+        second.join()
+        assertEquals(1, stored().size)
+        assertEquals(listOf(XHaptic.TOGGLE_ON), haptics())
+        assertNull(vm.main.value.guard)
+    }
+
     // ---- Breastfeed end ------------------------------------------------------------------------
 
     @Test
@@ -315,6 +343,27 @@ class MainViewModelTest {
         assertEquals(XHaptic.REJECT, haptics().last())
     }
 
+    @Test
+    fun aDoubleTapOnASideEndsTheFeedOnceAndKeepsFeedEnded() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BREAST).join()
+        clock.set(SampleData.NOW_1450)
+        vm.requestEndFeed().join()
+        awaitEvent(WearEvent.ShowSide)
+
+        val first = vm.endFeed(BreastSide.LEFT_THEN_RIGHT)
+        val second = vm.endFeed(BreastSide.LEFT_THEN_RIGHT)
+        first.join()
+        second.join()
+
+        // "Feed ended" stays with its Undo: no Reject, no return to Main closing it.
+        assertEquals(ReceiptKind.FEED_ENDED, present(vm.receipt.value).kind)
+        assertEquals(listOf(XHaptic.TOGGLE_ON, XHaptic.TOGGLE_OFF), haptics())
+        val all = awaitEvent(WearEvent.ShowLogged)
+        assertFalse(WearEvent.BackToMain in all.subList(all.indexOf(WearEvent.ShowLogged), all.size))
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, stored().single().breastSide)
+    }
+
     // ---- Diaper --------------------------------------------------------------------------------
 
     @Test
@@ -366,16 +415,30 @@ class MainViewModelTest {
         assertEquals(listOf(XHaptic.REJECT), haptics())
     }
 
+    @Test
+    fun aDoubleTapOnSaveLogsOneDiaperWithoutAlreadyLogged() = test {
+        vm.beginDiaper()
+        vm.setPee(true)
+        val first = vm.saveDiaper()
+        val second = vm.saveDiaper()
+        first.join()
+        second.join()
+        assertEquals(1, stored().size)
+        assertFalse(present(vm.receipt.value).duplicate)
+        assertEquals(listOf(XHaptic.CONFIRM), haptics())
+    }
+
     // ---- Sleep ---------------------------------------------------------------------------------
 
     @Test
     fun startSleepThenWokeUpShowsTheSleptReceipt() = test {
-        vm.toggleSleep().join()
-        assertEquals(MainMode.ASLEEP, awaitMain { it.runningSleep != null }.mode)
+        vm.toggleSleep(shownSleepId = null).join()
+        val sleep = awaitMain { it.runningSleep != null }
+        assertEquals(MainMode.ASLEEP, sleep.mode)
         assertEquals(listOf(XHaptic.TOGGLE_ON), haptics())
 
         clock.advanceBy(67 * minute)
-        vm.toggleSleep().join()
+        vm.toggleSleep(sleep.runningSleep?.id).join()
         val receipt = present(vm.receipt.value)
         assertEquals(ReceiptKind.WOKE_UP, receipt.kind)
         assertEquals(SampleData.NOW_1432 + 67 * minute, receipt.entry.endMillis)
@@ -387,9 +450,10 @@ class MainViewModelTest {
 
     @Test
     fun aToggleWithinTwoSecondsShowsAlreadyAsleep() = test {
-        vm.toggleSleep().join()
+        vm.toggleSleep(shownSleepId = null).join()
         clock.advanceBy(1_500)
-        vm.toggleSleep().join()
+        // The second tap of a double tap still saw "Start sleep".
+        vm.toggleSleep(shownSleepId = null).join()
 
         val state = awaitMain { it.guard != null }
         assertEquals(GuardKind.ALREADY_ASLEEP, state.sleepGuard)
@@ -400,18 +464,19 @@ class MainViewModelTest {
         // "Sleep cancelled").
         clock.advanceBy(2_500)
         assertNull(awaitMain { it.guard == null }.guard)
-        vm.toggleSleep().join()
+        vm.toggleSleep(state.runningSleep?.id).join()
         assertEquals(ReceiptKind.SLEEP_CANCELLED, vm.receipt.value?.kind)
         assertTrue(stored().isEmpty())
     }
 
     @Test
     fun aToggleRightAfterWokeUpShowsAlreadyAwake() = test {
-        vm.toggleSleep().join()
+        vm.toggleSleep(shownSleepId = null).join()
+        val sleep = stored().single()
         clock.advanceBy(10 * minute)
-        vm.toggleSleep().join()
+        vm.toggleSleep(sleep.id).join()
         clock.advanceBy(500)
-        vm.toggleSleep().join()
+        vm.toggleSleep(sleep.id).join()
 
         val state = awaitMain { it.guard != null }
         assertEquals(GuardKind.ALREADY_AWAKE, state.sleepGuard)
@@ -420,17 +485,34 @@ class MainViewModelTest {
     }
 
     @Test
-    fun theToggleReadsTheStoreSoASleepEndedElsewhereIsNotEndedAgain() = test {
-        vm.toggleSleep().join()
+    fun wokeUpForASleepTheOtherDeviceAlreadyEndedSaysAlreadyAwake() = test {
+        vm.toggleSleep(shownSleepId = null).join()
         val sleep = stored().single()
         clock.advanceBy(10 * minute)
-        // The phone ends the sleep while the watch still shows it running.
+        // The phone ends the sleep while the watch still shows it running ("Woke up").
         repo.endSleep(sleep.id, clock.now())
         clock.advanceBy(5_000)
-        vm.toggleSleep().join()
-        // The watch reads the store before writing, so it sees the ended sleep and starts a new one rather than
-        // failing; the guard only applies within 2 s of a toggle on this device.
-        assertEquals(2, stored().size)
+        vm.toggleSleep(shownSleepId = sleep.id).join()
+
+        // The tap meant "end the sleep I see": it is already over, so nothing new starts (DESIGN_SPEC §4.4).
+        assertEquals(GuardKind.ALREADY_AWAKE, awaitMain { it.guard != null }.sleepGuard)
+        assertEquals(1, stored().size)
+        assertNull(stored().single { it.id == sleep.id }.takeIf { it.isRunning })
+        assertEquals(XHaptic.REJECT, haptics().last())
+        assertNull(vm.receipt.value)
+    }
+
+    @Test
+    fun startSleepWhileTheOtherDeviceJustStartedOneSaysAlreadyAsleep() = test {
+        // The phone started a sleep 4 s ago; the watch still shows "Start sleep".
+        val phone = repo.startSleep(clock.now()).getOrThrow()
+        clock.advanceBy(4_000)
+        vm.toggleSleep(shownSleepId = null).join()
+
+        assertEquals(GuardKind.ALREADY_ASLEEP, awaitMain { it.guard != null }.sleepGuard)
+        // The phone's sleep is neither ended nor discarded as a mis-tap.
+        assertTrue(stored().single().let { it.id == phone.id && it.isRunning })
+        assertNull(vm.receipt.value)
     }
 
     // ---- Undo ----------------------------------------------------------------------------------
@@ -448,14 +530,15 @@ class MainViewModelTest {
 
     @Test
     fun undoAfterWokeUpResumesTheSleepAndAllowsAnImmediateToggle() = test {
-        vm.toggleSleep().join()
+        vm.toggleSleep(shownSleepId = null).join()
+        val sleep = stored().single()
         clock.advanceBy(30 * minute)
-        vm.toggleSleep().join()
+        vm.toggleSleep(sleep.id).join()
         vm.undo().join()
         assertTrue(awaitMain { it.runningSleep != null }.runningSleep!!.isRunning)
 
         clock.advanceBy(1_000)
-        vm.toggleSleep().join()
+        vm.toggleSleep(sleep.id).join()
         assertEquals("not blocked by the guard", ReceiptKind.WOKE_UP, vm.receipt.value?.kind)
     }
 
@@ -479,6 +562,28 @@ class MainViewModelTest {
         awaitEvent(WearEvent.ShowLogged)
     }
 
+    @Test
+    fun theTileUndoPathRestoresASleepCancelledOnTheTile() = test {
+        // The tile's "Woke up" under a minute discards the sleep (soft-deleted).
+        val sleep = repo.startSleep(clock.now()).getOrThrow()
+        clock.advanceBy(30_000)
+        val discarded = (repo.endSleep(sleep.id, clock.now()) as EndResult.Discarded).entry
+        assertTrue(stored().isEmpty())
+
+        vm.openReceipt(discarded.id, fromTile = true).join()
+        val receipt = present(vm.receipt.value)
+        assertEquals(ReceiptKind.SLEEP_CANCELLED, receipt.kind)
+        assertTrue(receipt.fromTile)
+        awaitEvent(WearEvent.ShowLogged)
+
+        vm.undo().join()
+        val restored = stored().single()
+        assertEquals(sleep.id, restored.id)
+        assertEquals(sleep.startMillis, restored.startMillis)
+        assertTrue(restored.isRunning)
+        awaitEvent(WearEvent.ShowUndone)
+    }
+
     // ---- Adjust / Set time ---------------------------------------------------------------------
 
     @Test
@@ -490,10 +595,10 @@ class MainViewModelTest {
         assertEquals(listOf(at(1, 50), at(2, 0), at(2, 10)), state.groups.single().options.map { it.at })
         assertTrue(state.groups.single().options.all { it.enabled })
 
-        vm.adjust(TimeField.START, -15).join()
+        vm.adjust(TimeField.START, at(1, 50)).join()
         assertEquals(at(1, 50), repo.get("sample-sleep-0205")?.startMillis)
         assertTrue(repo.get("sample-sleep-0205")!!.isRunning)
-        assertEquals(WearEvent.Back(), awaitEvent(WearEvent.Back()).last())
+        assertEquals(WearEvent.CloseAdjust, awaitEvent(WearEvent.CloseAdjust).last())
         assertEquals(XHaptic.SEGMENT_TICK, haptics().last())
     }
 
@@ -504,7 +609,7 @@ class MainViewModelTest {
         val state = await(vm.adjust) { it != null }!!
         assertEquals(listOf(true, true, false), state.groups.single().options.map { it.enabled })
 
-        vm.adjust(TimeField.START, 5).join()
+        vm.adjust(TimeField.START, pee.startMillis + 5 * minute).join()
         assertEquals(pee.startMillis, repo.get(pee.id)?.startMillis)
         assertEquals(XHaptic.REJECT, haptics().last())
     }
@@ -514,8 +619,42 @@ class MainViewModelTest {
         seed(SampleData.scenario())
         vm.beginAdjust("sample-sleep-1240", listOf(TimeField.END))
         await(vm.adjust) { it != null }
-        vm.adjust(TimeField.END, -5).join()
+        vm.adjust(TimeField.END, at(13, 22)).join()
         assertEquals(at(13, 22), repo.get("sample-sleep-1240")?.endMillis)
+    }
+
+    @Test
+    fun aDoubleTapOnAnAdjustChoiceAppliesItOnceAndReturnsOnce() = test {
+        clock.set(SampleData.NOW_0312)
+        seed(SampleData.scenarioAt0312())
+        vm.beginAdjust("sample-sleep-0205", listOf(TimeField.START))
+        val option = await(vm.adjust) { it != null }!!.groups.single().options.single { it.minutes == -5 }
+        assertEquals(at(2, 0), option.at)
+
+        val first = vm.adjust(TimeField.START, option.at)
+        val second = vm.adjust(TimeField.START, option.at)
+        first.join()
+        second.join()
+
+        // Never cumulative (DESIGN_SPEC §4.4): 02:05 − 5m, not − 10m.
+        assertEquals(at(2, 0), repo.get("sample-sleep-0205")?.startMillis)
+        assertEquals(1, events.count { it == WearEvent.CloseAdjust })
+        assertEquals(listOf(XHaptic.SEGMENT_TICK), haptics())
+    }
+
+    @Test
+    fun aDoubleConfirmOnSetTimeAppliesItOnceAndReturnsOnce() = test {
+        seed(SampleData.scenario())
+        vm.beginAdjust("sample-sleep-1240", listOf(TimeField.START, TimeField.END), allowSetTime = true)
+        vm.beginSetTime(TimeField.END)
+        await(vm.setTime) { it != null }
+        val first = vm.setTime(LocalTime.of(13, 15))
+        val second = vm.setTime(LocalTime.of(13, 15))
+        first.join()
+        second.join()
+        assertEquals(at(13, 15), repo.get("sample-sleep-1240")?.endMillis)
+        assertEquals(1, events.count { it == WearEvent.CloseAdjust })
+        assertEquals(listOf(XHaptic.SEGMENT_TICK), haptics())
     }
 
     @Test
@@ -526,7 +665,7 @@ class MainViewModelTest {
         assertEquals(at(13, 27), await(vm.setTime) { it != null }!!.base)
         vm.setTime(LocalTime.of(13, 15)).join()
         assertEquals(at(13, 15), repo.get("sample-sleep-1240")?.endMillis)
-        assertEquals(WearEvent.Back(count = 2), awaitEvent(WearEvent.Back(count = 2)).last())
+        assertEquals(WearEvent.CloseAdjust, awaitEvent(WearEvent.CloseAdjust).last())
 
         // 23:00 today would be in the future: it lands on the day before.
         vm.beginAdjust("sample-pee-1344", listOf(TimeField.START), allowSetTime = true)
@@ -545,5 +684,27 @@ class MainViewModelTest {
         vm.setTime(LocalTime.of(12, 0)).join()
         assertEquals(at(13, 27), repo.get("sample-sleep-1240")?.endMillis)
         assertEquals(XHaptic.REJECT, haptics().last())
+    }
+
+    // ---- Time zone -----------------------------------------------------------------------------
+
+    @Test
+    fun aNewTimeZoneAppliesWithoutANewViewModel() = test {
+        var system: ZoneId = SampleData.ZONE
+        val zoneStore = ViewModelStore()
+        val factory = viewModelFactory { initializer { MainViewModel(repo, NoopEntrySync, clock, zone = { system }, ticks = flowOf(Unit)) } }
+        val travelling = ViewModelProvider.create(zoneStore, factory)[MainViewModel::class]
+        try {
+            assertEquals(SampleData.ZONE, await(travelling.main) { it.loaded }.zone)
+            system = ZoneId.of("Europe/London")
+            // The time-zone broadcast (or the next minute tick) re-reads the zone.
+            travelling.refresh()
+            assertEquals(ZoneId.of("Europe/London"), await(travelling.main) { it.zone == system }.zone)
+            assertEquals(ZoneId.of("Europe/London"), await(travelling.today) { it.zone == system }.zone)
+            travelling.beginDiaper()
+            assertEquals(ZoneId.of("Europe/London"), travelling.diaperDraft.value?.zone)
+        } finally {
+            zoneStore.clear()
+        }
     }
 }

@@ -83,6 +83,10 @@ abstract class TileScreenshots(private val lang: String) {
     @Test
     fun s12g_tileSmall() = capture("12g-tile-small", WearSamples.tileIdle(), sizeDp = 192)
 
+    /** Below 225 dp a tile log is confirmed in Row A's secondary label, since there is no title (DESIGN_SPEC §3.6). */
+    @Test
+    fun s12i_tileSmallJustLogged() = capture("12i-tile-small-just-logged", WearSamples.tileJustLogged(), sizeDp = 192)
+
     /** Large text (1.3): titles and labels stay whole; the just-logged title drops its glyphs first. */
     @Test
     @Config(fontScale = 1.3f)
@@ -115,7 +119,7 @@ abstract class TileScreenshots(private val lang: String) {
         addSystemIcon(activity, parent, sizeDp, density)
         layout(parent, sizePx)
         shadowOf(Looper.getMainLooper()).idle()
-        parent.captureRoboImage(filePath = "screenshots/$lang/$name.png")
+        parent.captureRoboImage(filePath = "screenshots/$lang/$name.png", roborazziOptions = RoundWatch)
     }
 
     /** The header icon the tile host draws above the title (DESIGN_SPEC §3.6: `lamp` 24, onSurface). */

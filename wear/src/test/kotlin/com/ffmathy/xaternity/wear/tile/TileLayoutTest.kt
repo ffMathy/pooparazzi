@@ -66,7 +66,9 @@ class TileLayoutTest {
         assertTrue(proto.has("Feed"))
         assertTrue(proto.has("2h 10m ago"))
         assertTrue(proto.has("Feed. Last feed 2 hours 10 minutes ago"))
-        for (id in listOf("log_pee#5", "log_poop#5", "log_both#5", "sleep_toggle#5")) assertTrue(id, proto.contains(id))
+        // "Start sleep" says what it showed, so a stale tap cannot end a sleep started elsewhere.
+        for (id in listOf("log_pee#5", "log_poop#5", "log_both#5", "sleep_start#5")) assertTrue(id, proto.contains(id))
+        assertFalse(proto.contains("sleep_end"))
         assertTrue(proto.has("Start sleep"))
         // Feed opens the app on Feed type; it never logs from the tile.
         assertTrue(proto.contains(MainActivity.OPEN_FEED_TYPE))
@@ -98,6 +100,9 @@ class TileLayoutTest {
         assertTrue(proto.has("Woke up"))
         assertTrue(proto.has("Woke up, end sleep"))
         assertTrue(proto.has("1h 32m ago"))
+        // "Woke up" names the sleep it showed.
+        assertTrue(proto.contains("sleep_end#5#sample-sleep-0205"))
+        assertFalse(proto.contains("sleep_start"))
     }
 
     @Test
@@ -151,8 +156,54 @@ class TileLayoutTest {
     }
 
     @Test
-    fun aSpokenConfirmationNamesTheDiaperAsTheReceiptDoes() {
-        assertTrue(build(WearSamples.tileJustLogged()).has("Pee + poop at 14:32. Tap the tile to undo"))
+    fun aSpokenConfirmationNamesTheDiaperInWords() {
+        // Never "Both" or a "+" (DESIGN_SPEC §9.4).
+        assertTrue(build(WearSamples.tileJustLogged()).has("Pee and poop at 14:32. Tap the tile to undo"))
+    }
+
+    @Test
+    fun aSpokenLastDiaperNamesBothInWords() {
+        val state = WearSamples.tileIdle(babyName = "").let { idle ->
+            idle.copy(lastDiaper = idle.lastDiaper?.copy(poop = true))
+        }
+        assertTrue(build(state).has("Last diaper, pee and poop, 48 minutes ago"))
+    }
+
+    @Test
+    fun aSleepCancelledOnTheTileOffersUndo() {
+        val sleep = WearSamples.tileIdle()
+        val feedback = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, "cancelled-sleep", sleep.now, null, sleep.now + TILE_FEEDBACK_MILLIS)
+        val state = sleep.copy(feedback = feedback)
+        // DESIGN_SPEC §4.4: "Sleep cancelled", with Undo; the background opens it on the watch.
+        assertEquals("cancelled-sleep", state.undoEntryId)
+        val proto = build(state)
+        assertTrue(proto.has("Sleep cancelled · "))
+        assertTrue(proto.has("Undo"))
+        assertTrue(proto.has("Sleep cancelled. Tap the tile to undo"))
+        assertTrue(proto.contains("cancelled-sleep"))
+    }
+
+    @Test
+    fun aCancelledSleepConfirmationGoesWhenTheSleepIsBack() {
+        // Undone in the app: the discarded sleep runs again, so there is nothing left to undo.
+        val summary = summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, SampleData.ZONE)
+        val running = checkNotNull(summary.runningSleep)
+        val feedback = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, running.id, summary.now, null, summary.now + TILE_FEEDBACK_MILLIS)
+        assertNull(TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null).feedback)
+        // Still discarded (not among the entries): it stands.
+        val other = feedback.copy(entryId = "discarded")
+        assertEquals(other, TileUiState.from(summary, SampleData.BABY_NAME, other, guard = null).feedback)
+    }
+
+    @Test
+    fun onSmallWatchesRowACarriesTheConfirmation() {
+        // No title below 225 dp (DESIGN_SPEC §3.6): the feedback is Row A's secondary label for the 10 s.
+        val proto = build(WearSamples.tileJustLogged(), sizeDp = 192)
+        assertFalse(proto.has("Noa"))
+        assertTrue(proto, proto.has("Both · Undo") || proto.has("Both 14:32 · Undo") || proto.has("Both 14:32"))
+        assertTrue(proto.contains("Pee and poop at 14:32. Tap the tile to undo. Feed."))
+        // Without a confirmation Row A says the time since the last feed.
+        assertTrue(build(WearSamples.tileIdle(), sizeDp = 192).has("2h 10m ago"))
     }
 
     @Test

@@ -35,6 +35,7 @@ import com.ffmathy.xaternity.wear.theme.XWearTheme
 import com.ffmathy.xaternity.wear.today.TodayScreen
 import com.ffmathy.xaternity.wear.ui.LocalFixedTimeText
 import com.ffmathy.xaternity.wear.ui.XTimeText
+import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Before
 import org.junit.Rule
@@ -79,7 +80,7 @@ abstract class WatchScreenshots(private val lang: String) {
         after()
         // Past the 500 ms picker cooldowns and the 1 s Logged inert period.
         compose.mainClock.advanceTimeBy(1_200)
-        compose.onRoot().captureRoboImage(filePath = "screenshots/$lang/$name.png")
+        compose.onRoot().captureRoboImage(filePath = "screenshots/$lang/$name.png", roborazziOptions = RoundWatch)
     }
 
     @Test
@@ -106,12 +107,16 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s06_side() = capture("06-side", SampleData.NOW_1450) { SideScreen(WearSamples.sideDraft(), onSide = {}) }
 
+    /** As it opens: the title and the Pee and Poop checkboxes (V1_ADDITIONS §3.2), Poop on. */
     @Test
-    fun s07_diaper() = capture(
-        "07-diaper",
+    fun s07_diaper() = capture("07-diaper", SampleData.NOW_1432) { DiaperScreen(WearSamples.diaperDraft(), DiaperActions()) }
+
+    /** Scrolled to Poop's options: Colour and Texture with their values (the list centres the item it scrolls to). */
+    @Test
+    fun s07b_diaperOptions() = capture(
+        "07b-diaper-options",
         SampleData.NOW_1432,
-        // Colour and Texture in view (the list centres the item it scrolls to).
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4) },
+        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3) },
     ) { DiaperScreen(WearSamples.diaperDraft(), DiaperActions()) }
 
     @Test
@@ -188,6 +193,9 @@ abstract class WatchScreenshots(private val lang: String) {
 }
 
 private const val FRAME = 16L
+
+/** Screenshots of a round watch are round: the corners a round screen never shows are cropped away. */
+internal val RoundWatch = RoborazziOptions(recordOptions = RoborazziOptions.RecordOptions(applyDeviceCrop = true))
 
 @Config(qualifiers = "w227dp-h227dp-round-watch-xhdpi")
 class EnglishScreenshots : WatchScreenshots("en")

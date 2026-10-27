@@ -52,8 +52,11 @@ class TileActionsTest {
 
     private fun test(block: suspend () -> Unit) = runBlocking { block() }
 
-    /** A tap on a freshly built layout (each layout gets a new token). */
-    private suspend fun tap(action: TileAction): XHaptic? = actions.handle(action.clickId(++token), clock.now())
+    /** A tap on a freshly built layout (each layout gets a new token); [target] is the sleep behind "Woke up". */
+    private suspend fun tap(action: TileAction, target: String? = null): XHaptic? =
+        actions.handle(action.clickId(++token, target), clock.now())
+
+    private suspend fun sleeps() = stored().filter { it.kind == EntryKind.SLEEP }
 
     private suspend fun stored(): List<Entry> = repo.observeEntries().first()
 
@@ -115,21 +118,21 @@ class TileActionsTest {
 
     @Test
     fun sleepToggleStartsThenGuardsThenEnds() = test {
-        assertEquals(XHaptic.TOGGLE_ON, tap(TileAction.SLEEP_TOGGLE))
-        val sleep = stored().single { it.kind == EntryKind.SLEEP }
+        assertEquals(XHaptic.TOGGLE_ON, tap(TileAction.SLEEP_START))
+        val sleep = sleeps().single()
         assertTrue(sleep.isRunning)
 
         // A second tap within 2 s: "Already asleep" for 2 s, nothing changes.
         clock.advanceBy(1_500)
-        assertEquals(XHaptic.REJECT, tap(TileAction.SLEEP_TOGGLE))
+        assertEquals(XHaptic.REJECT, tap(TileAction.SLEEP_END, sleep.id))
         assertEquals(GuardKind.ALREADY_ASLEEP, memory.guard?.kind)
         assertEquals(clock.now() + TILE_GUARD_MILLIS, memory.guard?.untilMillis)
-        assertTrue(stored().single { it.kind == EntryKind.SLEEP }.isRunning)
+        assertTrue(sleeps().single().isRunning)
 
         // Later: Woke up, confirmed with Undo for 10 s.
         clock.advanceBy(20 * 60_000L)
-        assertEquals(XHaptic.TOGGLE_OFF, tap(TileAction.SLEEP_TOGGLE))
-        val ended = stored().single { it.kind == EntryKind.SLEEP }
+        assertEquals(XHaptic.TOGGLE_OFF, tap(TileAction.SLEEP_END, sleep.id))
+        val ended = sleeps().single()
         assertEquals(clock.now(), ended.endMillis)
         assertEquals(TileFeedbackKind.WOKE_UP, memory.feedback?.kind)
         assertEquals(ended.id, memory.feedback?.entryId)
@@ -137,13 +140,17 @@ class TileActionsTest {
     }
 
     @Test
-    fun aSleepUnderAMinuteIsCancelled() = test {
-        tap(TileAction.SLEEP_TOGGLE)
+    fun aSleepUnderAMinuteIsCancelledWithUndo() = test {
+        tap(TileAction.SLEEP_START)
+        val sleep = sleeps().single()
         clock.advanceBy(30_000)
-        assertEquals(XHaptic.TOGGLE_OFF, tap(TileAction.SLEEP_TOGGLE))
-        assertTrue(stored().none { it.kind == EntryKind.SLEEP })
-        assertEquals(TileFeedbackKind.SLEEP_CANCELLED, memory.feedback?.kind)
-        assertFalse(checkNotNull(memory.feedback).undoable)
+        assertEquals(XHaptic.TOGGLE_OFF, tap(TileAction.SLEEP_END, sleep.id))
+        assertTrue(sleeps().isEmpty())
+        val feedback = checkNotNull(memory.feedback)
+        assertEquals(TileFeedbackKind.SLEEP_CANCELLED, feedback.kind)
+        assertEquals(sleep.id, feedback.entryId)
+        // DESIGN_SPEC §4.4: "Sleep cancelled", with Undo, on phone and watch.
+        assertTrue(feedback.undoable)
     }
 
     @Test
@@ -151,9 +158,48 @@ class TileActionsTest {
         // The app's EdgeButton (or the phone, through sync) started a sleep a second ago.
         repo.startSleep(clock.now()).getOrThrow()
         clock.advanceBy(1_000)
-        assertEquals(XHaptic.REJECT, tap(TileAction.SLEEP_TOGGLE))
+        assertEquals(XHaptic.REJECT, tap(TileAction.SLEEP_START))
         assertEquals(GuardKind.ALREADY_ASLEEP, memory.guard?.kind)
         assertTrue(stored().single().isRunning)
+    }
+
+    @Test
+    fun aStaleStartSleepNeverEndsTheSleepThePhoneJustStarted() = test {
+        // 20:00:00 the phone starts a sleep; 20:00:04 the tile still shows "Start sleep" and is tapped.
+        val phone = repo.startSleep(clock.now()).getOrThrow()
+        clock.advanceBy(4_000)
+        assertEquals(XHaptic.REJECT, tap(TileAction.SLEEP_START))
+        assertEquals(GuardKind.ALREADY_ASLEEP, memory.guard?.kind)
+        // Not ended, not discarded as a mis-tap: the phone's sleep keeps running.
+        val running = sleeps().single()
+        assertEquals(phone.id, running.id)
+        assertTrue(running.isRunning)
+        assertNull(memory.feedback)
+    }
+
+    @Test
+    fun aStaleWokeUpNeverStartsANewSleep() = test {
+        val sleep = repo.startSleep(clock.now()).getOrThrow()
+        clock.advanceBy(20 * 60_000L)
+        // The phone ends the sleep; the tile still shows "Woke up" for it.
+        repo.endSleep(sleep.id, clock.now())
+        clock.advanceBy(4_000)
+        assertEquals(XHaptic.REJECT, tap(TileAction.SLEEP_END, sleep.id))
+        assertEquals(GuardKind.ALREADY_AWAKE, memory.guard?.kind)
+        assertEquals(listOf(false), sleeps().map { it.isRunning })
+    }
+
+    @Test
+    fun wokeUpForAnotherSleepThanTheOneRunningSaysAlreadyAwake() = test {
+        val shown = repo.startSleep(clock.now()).getOrThrow()
+        clock.advanceBy(20 * 60_000L)
+        repo.endSleep(shown.id, clock.now())
+        clock.advanceBy(60_000L)
+        val newer = repo.startSleep(clock.now()).getOrThrow()
+        clock.advanceBy(10_000L)
+        assertEquals(XHaptic.REJECT, tap(TileAction.SLEEP_END, shown.id))
+        assertEquals(GuardKind.ALREADY_AWAKE, memory.guard?.kind)
+        assertTrue(sleeps().single { it.id == newer.id }.isRunning)
     }
 
     @Test
@@ -164,9 +210,15 @@ class TileActionsTest {
     }
 
     @Test
-    fun clickIdsCarryTheirAction() {
+    fun clickIdsCarryTheirActionAndTarget() {
         assertEquals(TileAction.LOG_BOTH, TileAction.fromClickId(TileAction.LOG_BOTH.clickId(42)))
-        assertEquals("sleep_toggle#3", TileAction.SLEEP_TOGGLE.clickId(3))
+        assertEquals("sleep_start#3", TileAction.SLEEP_START.clickId(3))
+        assertEquals("sleep_end#3#sleep-1", TileAction.SLEEP_END.clickId(3, "sleep-1"))
+        assertEquals(TileAction.SLEEP_END, TileAction.fromClickId("sleep_end#3#sleep-1"))
+        assertEquals("sleep-1", TileAction.targetOf("sleep_end#3#sleep-1"))
+        assertNull(TileAction.targetOf("sleep_start#3"))
         assertNull(TileAction.fromClickId("log_feed#1"))
+        // A layout from before the split: ignored rather than guessed.
+        assertNull(TileAction.fromClickId("sleep_toggle#9"))
     }
 }
