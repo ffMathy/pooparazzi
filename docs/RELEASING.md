@@ -1,11 +1,11 @@
-# Releasing Pooparazzi to Google Play
+# Releasing Pooparazzi
 
 Two GitHub Actions workflows build and ship the apps:
 
 | Workflow | When | What it does |
 |---|---|---|
 | [`ci.yml`](../.github/workflows/ci.yml) | Every pull request (and by hand) | Unit tests of `:core`, `:app` and `:wear`, and debug builds of both apps. Needs no secrets. |
-| [`release.yml`](../.github/workflows/release.yml) | Every push to `main` (a merged pull request), and by hand | Unit tests, signed release **app bundles** (AAB) of the phone and the watch app, and an upload of both to Google Play. The bundles and R8 mapping files are also kept as a workflow artifact. |
+| [`release.yml`](../.github/workflows/release.yml) | Every push to `main` (a merged pull request), and by hand | Unit tests, signed release **app bundles** (AAB) and **APKs** of the phone and the watch app, a **GitHub Release** with both APKs for side-loading, and an upload of both bundles to Google Play. The bundles and R8 mapping files are also kept as a workflow artifact. |
 
 The phone app and the Wear OS app are one Play listing: both use the applicationId **`com.ffmathy.pooparazzi`** (the Wearable Data Layer only pairs apps with the same applicationId and signing key). The phone bundle goes to the phone track (`internal` by default) and the watch bundle to the matching **Wear OS form-factor track** (`wear:internal`), which is where Play expects Wear OS releases.
 
@@ -83,7 +83,7 @@ Play App Signing is on by default for new apps (app bundles require it). When yo
 ### 4. Enable Wear OS and upload the first bundles by hand
 
 1. **Enable the Wear OS form factor** for the listing: Test and release › Advanced settings › Form factors › **Add form factor › Wear OS**, and opt in. Without it Play has no Wear OS tracks and the watch upload fails. Wear OS also needs its own screenshots in the store listing and goes through a separate Wear OS review.
-2. Build signed bundles without publishing: Actions › **Release to Google Play** › **Run workflow**, with "Upload the bundles to Google Play" switched **off**. (This needs the four upload-key secrets; `PLAY_SERVICE_ACCOUNT_JSON` can come later.) Download the `bundles-<base>` artifact.
+2. Build signed bundles without publishing: Actions › **Release** › **Run workflow**, with "Upload the bundles to Google Play" switched **off**. (This needs the four upload-key secrets; `PLAY_SERVICE_ACCOUNT_JSON` can come later.) Download the `bundles-<base>` artifact.
 3. In Play Console, create a release on **Internal testing** with `app-release.aab`, and one on the **Wear OS › Internal testing** track with `wear-release.aab`. Save them (rolling them out is optional).
 
 Later runs number their builds above this one, so the automatic uploads continue from there.
@@ -98,9 +98,25 @@ Later runs number their builds above this one, so the automatic uploads continue
 
 Until the app's first release has been reviewed and published, Play only accepts **draft** releases through the API ("Only releases with status draft may be created on draft app"). Set the repository variable `PLAY_RELEASE_STATUS` to `draft` until then, and roll the drafts out from Play Console; afterwards remove the variable (or set it to `completed`).
 
+## Side-loading the APKs
+
+Every run of `release.yml` creates a GitHub Release tagged `v<versionName>-<base>` (for example `v0.1.0-101`) with two files: `pooparazzi-phone-….apk` and `pooparazzi-watch-….apk`. They only need the four upload-key secrets: without `PLAY_SERVICE_ACCOUNT_JSON` the Play upload is skipped with a warning and the GitHub Release is still made.
+
+- **Same release on both devices.** Install the phone and watch APK from the same release so they sync.
+- **Updates.** All releases are signed with your upload key, so a newer release installs over an older one and keeps the data.
+- **Not interchangeable with Play installs.** Play re-signs its downloads with the Play App Signing key, so a Play install can't update a side-loaded one or the other way round: uninstall first (which deletes the app's data).
+- **Phone:** open the APK on the phone and allow installs from that app, or `adb install pooparazzi-phone-….apk`.
+- **Watch:** enable Developer options (Settings › System › About › Versions, tap Build number 7 times), turn on ADB debugging and Wireless debugging, pair from a computer on the same Wi-Fi and install:
+
+  ```sh
+  adb pair <ip>:<pairing-port>      # enter the pairing code shown on the watch
+  adb connect <ip>:<port>
+  adb -s <ip>:<port> install pooparazzi-watch-….apk
+  ```
+
 ## Checklist
 
-- [ ] Upload keystore created and backed up (step 1)
+- [ ] Upload keystore created and backed up (step 1); with the four upload-key secrets every merge already publishes APKs to GitHub Releases
 - [ ] Secrets `PLAY_SERVICE_ACCOUNT_JSON`, `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_KEYSTORE_PASSWORD`, `UPLOAD_KEY_ALIAS`, `UPLOAD_KEY_PASSWORD` added (step 2)
 - [ ] App `com.ffmathy.pooparazzi` created in Play Console, Play App Signing on (step 3)
 - [ ] Wear OS form factor enabled for the listing (step 4)

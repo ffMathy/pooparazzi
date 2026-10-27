@@ -1,7 +1,7 @@
-# Merges to main: unit tests, signed release bundles (AAB) of the phone and watch apps, and an upload of both to
-# Google Play under the one shared applicationId. Setup (secrets, upload key, service account, the manual first
+# Merges to main: unit tests, signed release bundles (AAB) and APKs of the phone and watch apps, a GitHub Release
+# with both APKs for side-loading, and an upload of both bundles to Google Play under the one shared applicationId. Setup (secrets, upload key, service account, the manual first
 # upload): docs/RELEASING.md.
-name: Release to Google Play
+name: Release
 
 on:
   push:
@@ -9,12 +9,12 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Upload the bundles to Google Play (off = only build them and keep them as a workflow artifact)
+        description: Upload the bundles to Google Play (off = build them, keep them as an artifact and still create the GitHub Release)
         type: boolean
         default: true
 
 permissions:
-  contents: read
+  contents: write # create the GitHub Release and its tag
 
 # One release at a time, in merge order: version codes must reach Play increasing.
 concurrency:
@@ -34,6 +34,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check the release secrets
+        id: secrets
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
@@ -46,11 +47,17 @@ jobs:
           for name in UPLOAD_KEYSTORE_BASE64 UPLOAD_KEYSTORE_PASSWORD UPLOAD_KEY_ALIAS UPLOAD_KEY_PASSWORD; do
             [ -n "${!name}" ] || missing+=("$name")
           done
-          if [ "$PUBLISH" = "true" ] && [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then missing+=(PLAY_SERVICE_ACCOUNT_JSON); fi
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing repository secrets: ${missing[*]} (see docs/RELEASING.md)"
             exit 1
           fi
+          # Without a Play service account the APKs still go to a GitHub Release; only the Play upload is skipped.
+          play=false
+          if [ "$PUBLISH" = "true" ]; then
+            if [ -n "$PLAY_SERVICE_ACCOUNT_JSON" ]; then play=true
+            else echo "::warning::PLAY_SERVICE_ACCOUNT_JSON is not set: skipping the Google Play upload (see docs/RELEASING.md)"; fi
+          fi
+          echo "play=$play" >> "$GITHUB_OUTPUT"
 
       - name: Compute version
         id: version
@@ -92,7 +99,7 @@ jobs:
           echo "$UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
           echo "POOPARAZZI_UPLOAD_STORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
 
-      - name: Build signed release bundles
+      - name: Build signed release bundles and APKs
         env:
           POOPARAZZI_UPLOAD_STORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
           POOPARAZZI_UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
@@ -100,7 +107,7 @@ jobs:
           VERSION_BASE: ${{ steps.version.outputs.base }}
           VERSION_NAME: ${{ steps.version.outputs.name }}
         run: >-
-          ./gradlew --console=plain :app:bundleRelease :wear:bundleRelease
+          ./gradlew --console=plain :app:bundleRelease :wear:bundleRelease :app:assembleRelease :wear:assembleRelease
           "-Ppooparazzi.versionCode=$VERSION_BASE"
           "-Ppooparazzi.versionName=$VERSION_NAME"
 
@@ -119,8 +126,26 @@ jobs:
             wear/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
 
+      # Side-loadable APKs, signed with the upload key so each release installs over the previous one. Play installs
+      # are re-signed by Play App Signing, so they can't update these (and vice versa).
+      - name: Create a GitHub Release with the APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_BASE: ${{ steps.version.outputs.base }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          dir="$RUNNER_TEMP/apks"
+          mkdir -p "$dir"
+          cp app/build/outputs/apk/release/app-release.apk "$dir/pooparazzi-phone-$VERSION_NAME-$VERSION_BASE.apk"
+          cp wear/build/outputs/apk/release/wear-release.apk "$dir/pooparazzi-watch-$VERSION_NAME-$VERSION_BASE.apk"
+          tag="v$VERSION_NAME-$VERSION_BASE"
+          gh release create "$tag" "$dir"/*.apk \
+            --target "$GITHUB_SHA" \
+            --title "Pooparazzi $VERSION_NAME ($VERSION_BASE)" \
+            --notes "Phone and watch APKs built from $GITHUB_SHA. Install both from the same release so they sync; see docs/RELEASING.md#side-loading-the-apks."
+
       - name: Upload the phone bundle to Google Play
-        if: github.event_name == 'push' || inputs.publish
+        if: steps.secrets.outputs.play == 'true'
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -134,7 +159,7 @@ jobs:
       # The watch bundle shares the package but goes to the Wear OS form-factor track ("wear:<track>"), which Play
       # requires for Wear OS releases; the Wear OS form factor must be enabled for the listing first.
       - name: Upload the watch bundle to Google Play
-        if: github.event_name == 'push' || inputs.publish
+        if: steps.secrets.outputs.play == 'true'
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
