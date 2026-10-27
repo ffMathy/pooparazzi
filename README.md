@@ -1,6 +1,6 @@
-# Xaternity Tracker
+# Pooparazzi
 
-A baby tracker for an Android phone and a Wear OS watch, built for one-handed use at 3am. It logs **sleep**, **feeds** and **diapers** with one or two taps, keeps the phone and the watch in sync, and shows "how long since…" at a glance on the home screen, the lock screen, a watch tile and watch-face complications.
+**Pooparazzi** is a baby tracker for an Android phone and a Wear OS watch, built for one-handed use at 3am. It logs **sleep**, **feeds** and **diapers** with one or two taps, keeps the phone and the watch in sync, and shows "how long since…" at a glance on the home screen, the lock screen, a watch tile and watch-face complications.
 
 Only the time is ever required: the feed type, the breast side, pee/poop and the poop's colour and texture are optional extras.
 
@@ -96,7 +96,7 @@ The APKs land in `app/build/outputs/apk/debug/app-debug.apk` and `wear/build/out
 
 ## Install on devices
 
-Both apps use the **same applicationId, `com.ffmathy.xaternity`**, and must be signed with the same key: the Wearable Data Layer only pairs a phone app and a watch app that match. Debug builds from one machine share its debug key (release builds are signed with it too for now).
+Both apps use the **same applicationId, `com.ffmathy.pooparazzi`**, and must be signed with the same key: the Wearable Data Layer only pairs a phone app and a watch app that match. Debug builds from one machine share its debug key; local release builds fall back to it too unless an upload key is configured (see [Releasing](docs/RELEASING.md)).
 
 ```sh
 # Phone (USB or wireless debugging)
@@ -131,6 +131,10 @@ python3 scripts/readme_screenshots.py
 ```
 
 `readme_screenshots.py` takes a curated subset, scales phone shots to 360 px wide and masks watch shots to a 300 px circle with a transparent outside, for both languages. Edit the `PHONE` and `WATCH` lists in the script to change the set.
+
+## Releasing
+
+Every merge to `main` builds signed app bundles for the phone and the watch and uploads them to Google Play (the `internal` track by default) with the [`release.yml`](.github/workflows/release.yml) workflow; pull requests run the unit tests and a debug build ([`ci.yml`](.github/workflows/ci.yml)). The secrets, the upload key, the Play service account and the one-time manual steps are in [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Licences
 

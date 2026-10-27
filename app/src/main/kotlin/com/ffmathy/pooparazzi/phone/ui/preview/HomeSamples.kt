@@ -1,0 +1,104 @@
+package com.ffmathy.pooparazzi.phone.ui.preview
+
+import com.ffmathy.pooparazzi.core.model.Breast
+import com.ffmathy.pooparazzi.core.model.Entry
+import com.ffmathy.pooparazzi.core.model.FeedType
+import com.ffmathy.pooparazzi.core.model.PoopColor
+import com.ffmathy.pooparazzi.core.model.PoopTexture
+import com.ffmathy.pooparazzi.core.sample.SampleData
+import com.ffmathy.pooparazzi.core.sync.SyncStatus
+import com.ffmathy.pooparazzi.phone.ui.home.CardModel
+import com.ffmathy.pooparazzi.phone.ui.home.CardSpec
+import com.ffmathy.pooparazzi.phone.ui.home.HomeStateBuilder
+import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
+import com.ffmathy.pooparazzi.phone.ui.home.SheetModel
+import com.ffmathy.pooparazzi.phone.ui.home.Undo
+
+/**
+ * Home states from the reference scenario (V1_ADDITIONS §6), built through [HomeStateBuilder] like the app's own
+ * states. Used by previews and the screenshot tests.
+ */
+object HomeSamples {
+    private val zone = SampleData.ZONE
+    private val synced1431 = SyncStatus.Synced(SampleData.SYNCED_1431)
+
+    /** The Formula logged at 14:32 in [justLogged]. */
+    val formula1432: Entry = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432, id = "sample-formula-1432")
+
+    /** 14:32, idle: "Last fed 2h 10m ago · 12:22 · Formula", Awake 1h 05m, Pee 48m ago, Today 5 · 4 · 2 · 7h 57m. */
+    fun idle(): HomeUiState = build(SampleData.scenario(zone), SampleData.NOW_1432)
+
+    /** 03:12, asleep 1h 07m since 02:05; last fed 1h 32m ago · 01:40 · Breast. */
+    fun asleep(): HomeUiState =
+        build(SampleData.scenarioAt0312(zone), SampleData.NOW_0312, sync = SyncStatus.Synced(SampleData.SYNCED_0311))
+
+    /** 14:50, breastfeeding since 14:32 ("Breastfeeding 18m"), Feed button "End feed". */
+    fun breastfeeding(): HomeUiState =
+        build(SampleData.scenarioWithRunningFeed(zone), SampleData.NOW_1450, sync = SyncStatus.Synced(SampleData.at(14, 49)))
+
+    /**
+     * 14:32, Formula just logged from the Feed sheet: the undo card with Earlier chips. The log is on its way to the
+     * watch ("Syncing with watch…"), as in the approved mockup.
+     */
+    fun justLogged(): HomeUiState = build(
+        SampleData.scenario(zone) + formula1432,
+        SampleData.NOW_1432,
+        sync = SyncStatus.Pending,
+        card = CardModel(
+            key = 1,
+            spec = CardSpec.FeedLogged(formula1432.id, FeedType.FORMULA),
+            baseTime = SampleData.NOW_1432,
+            undo = Undo.Delete(formula1432.id),
+        ),
+    )
+
+    /** The Feed sheet opened at 14:32. */
+    fun feedSheet(): HomeUiState = build(SampleData.scenario(zone), SampleData.NOW_1432, sheet = SheetModel.Feed(SampleData.NOW_1432))
+
+    /** The Side sheet at 14:50 for the breastfeed running since 14:32, with [ticks] ticked in that order. */
+    fun sideSheet(ticks: List<Breast> = emptyList()): HomeUiState {
+        val feed = SampleData.runningBreastfeed(zone)
+        return build(
+            SampleData.scenarioWithRunningFeed(zone),
+            SampleData.NOW_1450,
+            sync = SyncStatus.Synced(SampleData.at(14, 49)),
+            sheet = SheetModel.Side(feed.id, feed.startMillis, SampleData.NOW_1450, ticks = ticks),
+        )
+    }
+
+    /** The Diaper sheet with Pee and Poop on, Yellow and Seedy selected. */
+    fun diaperSheet(): HomeUiState = build(
+        SampleData.scenario(zone),
+        SampleData.NOW_1432,
+        sheet = SheetModel.Diaper(
+            stamp = SampleData.NOW_1432,
+            pee = true,
+            poop = true,
+            color = PoopColor.YELLOW,
+            texture = PoopTexture.SEEDY,
+        ),
+    )
+
+    /** The Diaper sheet with Poop on and Pale selected: the health hint shows. */
+    fun diaperSheetHint(): HomeUiState = build(
+        SampleData.scenario(zone),
+        SampleData.NOW_1432,
+        sheet = SheetModel.Diaper(stamp = SampleData.NOW_1432, poop = true, color = PoopColor.PALE),
+    )
+
+    private fun build(
+        entries: List<Entry>,
+        now: Long,
+        sync: SyncStatus = synced1431,
+        card: CardModel? = null,
+        sheet: SheetModel? = null,
+    ): HomeUiState = HomeStateBuilder.build(
+        entries = entries,
+        babyName = SampleData.BABY_NAME,
+        sync = sync,
+        now = now,
+        zone = zone,
+        card = card,
+        sheet = sheet,
+    )
+}

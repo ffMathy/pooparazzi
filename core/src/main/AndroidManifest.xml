@@ -4,7 +4,7 @@
     <application>
         <!-- Merges remote /entries/* and /settings data items into the local store (phone and watch). -->
         <service
-            android:name="com.ffmathy.xaternity.core.sync.EntrySyncListenerService"
+            android:name="com.ffmathy.pooparazzi.core.sync.EntrySyncListenerService"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />

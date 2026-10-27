@@ -1,0 +1,146 @@
+# Merges to main: unit tests, signed release bundles (AAB) of the phone and watch apps, and an upload of both to
+# Google Play under the one shared applicationId. Setup (secrets, upload key, service account, the manual first
+# upload): docs/RELEASING.md.
+name: Release to Google Play
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Upload the bundles to Google Play (off = only build them and keep them as a workflow artifact)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# One release at a time, in merge order: version codes must reach Play increasing.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  PACKAGE_NAME: com.ffmathy.pooparazzi
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the release secrets
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
+        run: |
+          missing=()
+          for name in UPLOAD_KEYSTORE_BASE64 UPLOAD_KEYSTORE_PASSWORD UPLOAD_KEY_ALIAS UPLOAD_KEY_PASSWORD; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ "$PUBLISH" = "true" ] && [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then missing+=(PLAY_SERVICE_ACCOUNT_JSON); fi
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing repository secrets: ${missing[*]} (see docs/RELEASING.md)"
+            exit 1
+          fi
+
+      - name: Compute version
+        id: version
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          VERSION_CODE_OFFSET: ${{ vars.VERSION_CODE_OFFSET || '100' }}
+          VERSION_NAME: ${{ vars.VERSION_NAME }}
+        run: |
+          # One base per run; Gradle derives the phone's code (base * 10) and the watch's (base * 10 + 1).
+          base=$((RUN_NUMBER + VERSION_CODE_OFFSET))
+          name="${VERSION_NAME:-$(sed -n 's/^pooparazziVersionName = "\(.*\)"/\1/p' gradle/libs.versions.toml)}"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "Version $name: phone $((base * 10)), watch $((base * 10 + 1))" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK (platform 37)
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;36.1.0
+
+      - name: Set up Gradle (with cache)
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      # Robolectric's android-all jars come from the Maven Central mirror set for every Test task in the root
+      # build.gradle.kts (robolectric.dependency.repo.url / .id).
+      - name: Unit tests
+        run: ./gradlew --console=plain :core:testDebugUnitTest :app:testDebugUnitTest :wear:testDebugUnitTest
+
+      - name: Decode the upload keystore
+        env:
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          echo "$UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          echo "POOPARAZZI_UPLOAD_STORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed release bundles
+        env:
+          POOPARAZZI_UPLOAD_STORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          POOPARAZZI_UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          POOPARAZZI_UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          VERSION_BASE: ${{ steps.version.outputs.base }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: >-
+          ./gradlew --console=plain :app:bundleRelease :wear:bundleRelease
+          "-Ppooparazzi.versionCode=$VERSION_BASE"
+          "-Ppooparazzi.versionName=$VERSION_NAME"
+
+      - name: Remove the upload keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
+
+      - name: Keep the bundles
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bundles-${{ steps.version.outputs.base }}
+          path: |
+            app/build/outputs/bundle/release/app-release.aab
+            wear/build/outputs/bundle/release/wear-release.aab
+            app/build/outputs/mapping/release/mapping.txt
+            wear/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+
+      - name: Upload the phone bundle to Google Play
+        if: github.event_name == 'push' || inputs.publish
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: app/build/outputs/bundle/release/app-release.aab
+          mappingFile: app/build/outputs/mapping/release/mapping.txt
+          track: ${{ vars.PLAY_TRACK || 'internal' }}
+          status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+          releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.base }})
+
+      # The watch bundle shares the package but goes to the Wear OS form-factor track ("wear:<track>"), which Play
+      # requires for Wear OS releases; the Wear OS form factor must be enabled for the listing first.
+      - name: Upload the watch bundle to Google Play
+        if: github.event_name == 'push' || inputs.publish
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: wear/build/outputs/bundle/release/wear-release.aab
+          mappingFile: wear/build/outputs/mapping/release/mapping.txt
+          track: ${{ vars.PLAY_WEAR_TRACK || format('wear:{0}', vars.PLAY_TRACK || 'internal') }}
+          status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+          releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.base }}) Wear OS

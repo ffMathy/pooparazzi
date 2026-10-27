@@ -4,21 +4,30 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
-/** The watch's version codes sit above the phone's (1 000 001 for the phone's 1). */
-val wearVersionCodeOffset = 1_000_000
-
 android {
-    namespace = "com.ffmathy.xaternity.wear"
+    namespace = "com.ffmathy.pooparazzi.wear"
     compileSdk = 37
     defaultConfig {
         // The Wearable Data Layer only pairs apps with the same applicationId on phone and watch.
-        applicationId = "com.ffmathy.xaternity"
+        applicationId = "com.ffmathy.pooparazzi"
         minSdk = 30
         targetSdk = 36
-        // Same applicationId as the phone app: Google Play needs a version code of its own for every upload under it,
-        // so the watch takes the phone's code (one shared property) in a range of its own.
-        versionCode = wearVersionCodeOffset + libs.versions.xaternityVersionCode.get().toInt()
-        versionName = libs.versions.xaternityVersionName.get()
+        // Same applicationId as the phone app: Google Play needs a version code of its own for every bundle under it,
+        // so from one shared base (root build script) the phone takes base * 10 and the watch base * 10 + 1.
+        versionCode = rootProject.extra["pooparazzi.versionBase"] as Int * 10 + 1
+        versionName = rootProject.extra["pooparazzi.versionName"] as String
+    }
+    signingConfigs {
+        // The upload key from the root build script, when configured (CI); docs/RELEASING.md.
+        @Suppress("UNCHECKED_CAST")
+        (rootProject.extra["pooparazzi.uploadSigning"] as Map<String, String>?)?.let { upload ->
+            create("upload") {
+                storeFile = rootProject.file(upload.getValue("storeFile"))
+                storePassword = upload.getValue("storePassword")
+                keyAlias = upload.getValue("keyAlias")
+                keyPassword = upload.getValue("keyPassword")
+            }
+        }
     }
     buildTypes {
         release {
@@ -26,8 +35,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-            // Installable from a local build; a store build replaces this with the upload key.
-            signingConfig = signingConfigs.getByName("debug")
+            // The upload key when one is configured (CI, docs/RELEASING.md); otherwise the debug key, so a local
+            // release build still installs for testing.
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {

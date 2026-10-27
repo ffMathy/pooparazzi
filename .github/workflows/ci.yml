@@ -1,0 +1,55 @@
+# Pull requests: unit tests (JVM + Robolectric, no emulator) and debug builds of the phone and watch apps.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit tests and debug build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK (platform 37)
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;36.1.0
+
+      - name: Set up Gradle (with cache)
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # Pull requests read the cache that main writes, but do not write their own.
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      # Robolectric downloads its android-all jars at test time from the Maven Central mirror that the root
+      # build.gradle.kts sets for every Test task (robolectric.dependency.repo.url / .id); nothing more to set here.
+      - name: Unit tests
+        run: ./gradlew --console=plain :core:testDebugUnitTest :app:testDebugUnitTest :wear:testDebugUnitTest
+
+      - name: Debug builds
+        run: ./gradlew --console=plain :app:assembleDebug :wear:assembleDebug
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports
+          path: "*/build/reports/tests/"
+          if-no-files-found: ignore

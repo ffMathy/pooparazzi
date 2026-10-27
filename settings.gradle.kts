@@ -14,5 +14,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "xaternity-tracker"
+rootProject.name = "pooparazzi"
 include(":core", ":app", ":wear")

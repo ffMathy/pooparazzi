@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Phone-app strings. Shared words (kinds, feed types, sides, actions, receipts, guards, units, relative phrases,
-    sync lines) come from :core (com.ffmathy.xaternity.core.R). Danish twins live in values-da/strings.xml.
+    sync lines) come from :core (com.ffmathy.pooparazzi.core.R). Danish twins live in values-da/strings.xml.
     Pure format strings that only join localised parts are not translatable.
 -->
 <resources>
-    <string name="app_name" translatable="false">Xaternity</string>
+    <string name="app_name" translatable="false">Pooparazzi</string>
 
     <!-- Content descriptions (DESIGN_SPEC §9.4) -->
     <string name="cd_back">Back</string>

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Watch-only strings. Shared words (glossary, units, relative phrases, receipts, sync lines) come from :core
-    (com.ffmathy.xaternity.core.R) and are not redefined here. Every string has a Danish twin in values-da.
+    (com.ffmathy.pooparazzi.core.R) and are not redefined here. Every string has a Danish twin in values-da.
 -->
 <resources>
-    <string name="app_name" translatable="false">Xaternity</string>
+    <string name="app_name" translatable="false">Pooparazzi</string>
 
     <!-- Main: idle status block before the first feed is logged -->
     <string name="status_no_feed_yet">No feeds yet</string>

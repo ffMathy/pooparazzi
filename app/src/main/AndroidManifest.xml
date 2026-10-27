@@ -7,7 +7,7 @@
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
     <application
-        android:name=".XaternityApp"
+        android:name=".PooparazziApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules_legacy"
@@ -17,7 +17,7 @@
         android:localeConfig="@xml/locales_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Xaternity">
+        android:theme="@style/Theme.Pooparazzi">
 
         <!--
             uiMode is handled in Compose: the app resolves Night/Day itself (DESIGN_SPEC §8.1), so a system theme change
@@ -30,7 +30,7 @@
             android:configChanges="uiMode"
             android:exported="true"
             android:launchMode="singleTop"
-            android:theme="@style/Theme.Xaternity.Starting"
+            android:theme="@style/Theme.Pooparazzi.Starting"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -38,7 +38,7 @@
             </intent-filter>
             <!--
                 The watch's "More on phone" opens History here (RemoteActivityHelper, VIEW + BROWSABLE). Only
-                xaternity://history is exposed: the xaternity://home links that open the logging sheets stay explicit
+                pooparazzi://history is exposed: the pooparazzi://home links that open the logging sheets stay explicit
                 intents of the app's own widgets and notifications.
             -->
             <intent-filter>
@@ -47,7 +47,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:host="history"
-                    android:scheme="xaternity" />
+                    android:scheme="pooparazzi" />
             </intent-filter>
         </activity>
 
