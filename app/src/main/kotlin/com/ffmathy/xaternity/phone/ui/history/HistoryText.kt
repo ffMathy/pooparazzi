@@ -2,6 +2,7 @@ package com.ffmathy.xaternity.phone.ui.history
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import com.ffmathy.xaternity.core.domain.DayCounts
 import com.ffmathy.xaternity.core.domain.localDate
@@ -99,11 +100,7 @@ internal fun historySpoken(entry: Entry, day: LocalDate, zone: ZoneId, now: Long
 internal fun spokenEntryName(entry: Entry): String = when (entry.kind) {
     EntryKind.SLEEP -> stringResource(CoreR.string.kind_sleep)
     EntryKind.FEED -> stringResource(Labels.feedType(entry.feedType ?: FeedType.FORMULA))
-    EntryKind.DIAPER -> when (val kind = entry.diaperKind) {
-        DiaperKind.BOTH -> stringResource(R.string.spoken_pee_and_poop)
-        null -> stringResource(CoreR.string.kind_diaper)
-        else -> stringResource(Labels.diaperKind(kind))
-    }
+    EntryKind.DIAPER -> entry.diaperKind?.let { spokenDiaperKind(it) } ?: stringResource(CoreR.string.kind_diaper)
 }
 
 /** "Left", "Right", "left then right" (the arrow of "Left → Right" is not read well). */
@@ -114,6 +111,18 @@ internal fun spokenSide(side: BreastSide): String = when (side) {
     BreastSide.LEFT_THEN_RIGHT -> stringResource(R.string.spoken_side_left_then_right)
     BreastSide.RIGHT_THEN_LEFT -> stringResource(R.string.spoken_side_right_then_left)
 }
+
+/** [spokenSide] at the start of a phrase: "Left then right". */
+@Composable
+@ReadOnlyComposable
+internal fun spokenSideCapitalised(side: BreastSide): String =
+    spokenSide(side).replaceFirstChar { it.titlecase(LocalConfiguration.current.locales[0]) }
+
+/** "Pee", "Poop", "Pee and poop" (spoken; the "+" of "Pee + poop" reads badly). */
+@Composable
+@ReadOnlyComposable
+internal fun spokenDiaperKind(kind: DiaperKind): String =
+    if (kind == DiaperKind.BOTH) stringResource(R.string.spoken_pee_and_poop) else stringResource(Labels.diaperKind(kind))
 
 /**
  * The receipt label of a deleted entry: "Sleep", "Feed" (a breastfeed), "Formula", "Food", "Pee", "Pee + poop", used in

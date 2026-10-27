@@ -47,6 +47,8 @@ internal data class EditSession(
     val original: Entry?,
     val draft: EditDraft,
     val saveFailed: Boolean = false,
+    /** The entry changed or was deleted on the watch after the sheet opened (found on Save). */
+    val conflict: EditConflict? = null,
 )
 
 /**
@@ -71,7 +73,7 @@ class EditViewModel(
 
     /** The open sheet, or null while it is closed. */
     val state: StateFlow<EditUiState?> = combine(session, repository.observeEntries(), now) { s, entries, t ->
-        s?.let { EditRules.state(it.key, it.mode, it.draft, it.original, it.saveFailed, entries, t, zone) }
+        s?.let { EditRules.state(it.key, it.mode, it.draft, it.original, it.saveFailed, entries, t, zone, it.conflict) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Saved and deleted entries, for the host screen. */
@@ -104,15 +106,32 @@ class EditViewModel(
 
     override fun onSave() = act {
         val current = session.value ?: return@act
-        val ui = EditRules.state(current.key, current.mode, current.draft, current.original, false, entries(), clock.now(), zone)
+        val ui = EditRules.state(current.key, current.mode, current.draft, current.original, false, entries(), clock.now(), zone, current.conflict)
         if (!ui.canSave) {
             haptic(HomeHaptic.REJECT)
             return@act
         }
         val original = current.original
-        if (current.mode == EditMode.EDIT && original != null && EditRules.unchanged(current.draft, original)) {
-            setSession(null)
-            return@act
+        if (current.mode == EditMode.EDIT && original != null) {
+            if (EditRules.unchanged(current.draft, original)) {
+                setSession(null)
+                return@act
+            }
+            // The sheet holds the entry as it was when it opened. If the watch changed it meanwhile (e.g. Woke up on a
+            // sleep whose start is being corrected here), do not overwrite that: show the merged version and let the
+            // parent save again. A deleted entry is not brought back.
+            val stored = attempt { repository.get(original.id) }
+            if (stored == null || stored.deleted) {
+                setSession(current.copy(saveFailed = false, conflict = EditConflict.DELETED))
+                haptic(HomeHaptic.REJECT)
+                return@act
+            }
+            if (EditDraft.of(stored) != EditDraft.of(original)) {
+                val merged = EditRules.rebase(current.draft, original, stored)
+                setSession(current.copy(original = stored, draft = merged, saveFailed = false, conflict = EditConflict.CHANGED))
+                haptic(HomeHaptic.REJECT)
+                return@act
+            }
         }
         val entry = current.draft.toEntry(updatedAtMillis = clock.now())
         val written = attempt {
@@ -186,7 +205,8 @@ class EditViewModel(
         val current = session.value ?: return@act
         val next = transform(current)
         if (next != current.draft) {
-            setSession(current.copy(draft = next, saveFailed = false))
+            // A change clears a refused save and the "changed on the watch" note; a deletion there stays.
+            setSession(current.copy(draft = next, saveFailed = false, conflict = current.conflict?.takeIf { it == EditConflict.DELETED }))
             haptic?.let(::haptic)
         }
     }

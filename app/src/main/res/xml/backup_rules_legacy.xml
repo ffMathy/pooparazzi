@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Auto Backup on API 30 (data_extraction_rules.xml applies from API 31): the same device-local exclusions. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="system_surfaces.xml" />
+    <exclude domain="sharedpref" path="widget_memo.xml" />
+</full-backup-content>

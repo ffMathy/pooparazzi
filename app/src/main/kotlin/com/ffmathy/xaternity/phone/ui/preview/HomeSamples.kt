@@ -35,10 +35,14 @@ object HomeSamples {
     fun breastfeeding(): HomeUiState =
         build(SampleData.scenarioWithRunningFeed(zone), SampleData.NOW_1450, sync = SyncStatus.Synced(SampleData.at(14, 49)))
 
-    /** 14:32, Formula just logged from the Feed sheet: the undo card with Earlier chips. */
+    /**
+     * 14:32, Formula just logged from the Feed sheet: the undo card with Earlier chips. The log is on its way to the
+     * watch ("Syncing with watch…"), as in the approved mockup.
+     */
     fun justLogged(): HomeUiState = build(
         SampleData.scenario(zone) + formula1432,
         SampleData.NOW_1432,
+        sync = SyncStatus.Pending,
         card = CardModel(
             key = 1,
             spec = CardSpec.FeedLogged(formula1432.id, FeedType.FORMULA),

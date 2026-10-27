@@ -37,7 +37,7 @@ internal fun HomeButtons(state: HomeUiState, formatters: Formatters, actions: Ho
             val feed = state.runningFeed
             if (feed == null) {
                 BigButton(
-                    onClick = actions::onFeed,
+                    onClick = { actions.onFeed(shownRunning = false) },
                     icon = XIcons.feed,
                     iconTint = events.feed.strong,
                     label = stringResource(CoreR.string.kind_feed),
@@ -52,7 +52,7 @@ internal fun HomeButtons(state: HomeUiState, formatters: Formatters, actions: Ho
                     formatters.relative.since(feed.startMillis, zone),
                 )
                 BigButton(
-                    onClick = actions::onFeed,
+                    onClick = { actions.onFeed(shownRunning = true) },
                     icon = XIcons.breast,
                     iconTint = events.feed.strong,
                     label = stringResource(CoreR.string.action_end_feed),
@@ -90,7 +90,7 @@ private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: Hom
         }
         val startLabel = stringResource(CoreR.string.action_start_sleep)
         BigButton(
-            onClick = actions::onSleepToggle,
+            onClick = { actions.onSleepToggle(shownRunning = false) },
             icon = XIcons.sleep,
             iconTint = sleep.strong,
             label = startLabel,
@@ -108,7 +108,7 @@ private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: Hom
         )
         val name = stringResource(R.string.cd_woke_up_end_sleep)
         BigButton(
-            onClick = actions::onSleepToggle,
+            onClick = { actions.onSleepToggle(shownRunning = true) },
             icon = XIcons.wake,
             iconTint = sleep.strong,
             label = stringResource(CoreR.string.action_woke_up),

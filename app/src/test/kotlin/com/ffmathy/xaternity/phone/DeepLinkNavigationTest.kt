@@ -2,9 +2,12 @@ package com.ffmathy.xaternity.phone
 
 import android.Manifest
 import android.app.Application
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -69,5 +72,29 @@ class DeepLinkNavigationTest {
         val request = shadowOf(controller.get()).lastRequestedPermission
         assertEquals(listOf(Manifest.permission.POST_NOTIFICATIONS), request?.requestedPermissions?.toList())
         assertTrue(SurfacePrefs(app).notificationPermissionAsked)
+    }
+
+    /**
+     * The watch's "More on phone" sends `xaternity://history` (VIEW + BROWSABLE) through RemoteActivityHelper: the
+     * phone resolves it to the app and opens History, also when the app is already running on Home.
+     */
+    @Test
+    fun theWatchsMoreOnPhoneLinkOpensHistory() {
+        val link = Intent(Intent.ACTION_VIEW, Uri.parse("xaternity://history")).addCategory(Intent.CATEGORY_BROWSABLE)
+        val resolved = app.packageManager.queryIntentActivities(link, 0)
+        assertEquals(listOf(MainActivity::class.java.name), resolved.map { it.activityInfo.name })
+        // Only History is exposed to other apps and the browser; the logging sheets are not.
+        val sheet = Intent(Intent.ACTION_VIEW, Uri.parse("xaternity://home/feed")).addCategory(Intent.CATEGORY_BROWSABLE)
+        assertTrue(app.packageManager.queryIntentActivities(sheet, 0).isEmpty())
+
+        val activity = Robolectric.buildActivity(MainActivity::class.java, Intent(link).setClass(app, MainActivity::class.java)).setup()
+        compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 10_000)
+
+        // Back to Home, then the link again while the app runs.
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Add entry")).fetchSemanticsNodes().isEmpty() }
+        activity.newIntent(Intent(link).setClass(app, MainActivity::class.java))
+        compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
     }
 }

@@ -30,7 +30,7 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
 
     @Test
     fun startSleepRunsASleepAndShowsTheCard() = homeTest { home ->
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         val state = home.settle()
         val sleep = state.runningSleep!!
         assertEquals(SampleData.NOW_1432, sleep.startMillis)
@@ -41,11 +41,11 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
 
     @Test
     fun aSecondToggleWithinTwoSecondsIsGuarded() = homeTest { home ->
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         home.settle()
         home.scope.testScheduler.advanceTimeBy(1_500)
         home.clock.advanceBy(1_500)
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         var state = home.settle()
         assertTrue("still asleep", state.sleepRunning)
         assertEquals(CardRow.Guard(GuardKind.ASLEEP, SampleData.NOW_1432), state.card!!.row)
@@ -60,7 +60,7 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
     @Test
     fun wokeUpEndsTheSleepAndOffsetsMoveTheEnd() = homeTest { home ->
         val sleep = home.repository.startSleep(SampleData.at(13, 25)).getOrThrow()
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         var state = home.settle()
         assertEquals(SampleData.NOW_1432, home.repository.get(sleep.id)!!.endMillis)
         assertEquals(CardVariant.WokeUp(67 * MINUTE), state.card!!.variant)
@@ -76,7 +76,7 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
     @Test
     fun endOffsetsBeforeTheStartAreDisabled() = homeTest { home ->
         home.repository.startSleep(SampleData.at(14, 24)).getOrThrow()
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         val row = home.settle().card!!.row as CardRow.Earlier
         assertEquals(
             listOf(OffsetChipUi(-5, false, true), OffsetChipUi(-10, false, false), OffsetChipUi(-15, false, false)),
@@ -89,11 +89,11 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
 
     @Test
     fun aSleepStoppedWithinAMinuteIsCancelledAndUndoResumesIt() = homeTest { home ->
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         home.settle()
         home.scope.testScheduler.advanceTimeBy(2_100)
         home.clock.advanceBy(40_000)
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         var state = home.settle()
         assertEquals(CardVariant.SleepCancelled, state.card!!.variant)
         assertEquals(CardRow.None, state.card!!.row)
@@ -129,7 +129,7 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
 
     @Test
     fun offsetsAreRelativeToTheBaseAndRetappingClears() = homeTest { home ->
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.viewModel.onFeedType(FeedType.FORMULA)
         home.settle()
         suspend fun feedTime() = home.entries().single().startMillis
@@ -148,7 +148,7 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
 
     @Test
     fun theCardExpiresAfterTenSecondsAndChipTapsRestartTheWindow() = homeTest { home ->
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         var state = home.settle()
         val windowKey = state.card!!.windowKey
         home.scope.testScheduler.advanceTimeBy(8_000)
@@ -224,7 +224,7 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
 
         home.scope.testScheduler.advanceTimeBy(300)
         home.viewModel.onDiaper()
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         var state = home.settle()
         assertNull("Diaper ignored", state.sheet)
         assertFalse("Sleep toggle ignored", state.sleepRunning)
@@ -240,18 +240,18 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
         home.viewModel.onDiaper()
         home.viewModel.onSheetDismiss()
         home.viewModel.onSheetClosed()
-        home.viewModel.onFeed()
+        home.tapFeed()
         assertTrue(home.settle().sheet is HomeSheetUi.Feed)
     }
 
     @Test
     fun aGuardWithoutACardShowsANotice() = homeTest { home ->
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         home.settle()
         home.viewModel.onCardDone() // not an Adjust card: Done is not offered, but a dismissed card is the same case
         home.settle()
         home.scope.testScheduler.advanceTimeBy(500)
-        home.viewModel.onSleepToggle()
+        home.tapSleepToggle()
         val card = home.settle().card!!
         assertEquals(CardVariant.Notice(GuardKind.ASLEEP), card.variant)
         assertEquals(CardRow.Guard(GuardKind.ASLEEP, SampleData.NOW_1432), card.row)

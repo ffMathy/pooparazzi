@@ -1,5 +1,12 @@
 package com.ffmathy.xaternity.phone.ui.history
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,8 +24,9 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -32,6 +40,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -57,6 +66,7 @@ import com.ffmathy.xaternity.core.format.rememberFormatters
 import com.ffmathy.xaternity.core.sync.SyncStatus
 import com.ffmathy.xaternity.core.ui.icons.XIcon
 import com.ffmathy.xaternity.core.ui.icons.XIcons
+import com.ffmathy.xaternity.core.ui.time.rememberReducedMotion
 import com.ffmathy.xaternity.phone.R
 import com.ffmathy.xaternity.phone.ui.components.IconTarget
 import com.ffmathy.xaternity.phone.ui.components.SyncLine
@@ -204,7 +214,11 @@ fun HistoryScreen(
                 actionContentColor = colors.primary,
             )
         }
+        // Rows scroll under the FAB, which sits flat on them (elevation 0, §5.9): while they do, it is the 56 × 56 icon
+        // FAB; at the end of the list, where the bottom padding leaves it clear, it shows its label.
+        val fabExpanded by remember { derivedStateOf { !listState.canScrollForward } }
         AddEntryFab(
+            expanded = fabExpanded,
             onClick = actions::onAddEntry,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -311,22 +325,38 @@ private fun Stat(number: String, caption: String, spokenNumber: String?, modifie
     }
 }
 
-/** "Add entry": 56 tall, r 16, primaryContainer, `plus` 24 + 8 + labelLarge onPrimaryContainer. No shadow (§5.9). */
+/**
+ * "Add entry": 56 tall, r 16, primaryContainer, `plus` 24 + 8 + labelLarge onPrimaryContainer. No shadow (§5.9).
+ * Collapsed ([expanded] false) it is the 56 × 56 icon FAB, still named "Add entry".
+ */
 @Composable
-private fun AddEntryFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun AddEntryFab(expanded: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
+    val label = stringResource(R.string.history_add_entry)
+    val reducedMotion = rememberReducedMotion()
     Row(
         modifier
             .heightIn(min = HistoryDefaults.FabHeight)
+            .widthIn(min = HistoryDefaults.FabHeight)
             .clip(HistoryDefaults.FabShape)
             .background(colors.primaryContainer)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(start = 16.dp, end = 20.dp),
+            .semantics { if (!expanded) contentDescription = label }
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         XIcon(XIcons.plus, contentDescription = null, tint = colors.onPrimaryContainer, size = 24.dp)
-        Spacer(Modifier.width(8.dp))
-        Text(stringResource(R.string.history_add_entry), style = MaterialTheme.typography.labelLarge, color = colors.onPrimaryContainer)
+        AnimatedVisibility(
+            visible = expanded,
+            enter = if (reducedMotion) EnterTransition.None else expandHorizontally(expandFrom = Alignment.Start) + fadeIn(),
+            exit = if (reducedMotion) ExitTransition.None else shrinkHorizontally(shrinkTowards = Alignment.Start) + fadeOut(),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.width(8.dp))
+                Text(label, style = MaterialTheme.typography.labelLarge, color = colors.onPrimaryContainer, maxLines = 1)
+                Spacer(Modifier.width(4.dp))
+            }
+        }
     }
 }
 

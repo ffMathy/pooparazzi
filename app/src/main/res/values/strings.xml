@@ -35,6 +35,9 @@
     <!-- TalkBack, Today grid: "Today: 5 feeds, 4 pee, 2 poop, 7 hours 57 minutes sleep" -->
     <string name="spoken_today" translatable="false">%1$s: %2$s %3$s, %4$s %5$s, %6$s %7$s, %8$s %9$s</string>
 
+    <!-- Side sheet sub-line: "Breastfeeding · 14:32–14:50 · 18m" (the feed, named as a noun) -->
+    <string name="side_sheet_feed">Breastfeeding</string>
+
     <!-- TalkBack: "12:40 to 13:27" -->
     <string name="spoken_range">%1$s to %2$s</string>
     <!-- TalkBack names where the visible text reads badly ("+", "→") -->
@@ -77,13 +80,16 @@
     <!-- "Fell asleep day, Today" -->
     <string name="edit_spoken_day">%1$s day, %2$s</string>
     <!-- Validation slot. %1$s is a clock time. -->
-    <string name="edit_error_wake_before_sleep">Woke up must be after fell asleep.</string>
+    <string name="edit_error_wake_before_sleep">Waking up must come after falling asleep.</string>
     <string name="edit_error_feed_end_before_start">The feed must end after it started.</string>
     <string name="edit_error_future">%1$s hasn\'t happened yet. Log it for yesterday?</string>
     <string name="edit_use_yesterday">Use yesterday</string>
     <string name="edit_warning_overlap_sleep">Overlaps the %1$s sleep. Save anyway?</string>
     <string name="edit_warning_overlap_feed">Overlaps the %1$s feed. Save anyway?</string>
     <string name="edit_error_save_failed">Couldn\'t save this change. Try again.</string>
+    <!-- The entry changed on the watch while the sheet was open: the sheet shows the merged version -->
+    <string name="edit_notice_changed_on_watch">Changed on the watch meanwhile. Check and save again.</string>
+    <string name="edit_error_deleted_on_watch">Deleted on the watch meanwhile.</string>
 
     <!-- Settings -->
     <string name="settings_section_baby">Baby</string>

@@ -70,7 +70,8 @@ class PrefsWidgetMemoStore private constructor(private val prefs: SharedPreferen
         prefs.getString(KEY, null)?.let { runCatching { json.decodeFromString(WidgetMemo.serializer(), it) }.getOrNull() } ?: WidgetMemo()
 
     companion object {
-        private const val FILE = "widget_memo"
+        /** The preferences file; excluded from backup and device transfer (res/xml/data_extraction_rules.xml). */
+        internal const val FILE = "widget_memo"
         private const val KEY = "memo"
         private val json = Json { ignoreUnknownKeys = true }
 

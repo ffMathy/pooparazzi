@@ -23,6 +23,12 @@ sealed interface HomeLaunch {
     /** The Diaper sheet. */
     data object Diaper : HomeLaunch
 
+    /**
+     * History instead of Home: the watch's "More on phone" (`xaternity://history`, the only link other apps may open).
+     * Handled by the navigation; Home itself shows nothing extra.
+     */
+    data object History : HomeLaunch
+
     /** The undo card for a log made on the widget ([entryId]), so it can be undone or backdated in the app. */
     data class Receipt(val kind: ReceiptKind, val entryId: String) : HomeLaunch
 
@@ -44,21 +50,26 @@ enum class ReceiptKind(val path: String) {
 }
 
 /**
- * The app's deep links, `xaternity://home[/<sheet>]` and `xaternity://home/receipt/<kind>/<entryId>`, and the
- * intents that carry them to [MainActivity]. The links only open Home; they never log anything.
+ * The app's deep links, `xaternity://home[/<sheet>]`, `xaternity://home/receipt/<kind>/<entryId>` and
+ * `xaternity://history` (the watch's "More on phone"), and the intents that carry them to [MainActivity]. The links
+ * only open a screen; they never log anything.
  */
 object DeepLinks {
     const val SCHEME = "xaternity"
     const val HOST = "home"
+
+    /** `xaternity://history`: the one link the manifest exposes to other apps (VIEW + BROWSABLE). */
+    const val HISTORY_HOST = "history"
     private const val FEED = "feed"
     private const val SIDE = "side"
     private const val DIAPER = "diaper"
     private const val RECEIPT = "receipt"
 
     fun uri(launch: HomeLaunch): Uri {
+        if (launch == HomeLaunch.History) return Uri.Builder().scheme(SCHEME).authority(HISTORY_HOST).build()
         val builder = Uri.Builder().scheme(SCHEME).authority(HOST)
         when (launch) {
-            HomeLaunch.Home -> Unit
+            HomeLaunch.Home, HomeLaunch.History -> Unit
             HomeLaunch.Feed -> builder.appendPath(FEED)
             HomeLaunch.Side -> builder.appendPath(SIDE)
             HomeLaunch.Diaper -> builder.appendPath(DIAPER)
@@ -69,7 +80,9 @@ object DeepLinks {
 
     /** The launch a link asks for; null for anything that is not one of the app's links. */
     fun parse(uri: Uri?): HomeLaunch? {
-        if (uri == null || uri.scheme != SCHEME || uri.authority != HOST) return null
+        if (uri == null || uri.scheme != SCHEME) return null
+        if (uri.authority == HISTORY_HOST) return HomeLaunch.History
+        if (uri.authority != HOST) return null
         val segments = uri.pathSegments.orEmpty()
         return when (segments.firstOrNull()) {
             null -> HomeLaunch.Home

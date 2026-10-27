@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -25,20 +26,23 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
-import com.ffmathy.xaternity.phone.ui.history.spokenSide
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ffmathy.xaternity.core.format.Formatters
@@ -51,6 +55,7 @@ import com.ffmathy.xaternity.core.ui.tokens.LocalXPalette
 import com.ffmathy.xaternity.core.ui.type.PhoneType
 import com.ffmathy.xaternity.phone.R
 import com.ffmathy.xaternity.phone.ui.components.OffsetChip
+import com.ffmathy.xaternity.phone.ui.history.spokenSideCapitalised
 import com.ffmathy.xaternity.phone.ui.home.HomeSheetUi
 import com.ffmathy.xaternity.phone.ui.home.OffsetChipUi
 import com.ffmathy.xaternity.phone.ui.home.feedTypeLabel
@@ -139,38 +144,76 @@ internal fun SideSheetContent(
     val title = stringResource(CoreR.string.side_question)
     val end = maxOf(sheet.time, sheet.startMillis)
     val range = formatters.clock.range(sheet.startMillis, end, zone, spaced = false)
+    val feed = stringResource(R.string.side_sheet_feed)
     val sub = stringResource(
         R.string.join_dot,
-        stringResource(R.string.join_dot, stringResource(CoreR.string.status_breastfeeding), range),
+        stringResource(R.string.join_dot, feed, range),
         formatters.duration.between(sheet.startMillis, end),
+    )
+    // "Breastfeeding, 14:32 to 14:50, 18 minutes": no en dash or "18m" for TalkBack (DESIGN_SPEC §9.5).
+    val subSpoken = stringResource(
+        R.string.spoken_running,
+        feed,
+        stringResource(R.string.spoken_range, formatters.clock.format(sheet.startMillis, zone), formatters.clock.format(end, zone)),
+        formatters.duration.spokenBetween(sheet.startMillis, end),
     )
     SheetColumn(title) {
         SheetHeader(title, onCancel)
-        Text(sub, style = PhoneType.dataMedium, color = colors.onSurfaceVariant)
+        Text(sub, style = PhoneType.dataMedium, color = colors.onSurfaceVariant, modifier = Modifier.semantics { contentDescription = subSpoken })
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, onOffset)
         Spacer(Modifier.height(12.dp))
-        Column(Modifier.alpha(readiness.alpha), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            listOf(
-                BreastSide.LEFT to BreastSide.RIGHT,
-                BreastSide.LEFT_THEN_RIGHT to BreastSide.RIGHT_THEN_LEFT,
-            ).forEach { (first, second) ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SideTile(first, readiness.ready, { onSide(first) }, Modifier.weight(1f))
-                    SideTile(second, readiness.ready, { onSide(second) }, Modifier.weight(1f))
+        BoxWithConstraints(Modifier.alpha(readiness.alpha)) {
+            // One label size for all four tiles: the largest at which every label fits one line of a tile
+            // ("Venstre → Højre" would otherwise shrink alone next to a 24 sp "Venstre").
+            val labelSize = rememberSideLabelSize((maxWidth - 12.dp) / 2 - SideTileHorizontalPadding * 2)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                listOf(
+                    BreastSide.LEFT to BreastSide.RIGHT,
+                    BreastSide.LEFT_THEN_RIGHT to BreastSide.RIGHT_THEN_LEFT,
+                ).forEach { (first, second) ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SideTile(first, labelSize, readiness.ready, { onSide(first) }, Modifier.weight(1f))
+                        SideTile(second, labelSize, readiness.ready, { onSide(second) }, Modifier.weight(1f))
+                    }
                 }
             }
         }
     }
 }
 
+private val SideTileHorizontalPadding = 12.dp
+private val SideLabelMinSize = 15.sp
+private const val SIDE_LABEL_STEP_SP = 0.5f
+
+/**
+ * The headlineSmall size (24 sp, down to 15 sp in 0.5 sp steps) at which all four side labels fit one line of
+ * [width].
+ */
+@Composable
+private fun rememberSideLabelSize(width: Dp): TextUnit {
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.headlineSmall
+    val labels = BreastSide.entries.map { stringResource(Labels.side(it)) }
+    val widthPx = with(LocalDensity.current) { width.roundToPx() }
+    return remember(labels, widthPx, style, measurer) {
+        val max = style.fontSize.value
+        var size = max
+        fun fits(sp: Float) = labels.all { label ->
+            measurer.measure(label, style.copy(fontSize = sp.sp), maxLines = 1, softWrap = false).size.width <= widthPx
+        }
+        while (size > SideLabelMinSize.value && !fits(size)) size -= SIDE_LABEL_STEP_SP
+        size.sp
+    }
+}
+
 /** A 165 × 96 tile, r 28, FEED container: the side glyph with its L/R letters (from text) over the side label. */
 @Composable
-private fun SideTile(side: BreastSide, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun SideTile(side: BreastSide, labelSize: TextUnit, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val feed = LocalXPalette.current.events.feed
     val shape = RoundedCornerShape(28.dp)
     // TalkBack says "Left then right", not the arrow of the visible label (DESIGN_SPEC §9.4).
-    val spoken = spokenSide(side).replaceFirstChar { it.titlecase(LocalConfiguration.current.locales[0]) }
+    val spoken = spokenSideCapitalised(side)
     Column(
         modifier
             .heightIn(min = 96.dp)
@@ -179,7 +222,7 @@ private fun SideTile(side: BreastSide, enabled: Boolean, onClick: () -> Unit, mo
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             // The label and glyph letters are replaced by the spoken name; the click, role and enabled state stay.
             .clearAndSetSemantics { contentDescription = spoken }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = SideTileHorizontalPadding, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -191,9 +234,10 @@ private fun SideTile(side: BreastSide, enabled: Boolean, onClick: () -> Unit, mo
         }
         BasicText(
             stringResource(Labels.side(side)),
-            style = MaterialTheme.typography.headlineSmall.copy(color = feed.onContainer, textAlign = TextAlign.Center),
+            style = MaterialTheme.typography.headlineSmall.copy(color = feed.onContainer, textAlign = TextAlign.Center, fontSize = labelSize),
             maxLines = 1,
-            autoSize = TextAutoSize.StepBased(minFontSize = 15.sp, maxFontSize = 24.sp, stepSize = 0.5.sp),
+            // Only a safety net below the shared size (e.g. a rounding difference): never larger than the others.
+            autoSize = if (labelSize > SideLabelMinSize) TextAutoSize.StepBased(SideLabelMinSize, labelSize, 0.5.sp) else null,
         )
     }
 }

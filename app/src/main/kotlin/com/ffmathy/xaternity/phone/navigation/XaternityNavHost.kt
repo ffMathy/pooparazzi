@@ -2,6 +2,8 @@ package com.ffmathy.xaternity.phone.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -56,7 +58,8 @@ fun XaternityPhoneApp(
 /**
  * Home, History, Settings and the font licences. The edit sheet (P4) is not a destination: it opens over the screen
  * that asked for it (Home's since-rows and Adjust card, History's rows and FAB), with its scrim over that screen.
- * A deep link returns to Home first, which then opens the sheet or card it asks for.
+ * A deep link returns to Home first, which then opens the sheet or card it asks for; [HomeLaunch.History] (the watch's
+ * "More on phone") opens History over Home instead.
  */
 @Composable
 fun XaternityNavHost(
@@ -66,15 +69,27 @@ fun XaternityNavHost(
 ) {
     fun open(route: Any) = navController.navigate(route) { launchSingleTop = true }
     val back: () -> Unit = { navController.popBackStack() }
+    val handled by rememberUpdatedState(onLaunchHandled)
     LaunchedEffect(launch) {
-        if (launch != null) navController.popBackStack<Home>(inclusive = false)
+        when (launch) {
+            null -> Unit
+            HomeLaunch.History -> {
+                // Back from History returns to Home, whatever was open before.
+                navController.navigate(History) {
+                    launchSingleTop = true
+                    popUpTo<Home>()
+                }
+                handled(launch)
+            }
+            else -> navController.popBackStack<Home>(inclusive = false)
+        }
     }
     NavHost(navController = navController, startDestination = Home) {
         composable<Home> {
             HomeRoute(
                 onOpenHistory = { open(History) },
                 onOpenSettings = { open(Settings) },
-                launch = launch,
+                launch = launch?.takeUnless { it == HomeLaunch.History },
                 onLaunchHandled = onLaunchHandled,
             )
         }

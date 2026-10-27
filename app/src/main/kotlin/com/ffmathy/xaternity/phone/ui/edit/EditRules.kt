@@ -118,9 +118,40 @@ internal object EditRules {
     /** True when saving [draft] would not change [original] (Save then just closes). */
     fun unchanged(draft: EditDraft, original: Entry): Boolean = draft == EditDraft.of(original)
 
-    /** A rule that blocks Save comes first, then a refused save, then a warning. */
-    private fun issue(validation: EditIssue?, saveFailed: Boolean): EditIssue? = when {
+    /**
+     * [draft] (made from [original]) moved onto [stored], the entry as it is now after a change on the watch: the
+     * fields the parent changed in the sheet keep the sheet's value, every other field takes the stored one. So a
+     * corrected start survives a "Woke up" from the watch, and the watch's end and side are not wiped.
+     */
+    fun rebase(draft: EditDraft, original: Entry, stored: Entry): EditDraft {
+        val base = EditDraft.of(original)
+        val theirs = EditDraft.of(stored)
+        fun <T> pick(mine: T, was: T, other: T): T = if (mine != was) mine else other
+        val merged = EditDraft(
+            id = draft.id,
+            kind = draft.kind,
+            start = pick(draft.start, base.start, theirs.start),
+            end = pick(draft.end, base.end, theirs.end),
+            feedType = pick(draft.feedType, base.feedType, theirs.feedType),
+            side = pick(draft.side, base.side, theirs.side),
+            pee = pick(draft.pee, base.pee, theirs.pee),
+            poop = pick(draft.poop, base.poop, theirs.poop),
+            color = pick(draft.color, base.color, theirs.color),
+            texture = pick(draft.texture, base.texture, theirs.texture),
+        )
+        return when {
+            merged.kind == EntryKind.DIAPER ->
+                if (merged.poop) merged.copy(end = null, side = null) else merged.copy(end = null, side = null, color = null, texture = null)
+            merged.isInterval -> if (merged.end == null) merged.copy(side = null) else merged
+            else -> merged.copy(end = null, side = null)
+        }
+    }
+
+    /** A deleted entry comes first, then a rule that blocks Save, a change on the watch, a refused save, a warning. */
+    private fun issue(validation: EditIssue?, saveFailed: Boolean, conflict: EditConflict?): EditIssue? = when {
+        conflict == EditConflict.DELETED -> EditIssue.ChangedElsewhere(deleted = true)
         validation?.blocksSave == true -> validation
+        conflict == EditConflict.CHANGED -> EditIssue.ChangedElsewhere(deleted = false)
         saveFailed -> EditIssue.SaveFailed
         else -> validation
     }
@@ -135,6 +166,7 @@ internal object EditRules {
         entries: List<Entry>,
         now: Long,
         zone: ZoneId,
+        conflict: EditConflict? = null,
     ): EditUiState {
         val wasStart = original?.startMillis?.takeUnless { sameMinute(it, draft.start) }
         val originalEnd = original?.endMillis
@@ -154,7 +186,7 @@ internal object EditRules {
             wasEnd = wasEnd,
             durationMillis = duration,
             wasDurationMillis = originalDuration?.takeIf { draft.end != null && it != duration },
-            issue = issue(validate(draft, entries, now), saveFailed),
+            issue = issue(validate(draft, entries, now), saveFailed, conflict),
             complete = isComplete(draft),
         )
     }

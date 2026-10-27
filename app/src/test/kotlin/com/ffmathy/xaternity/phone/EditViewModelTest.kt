@@ -304,4 +304,51 @@ class EditViewModelTest : CoreTestBase() {
         assertEquals(at(12, 35), state.draft.start)
         assertEquals(at(12, 40), state.wasStart)
     }
+
+    /** The watch ends a sleep while its start is being corrected here: the end is kept, not overwritten. */
+    @Test
+    fun anEndFromTheWatchWhileEditingIsNotLost() = coreTest(now = SampleData.NOW_0312, seed = SampleData.scenarioAt0312(SampleData.ZONE)) { core ->
+        val sheet = core.sheet()
+        sheet.vm.openEntry("sample-sleep-0205")
+        sheet.vm.onNudge(TimeField.START, -5)
+        assertNull(state(sheet).draft.end)
+        val stored = core.entry("sample-sleep-0205")!!
+        core.repository.applyRemote(stored.copy(endMillis = at(3, 12), updatedAtMillis = stored.updatedAtMillis + 1))
+        runCurrent()
+
+        sheet.vm.onSave()
+        runCurrent()
+        assertEquals("the watch's Woke up is kept", at(3, 12), core.entry("sample-sleep-0205")!!.endMillis)
+        // The sheet shows the merged change (the new end, this start) and asks for a second look.
+        val shown = state(sheet)
+        assertEquals(at(2, 0), shown.draft.start)
+        assertEquals(at(3, 12), shown.draft.end)
+        assertEquals(EditIssue.ChangedElsewhere(deleted = false), shown.issue)
+        assertTrue(shown.canSave)
+        assertEquals(HomeHaptic.REJECT, sheet.haptics.last())
+
+        sheet.vm.onSave()
+        runCurrent()
+        val saved = core.entry("sample-sleep-0205")!!
+        assertEquals(at(2, 0), saved.startMillis)
+        assertEquals(at(3, 12), saved.endMillis)
+        assertNull("the sheet closed", sheet.vm.state.value)
+    }
+
+    @Test
+    fun anEntryDeletedOnTheWatchWhileEditingIsNotBroughtBack() = coreTest { core ->
+        val sheet = core.sheet()
+        sheet.vm.openEntry("sample-sleep-1240")
+        sheet.vm.onNudge(TimeField.START, -5)
+        state(sheet)
+        val stored = core.entry("sample-sleep-1240")!!
+        core.repository.applyRemote(stored.copy(deleted = true, updatedAtMillis = stored.updatedAtMillis + 1))
+        runCurrent()
+
+        sheet.vm.onSave()
+        val shown = state(sheet)
+        assertTrue("still deleted", core.entry("sample-sleep-1240")!!.deleted)
+        assertEquals(EditIssue.ChangedElsewhere(deleted = true), shown.issue)
+        assertFalse(shown.canSave)
+    }
 }

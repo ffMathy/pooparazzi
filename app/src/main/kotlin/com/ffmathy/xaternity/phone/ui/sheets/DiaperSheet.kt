@@ -205,7 +205,8 @@ internal fun PoopDetails(
 
 /**
  * A checkbox tile, 165 × 112, r 28. Off: container fill, 1 dp outline border, empty checkbox. On: the diaper lit fill,
- * a 2 dp border and a checked checkbox in the kind's strong colour. `Role.Checkbox`: "Pee, checkbox, not checked".
+ * a 2 dp border and a checked checkbox in DIAPER strong for both kinds (POOP strong is only 2.4:1 on the lit fill at
+ * Night; the watch does the same). The icon keeps the kind's colour. `Role.Checkbox`: "Pee, checkbox, not checked".
  */
 @Composable
 private fun DiaperTile(
@@ -220,7 +221,8 @@ private fun DiaperTile(
     val colors = MaterialTheme.colorScheme
     val events = LocalXPalette.current.events
     val shape = RoundedCornerShape(28.dp)
-    val border = if (checked) BorderStroke(2.dp, eventColors.strong) else BorderStroke(1.dp, colors.outline)
+    val checkedColor = events.diaper.strong
+    val border = if (checked) BorderStroke(2.dp, checkedColor) else BorderStroke(1.dp, colors.outline)
     val icon = diaperIcon(kind, events)
     Box(
         modifier
@@ -233,7 +235,7 @@ private fun DiaperTile(
         XIcon(
             if (checked) XIcons.checkboxChecked else XIcons.checkbox,
             contentDescription = null,
-            tint = if (checked) eventColors.strong else colors.outline,
+            tint = if (checked) checkedColor else colors.outline,
             size = 24.dp,
             modifier = Modifier
                 .align(Alignment.TopEnd)

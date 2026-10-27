@@ -29,7 +29,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
 
     @Test
     fun feedOpensTheFeedSheetStampedAtTheTap() = homeTest { home ->
-        home.viewModel.onFeed()
+        home.tapFeed()
         val sheet = home.settle().sheet as HomeSheetUi.Feed
         assertEquals(SampleData.NOW_1432, sheet.stamp)
         assertEquals(listOf(0, -5, -10, -15), sheet.chips.map { it.minutes })
@@ -38,7 +38,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
 
     @Test
     fun formulaLogsAnInstantAtStampPlusOffsetAndShowsTheCard() = homeTest { home ->
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.viewModel.onSheetOffset(-10)
         home.settle()
         home.clock.advanceBy(20_000) // the stamp was taken on the first tap
@@ -60,7 +60,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
 
     @Test
     fun foodLogsAnInstant() = homeTest { home ->
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.viewModel.onFeedType(FeedType.FOOD)
         val state = home.settle()
         assertEquals(CardVariant.FeedLogged(FeedType.FOOD), state.card!!.variant)
@@ -71,7 +71,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
 
     @Test
     fun breastStartsATimerAndEndFeedOpensTheSideSheet() = homeTest { home ->
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.viewModel.onFeedType(FeedType.BREAST)
         var state = home.settle()
         val running = state.runningFeed!!
@@ -83,7 +83,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
         home.viewModel.onSheetClosed()
         home.scope.testScheduler.advanceTimeBy(700)
         home.clock.advanceBy(18 * MINUTE)
-        home.viewModel.onFeed()
+        home.tapFeed()
         state = home.settle()
         val side = state.sheet as HomeSheetUi.Side
         assertEquals(running.id, side.feedId)
@@ -95,7 +95,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
     fun aSideEndsTheBreastfeedWithItsDuration() = homeTest { home ->
         val feed = home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
         home.clock.advanceBy(18 * MINUTE)
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.viewModel.onSide(BreastSide.LEFT_THEN_RIGHT)
         val state = home.settle()
 
@@ -111,7 +111,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
     fun sideEndChipsBeforeTheStartAreDisabled() = homeTest { home ->
         home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
         home.clock.advanceBy(7 * MINUTE)
-        home.viewModel.onFeed()
+        home.tapFeed()
         val side = home.settle().sheet as HomeSheetUi.Side
         assertEquals(
             listOf(OffsetChipUi(0, true, true), OffsetChipUi(-5, false, true), OffsetChipUi(-10, false, false)),
@@ -125,7 +125,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
     fun cancellingTheSideSheetKeepsTheFeedRunning() = homeTest { home ->
         home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
         home.clock.advanceBy(5 * MINUTE)
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.settle()
         home.viewModel.onSheetDismiss()
         val state = home.settle()
@@ -138,7 +138,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
     fun aBreastfeedEndedWithinAMinuteIsCancelledAndUndoResumesIt() = homeTest { home ->
         val feed = home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
         home.clock.advanceBy(30_000)
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.viewModel.onSide(BreastSide.LEFT)
         var state = home.settle()
         assertEquals(CardVariant.FeedCancelled(BreastSide.LEFT), state.card!!.variant)
@@ -155,7 +155,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
 
     @Test
     fun breastWhileOneRunsShowsTheFeedingGuard() = homeTest { home ->
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.settle()
         // The watch starts a breastfeed while the sheet is open.
         val other = home.repository.startBreastfeed(SampleData.NOW_1432 - 2 * MINUTE).getOrThrow()
@@ -168,13 +168,13 @@ class HomeFeedTest : HomeViewModelTestBase() {
 
     @Test
     fun theSameFeedTwiceWithinFiveSecondsIsDeduplicated() = homeTest { home ->
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.viewModel.onFeedType(FeedType.FORMULA)
         home.settle()
         home.viewModel.onSheetClosed()
         home.scope.testScheduler.advanceTimeBy(700)
         home.clock.advanceBy(2_000)
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.settle()
         home.clock.advanceBy(1_000)
         // Same stamp window: the sheet was opened 2 s after the first log.
@@ -192,7 +192,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
     @Test
     fun aFeedLoggedDuringASleepOffersEndSleep() = homeTest { home ->
         val sleep = home.repository.startSleep(SampleData.at(13, 50)).getOrThrow()
-        home.viewModel.onFeed()
+        home.tapFeed()
         home.viewModel.onFeedType(FeedType.BREAST)
         var state = home.settle()
         val row = state.card!!.row as CardRow.RunningSleep

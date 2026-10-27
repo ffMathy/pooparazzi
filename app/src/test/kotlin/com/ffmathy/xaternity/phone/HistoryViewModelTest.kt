@@ -139,4 +139,15 @@ class HistoryViewModelTest : CoreTestBase() {
         assertEquals(DayCounts(feeds = 1, pee = 1, poop = 0, sleepMinutes = 2 * 60 + 42), state.counts)
         assertTrue(state.ribbon.sleeps.last().running)
     }
+
+    @Test
+    fun anEntryLoggedElsewhereThisMinuteIsListedAtOnce() = coreTest { core ->
+        val history = core.history()
+        history.current()
+        // 20 s into the minute the watch logs a diaper; History's minute tick has not come yet.
+        core.clock.advanceBy(20_000)
+        val diaper = core.repository.logDiaper(core.clock.now(), pee = true, poop = false, color = null, texture = null)
+        runCurrent()
+        assertEquals(diaper.id, history.current().entries.first().id)
+    }
 }

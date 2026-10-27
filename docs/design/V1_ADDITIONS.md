@@ -121,7 +121,7 @@ The sheet scrolls. It opens with `skipPartiallyExpanded`.
    - **Pee:** icon `pee`.
    - **Poop:** icon `poop`.
    - **Off:** container fill and a 1 dp `outline` border, plus an empty checkbox glyph in the tile's top-right corner.
-   - **On:** `*-container-lit` fill (pee/poop use the diaper lit colour), a 2 dp border in its strong colour, and a checked checkbox glyph in that colour.
+   - **On:** `*-container-lit` fill (pee/poop use the diaper lit colour), a 2 dp border in DIAPER strong, and a checked checkbox glyph in that colour (both tiles alike, as on the watch and the avatars: POOP strong is only 2.4:1 on the lit fill at Night). The pee/poop icon keeps its kind colour.
    - **Semantics:** `Modifier.toggleable(role = Role.Checkbox)`. TalkBack announces "Pee, checkbox, not checked".
 4. **When Poop is on**, two sections expand below it (animated height; reduced motion makes it instant):
    - **Colour** (labelMedium heading): six chips in a wrapping row. Each is 48 dp tall with a 20 dp swatch dot and a label: Yellow, Green, Brown, Black, Red, Pale. They are single-select and **optional**: tapping the selected chip clears it.

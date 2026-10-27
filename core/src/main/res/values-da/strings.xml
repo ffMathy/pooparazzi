@@ -84,9 +84,9 @@
     <string name="receipt_deleted">%1$s slettet</string>
 
     <!-- Guards -->
-    <string name="guard_already_asleep">Sover allerede siden kl. %1$s</string>
-    <string name="guard_already_awake">Allerede vågen siden kl. %1$s</string>
-    <string name="guard_already_feeding">Ammer allerede siden kl. %1$s</string>
+    <string name="guard_already_asleep">Sover allerede – siden kl. %1$s</string>
+    <string name="guard_already_awake">Allerede vågen – siden kl. %1$s</string>
+    <string name="guard_already_feeding">Ammer allerede – siden kl. %1$s</string>
     <string name="guard_already_logged">Allerede registreret kl. %1$s</string>
 
     <!-- Navigation -->
@@ -151,10 +151,12 @@
     <string name="sync_syncing_with_watch">Synkroniserer med ur…</string>
     <string name="sync_syncing_with_phone">Synkroniserer med telefon…</string>
     <!-- Short: the phone top bar has room for about "Synkroniseret med ur · 14:31". -->
-    <string name="sync_saved_on_phone">Gemt lokalt · synkes senere</string>
-    <string name="sync_saved_on_watch">Gemt på uret · synkes senere</string>
+    <string name="sync_saved_on_phone">Gemt · synkroniseres senere</string>
+    <!-- The watch's Logged line holds about 182 dp; "synkroniseres" alone already means "will be synced". -->
+    <string name="sync_saved_on_watch">Gemt på uret · synkroniseres</string>
     <string name="sync_error">Ikke gemt</string>
 
     <!-- "man. 26. okt." -->
+    <string name="format_language">da</string>
     <string name="pattern_weekday_day_month">EEE d. MMM</string>
 </resources>
