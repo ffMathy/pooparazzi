@@ -46,6 +46,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ffmathy.xaternity.core.format.Labels
 import com.ffmathy.xaternity.core.format.rememberFormatters
@@ -71,8 +72,9 @@ import com.ffmathy.xaternity.core.R as CoreR
 fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit) {
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val back by rememberUpdatedState(onBack)
-    val licences by rememberUpdatedState(onOpenLicences)
+    // Only while this screen is resumed: a second tap during a transition must not pop Home or stack Licences twice.
+    val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
+    val licences by rememberUpdatedState(dropUnlessResumed(block = onOpenLicences))
     val actions = remember(viewModel) {
         object : SettingsActions by viewModel {
             override fun onBack() = back()

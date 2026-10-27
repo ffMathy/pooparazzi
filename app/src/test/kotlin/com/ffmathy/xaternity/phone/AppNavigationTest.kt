@@ -46,6 +46,24 @@ class AppNavigationTest {
         compose.onNodeWithText("Settings").assertExists()
     }
 
+    /** A second Back tap while History is still animating out must not pop Home as well (an empty screen). */
+    @Test
+    fun aDoubleTapOnBackReturnsToHomeOnce() {
+        compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
+        compose.onNodeWithText("History").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
+
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.mainClock.autoAdvance = true
+
+        compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Add entry")).fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithText("Feed").assertExists()
+    }
+
     @Test
     fun historyAddsAPastEntryAndSettingsShowTheFontLicences() {
         compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)

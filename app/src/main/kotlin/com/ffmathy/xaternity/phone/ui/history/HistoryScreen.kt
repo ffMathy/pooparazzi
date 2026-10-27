@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ffmathy.xaternity.core.domain.DayCounts
 import com.ffmathy.xaternity.core.format.Formatters
@@ -86,7 +87,8 @@ fun HistoryRoute(onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val edit by editViewModel.state.collectAsStateWithLifecycle()
     rememberEditEffects(editViewModel, onDeleted = viewModel::onEntryDeleted)
-    val back by rememberUpdatedState(onBack)
+    // Only while this screen is resumed: a second tap during the exit transition must not pop Home as well.
+    val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
     val actions = remember(viewModel, editViewModel) {
         object : HistoryActions by viewModel {
             override fun onBack() = back()

@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.dropUnlessResumed
 import com.ffmathy.xaternity.core.ui.icons.XIcons
 import com.ffmathy.xaternity.phone.R
 import com.ffmathy.xaternity.phone.ui.components.XTopBar
@@ -52,7 +53,8 @@ fun LicencesRoute(onBack: () -> Unit) {
     val licences by produceState(emptyList<FontLicence>(), context) {
         value = withContext(Dispatchers.IO) { readLicences(context) }
     }
-    LicencesScreen(licences, onBack)
+    // Only while this screen is resumed: a second tap during the exit transition must not pop Settings as well.
+    LicencesScreen(licences, dropUnlessResumed(block = onBack))
 }
 
 @Composable

@@ -404,9 +404,10 @@ private fun ValidationSlot(state: EditUiState, formatters: Formatters, actions: 
     Row(
         Modifier
             .fillMaxWidth()
+            // Tagged with its padding, so scrolling to the slot reaches the end of the form.
+            .testTag(EditTags.VALIDATION)
             .padding(top = 12.dp, bottom = 8.dp)
             .heightIn(min = 48.dp)
-            .testTag(EditTags.VALIDATION)
             .semantics { liveRegion = LiveRegionMode.Polite },
         verticalAlignment = Alignment.CenterVertically,
     ) {
