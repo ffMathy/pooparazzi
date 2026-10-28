@@ -37,8 +37,8 @@ import com.ffmathy.pooparazzi.phone.system.inAppLanguage
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
- * The 2×1 home-screen widget (P5, DESIGN_SPEC §3.3.6): Feed and the sleep toggle. Feed opens the app's Feed sheet
- * (End feed, while a breastfeed runs, opens the Side sheet); the toggle logs in place.
+ * The 2×1 home-screen widget (P5, DESIGN_SPEC §3.3.6): Feed and the sleep toggle. Feed opens the app's Feed sheet;
+ * the toggle logs in place.
  */
 class QuickWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(QuickLayout.Sizes)
@@ -82,40 +82,21 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
     WidgetSurface(colors, snapshot.backgroundLaunch, GlanceModifier.padding(12.dp)) {
         Row(GlanceModifier.fillMaxSize()) {
             // The mockup's Feed is the narrower button (52 of 147 dp), widened to its label ("Måltid") so the word
-            // never breaks. End feed may take two lines ("End" / "feed"), so it is as wide as its longest word: the
-            // sleep button keeps the rest of the row and its one-line label.
+            // never breaks: the sleep button keeps the rest of the row and its one-line label.
             val feedLabel = strings.string(CoreR.string.kind_feed)
-            val endFeedLabel = strings.string(CoreR.string.action_end_feed)
-            val feedDp: Dp? = when {
-                !layout.narrowFeed -> null
-                snapshot.feeding -> maxOf(52.dp, endFeedLabel.split(' ').maxOf { measure.width(it, QuickLabelSize) } + 8.dp + 12.dp)
-                else -> maxOf(52.dp, measure.width(feedLabel, QuickLabelSize) + 16.dp)
-            }
+            val feedDp: Dp? = if (layout.narrowFeed) maxOf(52.dp, measure.width(feedLabel, QuickLabelSize) + 16.dp) else null
             val feedWidth = feedDp?.let { GlanceModifier.width(it) } ?: GlanceModifier.defaultWeight()
             // The sleep button's room beside a fixed-width Feed (12 dp padding each side, 8 dp gap).
             val sleepRoom = feedDp?.let { LocalSize.current.width - 24.dp - 8.dp - it }
             val feed = colors.feed
-            if (snapshot.feeding) {
-                WidgetButton(
-                    modifier = feedWidth.fillMaxHeight(),
-                    fill = feed.containerLit,
-                    border = feed.strong,
-                    radius = 20.dp,
-                    action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Side)),
-                    description = strings.string(R.string.cd_end_feed_choose_side),
-                ) {
-                    QuickFace(XDrawables.breast, feed.strong, endFeedLabel, feed.onContainer, layout.labels, labelPadding = 4.dp)
-                }
-            } else {
-                WidgetButton(
-                    modifier = feedWidth.fillMaxHeight(),
-                    fill = feed.container,
-                    radius = 20.dp,
-                    action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Feed)),
-                    description = strings.string(R.string.widget_cd_log_feed),
-                ) {
-                    QuickFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, layout.labels, labelPadding = 4.dp)
-                }
+            WidgetButton(
+                modifier = feedWidth.fillMaxHeight(),
+                fill = feed.container,
+                radius = 20.dp,
+                action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Feed)),
+                description = strings.string(R.string.widget_cd_log_feed),
+            ) {
+                QuickFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, layout.labels, labelPadding = 4.dp)
             }
             Spacer(GlanceModifier.width(8.dp))
             val sleep = colors.sleep
@@ -124,7 +105,7 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
             val label = when {
                 asleep -> strings.string(CoreR.string.action_woke_up)
                 layout.shortSleepLabel -> strings.string(CoreR.string.kind_sleep)
-                // Beside "Afslut amning" there is no room for "Start søvn" on one line: "Søvn", like a narrow widget.
+                // Where there is no room for "Start søvn" on one line beside Feed: "Søvn", like a narrow widget.
                 sleepRoom != null && !measure.fits(startSleep, QuickLabelSize, sleepRoom - 16.dp) -> strings.string(CoreR.string.kind_sleep)
                 else -> startSleep
             }

@@ -3,7 +3,9 @@ package com.ffmathy.pooparazzi.core.domain
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
+import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.FeedType
+import com.ffmathy.pooparazzi.core.model.normalized
 import com.ffmathy.pooparazzi.core.model.durationMillis
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sample.SampleData.NOW_0312
@@ -79,7 +81,6 @@ class SummaryAt1432Test {
         state as LampState.FeedIdle
         assertEquals("sample-formula-1222", state.lastFeed?.id)
         assertEquals(130L, state.elapsedMinutes)
-        assertNull(summary.runningFeed)
     }
 
     @Test
@@ -179,20 +180,20 @@ class SummaryAt0312Test {
 }
 
 class SummaryAt1450Test {
-    private val summary = summarize(SampleData.scenarioWithRunningFeed(), NOW_1450, ZONE)
+    private val summary = summarize(SampleData.scenarioWithRecentFeed(), NOW_1450, ZONE)
 
     @Test
-    fun breastfeedingFor18mSince1432() {
-        val feed = summary.runningFeed!!
-        assertEquals(at(14, 32), feed.startMillis)
+    fun aBreastFeedIsAnInstantSoTheLampStaysIdle() {
         val state = lampState(summary)
-        assertTrue(state is LampState.FeedRunning)
+        assertTrue(state is LampState.FeedIdle)
+        state as LampState.FeedIdle
+        assertEquals(feedId(), state.lastFeed?.id)
         assertEquals(18L, state.elapsedMinutes)
-        assertEquals(18 * MINUTE, feed.durationMillis(NOW_1450))
+        assertEquals(0L, summary.lastFeed!!.durationMillis(NOW_1450))
     }
 
     @Test
-    fun timeSinceLastFeedCountsFromTheRunningFeedsStart() {
+    fun timeSinceLastFeedCountsFromTheBreastFeed() {
         assertEquals(feedId(), summary.lastFeed?.id)
         assertEquals(18 * MINUTE, summary.sinceLastFeedMillis)
     }
@@ -204,21 +205,38 @@ class SummaryAt1450Test {
     }
 
     @Test
-    fun runningFeedTakesPriorityOverARunningSleep() {
-        val withSleep = SampleData.scenarioWithRunningFeed() + Entry.sleep(at(14, 40), id = "nap")
+    fun aRunningSleepAfterABreastFeedShowsOnTheLamp() {
+        val withSleep = SampleData.scenarioWithRecentFeed() + Entry.sleep(at(14, 40), id = "nap")
         val state = lampState(summarize(withSleep, NOW_1450, ZONE))
-        assertTrue(state is LampState.FeedRunning)
+        assertTrue(state is LampState.SleepRunning)
     }
 
     @Test
-    fun runningBreastfeedOnTheRibbon() {
-        val bar = summary.ribbon(TODAY).breastfeeds.last()
-        assertTrue(bar.running)
-        assertEquals(872f / 1440f, bar.start, 1e-6f)
-        assertEquals(890f / 1440f, bar.end, 1e-6f)
+    fun breastFeedsAreTickMarksOnTheRibbon() {
+        val marks = summary.ribbon(TODAY).breastfeeds
+        assertEquals(listOf("sample-breast-0140", "sample-breast-0800", feedId()), marks.map { it.entry.id })
+        assertEquals(872f / 1440f, marks.last().at, 1e-6f)
     }
 
-    private fun feedId() = SampleData.runningBreastfeed().id
+    @Test
+    fun aLegacyRunningBreastfeedDoesNotRunOrBlockAnything() {
+        // Stored by an older version as a running interval (no end), then read back through normalized().
+        val legacy = Entry(
+            id = "legacy", kind = EntryKind.FEED, startMillis = at(14, 0), feedType = FeedType.BREAST, updatedAtMillis = at(14, 0),
+        ).normalized()
+        val legacyEnded = Entry(
+            id = "legacy-ended", kind = EntryKind.FEED, startMillis = at(13, 50), endMillis = at(14, 5),
+            feedType = FeedType.BREAST, breastSide = BreastSide.LEFT, updatedAtMillis = at(14, 5),
+        ).normalized()
+        val s = summarize(SampleData.scenario() + legacy + legacyEnded + Entry.sleep(at(14, 30), id = "nap"), NOW_1450, ZONE)
+        assertTrue(lampState(s) is LampState.SleepRunning)
+        assertEquals("legacy", s.lastFeed?.id)
+        assertNull(legacyEnded.endMillis)
+        val marks = s.ribbon(TODAY).breastfeeds.map { it.entry.id }
+        assertTrue(marks.containsAll(listOf("legacy", "legacy-ended")))
+    }
+
+    private fun feedId() = SampleData.recentBreastfeed().id
 }
 
 class SummaryEdgeTest {

@@ -71,7 +71,7 @@ internal object HomeLampDefaults {
 
 /**
  * The Lamp with its text (DESIGN_SPEC §2.3–2.4, V1_ADDITIONS §2.1): FEED glow/disc when idle with the last feed's
- * type icon and "Last fed"; a running breastfeed (priority) or sleep with its orbit, "since …" and "Adjust start".
+ * type icon and "Last fed"; a running sleep with its orbit, "since …" and "Adjust start".
  * The digits are never a tap target; the text is one TalkBack stop with a spoken form, never a live region.
  */
 @Composable
@@ -214,14 +214,6 @@ private fun lampTexts(lamp: LampState, zone: ZoneId, size: Dp, formatters: Forma
             icon = XIcons.sleep,
             label = stringResource(CoreR.string.status_asleep),
             startMillis = lamp.sleep.startMillis,
-            elapsedMillis = lamp.elapsedMillis,
-            zone = zone,
-            formatters = formatters,
-        )
-        is LampState.FeedRunning -> runningTexts(
-            icon = XIcons.breast,
-            label = stringResource(CoreR.string.status_breastfeeding),
-            startMillis = lamp.feed.startMillis,
             elapsedMillis = lamp.elapsedMillis,
             zone = zone,
             formatters = formatters,

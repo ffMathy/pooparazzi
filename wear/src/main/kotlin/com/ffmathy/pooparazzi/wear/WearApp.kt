@@ -97,7 +97,7 @@ class WearApp : Application() {
 }
 
 /**
- * Restores the Ongoing Activity of a running sleep or breastfeed after a reboot (overnight OS updates fall in the
+ * Restores the Ongoing Activity of a running sleep after a reboot (overnight OS updates fall in the
  * sleep window) or an app update: notifications are gone then, and nothing else would start the process until the
  * user, a tile or a sync happens to. Not exported: only the system sends these.
  */

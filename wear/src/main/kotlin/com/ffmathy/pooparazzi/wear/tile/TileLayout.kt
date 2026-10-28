@@ -112,8 +112,7 @@ internal val Color.layout: LayoutColor get() = toArgb().argb
  * The tile (DESIGN_SPEC §3.6, §10.9; V1_ADDITIONS §2.2) as a Material 3 `primaryLayout`:
  * - **title**: the guard, the just-logged confirmation ("Pee 14:32 · Undo"), "Asleep 1h 07m", the baby's name, or the
  *   last diaper; hidden below 225 dp;
- * - **Row A**: Feed (opens the Feed type screen) with the time since the last feed, or End feed (opens the Side
- *   screen) with the running duration while a breastfeed runs;
+ * - **Row A**: Feed (opens the Feed type screen) with the time since the last feed;
  * - **Row B**: Pee | Poop | Both, one tap each;
  * - **edge**: the sleep toggle.
  *
@@ -301,23 +300,17 @@ private class TileContent(
     )
 
     /**
-     * Row A: Feed (idle) or End feed (a breastfeed runs). Both open the app; feeds are never logged from the tile.
+     * Row A: Feed opens the app's Feed type screen; feeds are never logged from the tile.
      * Without a title (below 225 dp) its secondary label shows a just-logged confirmation for its 10 s.
      */
     private fun rowA(withTitle: Boolean): LayoutElement = with(scope) {
         val feed = events.feed
-        val running = state.runningFeed
         val lastFeed = state.lastFeed
         val label: String
         val secondary: LayoutString
         val spoken: TimeText?
         val spokenStatic: String
-        if (running != null) {
-            label = res.getString(CoreR.string.action_end_feed)
-            secondary = text.duration(running.startMillis, now).layout(TEXT_ALIGN_START)
-            spoken = text.template(SurfaceText.Template.of(res, R.string.tile_cd_end_feed), text.spokenDuration(running.startMillis, now))
-            spokenStatic = spoken.static
-        } else if (lastFeed != null) {
+        if (lastFeed != null) {
             label = res.getString(CoreR.string.kind_feed)
             secondary = text.ago(lastFeed.startMillis, now).layout(TEXT_ALIGN_START)
             spoken = text.template(SurfaceText.Template.of(res, R.string.tile_cd_feed), text.spokenAgo(lastFeed.startMillis, now))
@@ -346,15 +339,15 @@ private class TileContent(
             ).layoutString
         } ?: secondary
         button(
-            onClick = openApp(if (running != null) MainActivity.OPEN_END_FEED else MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
-            modifier = if (running != null) description.border(LIT_BORDER, feed.strong.layout) else description,
-            iconContent = { glyph(if (running != null) XDrawables.breast else XDrawables.feed, feed.strong, ROW_A_ICON) },
+            onClick = openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
+            modifier = description,
+            iconContent = { glyph(XDrawables.feed, feed.strong, ROW_A_ICON) },
             labelContent = { plainText(label.layoutString, Typography.LABEL_MEDIUM, feed.onContainer.layout, start = true) },
             secondaryLabelContent = { plainText(shownSecondary, Typography.LABEL_SMALL, feed.onContainer.layout, start = true) },
             width = expand(),
             height = weight(1f),
             colors = ButtonColors(
-                containerColor = (if (running != null) feed.containerLit else feed.container).layout,
+                containerColor = feed.container.layout,
                 iconColor = feed.strong.layout,
                 labelColor = feed.onContainer.layout,
                 secondaryLabelColor = feed.onContainer.layout,

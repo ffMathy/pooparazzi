@@ -20,7 +20,7 @@ object EditSamples {
         return edit(sleep, EditDraft.of(sleep).copy(start = sleep.startMillis - 5 * MINUTE))
     }
 
-    /** The 08:00 – 08:14 breastfeed (Right → Left): type, start, end, the sides group and the duration. */
+    /** The 08:00 breast feed (Right → Left): type, one time block and the sides group. */
     fun breastfeed(): EditUiState {
         val feed = entry("sample-breast-0800")
         return edit(feed, EditDraft.of(feed))

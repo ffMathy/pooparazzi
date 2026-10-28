@@ -226,30 +226,18 @@ class MainViewModelTest {
     }
 
     @Test
-    fun breastStartsTheTimerAndReturnsToMain() = test {
+    fun breastOpensSideWithTheFeedTypeScreensTimeAndLogsNothingYet() = test {
         vm.beginFeed()
+        vm.cycleFeedOffset() // −5m
         vm.chooseFeedType(FeedType.BREAST).join()
-        val state = awaitMain { it.runningFeed != null }
-        assertEquals(MainMode.FEEDING, state.mode)
-        assertEquals(SampleData.NOW_1432, state.runningFeed?.startMillis)
-        awaitEvent(WearEvent.BackToMain)
-        assertEquals(listOf(XHaptic.TOGGLE_ON), haptics())
-        assertNull("no Logged for a started feed", vm.receipt.value)
-    }
-
-    @Test
-    fun aSecondBreastfeedShowsTheFeedingGuard() = test {
-        vm.beginFeed()
-        vm.chooseFeedType(FeedType.BREAST).join()
-        clock.advanceBy(5 * minute)
-        vm.beginFeed()
-        vm.chooseFeedType(FeedType.BREAST).join()
-
-        val state = awaitMain { it.guard != null }
-        assertEquals(GuardKind.ALREADY_FEEDING, state.endFeedGuard)
-        assertEquals(GuardTarget.END_FEED, state.guard?.target)
-        assertEquals(1, stored().count { it.isRunning })
-        assertEquals(XHaptic.REJECT, haptics().last())
+        awaitEvent(WearEvent.ShowSide)
+        val draft = present(vm.sideDraft.value)
+        assertEquals(SampleData.NOW_1432 - 5 * minute, draft.at)
+        assertEquals(emptyList<Breast>(), draft.ticks)
+        assertTrue("nothing is logged before Save", stored().isEmpty())
+        assertNull(vm.receipt.value)
+        assertNotNull("swiping back keeps the Feed type screen's time", vm.feedDraft.value)
+        assertEquals(MainMode.IDLE, vm.main.value.mode)
     }
 
     @Test
@@ -266,130 +254,114 @@ class MainViewModelTest {
         assertEquals(1, events.count { it == WearEvent.ShowLogged })
     }
 
-    @Test
-    fun aDoubleTapOnBreastStartsOneFeedWithoutTheGuard() = test {
-        vm.beginFeed()
-        val first = vm.chooseFeedType(FeedType.BREAST)
-        val second = vm.chooseFeedType(FeedType.BREAST)
-        first.join()
-        second.join()
-        assertEquals(1, stored().size)
-        assertEquals(listOf(XHaptic.TOGGLE_ON), haptics())
-        assertNull(vm.main.value.guard)
-    }
-
-    // ---- Breastfeed end ------------------------------------------------------------------------
+    // ---- Breast side -----------------------------------------------------------------------------
 
     @Test
-    fun endFeedAsksForTheSideAndEndsWithIt() = test {
+    fun saveOnSideLogsABreastFeedInstantWithTheTickOrder() = test {
         vm.beginFeed()
         vm.chooseFeedType(FeedType.BREAST).join()
-        clock.set(SampleData.NOW_1450)
-        vm.requestEndFeed().join()
-        awaitEvent(WearEvent.ShowSide)
-        val draft = present(vm.sideDraft.value)
-        assertEquals(SampleData.NOW_1450, draft.endAt)
-
-        clock.advanceBy(10_000) // Ticking the sides takes a moment; the end stays at the "End feed" tap.
+        clock.advanceBy(10_000) // Ticking the sides takes a moment; the time stays at the Feed tap.
         vm.tickSide(Breast.LEFT)
         vm.tickSide(Breast.RIGHT)
         assertEquals(BreastSide.LEFT_THEN_RIGHT, present(vm.sideDraft.value).side)
-        vm.endFeed().join()
+        vm.saveBreastfeed().join()
+
         val receipt = present(vm.receipt.value)
-        assertEquals(ReceiptKind.FEED_ENDED, receipt.kind)
-        assertEquals(SampleData.NOW_1450, receipt.entry.endMillis)
+        assertEquals(ReceiptKind.FEED_LOGGED, receipt.kind)
+        assertEquals(FeedType.BREAST, receipt.entry.feedType)
+        assertEquals(SampleData.NOW_1432, receipt.entry.startMillis)
+        assertNull("a breast feed has no end", receipt.entry.endMillis)
         assertEquals(BreastSide.LEFT_THEN_RIGHT, receipt.entry.breastSide)
+        assertEquals(Undo.Delete(receipt.entry.id), receipt.undo)
         awaitEvent(WearEvent.ShowLogged)
-        assertEquals(XHaptic.TOGGLE_OFF, haptics().last())
-
-        val state = awaitMain { it.runningFeed == null }
-        assertEquals(MainMode.IDLE, state.mode)
+        assertEquals(XHaptic.CONFIRM, haptics().last())
         assertEquals(receipt.entry, stored().single())
-    }
-
-    @Test
-    fun endFeedWithinTwoSecondsOfTheStartShowsTheGuard() = test {
-        vm.beginFeed()
-        vm.chooseFeedType(FeedType.BREAST).join()
-        clock.advanceBy(1_000)
-        vm.requestEndFeed().join()
-        val state = awaitMain { it.guard != null }
-        assertEquals(GuardKind.ALREADY_FEEDING, state.endFeedGuard)
         assertNull(vm.sideDraft.value)
-        assertFalse(WearEvent.ShowSide in events)
-    }
+        assertNull(vm.feedDraft.value)
 
-    @Test
-    fun aBreastfeedUnderAMinuteIsCancelled() = test {
-        vm.beginFeed()
-        vm.chooseFeedType(FeedType.BREAST).join()
-        clock.advanceBy(30_000)
-        vm.requestEndFeed().join()
-        vm.tickSide(Breast.LEFT)
-        vm.endFeed().join()
-        assertEquals(ReceiptKind.FEED_CANCELLED, vm.receipt.value?.kind)
-        assertTrue(stored().isEmpty())
-    }
-
-    @Test
-    fun undoAfterFeedEndedResumesTheBreastfeed() = test {
-        vm.beginFeed()
-        vm.chooseFeedType(FeedType.BREAST).join()
-        clock.set(SampleData.NOW_1450)
-        vm.requestEndFeed().join()
-        vm.tickSide(Breast.RIGHT)
-        vm.endFeed().join()
-        vm.undo().join()
-
-        awaitEvent(WearEvent.ShowUndone)
-        val running = stored().single()
-        assertTrue(running.isRunning)
-        assertNull(running.breastSide)
-        assertNull(vm.receipt.value)
-        assertEquals(XHaptic.REJECT, haptics().last())
-    }
-
-    @Test
-    fun aDoubleTapOnASideEndsTheFeedOnceAndKeepsFeedEnded() = test {
-        vm.beginFeed()
-        vm.chooseFeedType(FeedType.BREAST).join()
-        clock.set(SampleData.NOW_1450)
-        vm.requestEndFeed().join()
-        awaitEvent(WearEvent.ShowSide)
-
-        vm.tickSide(Breast.LEFT)
-        vm.tickSide(Breast.RIGHT)
-        val first = vm.endFeed()
-        val second = vm.endFeed()
-        first.join()
-        second.join()
-
-        // "Feed ended" stays with its Undo: no Reject, no return to Main closing it.
-        assertEquals(ReceiptKind.FEED_ENDED, present(vm.receipt.value).kind)
-        assertEquals(listOf(XHaptic.TOGGLE_ON, XHaptic.TOGGLE_OFF), haptics())
-        val all = awaitEvent(WearEvent.ShowLogged)
-        assertFalse(WearEvent.BackToMain in all.subList(all.indexOf(WearEvent.ShowLogged), all.size))
-        assertEquals(BreastSide.LEFT_THEN_RIGHT, stored().single().breastSide)
+        val state = awaitMain { it.lastFeed != null }
+        assertEquals(MainMode.IDLE, state.mode)
+        assertEquals(receipt.entry.id, state.lastFeed?.id)
     }
 
     @Test
     fun theSideIsTheTickOrderAndOptional() = test {
         vm.beginFeed()
         vm.chooseFeedType(FeedType.BREAST).join()
-        clock.set(SampleData.NOW_1450)
-        vm.requestEndFeed().join()
         vm.tickSide(Breast.RIGHT)
         vm.tickSide(Breast.LEFT)
         assertEquals(BreastSide.RIGHT_THEN_LEFT, present(vm.sideDraft.value).side)
         vm.tickSide(Breast.RIGHT)
         vm.tickSide(Breast.LEFT)
         assertEquals(emptyList<Breast>(), present(vm.sideDraft.value).ticks)
-        vm.endFeed().join()
+        vm.saveBreastfeed().join()
 
         val receipt = present(vm.receipt.value)
-        assertEquals(ReceiptKind.FEED_ENDED, receipt.kind)
-        assertNull("nothing ticked: only the times", receipt.entry.breastSide)
-        assertEquals(SampleData.NOW_1450, stored().single().endMillis)
+        assertEquals(ReceiptKind.FEED_LOGGED, receipt.kind)
+        assertNull("nothing ticked: only the time", receipt.entry.breastSide)
+        assertNull(stored().single().endMillis)
+    }
+
+    @Test
+    fun aDoubleTapOnSaveLogsOnce() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BREAST).join()
+        vm.tickSide(Breast.LEFT)
+        val first = vm.saveBreastfeed()
+        val second = vm.saveBreastfeed()
+        first.join()
+        second.join()
+        assertEquals(1, stored().size)
+        assertFalse(present(vm.receipt.value).duplicate)
+        assertEquals(listOf(XHaptic.CONFIRM), haptics())
+    }
+
+    @Test
+    fun aRepeatBreastFeedWithinFiveSecondsShowsAlreadyLogged() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BREAST).join()
+        vm.saveBreastfeed().join()
+        clock.advanceBy(2_000)
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BREAST).join()
+        vm.tickSide(Breast.RIGHT)
+        vm.saveBreastfeed().join()
+        assertTrue(present(vm.receipt.value).duplicate)
+        assertEquals(1, stored().size)
+    }
+
+    @Test
+    fun breastFeedsNeverRunOrBlockTheNextOne() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BREAST).join()
+        vm.saveBreastfeed().join()
+        clock.advanceBy(5 * minute)
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BREAST).join()
+        vm.saveBreastfeed().join()
+        assertEquals(2, stored().size)
+        assertTrue(stored().none { it.isRunning })
+        assertNull(vm.main.value.guard)
+    }
+
+    @Test
+    fun undoRemovesTheBreastFeed() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BREAST).join()
+        vm.tickSide(Breast.RIGHT)
+        vm.saveBreastfeed().join()
+        vm.undo().join()
+        awaitEvent(WearEvent.ShowUndone)
+        assertTrue(stored().isEmpty())
+        assertNull(vm.receipt.value)
+    }
+
+    @Test
+    fun saveWithoutBreastDoesNothing() = test {
+        vm.saveBreastfeed().join()
+        vm.tickSide(Breast.LEFT)
+        assertNull(vm.sideDraft.value)
+        assertTrue(stored().isEmpty())
     }
 
     @Test

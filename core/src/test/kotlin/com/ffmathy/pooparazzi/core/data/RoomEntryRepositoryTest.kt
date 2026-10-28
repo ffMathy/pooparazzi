@@ -109,9 +109,9 @@ class RoomEntryRepositoryTest {
         val ended = (repo.endSleep(sleep.id, now) as EndResult.Ended).entry
         // The other device already ended it: "Already awake since …".
         assertEquals(EndResult.NotRunning(ended), repo.endSleep(sleep.id, now))
-        // A sleep id is not a breastfeed.
-        val running = repo.startSleep(now).getOrThrow()
-        assertTrue(repo.endBreastfeed(running.id, now, BreastSide.LEFT) is EndResult.NotRunning)
+        // A breastfeed is not a sleep (and never runs).
+        val feed = repo.logFeed(FeedType.BREAST, now, BreastSide.LEFT)
+        assertEquals(EndResult.NotRunning(feed), repo.endSleep(feed.id, now))
     }
 
     @Test
@@ -134,32 +134,71 @@ class RoomEntryRepositoryTest {
     // ---- Breastfeeds --------------------------------------------------------------------------
 
     @Test
-    fun breastfeedRunsWithoutSideAndEndsWithOne() = test {
-        val feed = repo.startBreastfeed(now - 18 * minute).getOrThrow()
+    fun breastfeedIsAnInstantWithAnOptionalSideOrder() = test {
+        val feed = repo.logFeed(FeedType.BREAST, now - 5 * minute, BreastSide.RIGHT_THEN_LEFT)
         assertEquals(FeedType.BREAST, feed.feedType)
-        assertNull(feed.breastSide)
-        assertTrue(feed.isRunning)
-
-        val ended = repo.endBreastfeed(feed.id, now, BreastSide.LEFT_THEN_RIGHT) as EndResult.Ended
-        assertEquals(BreastSide.LEFT_THEN_RIGHT, ended.entry.breastSide)
-        assertEquals(now, ended.entry.endMillis)
-        assertEquals(BreastSide.LEFT_THEN_RIGHT, repo.get(feed.id)!!.breastSide)
+        assertEquals(BreastSide.RIGHT_THEN_LEFT, feed.breastSide)
+        assertEquals(now - 5 * minute, feed.startMillis)
+        assertNull(feed.endMillis)
+        assertFalse(feed.isRunning)
+        assertEquals(feed, repo.get(feed.id))
+        assertEquals(feed, sync.pushed.last())
+        // Ticking nothing records only the time.
+        val noSide = repo.logFeed(FeedType.BREAST, now - 30 * minute)
+        assertNull(noSide.breastSide)
+        // A side can be added (and removed again) later; an end time never.
+        assertEquals(BreastSide.RIGHT, repo.update(noSide.copy(breastSide = BreastSide.RIGHT)).breastSide)
+        assertNull(repo.update(repo.get(noSide.id)!!.copy(breastSide = null)).breastSide)
+        val withEnd = assertThrows(InvalidEntryException::class.java) {
+            runBlocking { repo.update(feed.copy(endMillis = now)) }
+        }
+        assertEquals(EntryViolation.INSTANT_HAS_END, withEnd.violation)
     }
 
     @Test
-    fun breastfeedSideIsOptional() = test {
-        val feed = repo.startBreastfeed(now - 18 * minute).getOrThrow()
-        // Ending with nothing ticked records only the times.
-        val ended = (repo.endBreastfeed(feed.id, now, side = null) as EndResult.Ended).entry
-        assertNull(ended.breastSide)
-        assertEquals(now, repo.get(feed.id)!!.endMillis)
-        // A side can be added (and removed again) later; a running feed still cannot have one.
-        assertEquals(BreastSide.RIGHT, repo.update(ended.copy(breastSide = BreastSide.RIGHT)).breastSide)
-        assertNull(repo.update(repo.get(feed.id)!!.copy(breastSide = null)).breastSide)
-        val sideWhileRunning = assertThrows(InvalidEntryException::class.java) {
-            runBlocking { repo.update(ended.copy(endMillis = null, breastSide = BreastSide.LEFT)) }
-        }
-        assertEquals(EntryViolation.SIDE_WHILE_RUNNING, sideWhileRunning.violation)
+    fun breastfeedsAreDeduplicatedLikeOtherFeeds() = test {
+        val first = repo.logFeedChecked(FeedType.BREAST, now, BreastSide.LEFT)
+        assertTrue(first is LogResult.Logged)
+        // The same type within 5 s is one entry (whatever the side), apart from other types at the same time.
+        val again = repo.logFeedChecked(FeedType.BREAST, now - 4_000, BreastSide.RIGHT)
+        assertTrue(again is LogResult.Duplicate)
+        assertEquals(first.entry, again.entry)
+        assertTrue(repo.logFeedChecked(FeedType.FORMULA, now) is LogResult.Logged)
+        assertTrue(repo.logFeedChecked(FeedType.BREAST, now - 5_000) is LogResult.Logged)
+        // Breastfeeds never block each other or a sleep.
+        assertTrue(repo.startSleep(now - minute).isSuccess)
+        assertTrue(repo.logFeedChecked(FeedType.BREAST, now - 10 * minute) is LogResult.Logged)
+    }
+
+    @Test
+    fun legacyTimedBreastfeedsReadAsInstantsAndBlockNothing() = test {
+        // Rows written by an older version: one ended (with a side) and one still "running".
+        val dao = db.entryDao()
+        val ended = Entry(
+            id = "legacy-ended", kind = com.ffmathy.pooparazzi.core.model.EntryKind.FEED, startMillis = now - 60 * minute,
+            endMillis = now - 42 * minute, feedType = FeedType.BREAST, breastSide = BreastSide.LEFT_THEN_RIGHT,
+            updatedAtMillis = now - 42 * minute,
+        )
+        val running = ended.copy(id = "legacy-running", startMillis = now - 20 * minute, endMillis = null, breastSide = null)
+        dao.write(EntryEntity.from(ended, pendingSync = false))
+        dao.write(EntryEntity.from(running, pendingSync = false))
+
+        val read = repo.observeEntries().first().associateBy { it.id }
+        assertEquals(Entry.breastfeed(now - 60 * minute, BreastSide.LEFT_THEN_RIGHT, id = "legacy-ended", updatedAtMillis = now - 42 * minute), read["legacy-ended"])
+        assertNull(read["legacy-running"]!!.endMillis)
+        assertFalse(read["legacy-running"]!!.isRunning)
+        // Nothing is blocked: a new breastfeed and a sleep both log.
+        assertTrue(repo.logFeedChecked(FeedType.BREAST, now, BreastSide.LEFT) is LogResult.Logged)
+        assertTrue(repo.startSleep(now - minute).isSuccess)
+        // Editing a legacy entry writes it back as an instant.
+        val edited = repo.update(read.getValue("legacy-ended").copy(breastSide = BreastSide.RIGHT))
+        assertNull(edited.endMillis)
+        assertNull(dao.get("legacy-ended")!!.endMillis)
+
+        // The same from the other device (an older app pushing a timed breastfeed) merges as an instant.
+        val remote = ended.copy(id = "remote-legacy", updatedAtMillis = now)
+        assertTrue(repo.applyRemote(remote))
+        assertEquals(remote.copy(endMillis = null), repo.get("remote-legacy"))
     }
 
     @Test
@@ -179,23 +218,6 @@ class RoomEntryRepositoryTest {
         assertNull(repo.update(repo.get(feed.id)!!.copy(feedType = null)).feedType)
     }
 
-    @Test
-    fun oneBreastfeedAtATimeButItMayOverlapASleep() = test {
-        repo.startSleep(now - 30 * minute).getOrThrow()
-        val feed = repo.startBreastfeed(now - 5 * minute).getOrThrow()
-        val second = repo.startBreastfeed(now).exceptionOrNull() as AlreadyRunningException
-        assertEquals(feed, second.running)
-    }
-
-    @Test
-    fun shortBreastfeedIsDiscarded() = test {
-        val feed = repo.startBreastfeed(now - 30_000).getOrThrow()
-        val result = repo.endBreastfeed(feed.id, now, BreastSide.LEFT) as EndResult.Discarded
-        assertTrue(result.entry.deleted)
-        assertEquals(BreastSide.LEFT, result.entry.breastSide)
-        assertTrue(repo.observeEntries().first().isEmpty())
-    }
-
     // ---- Instant feeds and diapers ------------------------------------------------------------
 
     @Test
@@ -204,7 +226,6 @@ class RoomEntryRepositoryTest {
         val food = repo.logFeed(FeedType.FOOD, now - 5 * minute)
         assertNull(formula.endMillis)
         assertEquals(FeedType.FOOD, food.feedType)
-        assertThrows(IllegalArgumentException::class.java) { runBlocking { repo.logFeed(FeedType.BREAST, now) } }
     }
 
     @Test
@@ -299,7 +320,7 @@ class RoomEntryRepositoryTest {
 
     @Test
     fun addPastEntry() = test {
-        val past = Entry.breastfeed(now - 60 * minute, now - 45 * minute, BreastSide.LEFT)
+        val past = Entry.breastfeed(now - 60 * minute, BreastSide.LEFT)
         val added = repo.add(past)
         assertEquals(past.copy(updatedAtMillis = now), added)
         assertThrows(IllegalArgumentException::class.java) { runBlocking { repo.add(past) } }
@@ -367,10 +388,10 @@ class RoomEntryRepositoryTest {
 
     @Test
     fun applyRemoteAcceptsTheMinimalEntries() = test {
-        // A plain diaper change, a feed with just its time and a breastfeed ended without a side.
+        // A plain diaper change, a feed with just its time and a breastfeed without a side.
         val plain = Entry.diaper(now, pee = false, poop = false, id = "plain")
         val untyped = Entry.feed(null, now - minute, id = "untyped")
-        val noSide = Entry.breastfeed(now - 30 * minute, now - 10 * minute, side = null, id = "no-side")
+        val noSide = Entry.breastfeed(now - 30 * minute, side = null, id = "no-side")
         assertEquals(3, repo.applyRemoteAll(listOf(plain, untyped, noSide)))
         assertEquals(plain, repo.get("plain"))
         assertEquals(untyped, repo.get("untyped"))

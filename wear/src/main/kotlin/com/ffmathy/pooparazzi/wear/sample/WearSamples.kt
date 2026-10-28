@@ -1,7 +1,6 @@
 package com.ffmathy.pooparazzi.wear.sample
 
 import com.ffmathy.pooparazzi.core.domain.summarize
-import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -29,7 +28,7 @@ import com.ffmathy.pooparazzi.wear.tile.TileUiState
 
 /**
  * Screen states for the reference scenario (V1_ADDITIONS §6) at its snapshots: 14:32 idle, 03:12 asleep,
- * 14:50 breastfeeding. Used by previews and screenshot tests.
+ * 14:50 after the 14:32 breast feed. Used by previews and screenshot tests.
  */
 object WearSamples {
     val zone = SampleData.ZONE
@@ -43,13 +42,14 @@ object WearSamples {
     fun mainAsleep(): MainUiState =
         MainUiState.from(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, zone), guard = null, sync = synced0311)
 
-    /** Breastfeeding since 14:32, seen at 14:50 ("Breastfeeding 18m"). */
-    fun mainFeeding(): MainUiState =
-        MainUiState.from(summarize(SampleData.scenarioWithRunningFeed(), SampleData.NOW_1450, zone), guard = null, sync = synced1431)
+    /** 14:50, 18 minutes after the 14:32 breast feed (Left → Right): idle, "Last fed 18m · Breast". */
+    fun mainAfterBreastfeed(): MainUiState =
+        MainUiState.from(summarize(SampleData.scenarioWithRecentFeed(), SampleData.NOW_1450, zone), guard = null, sync = synced1431)
 
     fun feedDraft(): FeedDraft = FeedDraft(stamp = SampleData.NOW_1432, zone = zone)
 
-    fun sideDraft(): SideDraft = SideDraft(SampleData.runningBreastfeed(), endAt = SampleData.NOW_1450, zone = zone)
+    /** Breast chosen on the Feed type screen opened at 14:32: Side, nothing ticked yet. */
+    fun sideDraft(): SideDraft = SideDraft(at = SampleData.NOW_1432, zone = zone)
 
     /** Pee + Poop on, Colour Yellow, Texture Seedy, stamped 14:32. */
     fun diaperDraft(): DiaperDraft = DiaperDraft(
@@ -61,11 +61,10 @@ object WearSamples {
         texture = PoopTexture.SEEDY,
     )
 
-    /** "Feed ended" / "Left → Right · 18m" after the 14:32 breastfeed ends at 14:50. */
-    fun receiptFeedEnded(): Receipt {
-        val running = SampleData.runningBreastfeed()
-        val ended = running.copy(endMillis = SampleData.NOW_1450, breastSide = BreastSide.LEFT_THEN_RIGHT)
-        return Receipt(ReceiptKind.FEED_ENDED, ended, Undo.Restore(running), zone)
+    /** "Breast at 14:32" / "Left → Right": the breast feed saved on the Side screen. */
+    fun receiptBreast(): Receipt {
+        val entry = SampleData.recentBreastfeed()
+        return Receipt(ReceiptKind.FEED_LOGGED, entry, Undo.Delete(entry.id), zone)
     }
 
     /** "Formula at 14:32". */
@@ -98,9 +97,9 @@ object WearSamples {
     fun tileAsleep(): TileUiState =
         TileUiState.from(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, zone), SampleData.BABY_NAME, feedback = null, guard = null)
 
-    /** Breastfeeding since 14:32, seen at 14:50: Row A is "End feed · 18m". */
-    fun tileBreastfeeding(): TileUiState =
-        TileUiState.from(summarize(SampleData.scenarioWithRunningFeed(), SampleData.NOW_1450, zone), SampleData.BABY_NAME, feedback = null, guard = null)
+    /** 14:50, after the 14:32 breast feed: Row A is "Feed · 18m ago" with nothing running. */
+    fun tileAfterBreastfeed(): TileUiState =
+        TileUiState.from(summarize(SampleData.scenarioWithRecentFeed(), SampleData.NOW_1450, zone), SampleData.BABY_NAME, feedback = null, guard = null)
 
     /** Just logged Pee + poop from the tile at 14:32: "Both 14:32 · Undo" for 10 s. */
     fun tileJustLogged(): TileUiState {

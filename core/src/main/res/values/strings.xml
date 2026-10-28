@@ -18,7 +18,8 @@
     <!-- Same word with a soft hyphen (U+00AD) where it may break in tight places; use with Hyphens.Auto. -->
     <string name="feed_type_formula_compact">Formula</string>
     <string name="feed_type_food">Food</string>
-    <string name="feed_breast_starts_timer">Starts a timer</string>
+    <!-- Under Breast in the Feed sheet: the next step offers the side order -->
+    <string name="feed_breast_sides_next">Then the sides, if you like</string>
     <!-- Logs a feed with no type: only its time is recorded -->
     <string name="feed_type_none">Just the time</string>
 
@@ -30,7 +31,7 @@
     <string name="side_letter_left">L</string>
     <string name="side_letter_right">R</string>
     <string name="side_question">Which side?</string>
-    <!-- End-of-feed checkboxes: the order of the ticks is the order recorded; ticking nothing is fine -->
+    <!-- Breast feed side checkboxes: the order of the ticks is the order recorded; ticking nothing is fine -->
     <string name="side_order_hint">Tick the sides in the order you fed. Optional.</string>
     <!-- Summary line when no side is ticked -->
     <string name="side_none">No side</string>
@@ -67,7 +68,6 @@
     <string name="status_fed">Fed</string>
     <string name="status_asleep">Asleep</string>
     <string name="status_awake">Awake</string>
-    <string name="status_breastfeeding">Breastfeeding</string>
     <!-- As in "Breast · running" -->
     <string name="status_running">running</string>
 
@@ -75,7 +75,8 @@
     <string name="action_start_sleep">Start sleep</string>
     <string name="action_woke_up">Woke up</string>
     <string name="action_end_sleep">End sleep</string>
-    <string name="action_end_feed">End feed</string>
+    <!-- Logs a breast feed with the ticked side order -->
+    <string name="action_log_feed">Log feed</string>
     <string name="action_undo">Undo</string>
     <string name="action_done">Done</string>
     <string name="action_save">Save</string>
@@ -92,9 +93,6 @@
     <string name="receipt_logged">%1$s logged</string>
     <!-- Watch Logged title: "Formula at 14:32" -->
     <string name="receipt_at_time">%1$s at %2$s</string>
-    <string name="receipt_feed_started">Feed started</string>
-    <string name="receipt_feed_ended">Feed ended</string>
-    <string name="receipt_feed_cancelled">Feed cancelled</string>
     <string name="receipt_sleep_started">Sleep started</string>
     <string name="receipt_sleep_cancelled">Sleep cancelled</string>
     <!-- "Slept 1h 07m" -->
@@ -106,7 +104,6 @@
     <!-- Guards. %1$s is a clock time. -->
     <string name="guard_already_asleep">Already asleep since %1$s</string>
     <string name="guard_already_awake">Already awake since %1$s</string>
-    <string name="guard_already_feeding">Already feeding since %1$s</string>
     <string name="guard_already_logged">Already logged at %1$s</string>
 
     <!-- Navigation -->

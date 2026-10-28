@@ -57,7 +57,6 @@ class Android17SmokeTest {
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         val state = TimerState(
             sleep = RunningTimer("sleep-1", SampleData.at(2, 5)),
-            feed = RunningTimer("feed-1", SampleData.at(2, 40)),
             lastFeedStartMillis = SampleData.at(1, 40),
             babyName = "Noa",
             language = AppLanguage.DA,
@@ -66,11 +65,9 @@ class Android17SmokeTest {
         TimerNotifications(app).render(state)
 
         val manager = app.getSystemService(NotificationManager::class.java)
-        for (id in listOf(TimerNotifications.SLEEP_ID, TimerNotifications.FEED_ID)) {
-            val posted = shadowOf(manager).getNotification(id)
-            assertNotNull("notification $id", posted)
-            assertEquals(Notification.MetricStyle::class.java.name, posted!!.extras.getString(Notification.EXTRA_TEMPLATE))
-            assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
-        }
+        val posted = shadowOf(manager).getNotification(TimerNotifications.SLEEP_ID)
+        assertNotNull("the sleep notification", posted)
+        assertEquals(Notification.MetricStyle::class.java.name, posted!!.extras.getString(Notification.EXTRA_TEMPLATE))
+        assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
     }
 }

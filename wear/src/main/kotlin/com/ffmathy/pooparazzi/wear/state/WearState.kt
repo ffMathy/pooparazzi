@@ -12,21 +12,21 @@ import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** What Main leads with (DESIGN_SPEC §3.5.1–2, V1_ADDITIONS §2.2). A running breastfeed wins over a running sleep. */
-enum class MainMode { IDLE, ASLEEP, FEEDING }
+/** What Main leads with (DESIGN_SPEC §3.5.1–2, V1_ADDITIONS §2.2). Only a sleep runs: feeds are instants. */
+enum class MainMode { IDLE, ASLEEP }
 
 /** The guard word shown after a rejected toggle (DESIGN_SPEC §3.5.2, §4.4). */
-enum class GuardKind { ALREADY_ASLEEP, ALREADY_AWAKE, ALREADY_FEEDING }
+enum class GuardKind { ALREADY_ASLEEP, ALREADY_AWAKE }
 
-/** Which control shows the guard: the sleep toggle (EdgeButton or list button) or "End feed". */
-enum class GuardTarget { SLEEP_TOGGLE, END_FEED }
+/** Which control shows the guard: the sleep toggle (the EdgeButton). */
+enum class GuardTarget { SLEEP_TOGGLE }
 
 /** A visible guard: shown on [target] until [untilMillis] (2 s, DESIGN_SPEC §5.12). */
 @Immutable
 data class Guard(val kind: GuardKind, val target: GuardTarget, val untilMillis: Long)
 
 /**
- * Main (W1/W2 and the running-feed variant). Domain values only: the screen formats them with the shared
+ * Main (W1/W2). Domain values only: the screen formats them with the shared
  * formatters, so the ViewModel stays free of resources.
  *
  * @property now minute-resolution "now" used for every duration on the screen.
@@ -40,23 +40,15 @@ data class MainUiState(
     val lastFeed: Entry?,
     val lastDiaper: Entry?,
     val runningSleep: Entry?,
-    val runningFeed: Entry?,
     val lastSleep: Entry?,
     val guard: Guard?,
     val sync: SyncStatus,
 ) {
     val mode: MainMode
-        get() = when {
-            runningFeed != null -> MainMode.FEEDING
-            runningSleep != null -> MainMode.ASLEEP
-            else -> MainMode.IDLE
-        }
+        get() = if (runningSleep != null) MainMode.ASLEEP else MainMode.IDLE
 
     /** The guard on the sleep toggle, if one is showing. */
     val sleepGuard: GuardKind? get() = guard?.takeIf { it.target == GuardTarget.SLEEP_TOGGLE }?.kind
-
-    /** The guard on "End feed", if one is showing. */
-    val endFeedGuard: GuardKind? get() = guard?.takeIf { it.target == GuardTarget.END_FEED }?.kind
 
     companion object {
         fun from(summary: Summary, guard: Guard?, sync: SyncStatus) = MainUiState(
@@ -66,7 +58,6 @@ data class MainUiState(
             lastFeed = summary.lastFeed,
             lastDiaper = summary.lastDiaper,
             runningSleep = summary.runningSleep,
-            runningFeed = summary.runningFeed,
             lastSleep = summary.lastSleep,
             guard = guard?.takeIf { it.untilMillis > summary.now },
             sync = sync,
@@ -75,7 +66,7 @@ data class MainUiState(
         /** Before the first database read. */
         fun loading(now: Long, zone: ZoneId) = MainUiState(
             now = now, zone = zone, loaded = false, lastFeed = null, lastDiaper = null, runningSleep = null,
-            runningFeed = null, lastSleep = null, guard = null, sync = SyncStatus.Unavailable,
+            lastSleep = null, guard = null, sync = SyncStatus.Unavailable,
         )
     }
 }
@@ -97,11 +88,12 @@ data class FeedDraft(val stamp: Long, val offsetMinutes: Int = 0, val zone: Zone
 }
 
 /**
- * The Side screen: the running breastfeed, the end time stamped on the "End feed" tap, and the Left / Right
- * checkboxes ticked so far, in tick order ([side] is what that order records; null = no side).
+ * The Side screen after Breast on the Feed type screen: the time the breast feed is logged at ([at], the Feed tap's
+ * stamp plus its Earlier offset) and the Left / Right checkboxes ticked so far, in tick order ([side] is what that
+ * order records; null = no side).
  */
 @Immutable
-data class SideDraft(val feed: Entry, val endAt: Long, val zone: ZoneId, val ticks: List<Breast> = emptyList()) {
+data class SideDraft(val at: Long, val zone: ZoneId, val ticks: List<Breast> = emptyList()) {
     val side: BreastSide? get() = BreastSide.fromOrder(ticks)
 }
 
@@ -120,14 +112,14 @@ data class DiaperDraft(
 }
 
 /** What a Logged confirmation is for (DESIGN_SPEC §3.5.6, V1_ADDITIONS §2.2, §3.2). */
-enum class ReceiptKind { FEED_LOGGED, DIAPER_LOGGED, FEED_ENDED, FEED_CANCELLED, WOKE_UP, SLEEP_CANCELLED }
+enum class ReceiptKind { FEED_LOGGED, DIAPER_LOGGED, WOKE_UP, SLEEP_CANCELLED }
 
 /** How Undo reverts a receipt. */
 sealed interface Undo {
     /** A new entry: soft-delete it. */
     data class Delete(val id: String) : Undo
 
-    /** An ended or discarded interval: write the running snapshot back. */
+    /** An ended or discarded sleep: write the running snapshot back. */
     data class Restore(val previous: Entry) : Undo
 }
 
@@ -246,7 +238,7 @@ sealed interface WearEvent {
     /** Undo succeeded: show "Undone", then Main. */
     data object ShowUndone : WearEvent
 
-    /** "End feed" was accepted: pick the side. */
+    /** Breast was chosen on the Feed type screen: pick the side order, then Save. */
     data object ShowSide : WearEvent
 
     /** Return to Main (closing pickers). */

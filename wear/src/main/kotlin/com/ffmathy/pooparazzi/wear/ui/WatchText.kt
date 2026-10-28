@@ -141,7 +141,7 @@ fun Formatters.spokenAgo(prefix: String, detail: String?, fromMillis: Long, now:
 fun Formatters.spokenDurationSince(status: String, fromMillis: Long, now: Long): String =
     spokenText().statusSince(status, duration.spoken(clockDurationMillis(fromMillis, now)), relative.since(fromMillis, zone))
 
-/** Spoken "{status}, 1 hour 7 minutes, since 02:05" (a running sleep or breastfeed read on its own). */
+/** Spoken "{status}, 1 hour 7 minutes, since 02:05" (a running sleep read on its own). */
 @Composable
 @ReadOnlyComposable
 fun Formatters.spokenRunning(status: String, fromMillis: Long, now: Long): String =

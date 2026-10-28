@@ -70,6 +70,7 @@ import com.ffmathy.pooparazzi.core.format.SyncPeer
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.diaperKind
+import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
@@ -229,8 +230,7 @@ private fun ReceiptCircle(receipt: Receipt, ambient: Boolean, size: Dp) {
     val events = events()
     val kind = receipt.entry.diaperKind
     val (fill, split, iconColor) = when (receipt.kind) {
-        ReceiptKind.FEED_LOGGED, ReceiptKind.FEED_ENDED, ReceiptKind.FEED_CANCELLED ->
-            Triple(events.feed.container, null, events.feed.strong)
+        ReceiptKind.FEED_LOGGED -> Triple(events.feed.container, null, events.feed.strong)
         ReceiptKind.WOKE_UP, ReceiptKind.SLEEP_CANCELLED -> Triple(events.sleep.container, null, events.sleep.strong)
         ReceiptKind.DIAPER_LOGGED -> when (kind) {
             DiaperKind.POOP -> Triple(events.poop.container, null, events.poop.strong)
@@ -240,7 +240,6 @@ private fun ReceiptCircle(receipt: Receipt, ambient: Boolean, size: Dp) {
     }
     val icon: ImageVector = when (receipt.kind) {
         ReceiptKind.SLEEP_CANCELLED -> XIcons.wake
-        ReceiptKind.FEED_CANCELLED -> XIcons.breast
         else -> XIcons.check
     }
     val outline = if (ambient) WatchAmbient.content else null
@@ -259,7 +258,7 @@ private fun ReceiptCircle(receipt: Receipt, ambient: Boolean, size: Dp) {
     }
 }
 
-/** "Formula at 14:32" with the time in the event colour; time-free titles for ended and cancelled intervals. */
+/** "Formula at 14:32" with the time in the event colour; "Sleep cancelled" is time-free. */
 @Composable
 private fun ReceiptTitle(receipt: Receipt, f: Formatters, ambient: Boolean) {
     val events = events()
@@ -272,8 +271,6 @@ private fun ReceiptTitle(receipt: Receipt, f: Formatters, ambient: Boolean) {
             withTime(stringResource(Labels.diaperKind(entry.diaperKind ?: DiaperKind.PLAIN)), entry.startMillis, f, events.diaper.text, ambient)
         ReceiptKind.WOKE_UP ->
             withTime(stringResource(CoreR.string.action_woke_up), entry.endMillis ?: entry.startMillis, f, events.sleep.text, ambient)
-        ReceiptKind.FEED_ENDED -> AnnotatedString(stringResource(CoreR.string.receipt_feed_ended))
-        ReceiptKind.FEED_CANCELLED -> AnnotatedString(stringResource(CoreR.string.receipt_feed_cancelled))
         ReceiptKind.SLEEP_CANCELLED -> AnnotatedString(stringResource(CoreR.string.receipt_sleep_cancelled))
     }
     // "Pee and poop at 14:32": never the "+" (DESIGN_SPEC §9.4).
@@ -317,10 +314,10 @@ private fun withTime(label: String, millis: Long, f: Formatters, timeColor: Colo
     }
 }
 
-/** A line as shown ("Left → Right · 18m") and as read ("Left then right, 18 minutes"). */
+/** A line as shown ("Left → Right") and as read ("Left then right"). */
 private class Line(val shown: String, val spoken: String)
 
-/** Line 2: "Slept 1h 07m", "Left → Right · 18m", "Already logged". */
+/** Line 2: "Slept 1h 07m", "Left → Right" (a breast feed's side order), "Already logged". */
 @Composable
 private fun receiptLine2(receipt: Receipt, f: Formatters): Line? {
     val entry = receipt.entry
@@ -333,19 +330,10 @@ private fun receiptLine2(receipt: Receipt, f: Formatters): Line? {
                 stringResource(CoreR.string.receipt_slept, f.duration.spokenBetween(entry.startMillis, it)),
             )
         }
-        ReceiptKind.FEED_ENDED, ReceiptKind.FEED_CANCELLED -> {
-            val side = entry.breastSide
-            val shown = listOfNotNull(
-                side?.let { stringResource(Labels.side(it)).keepSidesTogether() },
-                end?.let { f.duration.between(entry.startMillis, it) },
-            )
-            val spoken = listOfNotNull(
-                side?.let { stringResource(SpokenLabels.side(it)) },
-                end?.let { f.duration.spokenBetween(entry.startMillis, it) },
-            )
-            if (shown.isEmpty()) null else Line(shown.joinToString(DOT_SEPARATOR), spokenText().all(spoken))
+        ReceiptKind.FEED_LOGGED -> entry.breastSide?.takeIf { entry.isBreastfeed }?.let { side ->
+            Line(stringResource(Labels.side(side)).keepSidesTogether(), stringResource(SpokenLabels.side(side)))
         }
-        ReceiptKind.FEED_LOGGED, ReceiptKind.DIAPER_LOGGED -> null
+        ReceiptKind.DIAPER_LOGGED -> null
     }
 }
 
@@ -429,8 +417,8 @@ const val UNDONE_MILLIS = 1_500L
 
 @WearPreviewDevices
 @Composable
-private fun LoggedFeedEndedPreview() = XWearTheme {
-    LoggedScreen(WearSamples.receiptFeedEnded(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
+private fun LoggedBreastPreview() = XWearTheme {
+    LoggedScreen(WearSamples.receiptBreast(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
 }
 
 @WearPreviewDevices

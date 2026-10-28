@@ -21,12 +21,8 @@ interface HomeActions {
     fun onEditEntry(entryId: String) {}
 
     // Big buttons
-    /**
-     * Idle ("Feed"): opens the Feed sheet. While a breastfeed runs ("End feed"): opens the Side sheet. [shownRunning]
-     * is the form the button showed (true for "End feed"): when the feed has started or ended elsewhere since (the
-     * watch, a widget), the tap is answered with the guard instead of the other sheet (DESIGN_SPEC §4.4).
-     */
-    fun onFeed(shownRunning: Boolean) {}
+    /** "Feed": opens the Feed sheet. */
+    fun onFeed() {}
     fun onDiaper() {}
 
     /**
@@ -47,14 +43,17 @@ interface HomeActions {
     // Sheets
     fun onSheetOffset(minutes: Int) {}
 
-    /** Feed sheet: Breast starts a timer, Formula / Food log an instant, null ("Just the time") logs an untyped feed. */
+    /**
+     * Feed sheet: Breast reveals the side checkboxes and "Log feed"; Formula / Food log an instant, null ("Just the
+     * time") logs an untyped feed.
+     */
     fun onFeedType(type: FeedType?) {}
 
-    /** Side sheet: ticks or unticks [breast]; the tick order is the order recorded (re-ticking appends). */
+    /** Feed sheet, Breast step: ticks or unticks [breast]; the tick order is the order recorded (re-ticking appends). */
     fun onSideTick(breast: Breast) {}
 
-    /** Side sheet "End feed": ends the running breastfeed with the ticked order (nothing ticked records no side). */
-    fun onEndFeed() {}
+    /** Feed sheet, Breast step, "Log feed": logs a breast feed at the sheet's time with the ticked order (or none). */
+    fun onLogBreastfeed() {}
     fun onDiaperPee(checked: Boolean) {}
     fun onDiaperPoop(checked: Boolean) {}
 

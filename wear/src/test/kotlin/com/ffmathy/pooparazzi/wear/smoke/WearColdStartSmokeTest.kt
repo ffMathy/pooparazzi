@@ -66,7 +66,8 @@ class WearColdStartSmokeTest {
 
     @Test
     fun tileAndComplicationEntryPointsOpenTheApp() {
-        val opens = listOf(MainActivity.OPEN_MAIN, MainActivity.OPEN_FEED_TYPE, MainActivity.OPEN_END_FEED, MainActivity.OPEN_TODAY)
+        // "end_feed" is an older tile's End feed (when breastfeeds were timed): it now opens Main.
+        val opens = listOf(MainActivity.OPEN_MAIN, MainActivity.OPEN_FEED_TYPE, "end_feed", MainActivity.OPEN_TODAY)
         for (open in opens) {
             ActivityScenario.launch<MainActivity>(MainActivity.intent(app, open)).use { scenario ->
                 compose.waitForIdle()

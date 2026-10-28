@@ -23,7 +23,6 @@ import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
-import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.core.model.isInterval
 import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.sync.EntrySync
@@ -160,7 +159,6 @@ class MainViewModel(
 
     private val writes = Mutex()
     private var lastSleepToggleAt = NEVER
-    private var lastFeedToggleAt = NEVER
     private var receiptSerial = 0L
     private var guardJob: Job? = null
 
@@ -178,56 +176,27 @@ class MainViewModel(
     }
 
     /**
-     * Breast starts the timer and returns to Main; a breastfeed already running shows the guard on "End feed".
+     * Breast opens the Side screen for the optional side order (the feed is logged there, at this screen's time).
      * Formula, Food and "Just the time" ([type] null) log an instant and show Logged ("Already logged" for a repeat
      * within 5 s).
      */
     fun chooseFeedType(type: FeedType?): Job = action {
+        if (type == FeedType.BREAST) {
+            // The Feed type draft stays, so swiping back from Side keeps its time; Save on Side uses it up.
+            val draft = _feedDraft.value ?: return@action
+            _sideDraft.value = SideDraft(at = draft.at, zone = draft.zone)
+            send(WearEvent.ShowSide)
+            return@action
+        }
         // A second tap that reached the leaving screen finds the draft used and does nothing.
         val draft = _feedDraft.consume() ?: return@action
-        restoreOnFailure(_feedDraft, draft) { logFeed(type, draft.at) }
-    }
-
-    private suspend fun logFeed(type: FeedType?, at: Long) {
-        if (type == FeedType.BREAST) {
-            val started = repository.startBreastfeed(at)
-            val error = started.exceptionOrNull()
-            when {
-                error == null -> {
-                    lastFeedToggleAt = clock.now()
-                    haptic(XHaptic.TOGGLE_ON)
-                    send(WearEvent.BackToMain)
-                }
-                error is AlreadyRunningException -> {
-                    showGuard(GuardKind.ALREADY_FEEDING, GuardTarget.END_FEED)
-                    send(WearEvent.BackToMain)
-                }
-                else -> throw error
-            }
-        } else {
-            val result = repository.logFeedChecked(type, at)
+        restoreOnFailure(_feedDraft, draft) {
+            val result = repository.logFeedChecked(type, draft.at)
             showReceipt(ReceiptKind.FEED_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
         }
     }
 
-    // ---- Breastfeed end ----------------------------------------------------------------------
-
-    /** "End feed": stamps the end and opens the Side screen, unless within 2 s of the start (guard). */
-    fun requestEndFeed(): Job = action {
-        val now = clock.now()
-        val running = currentSummary().runningFeed
-        when {
-            running == null -> {
-                haptic(XHaptic.REJECT)
-                send(WearEvent.BackToMain)
-            }
-            now - lastFeedToggleAt < GUARD_MILLIS -> showGuard(GuardKind.ALREADY_FEEDING, GuardTarget.END_FEED)
-            else -> {
-                _sideDraft.value = SideDraft(running, endAt = now, zone = zone())
-                send(WearEvent.ShowSide)
-            }
-        }
-    }
+    // ---- Breast side -------------------------------------------------------------------------
 
     /** Ticks or unticks [breast] on the Side screen; the tick order is the order recorded (re-ticking appends). */
     fun tickSide(breast: Breast) {
@@ -235,36 +204,23 @@ class MainViewModel(
     }
 
     /**
-     * "End feed" on the Side screen ends the feed at the stamped time with the ticked order (no side when nothing is
-     * ticked): "Feed ended" (or "Feed cancelled" under 60 s).
+     * Save on the Side screen: logs the breast feed at the Feed type screen's time with the ticked order (no side when
+     * nothing is ticked) and shows Logged ("Already logged" for a repeat within 5 s).
      */
-    fun endFeed(): Job = action {
-        // Consumed: a second tap on the leaving Side screen must not end the (ended) feed again and close its receipt.
+    fun saveBreastfeed(): Job = action {
+        // Consumed: a second tap on the leaving Side screen must not log the feed again.
         val draft = _sideDraft.consume() ?: return@action
-        restoreOnFailure(_sideDraft, draft) { endBreastfeed(draft, draft.side) }
-    }
-
-    private suspend fun endBreastfeed(draft: SideDraft, side: BreastSide?) {
-        when (val result = repository.endBreastfeed(draft.feed.id, draft.endAt, side)) {
-            is EndResult.Ended -> {
-                lastFeedToggleAt = clock.now()
-                showReceipt(ReceiptKind.FEED_ENDED, result.entry, Undo.Restore(result.previous), haptic = XHaptic.TOGGLE_OFF)
-            }
-            is EndResult.Discarded -> {
-                lastFeedToggleAt = clock.now()
-                showReceipt(ReceiptKind.FEED_CANCELLED, result.entry, Undo.Restore(result.previous), haptic = XHaptic.TOGGLE_OFF)
-            }
-            is EndResult.NotRunning -> {
-                haptic(XHaptic.REJECT)
-                send(WearEvent.BackToMain)
-            }
+        restoreOnFailure(_sideDraft, draft) {
+            val result = repository.logFeedChecked(FeedType.BREAST, draft.at, draft.side)
+            _feedDraft.value = null
+            showReceipt(ReceiptKind.FEED_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
         }
     }
 
     // ---- Sleep -------------------------------------------------------------------------------
 
     /**
-     * The sleep toggle (pinned EdgeButton, or the list button while a breastfeed runs). Start sleep stays on Main;
+     * The sleep toggle (the pinned EdgeButton). Start sleep stays on Main;
      * Woke up shows Logged (or "Sleep cancelled" under 60 s).
      *
      * The tap carries what the button showed: [shownSleepId] is the running sleep behind "Woke up", or null for
@@ -359,8 +315,9 @@ class MainViewModel(
 
     /**
      * Opens Logged for an existing entry, e.g. from the Tile's undo path ([fromTile]: Undo is active at once).
-     * Instants undo by deletion; ended intervals by restoring them as running, and so do intervals discarded as a
-     * mis-tap ("Sleep cancelled" on the tile, DESIGN_SPEC §4.4: with Undo on phone and watch).
+     * Instants (feeds, breastfeeds included, and diapers) undo by deletion; an ended sleep by restoring it as running,
+     * and so does a sleep discarded as a mis-tap ("Sleep cancelled" on the tile, DESIGN_SPEC §4.4: with Undo on phone
+     * and watch).
      */
     fun openReceipt(entryId: String, fromTile: Boolean): Job = action {
         val stored = repository.get(entryId) ?: return@action
@@ -372,8 +329,6 @@ class MainViewModel(
         val (kind, undo) = when {
             entry.kind == EntryKind.DIAPER -> ReceiptKind.DIAPER_LOGGED to Undo.Delete(entry.id)
             entry.isSleep && entry.endMillis != null -> ReceiptKind.WOKE_UP to Undo.Restore(entry.copy(endMillis = null))
-            entry.isBreastfeed && entry.endMillis != null ->
-                ReceiptKind.FEED_ENDED to Undo.Restore(entry.copy(endMillis = null, breastSide = null))
             !entry.isInterval -> ReceiptKind.FEED_LOGGED to Undo.Delete(entry.id)
             else -> return@action
         }
@@ -381,12 +336,11 @@ class MainViewModel(
         send(WearEvent.ShowLogged)
     }
 
-    /** A sleep or breastfeed ended under a minute (soft-deleted): "Sleep cancelled" / "Feed cancelled", Undo resumes it. */
+    /** A sleep ended under a minute (soft-deleted): "Sleep cancelled", Undo resumes it. */
     private fun openCancelledReceipt(entry: Entry, fromTile: Boolean) {
-        if (!entry.isInterval || entry.endMillis == null) return
-        val kind = if (entry.isSleep) ReceiptKind.SLEEP_CANCELLED else ReceiptKind.FEED_CANCELLED
-        val running = entry.copy(deleted = false, endMillis = null, breastSide = null)
-        _receipt.value = Receipt(kind, entry, Undo.Restore(running), zone(), fromTile = fromTile, serial = ++receiptSerial)
+        if (!entry.isSleep || entry.endMillis == null) return
+        val running = entry.copy(deleted = false, endMillis = null)
+        _receipt.value = Receipt(ReceiptKind.SLEEP_CANCELLED, entry, Undo.Restore(running), zone(), fromTile = fromTile, serial = ++receiptSerial)
         send(WearEvent.ShowLogged)
     }
 
@@ -399,7 +353,7 @@ class MainViewModel(
                 is Undo.Restore -> repository.restore(undo.previous)
             }
         } catch (e: AlreadyRunningException) {
-            // Another sleep or feed started meanwhile (e.g. on the phone): the old one cannot run again.
+            // Another sleep started meanwhile (e.g. on the phone): the old one cannot run again.
             Log.i(TAG, "Undo blocked by a running entry", e)
             _receipt.value = null
             haptic(XHaptic.REJECT)
@@ -409,7 +363,6 @@ class MainViewModel(
         _receipt.value = null
         // Undo is deliberate: the reverted toggle may be toggled again at once.
         lastSleepToggleAt = NEVER
-        lastFeedToggleAt = NEVER
         haptic(XHaptic.REJECT)
         send(WearEvent.ShowUndone)
     }

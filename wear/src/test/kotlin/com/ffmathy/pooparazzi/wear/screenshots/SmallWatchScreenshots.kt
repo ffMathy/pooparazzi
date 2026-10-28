@@ -67,14 +67,14 @@ abstract class SmallWatchScreenshots(private val lang: String) {
     @Test
     fun s20_mainAsleepSmall() = capture("20-main-asleep-small", SampleData.NOW_0312, WearSamples.mainAsleep())
 
-    /** Side on a 192 dp watch: Right sits partly behind "End feed" at rest, and scrolls clear of it. */
+    /** Side on a 192 dp watch: Right sits partly behind "Save" at rest, and scrolls clear of it. */
     @Test
-    fun s21_sideSmall() = captureScreen("21-side-small", SampleData.NOW_1450) { SideScreen(WearSamples.sideDraft(), SideActions()) }
+    fun s21_sideSmall() = captureScreen("21-side-small", SampleData.NOW_1432) { SideScreen(WearSamples.sideDraft(), SideActions()) }
 
     @Test
     fun s21b_sideSmallScrolled() = captureScreen(
         "21b-side-small-scrolled",
-        SampleData.NOW_1450,
+        SampleData.NOW_1432,
         after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3) },
     ) { SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.LEFT)), SideActions()) }
 }

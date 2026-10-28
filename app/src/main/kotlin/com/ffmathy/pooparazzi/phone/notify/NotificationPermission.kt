@@ -19,7 +19,7 @@ fun Context.hasNotificationPermission(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
 /**
- * Asks for the notification permission in context, the first time a sleep or breastfeed starts (DESIGN_SPEC §3.3.1,
+ * Asks for the notification permission in context, the first time a sleep starts (DESIGN_SPEC §3.3.1,
  * §10.5), so the running timer can show its ongoing notification. Asked once: a denial is respected and the timers run
  * without a notification. When granted, the notification for the timer that just started is posted at once.
  *

@@ -56,8 +56,8 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
 
     @Test fun editSleep() = sheet("12-edit-sleep", night = true, EditSamples.sleepNudged())
 
-    /** The breastfeed form is taller than the sheet: scrolled to its end to show the sides group. */
-    @Test fun editBreastfeed() = sheet("13-edit-breastfeed", night = false, EditSamples.breastfeed(), scrollTo = EditTags.VALIDATION)
+    /** The breastfeed form: type, one time block and the sides group (it fits without scrolling). */
+    @Test fun editBreastfeed() = sheet("13-edit-breastfeed", night = false, EditSamples.breastfeed())
 
     @Test fun editDiaper() = sheet("14-edit-diaper", night = true, EditSamples.diaperPoop())
 

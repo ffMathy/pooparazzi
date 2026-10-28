@@ -12,7 +12,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 
 /**
- * An interval clipped to a day, as fractions 0..1 of the day (DESIGN_SPEC §3.3.3, V1_ADDITIONS §4).
+ * A sleep clipped to a day, as fractions 0..1 of the day (DESIGN_SPEC §3.3.3, V1_ADDITIONS §4).
  * Nothing extends past now. [continuesBefore] / [continuesAfter] tell that the entry crosses the day edge
  * (or, for [continuesAfter], is still running).
  */
@@ -25,7 +25,7 @@ data class RibbonSpan(
     val continuesAfter: Boolean,
 )
 
-/** An instant as a fraction 0..1 of the day. */
+/** An instant as a fraction 0..1 of the day (a breastfeed also carries its optional side order in [entry]). */
 data class RibbonMark(val entry: Entry, val at: Float)
 
 /** A diaper mark with its kind (ring = pee, dot = poop, ring + half = both, short tick = a plain change). */
@@ -40,7 +40,7 @@ data class RibbonDiaperMark(val entry: Entry, val at: Float, val kind: DiaperKin
 data class Ribbon(
     val bounds: DayBounds,
     val sleeps: List<RibbonSpan>,
-    val breastfeeds: List<RibbonSpan>,
+    val breastfeeds: List<RibbonMark>,
     val formula: List<RibbonMark>,
     val food: List<RibbonMark>,
     val diapers: List<RibbonDiaperMark>,
@@ -59,7 +59,7 @@ data class Ribbon(
             val bounds = DayBounds.of(day, zone)
             val visibleEnd = minOf(bounds.endMillis, now)
             val sleeps = mutableListOf<RibbonSpan>()
-            val breastfeeds = mutableListOf<RibbonSpan>()
+            val breastfeeds = mutableListOf<RibbonMark>()
             val formula = mutableListOf<RibbonMark>()
             val food = mutableListOf<RibbonMark>()
             val diapers = mutableListOf<RibbonDiaperMark>()
@@ -85,8 +85,8 @@ data class Ribbon(
                 when (entry.kind) {
                     EntryKind.SLEEP -> span(entry)?.let(sleeps::add)
                     EntryKind.FEED -> when {
-                        entry.isBreastfeed -> span(entry)?.let(breastfeeds::add)
                         !instantVisible -> Unit
+                        entry.isBreastfeed -> breastfeeds += RibbonMark(entry, bounds.fractionOf(entry.startMillis))
                         entry.feedType == FeedType.FOOD -> food += RibbonMark(entry, bounds.fractionOf(entry.startMillis))
                         else -> formula += RibbonMark(entry, bounds.fractionOf(entry.startMillis))
                     }

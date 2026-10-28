@@ -232,13 +232,13 @@ private fun SleepForm(state: EditUiState, formatters: Formatters, actions: EditA
         stillLabel = stringResource(R.string.edit_still_asleep),
     )
     Spacer(Modifier.height(24.dp))
-    DurationRow(state, formatters, sleep = true)
+    DurationRow(state, formatters)
 }
 
 /**
- * The optional type (Breast | Formula | Food; tapping the selected one clears it, leaving a feed with just its time).
- * A breastfeed has "Started" and "Ended" (or "Still feeding" + End now), the optional side (Left / Right checkboxes in
- * tick order, once the feed has ended) and its duration; every other feed one time block.
+ * The optional type (Breast | Formula | Food; tapping the selected one clears it, leaving a feed with just its time)
+ * and one time block: every feed is an instant. A breastfeed adds the optional side (Left / Right checkboxes in tick
+ * order).
  */
 @Composable
 private fun FeedForm(state: EditUiState, formatters: Formatters, actions: EditActions) {
@@ -253,23 +253,11 @@ private fun FeedForm(state: EditUiState, formatters: Formatters, actions: EditAc
         weight = { if (it == FeedType.FORMULA) 1.5f else 1f },
     )
     Spacer(Modifier.height(9.dp))
+    InstantBlock(state, formatters, actions)
     if (draft.isBreastfeed) {
-        IntervalBlocks(
-            state = state,
-            formatters = formatters,
-            actions = actions,
-            startLabel = stringResource(R.string.edit_started),
-            endLabel = stringResource(R.string.edit_ended),
-            stillLabel = stringResource(R.string.edit_still_feeding),
-        )
-        if (draft.end != null) {
-            SectionLabel(stringResource(R.string.join_dot, stringResource(R.string.edit_side), stringResource(CoreR.string.optional)))
-            SideCheckboxes(draft.side, actions::onSideTick)
-        }
-        Spacer(Modifier.height(24.dp))
-        DurationRow(state, formatters, sleep = false)
-    } else {
-        InstantBlock(state, formatters, actions)
+        Spacer(Modifier.height(16.dp))
+        SectionLabel(stringResource(R.string.join_dot, stringResource(R.string.edit_side), stringResource(CoreR.string.optional)))
+        SideCheckboxes(draft.side, actions::onSideTick)
     }
 }
 
@@ -345,7 +333,7 @@ private fun IntervalBlocks(
     }
 }
 
-/** The Side sheet's Left / Right checkboxes (tick order = side order) and the "Left → Right" / "No side" summary. */
+/** The Feed sheet's Breast-step Left / Right checkboxes (tick order = side order) and the "Left → Right" / "No side" summary. */
 @Composable
 private fun SideCheckboxes(side: BreastSide?, onTick: (Breast) -> Unit) {
     val ticks = side?.order.orEmpty()
@@ -356,9 +344,9 @@ private fun SideCheckboxes(side: BreastSide?, onTick: (Breast) -> Unit) {
     }
 }
 
-/** `sleep` / `breast` 20 in the event's strong colour + "Duration 52m" titleMedium + " · was 47m" dataMedium. */
+/** `sleep` 20 in SLEEP strong + "Duration 52m" titleMedium + " · was 47m" dataMedium. */
 @Composable
-private fun DurationRow(state: EditUiState, formatters: Formatters, sleep: Boolean) {
+private fun DurationRow(state: EditUiState, formatters: Formatters) {
     val duration = state.durationMillis ?: return
     val colors = MaterialTheme.colorScheme
     val events = LocalXPalette.current.events
@@ -375,12 +363,7 @@ private fun DurationRow(state: EditUiState, formatters: Formatters, sleep: Boole
             .clearAndSetSemantics { contentDescription = spoken },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        XIcon(
-            if (sleep) XIcons.sleep else XIcons.breast,
-            contentDescription = null,
-            tint = if (sleep) events.sleep.strong else events.feed.strong,
-            size = 20.dp,
-        )
+        XIcon(XIcons.sleep, contentDescription = null, tint = events.sleep.strong, size = 20.dp)
         Spacer(Modifier.width(8.dp))
         Text(
             buildAnnotatedString {
@@ -415,12 +398,10 @@ private fun ValidationSlot(state: EditUiState, formatters: Formatters, actions: 
         if (issue == null) return@Row
         val color = if (issue.blocksSave) colors.error else colors.onSurfaceVariant
         val (text, hasDigits) = when (issue) {
-            is EditIssue.EndBeforeStart -> stringResource(
-                if (issue.kind == EntryKind.SLEEP) R.string.edit_error_wake_before_sleep else R.string.edit_error_feed_end_before_start,
-            ) to false
+            is EditIssue.EndBeforeStart -> stringResource(R.string.edit_error_wake_before_sleep) to false
             is EditIssue.InFuture -> stringResource(R.string.edit_error_future, formatters.clock.format(issue.at, state.zone)) to true
             is EditIssue.Overlaps -> stringResource(
-                if (issue.other.kind == EntryKind.SLEEP) R.string.edit_warning_overlap_sleep else R.string.edit_warning_overlap_feed,
+                R.string.edit_warning_overlap_sleep,
                 formatters.clock.format(issue.other.startMillis, state.zone),
             ) to true
             EditIssue.SaveFailed -> stringResource(R.string.edit_error_save_failed) to false

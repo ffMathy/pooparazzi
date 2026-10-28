@@ -51,7 +51,8 @@ data class FeedTypeActions(
 /**
  * Feed type (V1_ADDITIONS §2.2): "Feed · 14:32" (stamped on the Feed tap), three full-width FEED buttons
  * (Breast / Formula / Food), an outlined "Just the time" button (the type is optional: logs a feed with no type) and
- * an Earlier CompactButton that cycles the time through −5m / −10m / −15m.
+ * an Earlier CompactButton that cycles the time through −5m / −10m / −15m. Breast opens Side for the optional side
+ * order (logged there, at this screen's time); the others log at once.
  * Taps are ignored for 500 ms after the screen appears (DESIGN_SPEC §5.9).
  */
 @Composable

@@ -1,6 +1,5 @@
 package com.ffmathy.pooparazzi.core.data
 
-import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -11,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 /** Timing rules shared by the repository and the apps (DESIGN_SPEC §5.12, V1_ADDITIONS §1). */
 object EntryRules {
-    /** An interval that ends less than this after its start is a mis-tap and is discarded. */
+    /** A sleep that ends less than this after its start is a mis-tap and is discarded. */
     const val MIS_TAP_MILLIS: Long = 60_000L
 
     /** Two logs of the same kind (and type / flags) whose times are closer than this are one entry. */
@@ -24,14 +23,14 @@ object EntryRules {
     const val FUTURE_TOLERANCE_MILLIS: Long = 60_000L
 }
 
-/** Outcome of ending a running interval. */
+/** Outcome of ending a running sleep. */
 sealed interface EndResult {
     /** The interval ended normally. [previous] is the running snapshot, for Undo via [EntryRepository.restore]. */
     data class Ended(val entry: Entry, val previous: Entry) : EndResult
 
     /**
-     * The interval ended less than [EntryRules.MIS_TAP_MILLIS] after its start, so it was soft-deleted
-     * ("Sleep cancelled" / "Feed cancelled"). [entry] is the discarded entry (deleted, with its end);
+     * The sleep ended less than [EntryRules.MIS_TAP_MILLIS] after its start, so it was soft-deleted
+     * ("Sleep cancelled"). [entry] is the discarded entry (deleted, with its end);
      * [previous] is the running snapshot to pass to [EntryRepository.restore] for Undo.
      */
     data class Discarded(val entry: Entry, val previous: Entry) : EndResult
@@ -59,7 +58,7 @@ sealed interface LogResult {
  * is validated (V1_ADDITIONS §1) and is pushed to the other device through sync.
  *
  * Invalid writes throw [InvalidEntryException] (or return it as a failure for the `Result` functions);
- * a second running sleep or breastfeed is rejected with [AlreadyRunningException].
+ * a second running sleep is rejected with [AlreadyRunningException].
  * Local times may not lie in the future (beyond [EntryRules.FUTURE_TOLERANCE_MILLIS]).
  */
 interface EntryRepository {
@@ -70,22 +69,14 @@ interface EntryRepository {
     suspend fun get(id: String): Entry?
 
     /**
-     * Logs a FORMULA, FOOD or untyped ([type] null: just the time) feed instant at [at]; returns the existing entry
-     * for a duplicate. BREAST is rejected: use [startBreastfeed].
+     * Logs a feed instant of [type] (null: just the time) at [at]; returns the existing entry for a duplicate
+     * (the same type within [EntryRules.DEDUPE_WINDOW_MILLIS]). [side] is the optional side order of a
+     * [FeedType.BREAST] feed and is ignored for other types.
      */
-    suspend fun logFeed(type: FeedType?, at: Long): Entry = logFeedChecked(type, at).entry
+    suspend fun logFeed(type: FeedType?, at: Long, side: BreastSide? = null): Entry = logFeedChecked(type, at, side).entry
 
     /** As [logFeed], but tells a new entry apart from a duplicate. */
-    suspend fun logFeedChecked(type: FeedType?, at: Long): LogResult
-
-    /** Starts a breastfeed at [at]. Fails with [AlreadyRunningException] while one runs. */
-    suspend fun startBreastfeed(at: Long): Result<Entry>
-
-    /**
-     * Ends the running breastfeed [id] at [at] with the optional [side] (null records no side):
-     * [EndResult.Ended], or [EndResult.Discarded] under 60 s.
-     */
-    suspend fun endBreastfeed(id: String, at: Long, side: BreastSide?): EndResult
+    suspend fun logFeedChecked(type: FeedType?, at: Long, side: BreastSide? = null): LogResult
 
     /** Starts a sleep at [at]. Fails with [AlreadyRunningException] while one runs. */
     suspend fun startSleep(at: Long): Result<Entry>
@@ -131,7 +122,7 @@ interface EntryRepository {
 
     /**
      * Merges a batch from the other device as one unit: applied oldest write first, with cross-device conflicts
-     * (two running sleeps or breastfeeds, the same log within the dedupe window) resolved once after the batch.
+     * (two running sleeps, the same log within the dedupe window) resolved once after the batch.
      * Returns how many entries were stored.
      */
     suspend fun applyRemoteAll(entries: List<Entry>): Int = entries.count { applyRemote(it) }

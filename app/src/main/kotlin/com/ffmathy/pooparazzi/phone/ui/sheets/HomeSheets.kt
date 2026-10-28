@@ -17,15 +17,18 @@ internal fun HomeSheets(sheet: HomeSheetUi?, zone: ZoneId, formatters: Formatter
         onClosed = actions::onSheetClosed,
         windowInsets = windowInsets,
     ) { feed ->
-        FeedSheetContent(feed, zone, formatters, actions::onSheetOffset, actions::onFeedType, actions::onSheetDismiss)
-    }
-    XModalSheet(
-        value = sheet as? HomeSheetUi.Side,
-        onDismissRequest = actions::onSheetDismiss,
-        onClosed = actions::onSheetClosed,
-        windowInsets = windowInsets,
-    ) { side ->
-        SideSheetContent(side, zone, formatters, actions::onSheetOffset, actions::onSideTick, actions::onEndFeed, actions::onSheetDismiss)
+        FeedSheetContent(
+            feed,
+            zone,
+            formatters,
+            FeedSheetCallbacks(
+                onOffset = actions::onSheetOffset,
+                onType = actions::onFeedType,
+                onTick = actions::onSideTick,
+                onLogBreast = actions::onLogBreastfeed,
+                onCancel = actions::onSheetDismiss,
+            ),
+        )
     }
     val diaperCallbacks = remember(actions) {
         DiaperSheetCallbacks(

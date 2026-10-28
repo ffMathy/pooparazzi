@@ -11,7 +11,7 @@ enum class EntryViolation {
     /** An interval ends before it starts. */
     END_BEFORE_START,
 
-    /** An instant (FORMULA, FOOD, untyped FEED, DIAPER) has an end time. */
+    /** An instant (any FEED, breastfeeds included, or a DIAPER) has an end time. */
     INSTANT_HAS_END,
 
     /** A non-FEED has a feed type or breast side. */
@@ -19,9 +19,6 @@ enum class EntryViolation {
 
     /** A breast side on a FORMULA, FOOD or untyped feed. */
     SIDE_ON_NON_BREAST,
-
-    /** A running breastfeed already has a side (the side is picked when the feed ends). */
-    SIDE_WHILE_RUNNING,
 
     /** A non-DIAPER has diaper flags, colour or texture. */
     DIAPER_FIELDS_ON_NON_DIAPER,
@@ -37,7 +34,7 @@ enum class EntryViolation {
 class InvalidEntryException(val violation: EntryViolation, val entry: Entry) :
     IllegalArgumentException("Invalid entry ${entry.id}: $violation")
 
-/** Thrown when starting a sleep or breastfeed while one of the same type is already running. */
+/** Thrown when starting a sleep while one is already running. */
 class AlreadyRunningException(val running: Entry) :
     IllegalStateException("A ${running.kind} is already running since ${running.startMillis} (${running.id})")
 
@@ -58,11 +55,7 @@ fun validate(entry: Entry): EntryViolation? {
 
     when (entry.kind) {
         EntryKind.FEED -> {
-            if (entry.feedType == FeedType.BREAST) {
-                if (end == null && entry.breastSide != null) return EntryViolation.SIDE_WHILE_RUNNING
-            } else if (entry.breastSide != null) {
-                return EntryViolation.SIDE_ON_NON_BREAST
-            }
+            if (entry.feedType != FeedType.BREAST && entry.breastSide != null) return EntryViolation.SIDE_ON_NON_BREAST
         }
         EntryKind.SLEEP, EntryKind.DIAPER -> {
             if (entry.feedType != null || entry.breastSide != null) return EntryViolation.FEED_FIELDS_ON_NON_FEED

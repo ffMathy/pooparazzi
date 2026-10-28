@@ -11,7 +11,7 @@
     <string name="feed_type_formula">Modermælkserstatning</string>
     <string name="feed_type_formula_compact">Modermælks&#173;erstatning</string>
     <string name="feed_type_food">Mad</string>
-    <string name="feed_breast_starts_timer">Starter tidtagning</string>
+    <string name="feed_breast_sides_next">Derefter siderne, hvis du vil</string>
     <string name="feed_type_none">Kun tidspunktet</string>
 
     <!-- Breast sides -->
@@ -54,14 +54,13 @@
     <string name="status_fed">Spiste</string>
     <string name="status_asleep">Sover</string>
     <string name="status_awake">Vågen</string>
-    <string name="status_breastfeeding">Ammer</string>
     <string name="status_running">i gang</string>
 
     <!-- Actions -->
     <string name="action_start_sleep">Start søvn</string>
     <string name="action_woke_up">Vågnede</string>
     <string name="action_end_sleep">Afslut søvn</string>
-    <string name="action_end_feed">Afslut amning</string>
+    <string name="action_log_feed">Registrér</string>
     <string name="action_undo">Fortryd</string>
     <string name="action_done">Færdig</string>
     <string name="action_save">Gem</string>
@@ -77,9 +76,6 @@
     <!-- Receipts -->
     <string name="receipt_logged">%1$s registreret</string>
     <string name="receipt_at_time">%1$s kl. %2$s</string>
-    <string name="receipt_feed_started">Amning startet</string>
-    <string name="receipt_feed_ended">Amning afsluttet</string>
-    <string name="receipt_feed_cancelled">Amning annulleret</string>
     <string name="receipt_sleep_started">Søvn startet</string>
     <string name="receipt_sleep_cancelled">Søvn annulleret</string>
     <string name="receipt_slept">Sov %1$s</string>
@@ -89,7 +85,6 @@
     <!-- Guards -->
     <string name="guard_already_asleep">Sover allerede – siden kl. %1$s</string>
     <string name="guard_already_awake">Allerede vågen – siden kl. %1$s</string>
-    <string name="guard_already_feeding">Ammer allerede – siden kl. %1$s</string>
     <string name="guard_already_logged">Allerede registreret kl. %1$s</string>
 
     <!-- Navigation -->

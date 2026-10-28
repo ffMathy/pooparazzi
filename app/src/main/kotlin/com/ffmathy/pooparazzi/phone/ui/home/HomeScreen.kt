@@ -54,8 +54,8 @@ internal object HomeDefaults {
  * Home; a delete there shows the "… deleted" card with Undo.
  *
  * [launch] is a deep link from a widget or notification (DESIGN_SPEC §3.1): Home opens the sheet or undo card it asks
- * for and reports it through [onLaunchHandled]. The first sleep or breastfeed started here asks for the notification
- * permission, so the running timer can show its ongoing notification (§3.3.1, §10.5).
+ * for and reports it through [onLaunchHandled]. The first sleep started here asks for the notification permission, so
+ * the running sleep can show its ongoing notification (§3.3.1, §10.5).
  */
 @Composable
 fun HomeRoute(
@@ -232,10 +232,10 @@ private fun HomeAsleepPreview() {
     NightLightTheme(night = true) { HomeScreen(HomeSamples.asleep(), HomeActions.None) }
 }
 
-@Preview(name = "Day · breastfeeding 14:50", widthDp = 390, heightDp = 844)
+@Preview(name = "Day · breast feed logged 14:50", widthDp = 390, heightDp = 844)
 @Composable
-private fun HomeBreastfeedingPreview() {
-    NightLightTheme(night = false) { HomeScreen(HomeSamples.breastfeeding(), HomeActions.None) }
+private fun HomeBreastLoggedPreview() {
+    NightLightTheme(night = false) { HomeScreen(HomeSamples.breastLogged(), HomeActions.None) }
 }
 
 @Preview(name = "Night · undo card", widthDp = 390, heightDp = 844)

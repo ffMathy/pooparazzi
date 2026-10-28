@@ -18,8 +18,8 @@ import kotlinx.coroutines.sync.withLock
 import java.time.ZoneId
 
 /**
- * The tile's one-tap actions (DESIGN_SPEC §10.9: `loadAction` clickables handled in `onTileRequest`). Feed and
- * End feed open the app instead (V1_ADDITIONS §2.2), so they are not here.
+ * The tile's one-tap actions (DESIGN_SPEC §10.9: `loadAction` clickables handled in `onTileRequest`). Feed opens the
+ * app instead (V1_ADDITIONS §2.2), so it is not here.
  *
  * The sleep toggle is two actions, so a tap says what the button showed: the tile may still show "Start sleep" a
  * few seconds after the phone started a sleep (or "Woke up" after it ended one), and the tap must then not flip the

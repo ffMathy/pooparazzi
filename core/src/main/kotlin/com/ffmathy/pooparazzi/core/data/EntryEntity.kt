@@ -7,6 +7,7 @@ import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.FeedType
+import com.ffmathy.pooparazzi.core.model.normalized
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 
@@ -37,6 +38,7 @@ data class EntryEntity(
      */
     val createdLocally: Boolean = false,
 ) {
+    /** The entry this row holds, [normalized] (a timed breastfeed stored by an older version reads as an instant). */
     fun toEntry(): Entry = Entry(
         id = id,
         kind = kind,
@@ -50,7 +52,7 @@ data class EntryEntity(
         poopTexture = poopTexture,
         updatedAtMillis = updatedAtMillis,
         deleted = deleted,
-    )
+    ).normalized()
 
     companion object {
         fun from(entry: Entry, pendingSync: Boolean, createdLocally: Boolean = false) = EntryEntity(

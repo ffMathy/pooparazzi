@@ -85,12 +85,12 @@ class TileLayoutTest {
     }
 
     @Test
-    fun whileBreastfeedingRowAEndsTheFeedOnTheSideScreen() {
-        val proto = build(WearSamples.tileBreastfeeding())
-        assertTrue(proto.has("End feed"))
-        assertTrue(proto.has("18m"))
-        assertTrue(proto.contains(MainActivity.OPEN_END_FEED))
-        assertTrue(proto.has("End feed. Breastfeeding for 18 minutes"))
+    fun afterABreastFeedRowAIsStillFeed() {
+        val proto = build(WearSamples.tileAfterBreastfeed())
+        assertTrue(proto.has("Feed"))
+        assertTrue(proto.has("18m ago"))
+        assertFalse(proto.has("End feed"))
+        assertTrue(proto.contains(MainActivity.OPEN_FEED_TYPE))
     }
 
     @Test

@@ -84,37 +84,13 @@ class HomeRemoteChangesTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun feedOnAStaleButtonShowsTheFeedingGuardInsteadOfTheSideSheet() = homeTest { home ->
-        home.settle()
-        home.clock.advanceBy(20_000)
-        val feed = home.repository.startBreastfeed(home.clock.now()).getOrThrow()
-        home.viewModel.onFeed(shownRunning = false)
-        val state = home.settle()
-        assertNull("no sheet: the parent asked for Feed, not End feed", state.sheet)
-        assertEquals(CardRow.Guard(GuardKind.FEEDING, feed.startMillis), state.card!!.row)
-        assertEquals(listOf(HomeHaptic.REJECT), home.haptics)
-    }
-
-    @Test
-    fun endFeedAfterTheFeedEndedElsewhereOpensNothing() = homeTest { home ->
-        val feed = home.repository.startBreastfeed(SampleData.at(14, 0)).getOrThrow()
-        assertNotNull(home.settle().runningFeed)
-        home.repository.applyRemote(
-            feed.copy(endMillis = SampleData.NOW_1432, breastSide = com.ffmathy.pooparazzi.core.model.BreastSide.LEFT, updatedAtMillis = SampleData.NOW_1432 + 1),
-        )
-        home.viewModel.onFeed(shownRunning = true)
-        val state = home.settle()
-        assertNull("no Feed sheet for a tap on End feed", state.sheet)
-        assertEquals(listOf(HomeHaptic.REJECT), home.haptics)
-    }
-
-    @Test
-    fun feedOnAnIdleButtonStillOpensTheFeedSheet() = homeTest { home ->
-        home.viewModel.onFeed(shownRunning = false)
-        assertTrue(home.settle().sheet is HomeSheetUi.Feed)
-        home.viewModel.onSheetDismiss()
-        home.seed(listOf(Entry.breastfeed(SampleData.at(14, 20), null, null, id = "running")))
-        home.viewModel.onFeed(shownRunning = true)
-        assertTrue(home.settle().sheet is HomeSheetUi.Side)
+    fun feedOpensTheFeedSheetWhateverWasLoggedElsewhere() = homeTest { home ->
+        // A breast feed from the watch (or a "running" one synced from an older version) changes nothing for Feed.
+        home.repository.applyRemote(Entry.breastfeed(SampleData.at(14, 20), id = "watch-feed"))
+        assertFalse(home.settle().anythingRunning)
+        home.viewModel.onFeed()
+        val sheet = home.settle().sheet as HomeSheetUi.Feed
+        assertFalse(sheet.breast)
+        assertTrue(home.haptics.isEmpty())
     }
 }

@@ -20,7 +20,7 @@ import java.time.ZoneId
 internal object EditRules {
     const val MINUTE_MILLIS = 60_000L
 
-    /** A new interval in "Add past entry" lasts this long by default (never past now). */
+    /** A new sleep in "Add past entry" lasts this long by default (never past now). */
     const val DEFAULT_INTERVAL_MILLIS = 15 * MINUTE_MILLIS
 
     /** The minute containing [millis]. */
@@ -30,14 +30,14 @@ internal object EditRules {
     fun sameMinute(a: Long, b: Long): Boolean = Math.floorDiv(a, MINUTE_MILLIS) == Math.floorDiv(b, MINUTE_MILLIS)
 
     /**
-     * A new draft of [kind] starting at [start]: intervals end 15 min later (not after now), a feed takes [feedType]
-     * (null: no type), a diaper starts with both toggles off (a plain change unless one is ticked).
+     * A new draft of [kind] starting at [start]: a sleep ends 15 min later (not after now), a feed (an instant) takes
+     * [feedType] (null: no type), a diaper starts with both toggles off (a plain change unless one is ticked).
      */
     fun newDraft(id: String, kind: EntryKind, start: Long, now: Long, feedType: FeedType?): EditDraft {
         val end = defaultEnd(start, now)
         return when (kind) {
             EntryKind.SLEEP -> EditDraft(id, EntryKind.SLEEP, start, end)
-            EntryKind.FEED -> EditDraft(id, EntryKind.FEED, start, if (feedType == FeedType.BREAST) end else null, feedType)
+            EntryKind.FEED -> EditDraft(id, EntryKind.FEED, start, null, feedType)
             EntryKind.DIAPER -> EditDraft(id, EntryKind.DIAPER, start)
         }
     }
@@ -45,14 +45,12 @@ internal object EditRules {
     fun defaultEnd(start: Long, now: Long): Long = maxOf(start, minOf(start + DEFAULT_INTERVAL_MILLIS, floorToMinute(now)))
 
     /**
-     * Changes a feed's type, keeping its start. A breastfeed gets back the original's end and side when [original]
-     * was one, otherwise a default end and no side; formula, food and no type (null) drop end and side.
+     * Changes a feed's type, keeping its time. A breastfeed gets back the original's side when [original] was one,
+     * otherwise no side; formula, food and no type (null) drop the side. Feeds never have an end.
      */
-    fun withFeedType(draft: EditDraft, type: FeedType?, original: Entry?, now: Long): EditDraft = when {
+    fun withFeedType(draft: EditDraft, type: FeedType?, original: Entry?): EditDraft = when {
         draft.kind != EntryKind.FEED || draft.feedType == type -> draft
-        type == FeedType.BREAST && original?.isBreastfeed == true ->
-            draft.copy(feedType = type, end = original.endMillis, side = original.breastSide)
-        type == FeedType.BREAST -> draft.copy(feedType = type, end = defaultEnd(draft.start, now), side = null)
+        type == FeedType.BREAST && original?.isBreastfeed == true -> draft.copy(feedType = type, end = null, side = original.breastSide)
         else -> draft.copy(feedType = type, end = null, side = null)
     }
 
@@ -88,7 +86,7 @@ internal object EditRules {
 
     /**
      * The first rule [draft] breaks, in order: an end not after its start (blocks Save); a time in the future (blocks
-     * Save; offers "Use yesterday"); an overlap with another interval of the same kind (a warning). Null when none.
+     * Save; offers "Use yesterday"); an overlap with another sleep (a warning). Null when none.
      */
     fun validate(draft: EditDraft, entries: List<Entry>, now: Long): EditIssue? {
         val end = draft.end
@@ -99,13 +97,13 @@ internal object EditRules {
         return null
     }
 
-    /** The latest other sleep (for a sleep) or breastfeed (for a breastfeed) whose interval meets the draft's. */
+    /** The latest other sleep whose interval meets the draft sleep's. */
     fun overlap(draft: EditDraft, entries: List<Entry>, now: Long): Entry? {
-        val sameKind: (Entry) -> Boolean = if (draft.kind == EntryKind.SLEEP) { e -> e.isSleep } else { e -> e.isBreastfeed }
+        if (!draft.isInterval) return null
         val from = draft.start
         val to = draft.end ?: now
         return entries
-            .filter { it.id != draft.id && !it.deleted && sameKind(it) }
+            .filter { it.id != draft.id && !it.deleted && it.isSleep }
             .filter { other -> other.startMillis < to && from < (other.endMillis ?: now) }
             .maxByOrNull { it.startMillis }
     }
@@ -113,9 +111,9 @@ internal object EditRules {
     /** The feed type after tapping [type] in the type selector: the selected type again clears it (no type). */
     fun tappedFeedType(draft: EditDraft, type: FeedType): FeedType? = type.takeUnless { draft.feedType == it }
 
-    /** Ticks or unticks [breast] on an ended breastfeed; the side is the tick order (V1_ADDITIONS §2.1). */
+    /** Ticks or unticks [breast] on a breastfeed; the side is the tick order (V1_ADDITIONS §2.1). */
     fun withSideTick(draft: EditDraft, breast: Breast): EditDraft =
-        if (draft.isBreastfeed && draft.end != null) {
+        if (draft.isBreastfeed) {
             draft.copy(side = BreastSide.fromOrder(BreastSide.toggle(draft.side?.order.orEmpty(), breast)))
         } else {
             draft
@@ -127,7 +125,7 @@ internal object EditRules {
     /**
      * [draft] (made from [original]) moved onto [stored], the entry as it is now after a change on the watch: the
      * fields the parent changed in the sheet keep the sheet's value, every other field takes the stored one. So a
-     * corrected start survives a "Woke up" from the watch, and the watch's end and side are not wiped.
+     * corrected start survives a "Woke up" from the watch, and the watch's side is not wiped.
      */
     fun rebase(draft: EditDraft, original: Entry, stored: Entry): EditDraft {
         val base = EditDraft.of(original)
@@ -148,7 +146,8 @@ internal object EditRules {
         return when {
             merged.kind == EntryKind.DIAPER ->
                 if (merged.poop) merged.copy(end = null, side = null) else merged.copy(end = null, side = null, color = null, texture = null)
-            merged.isInterval -> if (merged.end == null) merged.copy(side = null) else merged
+            merged.isInterval -> merged.copy(side = null)
+            merged.isBreastfeed -> merged.copy(end = null)
             else -> merged.copy(end = null, side = null)
         }
     }

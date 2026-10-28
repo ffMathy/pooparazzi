@@ -94,8 +94,8 @@ class HomeTestRig(val scope: TestScope, now: Long = SampleData.NOW_1432) {
     /** Taps the sleep toggle in the form Home shows now ("Start sleep" or "Woke up"). */
     fun tapSleepToggle() = viewModel.onSleepToggle(shownRunning = settle().sleepRunning)
 
-    /** Taps Feed in the form Home shows now ("Feed" or "End feed"). */
-    fun tapFeed() = viewModel.onFeed(shownRunning = settle().runningFeed != null)
+    /** Taps Feed. */
+    fun tapFeed() = viewModel.onFeed()
 
     suspend fun entries(): List<Entry> = repository.observeEntries().first()
 

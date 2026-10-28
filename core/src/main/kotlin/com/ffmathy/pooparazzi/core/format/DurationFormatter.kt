@@ -89,7 +89,7 @@ class DurationFormatter(private val units: DurationUnits) {
 
     /**
      * The displayed duration between two instants, in whole clock minutes ([clockDurationMillis]): use it for
-     * receipts such as "Slept 1h 07m" and "Feed ended · 18m", so they match the clock times around them.
+     * receipts such as "Slept 1h 07m", so they match the clock times around them.
      */
     fun between(fromMillis: Long, toMillis: Long): String = format(clockDurationMillis(fromMillis, toMillis))
 

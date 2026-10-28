@@ -91,9 +91,10 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s02_mainAsleep() = capture("02-main-asleep", SampleData.NOW_0312) { MainScreen(WearSamples.mainAsleep(), MainActions()) }
 
+    /** 18 minutes after the 14:32 breast feed: Main stays idle (a breast feed is an instant), "Last fed" · Breast. */
     @Test
-    fun s03_mainBreastfeeding() =
-        capture("03-main-breastfeeding", SampleData.NOW_1450) { MainScreen(WearSamples.mainFeeding(), MainActions()) }
+    fun s03_mainAfterBreast() =
+        capture("03-main-after-breast", SampleData.NOW_1450) { MainScreen(WearSamples.mainAfterBreastfeed(), MainActions()) }
 
     @Test
     fun s04_mainScrolled() = capture(
@@ -106,12 +107,13 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s05_feedType() = capture("05-feed-type", SampleData.NOW_1432) { FeedTypeScreen(WearSamples.feedDraft(), FeedTypeActions()) }
 
+    /** After Breast on Feed type: "Which side?", "Breast · 14:32", Left / Right and Save. */
     @Test
-    fun s06_side() = capture("06-side", SampleData.NOW_1450) { SideScreen(WearSamples.sideDraft(), SideActions()) }
+    fun s06_side() = capture("06-side", SampleData.NOW_1432) { SideScreen(WearSamples.sideDraft(), SideActions()) }
 
     /** Right ticked first, then Left: the "1" / "2" badges and "Right → Left". */
     @Test
-    fun s06_sideTicked() = capture("06-side-ticked", SampleData.NOW_1450) {
+    fun s06_sideTicked() = capture("06-side-ticked", SampleData.NOW_1432) {
         SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.RIGHT, Breast.LEFT)), SideActions())
     }
 
@@ -133,8 +135,8 @@ abstract class WatchScreenshots(private val lang: String) {
     }
 
     @Test
-    fun s09_logged() = capture("09-logged", SampleData.NOW_1450, timeText = false) {
-        LoggedScreen(WearSamples.receiptFeedEnded(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
+    fun s09_logged() = capture("09-logged", SampleData.NOW_1432, timeText = false) {
+        LoggedScreen(WearSamples.receiptBreast(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
     }
 
     @Test
@@ -154,14 +156,6 @@ abstract class WatchScreenshots(private val lang: String) {
         SampleData.NOW_1432,
         after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(WearSamples.today().entries.size) },
     ) { TodayScreen(WearSamples.today(), phoneAvailable = true, onRow = {}, onMoreOnPhone = {}) }
-
-    /** While a breastfeed runs, the sleep toggle moves into the list (V1_ADDITIONS §2.2). */
-    @Test
-    fun s14_mainBreastfeedingList() = capture(
-        "14-main-breastfeeding-list",
-        SampleData.NOW_1450,
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3) },
-    ) { MainScreen(WearSamples.mainFeeding(), MainActions()) }
 
     /** A tap within 2 s of a toggle: "Already / asleep" on the EdgeButton, no state change (DESIGN_SPEC §3.5.2). */
     @Test

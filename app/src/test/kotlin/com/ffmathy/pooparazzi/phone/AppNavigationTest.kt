@@ -88,9 +88,9 @@ class AppNavigationTest {
     fun feedOpensTheFeedSheet() {
         compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
         compose.onNodeWithText("Feed").performClick()
-        compose.waitUntilAtLeastOneExists(hasText("Starts a timer"), timeoutMillis = 5_000)
+        compose.waitUntilAtLeastOneExists(hasText("Then the sides, if you like"), timeoutMillis = 5_000)
         compose.onNodeWithText("Formula").assertExists()
         compose.onNodeWithText("Cancel").performClick()
-        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Starts a timer")).fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Then the sides, if you like")).fetchSemanticsNodes().isEmpty() }
     }
 }

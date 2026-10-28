@@ -310,7 +310,7 @@ private fun HealthHint() {
 
 /**
  * Save: 160 × 56, r 28, `check` 20 + 8 + labelLarge; Night primaryContainer, Day primary (DESIGN_SPEC §3.3.4).
- * [label] defaults to "Save" (the Side sheet passes "End feed").
+ * [label] defaults to "Save" (the Feed sheet's Breast step passes "Log feed").
  */
 @Composable
 internal fun SaveButton(enabled: Boolean, onClick: () -> Unit, label: String = stringResource(CoreR.string.action_save)) {

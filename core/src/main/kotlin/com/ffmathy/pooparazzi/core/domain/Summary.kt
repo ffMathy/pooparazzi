@@ -5,7 +5,6 @@ import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
 import com.ffmathy.pooparazzi.core.model.clockMinutesBetween
 import com.ffmathy.pooparazzi.core.model.effectiveEnd
-import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.core.model.isRunning
 import java.time.LocalDate
 import java.time.ZoneId
@@ -26,11 +25,9 @@ data class DayCounts(
  * Everything the status surfaces need, derived from the entries at [now] in [zone].
  *
  * @property entries non-deleted entries that start at or before [now], oldest first.
- * @property lastFeed the feed with the latest start (any type, including a running breastfeed). Time since
- *   the last feed is measured from its start.
+ * @property lastFeed the feed with the latest time (any type). Time since the last feed is measured from it.
  * @property lastDiaper the latest diaper.
  * @property runningSleep the running sleep, if any.
- * @property runningFeed the running breastfeed, if any.
  * @property lastSleep the completed sleep with the latest end; [lastSleepEnd] is "awake since" when no sleep runs.
  * @property today counts for the local day containing [now].
  */
@@ -41,7 +38,6 @@ data class Summary(
     val lastFeed: Entry?,
     val lastDiaper: Entry?,
     val runningSleep: Entry?,
-    val runningFeed: Entry?,
     val lastSleep: Entry?,
     val today: DayCounts,
 ) {
@@ -102,7 +98,6 @@ fun summarize(entries: List<Entry>, now: Long, zone: ZoneId): Summary {
         lastFeed = feeds.lastOrNull(),
         lastDiaper = diapers.lastOrNull(),
         runningSleep = sleeps.lastOrNull { it.isRunning },
-        runningFeed = feeds.lastOrNull { it.isBreastfeed && it.isRunning },
         lastSleep = sleeps.filter { it.endMillis != null && it.endMillis <= now }.maxByOrNull { it.endMillis!! },
         today = countsFor(visible, DayBounds.containing(now, zone), now),
     )

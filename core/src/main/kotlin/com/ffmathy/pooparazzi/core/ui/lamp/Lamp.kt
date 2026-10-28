@@ -95,7 +95,7 @@ object LampDefaults {
     /** Phone lights-down SLEEP glow. */
     const val GLOW_PHONE_SLEEP = 0.45f
 
-    /** Watch running glow (sleep or breastfeed). */
+    /** Watch running glow (a running sleep). */
     const val GLOW_WATCH = 0.60f
 
     /** Tail opacities from the farthest segment to the nearest (8 × 6°). */
@@ -138,7 +138,7 @@ object LampDefaults {
  *
  * It draws graphics only: lay the label, hero and sub-line out on top as real text. The canvas is cleared from
  * semantics. The ember moves only for the one 6° step per minute, with a 600 ms ease (§2.2, §5.10); every other
- * change (another event, a sleep starting or synced in, Adjust start, a breastfeed ending) puts it at its new
+ * change (another event, a sleep starting or synced in, Adjust start, a sleep ending) puts it at its new
  * angle at once. It also jumps when [reducedMotion] or ambient. The accumulated angle is used, so 354° → 360°
  * never spins backwards.
  *
@@ -204,7 +204,6 @@ fun Lamp(
         reducedMotion = reducedMotion,
         identity = when (state) {
             is LampState.SleepRunning -> state.sleep.id
-            is LampState.FeedRunning -> state.feed.id
             is LampState.FeedIdle -> null
         },
     )

@@ -29,8 +29,8 @@ internal fun tileAsleepPreview(context: Context) = tilePreview(context, WearSamp
 @Preview(device = WearDevices.LARGE_ROUND, name = "Just logged")
 internal fun tileJustLoggedPreview(context: Context) = tilePreview(context, WearSamples.tileJustLogged())
 
-@Preview(device = WearDevices.LARGE_ROUND, name = "Breastfeeding 14:50")
-internal fun tileBreastfeedingPreview(context: Context) = tilePreview(context, WearSamples.tileBreastfeeding())
+@Preview(device = WearDevices.LARGE_ROUND, name = "After a breast feed 14:50")
+internal fun tileAfterBreastfeedPreview(context: Context) = tilePreview(context, WearSamples.tileAfterBreastfeed())
 
 @Preview(device = WearDevices.LARGE_ROUND, name = "Guard")
 internal fun tileGuardPreview(context: Context) = tilePreview(context, WearSamples.tileGuard())

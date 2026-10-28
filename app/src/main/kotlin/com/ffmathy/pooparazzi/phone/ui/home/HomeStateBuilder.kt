@@ -21,9 +21,8 @@ internal object HomeStateBuilder {
     val RUNNING_SLEEP_CHIPS = listOf(-5, -10)
     val ADJUST_CHIPS = listOf(-15, -5, 5)
 
-    /** Sheet chips: Now · −5m · −10m · −15m; the Side sheet's end chips: Now · −5m · −10m. */
+    /** Sheet chips: Now · −5m · −10m · −15m. */
     val SHEET_CHIPS = listOf(0, -5, -10, -15)
-    val SIDE_CHIPS = listOf(0, -5, -10)
 
     fun build(
         entries: List<Entry>,
@@ -47,7 +46,6 @@ internal object HomeStateBuilder {
             row2 = row2(summary),
             today = summary.today,
             runningSleep = summary.runningSleep,
-            runningFeed = summary.runningFeed,
             card = card?.let { cardUi(it, entries, summary, timings) },
             sheet = sheet?.let { sheetUi(it) },
         )
@@ -61,7 +59,6 @@ internal object HomeStateBuilder {
         }
         return when (lamp) {
             is LampState.SleepRunning -> summary.lastFeed?.let { SinceRow.LastFed(it, clockDurationMillis(it.startMillis, now)) }
-            is LampState.FeedRunning -> summary.runningSleep?.let { SinceRow.Asleep(it, clockDurationMillis(it.startMillis, now)) } ?: awake
             is LampState.FeedIdle -> awake
         }
     }
@@ -74,15 +71,12 @@ internal object HomeStateBuilder {
         val now = summary.now
         val subjectEntry = model.spec.subject?.let { (id, _) -> entries.firstOrNull { it.id == id && !it.deleted } }
         val variant = when (val spec = model.spec) {
-            is CardSpec.FeedLogged -> CardVariant.FeedLogged(spec.type)
+            is CardSpec.FeedLogged -> CardVariant.FeedLogged(spec.type, spec.side)
             is CardSpec.DiaperLogged -> CardVariant.DiaperLogged(spec.kind)
-            is CardSpec.FeedStarted -> CardVariant.FeedStarted
-            is CardSpec.FeedEnded -> CardVariant.FeedEnded(spec.side, subjectEntry?.clockDurationMillis(now) ?: 0L)
-            is CardSpec.FeedCancelled -> CardVariant.FeedCancelled(spec.side)
             is CardSpec.SleepStarted -> CardVariant.SleepStarted
             is CardSpec.WokeUp -> CardVariant.WokeUp(subjectEntry?.clockDurationMillis(now) ?: 0L)
             is CardSpec.SleepCancelled -> CardVariant.SleepCancelled
-            is CardSpec.AdjustStart -> CardVariant.AdjustStart(spec.sleep)
+            is CardSpec.AdjustStart -> CardVariant.AdjustStart
             is CardSpec.Notice -> CardVariant.Notice(spec.guard)
             is CardSpec.Deleted -> CardVariant.Deleted(spec.previous)
             is CardSpec.Undone -> CardVariant.Undone
@@ -146,15 +140,7 @@ internal object HomeStateBuilder {
         fun chips(minutes: List<Int>, enabled: (Int) -> Boolean = { true }) =
             minutes.map { OffsetChipUi(it, selected = it == sheet.offsetMinutes, enabled = enabled(it)) }
         return when (sheet) {
-            is SheetModel.Feed -> HomeSheetUi.Feed(sheet.stamp, sheet.offsetMinutes, chips(SHEET_CHIPS))
-            is SheetModel.Side -> HomeSheetUi.Side(
-                feedId = sheet.feedId,
-                startMillis = sheet.startMillis,
-                stamp = sheet.stamp,
-                offsetMinutes = sheet.offsetMinutes,
-                chips = chips(SIDE_CHIPS) { sideEndAllowed(sheet.startMillis, sheet.stamp, it) },
-                ticks = sheet.ticks,
-            )
+            is SheetModel.Feed -> HomeSheetUi.Feed(sheet.stamp, sheet.offsetMinutes, chips(SHEET_CHIPS), sheet.breast, sheet.ticks)
             is SheetModel.Diaper -> HomeSheetUi.Diaper(
                 stamp = sheet.stamp,
                 offsetMinutes = sheet.offsetMinutes,
@@ -166,7 +152,4 @@ internal object HomeStateBuilder {
             )
         }
     }
-
-    /** A Side-sheet end chip is disabled when it would put the end before the start (V1_ADDITIONS §2.1). */
-    fun sideEndAllowed(startMillis: Long, stamp: Long, minutes: Int): Boolean = stamp + minutes * MINUTE_MILLIS >= startMillis
 }

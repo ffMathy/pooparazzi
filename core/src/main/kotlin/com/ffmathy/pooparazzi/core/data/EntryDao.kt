@@ -25,12 +25,6 @@ abstract class EntryDao {
     abstract suspend fun runningSleeps(): List<EntryEntity>
 
     @Query(
-        "SELECT * FROM entries WHERE deleted = 0 AND endMillis IS NULL AND kind = 'FEED' AND feedType = 'BREAST' " +
-            "ORDER BY startMillis ASC, id ASC",
-    )
-    abstract suspend fun runningBreastfeeds(): List<EntryEntity>
-
-    @Query(
         "SELECT * FROM entries WHERE deleted = 0 AND kind = 'FEED' AND feedType = :type " +
             "AND startMillis BETWEEN :fromMillis AND :toMillis ORDER BY startMillis ASC",
     )

@@ -11,7 +11,7 @@ class EntryJsonTest {
 
     @Test
     fun everySampleEntryRoundTrips() {
-        val entries = SampleData.scenarioWithRunningFeed() + SampleData.scenarioAt0312()
+        val entries = SampleData.scenarioWithRecentFeed() + SampleData.scenarioAt0312()
         for (entry in entries) {
             assertEquals(entry, EntryJson.decode(EntryJson.encode(entry)))
         }
@@ -22,7 +22,7 @@ class EntryJsonTest {
         val diaper = Entry.diaper(1_000L, pee = true, poop = true, color = PoopColor.PALE, texture = PoopTexture.HARD, id = "d")
             .copy(deleted = true, updatedAtMillis = 5_000L)
         assertEquals(diaper, EntryJson.decode(EntryJson.encode(diaper)))
-        val feed = Entry.breastfeed(1_000L, 2_000_000L, BreastSide.RIGHT_THEN_LEFT, id = "b")
+        val feed = Entry.breastfeed(1_000L, BreastSide.RIGHT_THEN_LEFT, id = "b")
         assertEquals(feed, EntryJson.decode(EntryJson.encode(feed)))
     }
 
@@ -49,7 +49,7 @@ class EntryJsonTest {
         val minimal = listOf(
             Entry.feed(null, 1_000L, id = "untyped"),
             Entry.diaper(2_000L, pee = false, poop = false, id = "plain"),
-            Entry.breastfeed(1_000L, 2_000_000L, side = null, id = "no-side"),
+            Entry.breastfeed(1_000L, side = null, id = "no-side"),
         )
         for (entry in minimal) {
             assertEquals(entry, EntryJson.decode(EntryJson.encode(entry)))
@@ -57,11 +57,36 @@ class EntryJsonTest {
         }
         // An untyped feed is written with "feedType":null, which older apps read as a feed without a type.
         assertTrue(EntryJson.encode(minimal[0]).contains("\"feedType\":null"))
-        // JSON written before the type, side and flags became optional (every field set) still decodes the same.
+        // JSON written before the type, side and flags became optional (every field set) still decodes; the timed
+        // breastfeed of that version reads as an instant at its start.
         val older = """{"id":"b","kind":"FEED","startMillis":1000,"endMillis":2000000,"feedType":"BREAST",
             |"breastSide":"LEFT_THEN_RIGHT","pee":false,"poop":false,"poopColor":null,"poopTexture":null,
             |"updatedAtMillis":2000000,"deleted":false}""".trimMargin()
-        assertEquals(Entry.breastfeed(1_000L, 2_000_000L, BreastSide.LEFT_THEN_RIGHT, id = "b"), EntryJson.decode(older))
+        assertEquals(
+            Entry.breastfeed(1_000L, BreastSide.LEFT_THEN_RIGHT, id = "b", updatedAtMillis = 2_000_000L),
+            EntryJson.decode(older),
+        )
+    }
+
+    @Test
+    fun legacyTimedBreastfeedsDecodeAsInstants() {
+        // Ended, with a side: the end is dropped, the start and side are kept, and it is valid.
+        val ended = EntryJson.decode(
+            """{"id":"e","kind":"FEED","startMillis":5000,"endMillis":900000,"feedType":"BREAST","breastSide":"RIGHT","updatedAtMillis":900000}""",
+        )
+        assertNull(ended.endMillis)
+        assertEquals(5_000L, ended.startMillis)
+        assertEquals(BreastSide.RIGHT, ended.breastSide)
+        assertFalse(ended.isInterval)
+        assertFalse(ended.isRunning)
+        assertTrue(ended.isValid)
+        // Still "running" in the old app (no end): an instant at its start, never running.
+        val running = EntryJson.decode("""{"id":"r","kind":"FEED","startMillis":7000,"feedType":"BREAST","updatedAtMillis":7000}""")
+        assertEquals(Entry.breastfeed(7_000L, id = "r"), running)
+        assertFalse(running.isRunning)
+        assertTrue(running.isValid)
+        // A sleep keeps its end.
+        assertEquals(20L, EntryJson.decode(EntryJson.encode(Entry.sleep(10L, 20L, id = "s"))).endMillis)
     }
 
     @Test
@@ -81,9 +106,9 @@ class EntryExtensionsTest {
         assertFalse(sleep.copy(deleted = true).isRunning)
         assertFalse(sleep.copy(endMillis = 10L).isRunning)
 
-        val breast = Entry.breastfeed(0L)
-        assertTrue(breast.isInterval)
-        assertTrue(breast.isRunning)
+        val breast = Entry.breastfeed(0L, BreastSide.LEFT)
+        assertFalse(breast.isInterval)
+        assertFalse(breast.isRunning)
 
         val formula = Entry.feed(FeedType.FORMULA, 0L)
         assertFalse(formula.isInterval)
@@ -97,6 +122,7 @@ class EntryExtensionsTest {
         assertEquals(200L, Entry.sleep(1_000L, 1_200L).durationMillis(now = 9_999L))
         assertEquals(0L, Entry.sleep(1_000L).durationMillis(now = 500L))
         assertEquals(0L, Entry.feed(FeedType.FOOD, 1_000L).durationMillis(now = 9_999L))
+        assertEquals(0L, Entry.breastfeed(1_000L).durationMillis(now = 9_999L))
     }
 
     @Test
@@ -121,7 +147,7 @@ class EntryValidationTest {
 
     @Test
     fun sampleScenarioIsValid() {
-        (SampleData.scenarioWithRunningFeed() + SampleData.scenarioAt0312()).forEach { assertNull(it.id, validate(it)) }
+        (SampleData.scenarioWithRecentFeed() + SampleData.scenarioAt0312()).forEach { assertNull(it.id, validate(it)) }
     }
 
     @Test
@@ -134,11 +160,14 @@ class EntryValidationTest {
 
     @Test
     fun breastSide() {
+        // The side is optional: a breastfeed may record only its time.
         assertNull(violation(Entry.breastfeed(0L)))
-        assertEquals(EntryViolation.SIDE_WHILE_RUNNING, violation(Entry.breastfeed(0L).copy(breastSide = BreastSide.LEFT)))
-        // The side is optional: an ended breastfeed may record only its times.
-        assertNull(violation(Entry.breastfeed(0L, 120_000L, side = null)))
-        assertNull(violation(Entry.breastfeed(0L, 120_000L, BreastSide.LEFT)))
+        assertNull(violation(Entry.breastfeed(0L, BreastSide.LEFT)))
+        assertNull(violation(Entry.feed(FeedType.BREAST, 0L, BreastSide.RIGHT_THEN_LEFT)))
+        // A breastfeed is an instant: new data never has an end.
+        assertEquals(EntryViolation.INSTANT_HAS_END, violation(Entry.breastfeed(0L).copy(endMillis = 120_000L)))
+        // The factory drops a side on other feed types.
+        assertNull(Entry.feed(FeedType.FORMULA, 0L, BreastSide.LEFT).breastSide)
         assertEquals(
             EntryViolation.SIDE_ON_NON_BREAST,
             violation(Entry.feed(FeedType.FORMULA, 0L).copy(breastSide = BreastSide.RIGHT)),

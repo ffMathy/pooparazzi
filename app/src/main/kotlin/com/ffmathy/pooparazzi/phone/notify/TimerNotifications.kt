@@ -25,16 +25,16 @@ import com.ffmathy.pooparazzi.phone.system.inAppLanguage
 import java.time.ZoneId
 import com.ffmathy.pooparazzi.core.R as CoreR
 
-/** A running sleep or breastfeed as its notification shows it: which entry, and since when. */
+/** A running sleep as its notification shows it: which entry, and since when. */
 data class RunningTimer(val entryId: String, val startMillis: Long)
 
 /**
- * What the ongoing notifications show (DESIGN_SPEC §3.3.7, §10.5): the running sleep and breastfeed, the last feed (the
- * sleep's "Last fed" metric), and the name and language the text uses. Equal states post nothing new.
+ * What the ongoing notification shows (DESIGN_SPEC §3.3.7, §10.5): the running sleep, the last feed (the sleep's
+ * "Last fed" metric), and the name and language the text uses. Equal states post nothing new. Feeds are instants
+ * (breastfeeds too), so nothing else ever runs.
  */
 data class TimerState(
     val sleep: RunningTimer?,
-    val feed: RunningTimer?,
     val lastFeedStartMillis: Long?,
     val babyName: String,
     val language: AppLanguage,
@@ -45,7 +45,6 @@ data class TimerState(
             val summary = summarize(entries, now, zone)
             return TimerState(
                 sleep = summary.runningSleep?.let { RunningTimer(it.id, it.startMillis) },
-                feed = summary.runningFeed?.let { RunningTimer(it.id, it.startMillis) },
                 lastFeedStartMillis = summary.lastFeed?.startMillis,
                 babyName = settings.babyName,
                 language = settings.language,
@@ -56,9 +55,8 @@ data class TimerState(
 }
 
 /**
- * The ongoing notifications of a running sleep and a running breastfeed (DESIGN_SPEC §3.3.7, §10.5): a silent
- * IMPORTANCE_LOW channel, "Noa is asleep" / "Since 02:05" with a "Woke up" action that works from the lock screen, and
- * "Noa is breastfeeding" with "End feed", which opens the app on the Side sheet. Each asks to be promoted to a Live
+ * The ongoing notification of a running sleep (DESIGN_SPEC §3.3.7, §10.5): a silent IMPORTANCE_LOW channel, "Noa is
+ * asleep" / "Since 02:05" with a "Woke up" action that works from the lock screen. It asks to be promoted to a Live
  * Update where the system allows it, and is a normal ongoing notification otherwise.
  *
  * Absolute times only, never a ticking duration. A notification the parent swipes away is not posted again for that
@@ -69,15 +67,16 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
     private val context = context.applicationContext
     private val manager = context.getSystemService(NotificationManager::class.java)
 
-    /** Posts, updates or cancels both notifications so they match [state]. */
+    /** Posts, updates or cancels the notification so it matches [state]. */
     fun render(state: TimerState) {
-        // Forget dismissals of timers that have ended, so the next sleep or feed gets its notification again.
-        val running = setOfNotNull(state.sleep?.entryId, state.feed?.entryId)
+        // Forget dismissals of sleeps that have ended, so the next sleep gets its notification again.
+        val running = setOfNotNull(state.sleep?.entryId)
         val dismissed = prefs.dismissedTimers
         if (!running.containsAll(dismissed)) prefs.dismissedTimers = dismissed intersect running
 
         show(SLEEP_ID, state, state.sleep, dismissed) { buildSleep(state, it) }
-        show(FEED_ID, state, state.feed, dismissed) { buildFeed(state, it) }
+        // A breastfeed notification posted by an older version (when breastfeeds were timed) is never wanted now.
+        manager.cancel(LEGACY_FEED_ID)
     }
 
     private fun show(id: Int, state: TimerState, timer: RunningTimer?, dismissed: Set<String>, build: (RunningTimer) -> Notification) {
@@ -137,24 +136,6 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
             .build()
     }
 
-    @VisibleForTesting
-    internal fun buildFeed(state: TimerState, feed: RunningTimer): Notification {
-        val strings = context.inAppLanguage(state.language)
-        val clock = ClockFormatter.from(strings)
-        val status = strings.getString(CoreR.string.status_breastfeeding)
-        val title = state.babyName.takeIf { it.isNotBlank() }?.let { strings.getString(R.string.notification_breastfeeding_title, it) } ?: status
-        val endFeed = action(
-            icon = XDrawables.breast,
-            title = strings.getString(CoreR.string.action_end_feed),
-            intent = DeepLinks.pendingIntent(context, HomeLaunch.Side),
-        )
-        return base(strings, title, feed, clock, state.zone, smallIcon = XDrawables.breast, status = status)
-            .addAction(endFeed)
-            .setDeleteIntent(TimerActionReceiver.dismissedIntent(context, feed.entryId))
-            .withMetrics(strings = strings, zone = state.zone, since = feed.startMillis, lastFed = null)
-            .build()
-    }
-
     private fun base(
         strings: Context,
         title: String,
@@ -211,6 +192,7 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
         private const val TAG = "TimerNotifications"
         const val CHANNEL_ID = "running_timers"
         const val SLEEP_ID = 1001
-        const val FEED_ID = 1002
+        /** The running-breastfeed notification of older versions; cancelled if it is still showing. */
+        const val LEGACY_FEED_ID = 1002
     }
 }

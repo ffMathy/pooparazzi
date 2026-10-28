@@ -158,8 +158,9 @@ class EditViewModelTest : CoreTestBase() {
         assertNull(formula.draft.side)
         assertNull(formula.durationMillis)
         sheet.vm.onFeedType(FeedType.BREAST)
-        assertEquals("switching back restores the original's end and side", at(8, 14), state(sheet).draft.end)
-        assertEquals(BreastSide.LEFT, state(sheet).draft.side)
+        assertNull("a breast feed is an instant too", state(sheet).draft.end)
+        assertNull(state(sheet).durationMillis)
+        assertEquals("switching back restores the original's side", BreastSide.LEFT, state(sheet).draft.side)
         sheet.vm.onFeedType(FeedType.FORMULA)
         sheet.vm.onSave()
         runCurrent()
@@ -189,7 +190,8 @@ class EditViewModelTest : CoreTestBase() {
         runCurrent()
         val saved = core.entry("sample-breast-0800")!!
         assertNull(saved.breastSide)
-        assertEquals(at(8, 14), saved.endMillis)
+        assertNull(saved.endMillis)
+        assertEquals(at(8, 0), saved.startMillis)
     }
 
     @Test
@@ -205,11 +207,13 @@ class EditViewModelTest : CoreTestBase() {
         assertNull("a feed with just its time", saved.feedType)
         assertEquals(at(12, 22), saved.startMillis)
 
-        // From no type, Breast makes it a timed feed again.
+        // From no type, Breast makes it a breast feed at the same time (no end), whose side can be ticked.
         sheet.vm.openEntry("sample-formula-1222")
         sheet.vm.onFeedType(FeedType.BREAST)
         assertEquals(FeedType.BREAST, state(sheet).draft.feedType)
-        assertTrue(state(sheet).draft.end != null)
+        assertNull(state(sheet).draft.end)
+        sheet.vm.onSideTick(Breast.LEFT)
+        assertEquals(BreastSide.LEFT, state(sheet).draft.side)
     }
 
     @Test
@@ -277,7 +281,7 @@ class EditViewModelTest : CoreTestBase() {
         runCurrent()
         val breast = core.entries().single { it.feedType == FeedType.BREAST && it.startMillis == at(14, 17) }
         assertEquals(BreastSide.RIGHT, breast.breastSide)
-        assertEquals(at(14, 32), breast.endMillis)
+        assertNull("a breast feed is an instant", breast.endMillis)
 
         sheet.vm.openNew(start)
         sheet.vm.onKind(EntryKind.DIAPER)

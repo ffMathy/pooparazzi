@@ -27,13 +27,11 @@ data class WidgetSnapshot(
     val lastFeed: Entry?,
     val lastDiaper: Entry?,
     val runningSleepStart: Long?,
-    val runningFeedStart: Long?,
     val awakeSinceMillis: Long?,
     val receipt: WidgetReceipt?,
     val notice: WidgetNotice?,
 ) {
     val asleep: Boolean get() = runningSleepStart != null
-    val feeding: Boolean get() = runningFeedStart != null
 
     /** What a tap on the widget background opens: Home with the undo card for the receipt, or Home. */
     val backgroundLaunch: HomeLaunch
@@ -61,7 +59,6 @@ data class WidgetSnapshot(
                 lastFeed = summary.lastFeed,
                 lastDiaper = summary.lastDiaper,
                 runningSleepStart = sleep?.startMillis,
-                runningFeedStart = summary.runningFeed?.startMillis,
                 awakeSinceMillis = if (sleep == null) summary.lastSleepEnd else null,
                 receipt = memo.receipt?.takeIf { it.expiresAtMillis > now && it.stillStands(entries) },
                 notice = memo.notice?.takeIf { it.expiresAtMillis > now },

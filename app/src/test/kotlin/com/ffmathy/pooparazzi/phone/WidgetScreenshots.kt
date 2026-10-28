@@ -58,7 +58,7 @@ abstract class WidgetScreenshots(private val language: String) {
         Settings.System.putString(context.contentResolver, Settings.System.TIME_12_24, "24")
     }
 
-    /** Idle (Night), just logged (Day), asleep at 03:12 (Night under Auto) and breastfeeding (Day). */
+    /** Idle (Night), just logged (Day), asleep at 03:12 (Night under Auto) and after a breast feed (Day). */
     @Test
     fun widget4x2() {
         val size = DpSize(358.dp, 208.dp)
@@ -66,7 +66,7 @@ abstract class WidgetScreenshots(private val language: String) {
             WidgetSamples.idle(night = true),
             WidgetSamples.justLogged(night = false),
             WidgetSamples.asleep(),
-            WidgetSamples.breastfeeding(night = false),
+            WidgetSamples.afterBreastfeed(night = false),
         )
         val views = states.map { render(size) { LogWidgetContent(it) } }
         compose.setContent {
@@ -77,13 +77,13 @@ abstract class WidgetScreenshots(private val language: String) {
         compose.onNodeWithTag(TAG).captureRoboImage("screenshots/$language/17-widget-4x2.png")
     }
 
-    /** Idle and asleep (Night), breastfeeding and idle (Day), then the narrow breakpoints: "Sleep" and icon-only. */
+    /** Idle and asleep (Night), after a breast feed and idle (Day), then the narrow breakpoints: "Sleep" and icon-only. */
     @Test
     fun widget2x1() {
         val full = DpSize(171.dp, 100.dp)
         val rows = listOf(
             listOf(WidgetSamples.idle(night = true) to full, WidgetSamples.asleep() to full),
-            listOf(WidgetSamples.breastfeeding(night = false) to full, WidgetSamples.idle(night = false) to full),
+            listOf(WidgetSamples.afterBreastfeed(night = false) to full, WidgetSamples.idle(night = false) to full),
             listOf(WidgetSamples.idle(night = true) to DpSize(140.dp, 100.dp), WidgetSamples.asleep() to DpSize(100.dp, 100.dp)),
         )
         val views = rows.map { row -> row.map { (state, size) -> render(size) { QuickWidgetContent(state) } } }

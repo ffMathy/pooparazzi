@@ -39,8 +39,8 @@ object WidgetSamples {
     /** 03:12, asleep since 02:05: always Night under Auto. */
     fun asleep(): WidgetSnapshot = build(SampleData.scenarioAt0312(zone), SampleData.NOW_0312, night = null)
 
-    /** 14:50, breastfeeding since 14:32: Feed is "End feed". */
-    fun breastfeeding(night: Boolean): WidgetSnapshot = build(SampleData.scenarioWithRunningFeed(zone), SampleData.NOW_1450, night)
+    /** 14:50, after the 14:32 breast feed: "Fed at 14:32" with the breast icon. */
+    fun afterBreastfeed(night: Boolean): WidgetSnapshot = build(SampleData.scenarioWithRecentFeed(zone), SampleData.NOW_1450, night)
 
     /** [night] fixes the Appearance (Night or Day); null leaves it on Auto. */
     private fun build(entries: List<Entry>, now: Long, night: Boolean?, memo: WidgetMemo = WidgetMemo()): WidgetSnapshot {

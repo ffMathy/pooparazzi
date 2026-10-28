@@ -56,7 +56,7 @@ class DeepLinkNavigationTest {
 
         // The widget's Feed button while the app shows History.
         activity.newIntent(DeepLinks.intent(app, HomeLaunch.Feed))
-        compose.waitUntilAtLeastOneExists(hasText("Starts a timer"), timeoutMillis = 5_000)
+        compose.waitUntilAtLeastOneExists(hasText("Then the sides, if you like"), timeoutMillis = 5_000)
         compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Add entry")).fetchSemanticsNodes().isEmpty() }
     }
 

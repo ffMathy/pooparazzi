@@ -44,7 +44,7 @@ class HistoryViewModelTest : CoreTestBase() {
         assertTrue(state.canGoBack)
         assertNotNull("today's ribbon has a now-line", state.ribbon.nowFraction)
         assertEquals(5, state.ribbon.sleeps.size)
-        assertEquals(2, state.ribbon.breastfeeds.size)
+        assertEquals(listOf("sample-breast-0140", "sample-breast-0800"), state.ribbon.breastfeeds.map { it.entry.id })
         assertEquals(2, state.ribbon.formula.size)
         assertEquals(1, state.ribbon.food.size)
         assertEquals(5, state.ribbon.diapers.size)

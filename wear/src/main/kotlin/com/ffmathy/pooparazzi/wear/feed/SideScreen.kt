@@ -54,6 +54,7 @@ import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.wear.R
+import com.ffmathy.pooparazzi.wear.diaper.SaveEdgeButton
 import com.ffmathy.pooparazzi.wear.sample.WearSamples
 import com.ffmathy.pooparazzi.wear.state.SideDraft
 import com.ffmathy.pooparazzi.wear.theme.WatchAmbient
@@ -72,14 +73,15 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 @Immutable
 data class SideActions(
     val onTick: (Breast) -> Unit = {},
-    val onEnd: () -> Unit = {},
+    val onSave: () -> Unit = {},
 )
 
 /**
- * Side (V1_ADDITIONS §2.2): "Which side?" (with the feed's range and length under it), two CheckboxButtons Left and
- * Right whose tick order is the order recorded (a "1" / "2" badge on each ticked box and a "Left → Right" line under
- * them), and the pinned Medium EdgeButton "End feed". The side is optional: End feed with nothing ticked records
- * only the times. The feed ends at the time stamped on "End feed"; swipe right keeps it running. 500 ms tap cooldown.
+ * Side (V1_ADDITIONS §2.2), after Breast on the Feed type screen: "Which side?" (with "Breast · 14:32", the time the
+ * feed is logged at, under it), two CheckboxButtons Left and Right whose tick order is the order recorded (a "1" / "2"
+ * badge on each ticked box and a "Left → Right" line under them), and the pinned Medium EdgeButton "Save". The side
+ * is optional: Save with nothing ticked records only the time. Swipe right goes back to the Feed type screen without
+ * logging. 500 ms tap cooldown.
  */
 @Composable
 fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modifier) {
@@ -89,13 +91,11 @@ fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modi
     val ambient = isAmbient()
     val small = isSmallWatch()
     val f = rememberFormatters(draft.zone)
-    // "14:32–14:50 · 18m": the feed being ended, so the parent can confirm it before ending it.
-    val summary = f.clock.range(draft.feed.startMillis, draft.endAt, f.zone, spaced = false) +
-        DOT_SEPARATOR + f.duration.between(draft.feed.startMillis, draft.endAt)
-    // Read "14:32 to 14:50, 18 minutes", not the dash and "18m".
-    val spoken = spokenText().let {
-        it.pair(it.range(f, draft.feed.startMillis, draft.endAt), f.duration.spokenBetween(draft.feed.startMillis, draft.endAt))
-    }
+    // "Breast · 14:32": what Save logs, so the parent can confirm the time (set with Earlier on the screen before).
+    val breast = stringResource(CoreR.string.feed_type_breast)
+    val time = f.clock.format(draft.at, f.zone)
+    val summary = breast + DOT_SEPARATOR + time
+    val spoken = spokenText().pair(breast, time)
     val variant = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant
     ScreenScaffold(scrollState = listState, modifier = modifier) { contentPadding ->
         Box(Modifier.fillMaxSize()) {
@@ -103,7 +103,7 @@ fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modi
                 state = listState,
                 flingBehavior = TransformingLazyColumnDefaults.snapFlingBehavior(listState),
                 // Tighter than the default list so the title, summary and BOTH checkboxes sit above the pinned Medium
-                // "End feed" EdgeButton at rest on a 227 dp watch (its top edge is ~154 dp down). A small watch can't
+                // "Save" EdgeButton at rest on a 227 dp watch (its top edge is ~154 dp down). A small watch can't
                 // fit both anyway, so it keeps the full top padding (the title stays clear of the time) and the bottom
                 // padding lets Right scroll clear of the button.
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -162,9 +162,9 @@ fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modi
                     )
                 }
             }
-            EndFeedEdgeButton(
+            SaveEdgeButton(
                 enabled = cooldown.ready,
-                onClick = actions.onEnd,
+                onClick = actions.onSave,
                 ambient = ambient,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
@@ -241,44 +241,6 @@ private fun SideCheckbox(
         },
         label = { Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1) },
     )
-}
-
-/** "End feed": pinned Medium EdgeButton in the running feed's treatment (FEED lit, FEED strong border). Always enabled. */
-@Composable
-private fun EndFeedEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Boolean, modifier: Modifier) {
-    val feed = events().feed
-    val content = if (ambient) WatchAmbient.content else feed.onContainer
-    val label = stringResource(CoreR.string.action_end_feed)
-    EdgeButton(
-        onClick = onClick,
-        modifier = modifier.semantics { contentDescription = label },
-        buttonSize = EdgeButtonSize.Medium,
-        enabled = enabled,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (ambient) Color.Transparent else feed.containerLit,
-            contentColor = content,
-            disabledContainerColor = if (ambient) Color.Transparent else feed.containerLit,
-            disabledContentColor = content,
-        ),
-        border = BorderStroke(if (ambient) 2.dp else 1.5.dp, feed.strong),
-    ) {
-        if (isSmallWatch()) {
-            // A 192 dp watch's EdgeButton is too narrow for "Afslut amning" on one line: wrap it in place of the icon.
-            Text(
-                label,
-                style = MaterialTheme.typography.labelMedium,
-                color = content,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                modifier = Modifier.clearAndSetSemantics { },
-            )
-        } else {
-            Column(Modifier.clearAndSetSemantics { }, horizontalAlignment = Alignment.CenterHorizontally) {
-                XIcon(XIcons.check, null, tint = if (ambient) WatchAmbient.content else feed.strong, size = 24.dp)
-                AutoSizeLine(label, MaterialTheme.typography.labelMedium, content, minSize = 12, modifier = Modifier.width(96.dp))
-            }
-        }
-    }
 }
 
 @WearPreviewDevices

@@ -23,7 +23,6 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 import com.ffmathy.pooparazzi.core.model.diaperKind
-import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.settings.SettingsRepository
@@ -80,8 +79,8 @@ class HomeViewModel(
     val effects: Flow<HomeHaptic> = haptics.receiveAsFlow()
 
     /**
-     * A sleep or breastfeed was started here: the moment to ask for the notification permission in context, so the
-     * running timer can show its ongoing notification (DESIGN_SPEC §3.3.1, §10.5).
+     * A sleep was started here: the moment to ask for the notification permission in context, so the running sleep can
+     * show its ongoing notification (DESIGN_SPEC §3.3.1, §10.5).
      */
     val timerStarted: Flow<Unit> = timerStarts.receiveAsFlow()
 
@@ -131,21 +130,9 @@ class HomeViewModel(
 
     // ---- Big buttons --------------------------------------------------------------------------
 
-    override fun onFeed(shownRunning: Boolean) = act {
+    override fun onFeed() = act {
         if (homeBlocked()) return@act
-        val stamp = clock.now()
-        val running = summary().runningFeed
-        when {
-            // A breastfeed started elsewhere since the button was drawn: "Already breastfeeding since …", no Side sheet.
-            running != null && !shownRunning -> {
-                showGuard(GuardKind.FEEDING, running.startMillis)
-                haptic(HomeHaptic.REJECT)
-            }
-            // "End feed" on a feed that has already ended elsewhere: nothing to end, and no Feed sheet either.
-            running == null && shownRunning -> haptic(HomeHaptic.REJECT)
-            running != null -> sheet.value = SheetModel.Side(running.id, running.startMillis, stamp)
-            else -> sheet.value = SheetModel.Feed(stamp)
-        }
+        sheet.value = SheetModel.Feed(clock.now())
     }
 
     override fun onDiaper() = act {
@@ -215,8 +202,8 @@ class HomeViewModel(
 
     override fun onAdjustStart() = act {
         val summary = summary()
-        val target = summary.runningFeed ?: summary.runningSleep ?: return@act
-        showCard(CardSpec.AdjustStart(target.id, sleep = target.isSleep), baseTime = target.startMillis)
+        val target = summary.runningSleep ?: return@act
+        showCard(CardSpec.AdjustStart(target.id), baseTime = target.startMillis)
     }
 
     // ---- Undo card ----------------------------------------------------------------------------
@@ -273,9 +260,7 @@ class HomeViewModel(
                 haptic(HomeHaptic.REJECT)
             }
             .onFailure { e ->
-                if (e is AlreadyRunningException) {
-                    showGuard(if (e.running.isSleep) GuardKind.ASLEEP else GuardKind.FEEDING, e.running.startMillis)
-                }
+                if (e is AlreadyRunningException) showGuard(GuardKind.ASLEEP, e.running.startMillis)
                 haptic(HomeHaptic.REJECT)
             }
     }
@@ -297,10 +282,6 @@ class HomeViewModel(
         val next = when (current) {
             is SheetModel.Feed -> current.copy(offsetMinutes = minutes)
             is SheetModel.Diaper -> current.copy(offsetMinutes = minutes)
-            is SheetModel.Side -> {
-                if (!HomeStateBuilder.sideEndAllowed(current.startMillis, current.stamp, minutes)) return@act
-                current.copy(offsetMinutes = minutes)
-            }
         }
         sheet.value = next
         haptic(HomeHaptic.SEGMENT_TICK)
@@ -308,75 +289,48 @@ class HomeViewModel(
 
     override fun onFeedType(type: FeedType?) = act {
         val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
-        val at = feedSheet.stamp + feedSheet.offsetMinutes * MINUTE_MILLIS
-        closeSheet(committed = true)
-        val duringSleep = summary().runningSleep != null
         if (type == FeedType.BREAST) {
-            attempt { repository.startBreastfeed(at).getOrThrow() }
-                .onSuccess { feed ->
-                    showCard(
-                        CardSpec.FeedStarted(feed.id),
-                        baseTime = feedSheet.stamp,
-                        offsetMinutes = feedSheet.offsetMinutes,
-                        duringSleep = duringSleep,
-                        undo = Undo.Delete(feed.id),
-                    )
-                    haptic(HomeHaptic.CONFIRM)
-                    timerStarts.trySend(Unit)
-                }
-                .onFailure { e ->
-                    if (e is AlreadyRunningException) showGuard(GuardKind.FEEDING, e.running.startMillis)
-                    haptic(HomeHaptic.REJECT)
-                }
-        } else {
-            attempt { repository.logFeedChecked(type, at) }
-                .onSuccess { result ->
-                    when (result) {
-                        is LogResult.Logged -> {
-                            showCard(
-                                CardSpec.FeedLogged(result.entry.id, type),
-                                baseTime = feedSheet.stamp,
-                                offsetMinutes = feedSheet.offsetMinutes,
-                                duringSleep = duringSleep,
-                                undo = Undo.Delete(result.entry.id),
-                            )
-                            haptic(HomeHaptic.CONFIRM)
-                        }
-                        is LogResult.Duplicate -> showDuplicate(result.entry, duringSleep)
-                    }
-                }
-                .onFailure { haptic(HomeHaptic.REJECT) }
+            // Breast is an instant too, but first offers the optional side order: the sheet stays open.
+            if (!feedSheet.breast) {
+                sheet.value = feedSheet.copy(breast = true)
+                haptic(HomeHaptic.SEGMENT_TICK)
+            }
+            return@act
         }
+        logFeed(feedSheet, type, side = null)
     }
 
     override fun onSideTick(breast: Breast) = act {
-        val sideSheet = sheet.value as? SheetModel.Side ?: return@act
-        sheet.value = sideSheet.copy(ticks = BreastSide.toggle(sideSheet.ticks, breast))
+        val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
+        if (!feedSheet.breast) return@act
+        sheet.value = feedSheet.copy(ticks = BreastSide.toggle(feedSheet.ticks, breast))
     }
 
-    override fun onEndFeed() = act {
-        val sideSheet = sheet.value as? SheetModel.Side ?: return@act
-        val at = sideSheet.stamp + sideSheet.offsetMinutes * MINUTE_MILLIS
-        if (at < sideSheet.startMillis) return@act
-        val side = BreastSide.fromOrder(sideSheet.ticks)
+    override fun onLogBreastfeed() = act {
+        val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
+        if (!feedSheet.breast) return@act
+        logFeed(feedSheet, FeedType.BREAST, BreastSide.fromOrder(feedSheet.ticks))
+    }
+
+    /** Logs a feed instant of [type] at the sheet's stamp + offset, closing the sheet. */
+    private suspend fun logFeed(feedSheet: SheetModel.Feed, type: FeedType?, side: BreastSide?) {
+        val at = feedSheet.stamp + feedSheet.offsetMinutes * MINUTE_MILLIS
         closeSheet(committed = true)
-        attempt { repository.endBreastfeed(sideSheet.feedId, at, side) }
+        val duringSleep = summary().runningSleep != null
+        attempt { repository.logFeedChecked(type, at, side) }
             .onSuccess { result ->
                 when (result) {
-                    is EndResult.Ended -> {
+                    is LogResult.Logged -> {
                         showCard(
-                            CardSpec.FeedEnded(result.entry.id, side),
-                            baseTime = sideSheet.stamp,
-                            offsetMinutes = sideSheet.offsetMinutes,
-                            undo = Undo.Restore(result.previous),
+                            CardSpec.FeedLogged(result.entry.id, type, result.entry.breastSide),
+                            baseTime = feedSheet.stamp,
+                            offsetMinutes = feedSheet.offsetMinutes,
+                            duringSleep = duringSleep,
+                            undo = Undo.Delete(result.entry.id),
                         )
                         haptic(HomeHaptic.CONFIRM)
                     }
-                    is EndResult.Discarded -> {
-                        showCard(CardSpec.FeedCancelled(side), baseTime = at, undo = Undo.Restore(result.previous))
-                        haptic(HomeHaptic.CONFIRM)
-                    }
-                    is EndResult.NotRunning -> haptic(HomeHaptic.REJECT)
+                    is LogResult.Duplicate -> showDuplicate(result.entry, duringSleep)
                 }
             }
             .onFailure { haptic(HomeHaptic.REJECT) }
@@ -447,18 +401,13 @@ class HomeViewModel(
 
     /**
      * A widget or notification opened Home ([HomeLaunch]): the sheet it asks for, replacing any open one, or the undo
-     * card for a widget log. Stale requests (the feed already ended, the log already undone) show nothing.
+     * card for a widget log. Stale requests (the log already undone) show nothing.
      */
     fun onLaunch(launch: HomeLaunch) = act {
         when (launch) {
             // History is opened by the navigation (PooparazziNavHost); Home has nothing to show for it.
             HomeLaunch.Home, HomeLaunch.History -> Unit
-            HomeLaunch.Feed -> {
-                val stamp = clock.now()
-                val running = summary().runningFeed
-                sheet.value = if (running != null) SheetModel.Side(running.id, running.startMillis, stamp) else SheetModel.Feed(stamp)
-            }
-            HomeLaunch.Side -> summary().runningFeed?.let { sheet.value = SheetModel.Side(it.id, it.startMillis, clock.now()) }
+            HomeLaunch.Feed -> sheet.value = SheetModel.Feed(clock.now())
             HomeLaunch.Diaper -> sheet.value = SheetModel.Diaper(stamp = clock.now())
             is HomeLaunch.Receipt -> showReceipt(launch)
         }
@@ -472,8 +421,7 @@ class HomeViewModel(
                 if (entry.deleted) return
                 val spec = when (entry.kind) {
                     EntryKind.DIAPER -> CardSpec.DiaperLogged(entry.id, entry.diaperKind ?: DiaperKind.PLAIN)
-                    EntryKind.FEED ->
-                        if (entry.isBreastfeed) CardSpec.FeedStarted(entry.id) else CardSpec.FeedLogged(entry.id, entry.feedType)
+                    EntryKind.FEED -> CardSpec.FeedLogged(entry.id, entry.feedType, entry.breastSide)
                     EntryKind.SLEEP -> CardSpec.SleepStarted(entry.id)
                 }
                 val sleep = summary().runningSleep
@@ -577,7 +525,7 @@ class HomeViewModel(
         } else {
             val spec = when (existing.kind) {
                 EntryKind.DIAPER -> CardSpec.DiaperLogged(existing.id, existing.diaperKind ?: DiaperKind.PLAIN)
-                else -> CardSpec.FeedLogged(existing.id, existing.feedType)
+                else -> CardSpec.FeedLogged(existing.id, existing.feedType, existing.breastSide)
             }
             showCard(spec, baseTime = existing.startMillis, duringSleep = duringSleep, undo = Undo.Delete(existing.id), message = message)
         }

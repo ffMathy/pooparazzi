@@ -80,7 +80,6 @@ data class TileUiState(
     val lastFeed: Entry?,
     val lastDiaper: Entry?,
     val runningSleep: Entry?,
-    val runningFeed: Entry?,
     val feedback: TileFeedback? = null,
     val guard: TileGuard? = null,
 ) {
@@ -131,7 +130,6 @@ data class TileUiState(
             lastFeed = summary.lastFeed,
             lastDiaper = summary.lastDiaper,
             runningSleep = summary.runningSleep,
-            runningFeed = summary.runningFeed,
             feedback = feedback?.takeIf { it.untilMillis > summary.now && it.stillStands(summary) },
             guard = guard?.takeIf { it.untilMillis > summary.now },
         )

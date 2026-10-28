@@ -25,45 +25,23 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
  * Feed · Diaper and the Sleep toggle (DESIGN_SPEC §3.3.1, V1_ADDITIONS §2.1). Fills, labels and positions never change
- * in lights-down. While a breastfeed runs, Feed takes its checked form "End feed"; while a sleep runs, the toggle reads
- * "Woke up". Neither exposes a separate on/off state: the name and a state description carry it (§9.4).
+ * in lights-down. Feed always opens the Feed sheet (every feed is one time); while a sleep runs, the toggle reads
+ * "Woke up". The toggle exposes no separate on/off state: the name and a state description carry it (§9.4).
  */
 @Composable
 internal fun HomeButtons(state: HomeUiState, formatters: Formatters, actions: HomeActions, modifier: Modifier = Modifier) {
     val events = LocalXPalette.current.events
-    val zone = state.zone
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            val feed = state.runningFeed
-            if (feed == null) {
-                BigButton(
-                    onClick = { actions.onFeed(shownRunning = false) },
-                    icon = XIcons.feed,
-                    iconTint = events.feed.strong,
-                    label = stringResource(CoreR.string.kind_feed),
-                    container = events.feed.container,
-                    labelColor = events.feed.onContainer,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                )
-            } else {
-                val breastfeeding = stringResource(
-                    R.string.join_space,
-                    stringResource(CoreR.string.status_breastfeeding),
-                    formatters.relative.since(feed.startMillis, zone),
-                )
-                BigButton(
-                    onClick = { actions.onFeed(shownRunning = true) },
-                    icon = XIcons.breast,
-                    iconTint = events.feed.strong,
-                    label = stringResource(CoreR.string.action_end_feed),
-                    container = events.feed.containerLit,
-                    labelColor = events.feed.onContainer,
-                    radius = BigButtonDefaults.CheckedRadius,
-                    border = BorderStroke(2.dp, events.feed.strong),
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    semantics = { stateDescription = breastfeeding },
-                )
-            }
+            BigButton(
+                onClick = actions::onFeed,
+                icon = XIcons.feed,
+                iconTint = events.feed.strong,
+                label = stringResource(CoreR.string.kind_feed),
+                container = events.feed.container,
+                labelColor = events.feed.onContainer,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
             BigButton(
                 onClick = actions::onDiaper,
                 icon = XIcons.diaper,

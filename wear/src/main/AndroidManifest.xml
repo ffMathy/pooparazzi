@@ -4,7 +4,7 @@
 
     <uses-feature android:name="android.hardware.type.watch" />
 
-    <!-- The Ongoing Activity for a running sleep or breastfeed (DESIGN_SPEC §3.8); asked in context on API 33+. -->
+    <!-- The Ongoing Activity for a running sleep (DESIGN_SPEC §3.8); asked in context on API 33+. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Haptics for the tile's one-tap logs (DESIGN_SPEC §5.11). -->
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -53,7 +53,7 @@
 
         <!--
             After a reboot or an app update nothing restarts the process, and notifications are gone: this puts the
-            Ongoing Activity of a running sleep or breastfeed back (DESIGN_SPEC §3.8). Only the system sends these.
+            Ongoing Activity of a running sleep back (DESIGN_SPEC §3.8). Only the system sends these.
         -->
         <receiver
             android:name=".SurfacesRestoreReceiver"

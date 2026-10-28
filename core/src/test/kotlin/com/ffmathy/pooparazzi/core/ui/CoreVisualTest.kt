@@ -134,7 +134,7 @@ class CoreVisualTest {
 
     @Test
     fun avatars() {
-        val entries = SampleData.scenarioWithRunningFeed().distinctBy { listOf(it.kind, it.feedType, it.pee, it.poop) }
+        val entries = SampleData.scenarioWithRecentFeed().distinctBy { listOf(it.kind, it.feedType, it.pee, it.poop) }
         captureRoboImage("build/outputs/roborazzi/core_avatars.png") {
             Column {
                 for ((background, events) in listOf(night.surfaceContainer to XTokens.NightEvents, XTokens.Day.surfaceContainer to XTokens.DayEvents)) {

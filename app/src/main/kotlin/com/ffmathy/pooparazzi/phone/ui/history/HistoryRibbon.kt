@@ -68,8 +68,8 @@ internal object RibbonDefaults {
 }
 
 /**
- * The day ribbon (glance-only, not tappable): night bands, then three lanes — sleep bars; feeds (breastfeed bars,
- * formula ticks, food ticks with a square cap); diapers (pee ring, poop dot, both = ring + solid right half) — and the
+ * The day ribbon (glance-only, not tappable): night bands, then three lanes — sleep bars; feeds (formula ticks, food
+ * ticks with a square cap, breast ticks with a round foot); diapers (pee ring, poop dot, both = ring + solid right half) — and the
  * now-line in onSurface. Nothing is drawn after now. Axis labels "00 06 12 18 24". TalkBack reads [summary] instead.
  */
 @Composable
@@ -108,7 +108,7 @@ internal fun HistoryRibbon(ribbon: Ribbon, zone: ZoneId, summary: String, modifi
 
             // Core's ribbon already ends every span at now and leaves out later instants.
             ribbon.sleeps.forEach { bar(it, ::x, dp(RibbonDefaults.SLEEP_TOP), events.sleep.strong, d) }
-            ribbon.breastfeeds.forEach { bar(it, ::x, dp(RibbonDefaults.FEED_TOP), events.feed.strong, d) }
+            ribbon.breastfeeds.forEach { breastTick(x(it.at), events.feed.strong, d) }
             ribbon.formula.forEach { tick(x(it.at), events.feed.strong, d) }
             ribbon.food.forEach { foodTick(x(it.at), events.feed.strong, d) }
             ribbon.diapers.forEach { mark ->
@@ -200,6 +200,13 @@ private fun DrawScope.foodTick(centre: Float, color: Color, d: Float) {
         size = Size(cap, cap * 0.75f),
         cornerRadius = CornerRadius(1.5f * d),
     )
+}
+
+/** Breast: the tick with a round foot (a disc Ø 8 at its bottom), an upside-down lollipop unlike formula and food. */
+private fun DrawScope.breastTick(centre: Float, color: Color, d: Float) {
+    tick(centre, color, d)
+    val r = RibbonDefaults.FOOD_CAP * d / 2
+    drawCircle(color, r, Offset(centre, (RibbonDefaults.FEED_TOP + RibbonDefaults.LANE_HEIGHT) * d - r))
 }
 
 /** Pee: a ring r 5, stroke 2, filled with the card colour. */

@@ -51,7 +51,7 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun homeAsleepNight() = home("03-home-asleep-night", night = true, HomeSamples.asleep())
 
-    @Test fun homeBreastfeeding() = home("04-home-breastfeeding", night = false, HomeSamples.breastfeeding())
+    @Test fun homeBreastLogged() = home("04-home-breast-logged", night = false, HomeSamples.breastLogged())
 
     @Test fun homeUndoCard() {
         // Freeze the clock just after the card's 150 ms fade-in so the drain line is still almost full.
@@ -63,9 +63,9 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun feedSheet() = sheet("06-feed-sheet", night = true, HomeSamples.feedSheet())
 
-    @Test fun sideSheet() = sheet("07-side-sheet", night = false, HomeSamples.sideSheet())
+    @Test fun breastSheet() = sheet("07-breast-sheet", night = false, HomeSamples.breastSheet())
 
-    @Test fun sideSheetTicked() = sheet("07-side-sheet-ticked", night = true, HomeSamples.sideSheet(listOf(Breast.RIGHT, Breast.LEFT)))
+    @Test fun breastSheetTicked() = sheet("07-breast-sheet-ticked", night = true, HomeSamples.breastSheet(listOf(Breast.RIGHT, Breast.LEFT)))
 
     @Test fun diaperSheet() = sheet("08-diaper-sheet", night = true, HomeSamples.diaperSheet())
 
@@ -77,7 +77,7 @@ abstract class HomeScreenshots(private val language: String) {
      */
     @Test fun largeFont() {
         RuntimeEnvironment.setFontScale(2f)
-        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.breastfeeding(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.breastLogged(), HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/font200-$language-home.png")
     }
 

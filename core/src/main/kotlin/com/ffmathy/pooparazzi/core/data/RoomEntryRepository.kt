@@ -11,8 +11,8 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.InvalidEntryException
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
-import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.core.model.isInterval
+import com.ffmathy.pooparazzi.core.model.normalized
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.model.requireValid
@@ -60,16 +60,15 @@ class RoomEntryRepository(
 
     // ---- Feeds --------------------------------------------------------------------------------
 
-    override suspend fun logFeedChecked(type: FeedType?, at: Long): LogResult {
-        require(type != FeedType.BREAST) { "A breastfeed is timed: use startBreastfeed()" }
-        checkNotInFuture(at) { Entry.feed(type, at, updatedAtMillis = 0) }
+    override suspend fun logFeedChecked(type: FeedType?, at: Long, side: BreastSide?): LogResult {
+        checkNotInFuture(at) { Entry.feed(type, at, side, updatedAtMillis = 0) }
         val result = database.withTransaction {
             val window = EntryRules.DEDUPE_WINDOW_MILLIS - 1
             val duplicate = feedsBetween(type, at - window, at + window).firstOrNull()
             if (duplicate != null) {
                 LogResult.Duplicate(duplicate.toEntry())
             } else {
-                val entry = Entry.feed(type, at, updatedAtMillis = clock.now()).requireValid()
+                val entry = Entry.feed(type, at, side, updatedAtMillis = clock.now()).requireValid()
                 writeLocal(entry, stored = null)
                 LogResult.Logged(entry)
             }
@@ -78,19 +77,13 @@ class RoomEntryRepository(
         return result
     }
 
-    override suspend fun startBreastfeed(at: Long): Result<Entry> =
-        startInterval(at, running = { dao.runningBreastfeeds() }) { stamp -> Entry.breastfeed(at, updatedAtMillis = stamp) }
-
-    override suspend fun endBreastfeed(id: String, at: Long, side: BreastSide?): EndResult =
-        endInterval(id, at, side, matches = { it.isBreastfeed })
-
     // ---- Sleep --------------------------------------------------------------------------------
 
     override suspend fun startSleep(at: Long): Result<Entry> =
         startInterval(at, running = { dao.runningSleeps() }) { stamp -> Entry.sleep(at, updatedAtMillis = stamp) }
 
     override suspend fun endSleep(id: String, at: Long): EndResult =
-        endInterval(id, at, side = null, matches = { it.isSleep })
+        endInterval(id, at, matches = { it.isSleep })
 
     // ---- Diapers ------------------------------------------------------------------------------
 
@@ -187,7 +180,7 @@ class RoomEntryRepository(
      *
      * 1. The batch is applied oldest write first.
      * 2. Cross-device conflicts are resolved once, after the whole batch, by a rule both devices share:
-     *    - two running sleeps (or two running breastfeeds): the earliest start wins, then the smaller id;
+     *    - two running sleeps: the earliest start wins, then the smaller id;
      *    - two instants of the same kind, type and flags less than [EntryRules.DEDUPE_WINDOW_MILLIS] apart
      *      (DESIGN_SPEC §4.4: one entry "from any surface"): the earliest wins, then the smaller id.
      * 3. **Only the device that created a losing entry soft-deletes it** (a new local write, pushed), and the
@@ -198,7 +191,8 @@ class RoomEntryRepository(
     override suspend fun applyRemoteAll(entries: List<Entry>): Int {
         var applied = 0
         val inserted = mutableListOf<Entry>()
-        val ordered = entries.sortedWith(compareBy<Entry> { it.updatedAtMillis }.thenBy { it.id })
+        // A timed breastfeed from an older app version is merged as an instant (see Entry.normalized).
+        val ordered = entries.map(Entry::normalized).sortedWith(compareBy<Entry> { it.updatedAtMillis }.thenBy { it.id })
         for (entry in ordered) {
             val violation = validate(entry)
             if (violation != null) {
@@ -289,7 +283,6 @@ class RoomEntryRepository(
     private suspend fun endInterval(
         id: String,
         at: Long,
-        side: BreastSide?,
         matches: (Entry) -> Boolean,
     ): EndResult {
         val result = database.withTransaction {
@@ -298,7 +291,7 @@ class RoomEntryRepository(
             if (row == null || stored == null || !matches(stored) || !stored.isRunning) {
                 return@withTransaction EndResult.NotRunning(stored?.takeUnless { it.deleted })
             }
-            val ended = stored.copy(endMillis = at, breastSide = side, updatedAtMillis = nextStamp(stored.updatedAtMillis))
+            val ended = stored.copy(endMillis = at, updatedAtMillis = nextStamp(stored.updatedAtMillis))
             if (at < stored.startMillis) throw InvalidEntryException(EntryViolation.END_BEFORE_START, ended)
             checkNotInFuture(at) { ended }
             if (at - stored.startMillis < EntryRules.MIS_TAP_MILLIS) {
@@ -321,11 +314,7 @@ class RoomEntryRepository(
 
     /** Another running entry of the same type as [entry], if any. Call inside a transaction. */
     private suspend fun runningConflict(entry: Entry): Entry? {
-        val running = when {
-            entry.isSleep -> dao.runningSleeps()
-            entry.isBreastfeed -> dao.runningBreastfeeds()
-            else -> emptyList()
-        }
+        val running = if (entry.isSleep) dao.runningSleeps() else emptyList()
         return running.firstOrNull { it.id != entry.id }?.toEntry()
     }
 
@@ -341,7 +330,6 @@ class RoomEntryRepository(
             rows.filter { it.id != winner.id && it.createdLocally && it.id !in losers }.forEach { losers += it.id }
         }
         dropOwnLosers(dao.runningSleeps())
-        dropOwnLosers(dao.runningBreastfeeds())
         for (entry in inserted) {
             if (entry.deleted || entry.isInterval) continue
             dropOwnLosers(duplicatesAround(entry))

@@ -14,13 +14,13 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 
 - **Sleep**: one button starts a sleep and the same button ("Woke up") ends it. The running sleep is shown as a ring with its length; the start can be adjusted while it runs.
 - **Feeds**: Breast, Formula or Food, or **just the time**. Log it now or a few minutes ago (−5m / −10m / −15m).
-- **Breastfeeding timer**: Breast starts a timer. When it ends, tick **Left** and/or **Right**: the order you tick is the order recorded ("Right → Left"). The side is optional; "End feed" with nothing ticked records only the times.
+- **Breast feeds with side order**: a breast feed is logged like any feed, at one time (no timer, no duration). After Breast, tick **Left** and/or **Right**: the order you tick is the order recorded ("Right → Left"). The side is optional; "Log feed" (watch: "Save") with nothing ticked records just the time.
 - **Diapers**: Pee and Poop are independent checkboxes, both optional (nothing ticked is a plain change). With Poop on, pick an optional **colour** (yellow, green, brown, black, red, pale) and **texture** (watery, seedy, mushy, formed, hard); red, black and pale show a gentle "talk to your doctor" hint.
 - **History, edit and undo**: a day view with a 24-hour ribbon and day totals; tap any entry to edit its times, type, side or diaper details, or delete it; add a past entry; every log shows an **Undo** card (phone) or button (watch), with "Earlier?" chips to move it back.
 - **Phone ↔ watch sync** over the Wearable **Data Layer**. Both apps log offline and merge by last-writer-wins; the baby's name and the language follow the phone.
 - **Glanceable surfaces**:
-  - Phone: two **Glance widgets** (a 4×2 log widget and a 2×1 quick widget) and an **ongoing notification** for a running sleep or breastfeed (promoted to a Live Update where Android supports it).
-  - Watch: a **Tile**, four **complications** (since last feed, last diaper, asleep/awake, sleep and last feed) and an **Ongoing Activity** while a timer runs.
+  - Phone: two **Glance widgets** (a 4×2 log widget and a 2×1 quick widget) and an **ongoing notification** for a running sleep (promoted to a Live Update where Android supports it).
+  - Watch: a **Tile**, four **complications** (since last feed, last diaper, asleep/awake, sleep and last feed) and an **Ongoing Activity** while a sleep runs.
 - **Night Light design**: a dim, warm Night theme for the dark hours and a Day theme, chosen automatically (or fixed in Settings). Large targets, TalkBack descriptions in full words ("2 hours 10 minutes ago"), large-font and small-watch layouts.
 - **English and Danish**, with an in-app language choice (Settings › Language) that the widgets, notifications and the watch follow.
 
@@ -30,13 +30,13 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 ### Phone
 
-| Home, Night | Home, Day | Asleep at night | Breastfeeding |
+| Home, Night | Home, Day | Asleep at night | Breast feed logged |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-home-night.png" width="200" alt="Home, Night theme"> | <img src="docs/screenshots/en/phone-home-day.png" width="200" alt="Home, Day theme"> | <img src="docs/screenshots/en/phone-home-asleep.png" width="200" alt="Home while asleep"> | <img src="docs/screenshots/en/phone-home-breastfeeding.png" width="200" alt="Home while breastfeeding"> |
+| <img src="docs/screenshots/en/phone-home-night.png" width="200" alt="Home, Night theme"> | <img src="docs/screenshots/en/phone-home-day.png" width="200" alt="Home, Day theme"> | <img src="docs/screenshots/en/phone-home-asleep.png" width="200" alt="Home while asleep"> | <img src="docs/screenshots/en/phone-home-breast-logged.png" width="200" alt="Home after logging a breast feed, with its side order on the undo card"> |
 
-| Undo card | Feed sheet | Side sheet (tick order) | Diaper sheet |
+| Undo card | Feed sheet | Breast: side order | Diaper sheet |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-home-undo.png" width="200" alt="Undo card after logging"> | <img src="docs/screenshots/en/phone-feed-sheet.png" width="200" alt="Feed sheet: Breast, Formula, Food, Just the time"> | <img src="docs/screenshots/en/phone-side-sheet.png" width="200" alt="Side sheet with Right then Left ticked"> | <img src="docs/screenshots/en/phone-diaper-sheet.png" width="200" alt="Diaper sheet with poop colour and texture"> |
+| <img src="docs/screenshots/en/phone-home-undo.png" width="200" alt="Undo card after logging"> | <img src="docs/screenshots/en/phone-feed-sheet.png" width="200" alt="Feed sheet: Breast, Formula, Food, Just the time"> | <img src="docs/screenshots/en/phone-breast-sheet.png" width="200" alt="Feed sheet after Breast, with Right then Left ticked"> | <img src="docs/screenshots/en/phone-diaper-sheet.png" width="200" alt="Diaper sheet with poop colour and texture"> |
 
 | History | History, Night | Edit feed | Edit diaper |
 |:---:|:---:|:---:|:---:|
@@ -48,23 +48,23 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 ### Watch
 
-| Main, idle | Main, asleep | Main, breastfeeding | Feed type |
+| Main, idle | Main, asleep | Main, after a breast feed | Feed type |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/watch-main-idle.png" width="170" alt="Watch main, idle"> | <img src="docs/screenshots/en/watch-main-asleep.png" width="170" alt="Watch main, asleep"> | <img src="docs/screenshots/en/watch-main-breastfeeding.png" width="170" alt="Watch main, breastfeeding"> | <img src="docs/screenshots/en/watch-feed-type.png" width="170" alt="Watch feed type"> |
+| <img src="docs/screenshots/en/watch-main-idle.png" width="170" alt="Watch main, idle"> | <img src="docs/screenshots/en/watch-main-asleep.png" width="170" alt="Watch main, asleep"> | <img src="docs/screenshots/en/watch-main-after-breast.png" width="170" alt="Watch main after a breast feed"> | <img src="docs/screenshots/en/watch-feed-type.png" width="170" alt="Watch feed type"> |
 
 | Side | Diaper | Poop colour | Logged + Undo |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/watch-side.png" width="170" alt="Watch side, tick order"> | <img src="docs/screenshots/en/watch-diaper.png" width="170" alt="Watch diaper"> | <img src="docs/screenshots/en/watch-diaper-colour.png" width="170" alt="Watch poop colour list"> | <img src="docs/screenshots/en/watch-logged.png" width="170" alt="Watch logged receipt with Undo"> |
+| <img src="docs/screenshots/en/watch-side.png" width="170" alt="Watch side order after Breast, with Save"> | <img src="docs/screenshots/en/watch-diaper.png" width="170" alt="Watch diaper"> | <img src="docs/screenshots/en/watch-diaper-colour.png" width="170" alt="Watch poop colour list"> | <img src="docs/screenshots/en/watch-logged.png" width="170" alt="Watch logged breast feed with its side order and Undo"> |
 
-| Undone | Today | Tile | Tile, breastfeeding | Complications |
+| Undone | Today | Tile | Tile, asleep | Complications |
 |:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/watch-undone.png" width="140" alt="Watch undone"> | <img src="docs/screenshots/en/watch-today.png" width="140" alt="Watch today list"> | <img src="docs/screenshots/en/watch-tile.png" width="140" alt="Watch tile"> | <img src="docs/screenshots/en/watch-tile-breastfeeding.png" width="140" alt="Watch tile while breastfeeding"> | <img src="docs/screenshots/en/watch-complications.png" width="140" alt="Watch complications preview"> |
+| <img src="docs/screenshots/en/watch-undone.png" width="140" alt="Watch undone"> | <img src="docs/screenshots/en/watch-today.png" width="140" alt="Watch today list"> | <img src="docs/screenshots/en/watch-tile.png" width="140" alt="Watch tile"> | <img src="docs/screenshots/en/watch-tile-asleep.png" width="140" alt="Watch tile while asleep"> | <img src="docs/screenshots/en/watch-complications.png" width="140" alt="Watch complications preview"> |
 
 ### På dansk (Danish)
 
-| Hjem, nat | Hjem, dag | Hvilken side? | Ble | Historik | Indstillinger |
+| Hjem, nat | Hjem, dag | Amning | Ble | Historik | Indstillinger |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/da/phone-home-night.png" width="150" alt="Hjem, nat"> | <img src="docs/screenshots/da/phone-home-day.png" width="150" alt="Hjem, dag"> | <img src="docs/screenshots/da/phone-side-sheet.png" width="150" alt="Hvilken side?"> | <img src="docs/screenshots/da/phone-diaper-sheet.png" width="150" alt="Ble"> | <img src="docs/screenshots/da/phone-history.png" width="150" alt="Historik"> | <img src="docs/screenshots/da/phone-settings.png" width="150" alt="Indstillinger"> |
+| <img src="docs/screenshots/da/phone-home-night.png" width="150" alt="Hjem, nat"> | <img src="docs/screenshots/da/phone-home-day.png" width="150" alt="Hjem, dag"> | <img src="docs/screenshots/da/phone-breast-sheet.png" width="150" alt="Amning: siderækkefølge"> | <img src="docs/screenshots/da/phone-diaper-sheet.png" width="150" alt="Ble"> | <img src="docs/screenshots/da/phone-history.png" width="150" alt="Historik"> | <img src="docs/screenshots/da/phone-settings.png" width="150" alt="Indstillinger"> |
 
 | Ur: hoved | Måltid | Hvilken side? | Ble | Registreret | Flise |
 |:---:|:---:|:---:|:---:|:---:|:---:|
@@ -77,7 +77,7 @@ Every image above also exists in the other language: swap `en` and `da` in the p
 | Module | What it holds |
 |---|---|
 | [`core/`](core) | Android library shared by both apps: the `Entry` model and validation, the Room database and repository, the Data Layer sync (`sync/`), settings, summaries and the Lamp state (`domain/`), text formatting, the design tokens, type and icons, and the sample data used by previews and screenshots. |
-| [`app/`](app) | The phone app (Compose, Material 3): Home, the Feed / Side / Diaper sheets, History, Edit, Settings, the Glance widgets (`widget/`) and the running-timer notifications (`notify/`). |
+| [`app/`](app) | The phone app (Compose, Material 3): Home, the Feed (with its Breast step) / Diaper sheets, History, Edit, Settings, the Glance widgets (`widget/`) and the running-sleep notification (`notify/`). |
 | [`wear/`](wear) | The Wear OS app (Compose for Wear OS, Material 3): Main, Feed type, Side, Diaper, Logged, Today and Adjust, plus the Tile (`tile/`), complications (`complication/`) and the Ongoing Activity (`ongoing/`). |
 | [`docs/design/`](docs/design) | The design: [`DESIGN_SPEC.md`](docs/design/DESIGN_SPEC.md) (the "Night Light" direction: screens, tokens, icons, accessibility) and [`V1_ADDITIONS.md`](docs/design/V1_ADDITIONS.md) (feed types, tick-ordered sides, optional diaper details, English + Danish), which wins where they differ. |
 | [`scripts/`](scripts) | `readme_screenshots.py`, which builds the README images. |

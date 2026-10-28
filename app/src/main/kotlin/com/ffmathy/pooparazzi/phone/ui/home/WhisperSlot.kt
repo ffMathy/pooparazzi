@@ -328,7 +328,6 @@ private fun CardRowContent(row: CardRow, zone: ZoneId, formatters: Formatters, a
             val (icon, tint, textColor, format) = when (row.kind) {
                 GuardKind.ASLEEP -> GuardStyle(XIcons.sleep, events.sleep.strong, events.sleep.text, CoreR.string.guard_already_asleep)
                 GuardKind.AWAKE -> GuardStyle(XIcons.awake, events.sleep.strong, events.sleep.text, CoreR.string.guard_already_awake)
-                GuardKind.FEEDING -> GuardStyle(XIcons.breast, events.feed.strong, events.feed.text, CoreR.string.guard_already_feeding)
             }
             MessageRow(icon, tint, stringResource(format, formatters.clock.format(row.sinceMillis, zone)), textColor)
         }
@@ -380,15 +379,6 @@ private fun EditChip(onClick: () -> Unit) {
     }
 }
 
-/** "Left → Right · 18m" (spoken "Left then right, 18 minutes"), or just the duration when no side was recorded. */
-@Composable
-@ReadOnlyComposable
-private fun sideAndDuration(side: BreastSide?, duration: String, spoken: Boolean = false): String = when {
-    side == null -> duration
-    spoken -> stringResource(R.string.spoken_pair, spokenSideCapitalised(side), duration)
-    else -> stringResource(R.string.join_dot, stringResource(Labels.side(side)), duration)
-}
-
 /** Row 1 of a card: icon, title and optional sub-line, with the sub-line's spoken form. */
 private class CardContent(val icon: TintedIcon, val title: String, val sub: String?, val subSpoken: String? = null)
 
@@ -397,31 +387,18 @@ private fun cardContent(variant: CardVariant, formatters: Formatters): CardConte
     val events = LocalXPalette.current.events
     val colors = MaterialTheme.colorScheme
     val duration = formatters.duration
-    val breast = TintedIcon(XIcons.breast, events.feed.strong)
     val wake = TintedIcon(XIcons.wake, events.sleep.strong)
     return when (variant) {
         is CardVariant.FeedLogged -> CardContent(
             TintedIcon(XIcons.forFeedType(variant.type), events.feed.strong),
             stringResource(CoreR.string.receipt_logged, feedTypeLabel(variant.type, compact = true)),
-            null,
+            variant.side?.let { stringResource(Labels.side(it)) },
+            variant.side?.let { spokenSideCapitalised(it) },
         )
         is CardVariant.DiaperLogged -> CardContent(
             diaperIcon(variant.kind, events),
             stringResource(CoreR.string.receipt_logged, diaperLabel(variant.kind)),
             null,
-        )
-        CardVariant.FeedStarted -> CardContent(breast, stringResource(CoreR.string.receipt_feed_started), null)
-        is CardVariant.FeedEnded -> CardContent(
-            breast,
-            stringResource(CoreR.string.receipt_feed_ended),
-            sideAndDuration(variant.side, duration.format(variant.durationMillis)),
-            sideAndDuration(variant.side, duration.spoken(variant.durationMillis), spoken = true),
-        )
-        is CardVariant.FeedCancelled -> CardContent(
-            breast,
-            stringResource(CoreR.string.receipt_feed_cancelled),
-            sideAndDuration(variant.side, duration.format(0L)),
-            sideAndDuration(variant.side, duration.spoken(0L), spoken = true),
         )
         CardVariant.SleepStarted -> CardContent(TintedIcon(XIcons.sleep, events.sleep.strong), stringResource(CoreR.string.receipt_sleep_started), null)
         is CardVariant.WokeUp -> CardContent(
@@ -436,15 +413,14 @@ private fun cardContent(variant: CardVariant, formatters: Formatters): CardConte
             stringResource(CoreR.string.receipt_slept, duration.format(0L)),
             stringResource(CoreR.string.receipt_slept, duration.spoken(0L)),
         )
-        is CardVariant.AdjustStart -> CardContent(
-            if (variant.sleep) TintedIcon(XIcons.sleep, events.sleep.strong) else breast,
+        CardVariant.AdjustStart -> CardContent(
+            TintedIcon(XIcons.sleep, events.sleep.strong),
             stringResource(CoreR.string.action_adjust_start),
             null,
         )
         is CardVariant.Notice -> when (variant.guard) {
             GuardKind.ASLEEP -> CardContent(TintedIcon(XIcons.sleep, events.sleep.strong), stringResource(CoreR.string.status_asleep), null)
             GuardKind.AWAKE -> CardContent(TintedIcon(XIcons.awake, events.sleep.strong), stringResource(CoreR.string.status_awake), null)
-            GuardKind.FEEDING -> CardContent(breast, stringResource(CoreR.string.status_breastfeeding), null)
         }
         is CardVariant.Deleted -> CardContent(
             entryIcon(variant.entry, events),

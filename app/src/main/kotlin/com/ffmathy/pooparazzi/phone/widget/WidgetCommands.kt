@@ -24,7 +24,7 @@ import kotlinx.coroutines.sync.withLock
  * one running sleep) and sync like any other log. Each log leaves a receipt with Undo in row 1 for
  * [RECEIPT_MILLIS]; guards, duplicates and "Undone" leave a [NOTICE_MILLIS] line instead.
  *
- * Feed and End feed are not here: they open the app on the Feed and Side sheets, which need a choice.
+ * Feed is not here: it opens the app on the Feed sheet, which needs a choice.
  * Commands run one at a time (two quick taps are applied in order).
  */
 class WidgetCommands(
