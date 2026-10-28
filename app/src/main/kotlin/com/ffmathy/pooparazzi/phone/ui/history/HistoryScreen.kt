@@ -46,6 +46,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -294,7 +298,7 @@ private fun Stats(counts: DayCounts, formatters: Formatters, modifier: Modifier 
         Triple(counts.poop.toString(), labels.poopCaption(), null),
         Triple(formatters.duration.format(sleep), labels.sleepCaption(), formatters.duration.spoken(sleep)),
     )
-    // Four columns; two rows of two at large font scales (as Home's Today grid), so "7h 57m" stays on screen.
+    // Four columns; two rows of two from 130 % font, so the numbers keep their size.
     val columns = if (LocalDensity.current.fontScale >= LARGE_FONT_SCALE) 2 else 4
     Column(modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         stats.chunked(columns).forEach { row ->
@@ -312,15 +316,21 @@ private fun Stat(number: String, caption: String, spokenNumber: String?, modifie
         modifier.semantics(mergeDescendants = true) { spokenNumber?.let { contentDescription = "$it $caption" } },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // "7h 57m" is wider than its quarter of the row: like the mockup's grid, it may run into the gutter.
-        Text(
-            number,
-            style = MaterialTheme.typography.titleLarge,
-            color = colors.onSurface,
-            maxLines = 1,
-            softWrap = false,
-            modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true),
-        )
+        // "7h 57m" is wider than its quarter of the row: like the mockup's grid, it may run into the 16 dp gutter, and
+        // shrinks rather than leave the screen when even that is not enough (a 360 dp phone, a larger font).
+        BoxWithConstraints {
+            val style = MaterialTheme.typography.titleLarge
+            BasicText(
+                number,
+                style = style.copy(color = colors.onSurface),
+                maxLines = 1,
+                softWrap = false,
+                autoSize = TextAutoSize.StepBased(minFontSize = 12.sp, maxFontSize = style.fontSize, stepSize = 0.5.sp),
+                modifier = Modifier
+                    .wrapContentWidth(Alignment.Start, unbounded = true)
+                    .widthIn(max = maxWidth + 16.dp),
+            )
+        }
         Text(caption, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant, maxLines = 2)
     }
 }

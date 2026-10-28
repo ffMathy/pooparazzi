@@ -28,7 +28,11 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,6 +57,15 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 internal object HomeLampDefaults {
     val Reference: Dp = 264.dp
     val Min: Dp = 220.dp
+
+    /**
+     * The smallest Lamp when the screen is short or the font large (below it, the area above the buttons scrolls):
+     * 184 dp at 100 % font, rising to 208 dp at 130 % so the Lamp's larger text still fits inside the ring.
+     */
+    fun floor(fontScale: Float): Dp = (184.dp + 24.dp * ((fontScale - 1f) / 0.3f)).coerceIn(184.dp, 208.dp)
+
+    /** The hero band: 80 dp in a Lamp of 220 dp or more, shrinking with a smaller Lamp down to 64 dp. */
+    fun heroBand(size: Dp): Dp = (80.dp - (Min - size) / 2).coerceIn(64.dp, 80.dp)
 
     /** The hero's usable chord: 223 dp in the Ø264 Lamp. */
     const val HERO_CHORD = 223f / 264f
@@ -122,10 +135,19 @@ private fun LampText(lamp: LampState, zone: ZoneId, size: Dp, formatters: Format
             Spacer(Modifier.height(8.dp))
             // An 80 dp hero band (DESIGN_SPEC §2.4); it may grow only at large font scales.
             val large = LocalDensity.current.fontScale >= LARGE_FONT_SCALE
-            Box(if (large) Modifier.heightIn(min = 80.dp) else Modifier.height(80.dp), contentAlignment = Alignment.Center) {
+            val band = HomeLampDefaults.heroBand(size)
+            Box(if (large) Modifier.heightIn(min = band) else Modifier.height(band), contentAlignment = Alignment.Center) {
                 when {
                     text.heroParts != null -> HeroDuration(text.heroParts, maxWidth = size * HomeLampDefaults.HERO_CHORD, color = colors.onSurface)
-                    else -> Text(text.heroWord.orEmpty(), style = PhoneType.heroWord, color = colors.onSurface, maxLines = 1)
+                    // "just now" / "lige nu" shrinks to the chord rather than wrap or clip on a small Lamp.
+                    else -> BasicText(
+                        text.heroWord.orEmpty(),
+                        style = PhoneType.heroWord.copy(color = colors.onSurface, textAlign = TextAlign.Center),
+                        maxLines = 1,
+                        softWrap = false,
+                        autoSize = TextAutoSize.StepBased(minFontSize = 24.sp, maxFontSize = PhoneType.heroWord.fontSize, stepSize = 1.sp),
+                        modifier = Modifier.widthIn(max = size * HomeLampDefaults.HERO_CHORD),
+                    )
                 }
             }
             Spacer(Modifier.height(4.dp))

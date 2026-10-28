@@ -38,6 +38,9 @@ import com.ffmathy.pooparazzi.phone.ui.theme.LocalNightLightMotion
 /** Home's big buttons (DESIGN_SPEC §3.3.1, §5.8): 96 dp tall, icon 32 + 12 + headlineSmall. */
 object BigButtonDefaults {
     val Height: Dp = 96.dp
+
+    /** On a short screen (the Lamp already at its minimum size) the buttons give up 16 dp each before Home scrolls. */
+    val CompactHeight: Dp = 80.dp
     val PillRadius: Dp = 48.dp
     val PressedRadius: Dp = 16.dp
     val CheckedRadius: Dp = 28.dp
@@ -66,6 +69,7 @@ fun BigButton(
     border: BorderStroke? = null,
     onClickLabel: String? = null,
     semantics: (SemanticsPropertyReceiver.() -> Unit)? = null,
+    minHeight: Dp = BigButtonDefaults.Height,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -77,7 +81,7 @@ fun BigButton(
     val shape = RoundedCornerShape(corner)
     Surface(
         modifier = modifier
-            .heightIn(min = BigButtonDefaults.Height),
+            .heightIn(min = minHeight),
         shape = shape,
         color = container,
         border = border,

@@ -22,7 +22,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalAccessibilityManager
@@ -30,7 +29,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
@@ -125,6 +126,44 @@ internal fun HomeHaptic.feedbackType(): HapticFeedbackType = when (this) {
 }
 
 /**
+ * The area above the buttons: [top] (top bar), the Lamp and [below] (since-rows and the whisper slot). The Lamp takes
+ * the height the others leave in [viewport], up to [maxLampSize] and down to [HomeLampDefaults.floor], so a short
+ * screen or a larger font shrinks the Lamp before anything has to scroll. Below the floor the area scrolls.
+ */
+@Composable
+private fun HomeUpperArea(
+    viewport: Dp,
+    maxLampSize: Dp,
+    top: @Composable () -> Unit,
+    lamp: @Composable (Dp) -> Unit,
+    below: @Composable () -> Unit,
+) {
+    SubcomposeLayout { constraints ->
+        val loose = constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
+        val tops = subcompose(UpperSlot.TOP, top).map { it.measure(loose) }
+        val belows = subcompose(UpperSlot.BELOW, below).map { it.measure(loose) }
+        val topHeight = tops.sumOf { it.height }
+        val belowHeight = belows.sumOf { it.height }
+        val room = (viewport.roundToPx() - topHeight - belowHeight).toDp()
+        val floor = HomeLampDefaults.floor(fontScale)
+        val size = room.coerceIn(floor, maxLampSize.coerceAtLeast(floor))
+        val lamps = subcompose(UpperSlot.LAMP) { lamp(size) }.map { it.measure(loose) }
+        val lampHeight = lamps.maxOfOrNull { it.height } ?: 0
+        val width = constraints.maxWidth
+        layout(width, topHeight + lampHeight + belowHeight) {
+            // The glow reaches past the Lamp: draw it behind the top bar and rows.
+            lamps.forEach { it.placeRelative((width - it.width) / 2, topHeight, zIndex = -1f) }
+            var y = 0
+            tops.forEach { it.placeRelative(0, y); y += it.height }
+            y = topHeight + lampHeight
+            belows.forEach { it.placeRelative(0, y); y += it.height }
+        }
+    }
+}
+
+private enum class UpperSlot { TOP, LAMP, BELOW }
+
+/**
  * Home (P1, DESIGN_SPEC §3.3.1): top bar, the Lamp, two since-rows, the whisper slot, Feed · Diaper and the Sleep
  * toggle, plus the logging sheets. Laid out from [windowInsets] (edge to edge): the area above the button block
  * scrolls when it does not fit (200 % font scale), and the button block stays pinned above the navigation inset.
@@ -154,46 +193,62 @@ fun HomeScreen(
                 .fillMaxSize()
                 .windowInsetsPadding(windowInsets),
         ) {
-            Column(
+            BoxWithConstraints(
                 Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                    .fillMaxWidth(),
             ) {
-                HomeTopBar(state.babyName, state.sync, state.zone, lightsDown, formatters, actions)
-                Spacer(Modifier.height(8.dp))
-                HomeLamp(
-                    lamp = state.lamp,
-                    zone = state.zone,
-                    size = lampSize,
-                    formatters = formatters,
-                    onAdjustStart = actions::onAdjustStart,
-                    // The glow reaches past the Lamp: draw it behind the top bar and rows.
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .zIndex(-1f),
-                )
-                Spacer(Modifier.height(4.dp))
-                SinceRows(
-                    row1 = state.row1,
-                    row2 = state.row2,
-                    zone = state.zone,
-                    formatters = formatters,
-                    onEdit = actions::onEditEntry,
-                    modifier = Modifier.padding(horizontal = HomeDefaults.Gutter),
-                )
-                Spacer(Modifier.height(4.dp))
-                WhisperSlot(
-                    card = state.card,
-                    today = state.today,
-                    lightsDown = lightsDown,
-                    zone = state.zone,
-                    formatters = formatters,
-                    actions = actions,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = HomeDefaults.Gutter),
-                )
+                val viewport = maxHeight
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    HomeUpperArea(
+                        viewport = viewport,
+                        maxLampSize = lampSize,
+                        top = {
+                            Column {
+                                HomeTopBar(state.babyName, state.sync, state.zone, lightsDown, formatters, actions)
+                                Spacer(Modifier.height(8.dp))
+                            }
+                        },
+                        lamp = { size ->
+                            HomeLamp(
+                                lamp = state.lamp,
+                                zone = state.zone,
+                                size = size,
+                                formatters = formatters,
+                                onAdjustStart = actions::onAdjustStart,
+                            )
+                        },
+                        below = {
+                            Column {
+                                Spacer(Modifier.height(4.dp))
+                                SinceRows(
+                                    row1 = state.row1,
+                                    row2 = state.row2,
+                                    zone = state.zone,
+                                    formatters = formatters,
+                                    onEdit = actions::onEditEntry,
+                                    modifier = Modifier.padding(horizontal = HomeDefaults.Gutter),
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                WhisperSlot(
+                                    card = state.card,
+                                    today = state.today,
+                                    lightsDown = lightsDown,
+                                    zone = state.zone,
+                                    formatters = formatters,
+                                    actions = actions,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = HomeDefaults.Gutter),
+                                )
+                            }
+                        },
+                    )
+                }
             }
             Spacer(Modifier.height(12.dp))
             HomeButtons(
@@ -201,6 +256,8 @@ fun HomeScreen(
                 formatters = formatters,
                 actions = actions,
                 modifier = Modifier.padding(horizontal = HomeDefaults.Gutter),
+                // A short screen: the Lamp is already at its minimum, so the buttons give a little room too.
+                compact = lampSize <= HomeLampDefaults.Min,
             )
             Spacer(Modifier.height(12.dp))
         }

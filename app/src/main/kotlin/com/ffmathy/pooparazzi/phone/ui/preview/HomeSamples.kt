@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone.ui.preview
 
 import com.ffmathy.pooparazzi.core.model.Breast
+import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
@@ -20,6 +21,7 @@ import com.ffmathy.pooparazzi.phone.ui.home.Undo
  */
 object HomeSamples {
     private val zone = SampleData.ZONE
+    private const val SLEEP_0205 = "sample-sleep-0205"
     private val synced1431 = SyncStatus.Synced(SampleData.SYNCED_1431)
 
     /** The Formula logged at 14:32 in [justLogged]. */
@@ -68,6 +70,31 @@ object HomeSamples {
             undo = Undo.Delete(formula1432.id),
         ),
     )
+
+    /** 03:12, asleep since 02:05 with "Adjust start" tapped: the card with −15m · −5m · +5m and the Edit chip. */
+    fun adjustingStart(): HomeUiState = build(
+        SampleData.scenarioAt0312(zone),
+        SampleData.NOW_0312,
+        sync = SyncStatus.Synced(SampleData.SYNCED_0311),
+        card = CardModel(key = 1, spec = CardSpec.AdjustStart(SLEEP_0205), baseTime = SampleData.at(2, 5)),
+    )
+
+    /** 03:12, asleep since 02:05, a wet diaper just logged: the card offers "End sleep" · −5m · −10m. */
+    fun loggedDuringSleep(): HomeUiState {
+        val pee = Entry.diaper(SampleData.NOW_0312, pee = true, poop = false, id = "sample-pee-0312")
+        return build(
+            SampleData.scenarioAt0312(zone) + pee,
+            SampleData.NOW_0312,
+            sync = SyncStatus.Synced(SampleData.SYNCED_0311),
+            card = CardModel(
+                key = 1,
+                spec = CardSpec.DiaperLogged(pee.id, DiaperKind.PEE),
+                baseTime = SampleData.NOW_0312,
+                duringSleep = true,
+                undo = Undo.Delete(pee.id),
+            ),
+        )
+    }
 
     /** The Feed sheet opened at 14:32. */
     fun feedSheet(): HomeUiState = build(SampleData.scenario(zone), SampleData.NOW_1432, sheet = SheetModel.Feed(SampleData.NOW_1432))

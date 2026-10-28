@@ -18,7 +18,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.phone.ui.theme.LocalNightLightMotion
@@ -151,11 +152,14 @@ private fun ChoiceButton(
                 XIcon(XIcons.check, contentDescription = null, tint = content, size = 16.dp)
                 Box(Modifier.width(4.dp))
             }
-            Text(
+            // Up to two lines, broken only between words or at a (soft) hyphen; the label shrinks before a word would
+            // split ("Modermæl / ks-") or a line would be cut off (a 360 dp phone, a larger font).
+            val style = MaterialTheme.typography.labelLarge
+            BasicText(
                 label,
-                style = MaterialTheme.typography.labelLarge.copy(hyphens = Hyphens.Auto, textAlign = TextAlign.Center),
-                color = content,
+                style = style.copy(color = content, hyphens = Hyphens.Auto, textAlign = TextAlign.Center),
                 maxLines = 2,
+                autoSize = WordSafeAutoSize(min = 10.sp, max = style.fontSize),
             )
         }
     }
