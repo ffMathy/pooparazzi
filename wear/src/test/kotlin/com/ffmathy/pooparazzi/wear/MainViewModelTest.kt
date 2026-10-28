@@ -469,7 +469,7 @@ class MainViewModelTest {
         // The second tap of a double tap still saw "Start sleep".
         vm.toggleSleep(shownSleepId = null).join()
 
-        val state = awaitMain { it.guard != null }
+        val state = awaitMain { it.guard != null && it.runningSleep != null }
         assertEquals(GuardKind.ALREADY_ASLEEP, state.sleepGuard)
         assertNotNull("no state change", state.runningSleep)
         assertEquals(listOf(XHaptic.TOGGLE_ON, XHaptic.REJECT), haptics())
@@ -492,7 +492,9 @@ class MainViewModelTest {
         clock.advanceBy(500)
         vm.toggleSleep(sleep.id).join()
 
-        val state = awaitMain { it.guard != null }
+        // Wait for the settled state: the guard can show before Room's re-query reports the ended sleep, and on a
+        // slow CI runner that intermediate state (guard set, sleep still running) used to fail the assertions below.
+        val state = awaitMain { it.guard != null && it.runningSleep == null }
         assertEquals(GuardKind.ALREADY_AWAKE, state.sleepGuard)
         assertNull(state.runningSleep)
         assertEquals(1, stored().size)
@@ -509,7 +511,7 @@ class MainViewModelTest {
         vm.toggleSleep(shownSleepId = sleep.id).join()
 
         // The tap meant "end the sleep I see": it is already over, so nothing new starts (DESIGN_SPEC §4.4).
-        assertEquals(GuardKind.ALREADY_AWAKE, awaitMain { it.guard != null }.sleepGuard)
+        assertEquals(GuardKind.ALREADY_AWAKE, awaitMain { it.guard != null && it.runningSleep == null }.sleepGuard)
         assertEquals(1, stored().size)
         assertNull(stored().single { it.id == sleep.id }.takeIf { it.isRunning })
         assertEquals(XHaptic.REJECT, haptics().last())
@@ -523,7 +525,7 @@ class MainViewModelTest {
         clock.advanceBy(4_000)
         vm.toggleSleep(shownSleepId = null).join()
 
-        assertEquals(GuardKind.ALREADY_ASLEEP, awaitMain { it.guard != null }.sleepGuard)
+        assertEquals(GuardKind.ALREADY_ASLEEP, awaitMain { it.guard != null && it.runningSleep != null }.sleepGuard)
         // The phone's sleep is neither ended nor discarded as a mis-tap.
         assertTrue(stored().single().let { it.id == phone.id && it.isRunning })
         assertNull(vm.receipt.value)
