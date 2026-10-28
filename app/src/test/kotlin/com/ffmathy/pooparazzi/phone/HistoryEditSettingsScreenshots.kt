@@ -8,6 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
@@ -76,6 +80,25 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
     @Test fun largeFontHistory() {
         RuntimeEnvironment.setFontScale(2f)
         screen("font200-history", night = true, tour = false) { History(HistorySamples.today()) }
+    }
+
+    /** Tapping a time field opens the M3 time picker on its clock dial (written under build/ for review). */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test fun editTimePicker() {
+        compose.setContent {
+            NightLightTheme(night = true) {
+                Box {
+                    History(HistorySamples.today())
+                    EditSheet(EditSamples.sleepNudged(), EditActions.None, windowInsets = ReferenceInsets)
+                }
+            }
+        }
+        compose.waitForIdle()
+        val changeTime = ApplicationProvider.getApplicationContext<Application>().getString(R.string.edit_change_time)
+        compose.onAllNodes(SemanticsMatcher("click label") { it.config.getOrNull(SemanticsActions.OnClick)?.label == changeTime })[0]
+            .performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
+        captureScreenRoboImage(path("edit-time-picker", tour = false))
     }
 
     @Test fun largeFontEdit() {

@@ -57,6 +57,9 @@ abstract class DeviceFitScreenshots(private val config: String, private val font
 
     @Test fun homeAsleep() = home("02-home-asleep", night = true, HomeSamples.asleep())
 
+    /** A first day with only a running sleep: the Today grid shows 0 · 0 · 0 · 47m (numbers on one baseline). */
+    @Test fun homeFirstSleep() = home("02b-home-first-sleep", night = true, HomeSamples.firstSleep())
+
     @Test fun homeAdjustStart() = card("03-home-adjust-start", HomeSamples.adjustingStart())
 
     @Test fun homeUndoCard() = card("04-home-undo-card", HomeSamples.justLogged())

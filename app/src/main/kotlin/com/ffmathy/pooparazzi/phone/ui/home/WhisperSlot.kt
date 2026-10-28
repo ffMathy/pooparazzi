@@ -159,11 +159,18 @@ private fun TodayGrid(today: DayCounts, lightsDown: Boolean, formatters: Formatt
         val columns = if (LocalDensity.current.fontScale >= TODAY_TWO_COLUMN_SCALE) 2 else 4
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             numbers.zip(captions).chunked(columns).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { (number, caption) ->
-                        Column(Modifier.weight(1f)) {
-                            FitText(number, MaterialTheme.typography.titleMedium.copy(color = numberColor), minSp = 12f)
-                            FitText(caption, MaterialTheme.typography.labelMedium.copy(color = colors.onSurfaceVariant), minSp = 9f)
+                // One size per line across the row, so the numbers (and the captions) share a baseline even when one
+                // of them ("7h 57m", "måltider") has to shrink to fit its column.
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val cellWidth = (maxWidth - 8.dp * (columns - 1)) / columns
+                    val numberStyle = fitAll(row.map { it.first }, MaterialTheme.typography.titleMedium, cellWidth, minSp = 12f)
+                    val captionStyle = fitAll(row.map { it.second }, MaterialTheme.typography.labelMedium, cellWidth, minSp = 9f)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { (number, caption) ->
+                            Column(Modifier.weight(1f)) {
+                                Text(number, style = numberStyle, color = numberColor, maxLines = 1, softWrap = false)
+                                Text(caption, style = captionStyle, color = colors.onSurfaceVariant, maxLines = 1, softWrap = false)
+                            }
                         }
                     }
                 }
@@ -172,16 +179,25 @@ private fun TodayGrid(today: DayCounts, lightsDown: Boolean, formatters: Formatt
     }
 }
 
-/** One line that shrinks (down to [minSp]) rather than clip or break a word. */
+/**
+ * [style] at the largest size (stepping down 0.5 sp, not below [minSp]) at which every one of [texts] fits [width] on
+ * one line, with the line height scaled along so the texts keep a common baseline.
+ */
 @Composable
-private fun FitText(text: String, style: TextStyle, minSp: Float) {
-    BasicText(
-        text,
-        style = style,
-        maxLines = 1,
-        softWrap = false,
-        autoSize = TextAutoSize.StepBased(minFontSize = minSp.sp, maxFontSize = style.fontSize, stepSize = 0.5.sp),
-    )
+private fun fitAll(texts: List<String>, style: TextStyle, width: androidx.compose.ui.unit.Dp, minSp: Float): TextStyle {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val maxPx = with(density) { width.roundToPx() }.coerceAtLeast(0)
+    return remember(texts, style, maxPx, minSp, density) {
+        var size = style.fontSize.value
+        fun fits(sp: Float) = texts.all { text ->
+            measurer.measure(text, style.copy(fontSize = sp.sp), maxLines = 1, softWrap = false, density = density).size.width <= maxPx
+        }
+        while (size > minSp && !fits(size)) size = (size - 0.5f).coerceAtLeast(minSp)
+        val scale = size / style.fontSize.value
+        if (scale >= 1f) style
+        else style.copy(fontSize = size.sp, lineHeight = if (style.lineHeight.isSp) (style.lineHeight.value * scale).sp else style.lineHeight)
+    }
 }
 
 /** From this font scale the Today grid is 2 × 2. */

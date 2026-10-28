@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -318,8 +319,9 @@ private fun Stat(number: String, caption: String, spokenNumber: String?, modifie
     ) {
         // "7h 57m" is wider than its quarter of the row: like the mockup's grid, it may run into the 16 dp gutter, and
         // shrinks rather than leave the screen when even that is not enough (a 360 dp phone, a larger font).
-        BoxWithConstraints {
-            val style = MaterialTheme.typography.titleLarge
+        // The box keeps the full line height when the number shrinks, so all four numbers sit on the same line.
+        val style = MaterialTheme.typography.titleLarge
+        BoxWithConstraints(Modifier.height(with(LocalDensity.current) { style.lineHeight.toDp() }), contentAlignment = Alignment.BottomStart) {
             BasicText(
                 number,
                 style = style.copy(color = colors.onSurface),
