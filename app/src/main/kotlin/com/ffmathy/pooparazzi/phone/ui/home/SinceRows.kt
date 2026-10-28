@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.phone.ui.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,6 +28,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -43,6 +46,9 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** From this font scale on, rows may wrap and the Today grid becomes 2 × 2. */
 internal const val LARGE_FONT_SCALE = 1.3f
+
+/** The smallest since-row text before it wraps to a second line. */
+private const val MIN_ROW_SP = 14f
 
 /** The two since-rows (DESIGN_SPEC §3.3.1): the one-tap correction path into the edit sheet. */
 @Composable
@@ -83,20 +89,28 @@ private fun SinceRowItem(row: SinceRow?, zone: ZoneId, formatters: Formatters, o
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         XIcon(text.icon.icon, contentDescription = null, tint = text.icon.tint, size = 20.dp)
-        // One line, no wrapping (text slot 258 dp): long Danish leads shrink a little instead. At large font scales
-        // the row may take a second line (DESIGN_SPEC §9.3: the area above the buttons scrolls).
-        BasicText(
-            text = buildAnnotatedString {
-                append(text.lead)
-                withStyle(SpanStyle(fontSize = (16f / 18f).em, fontWeight = FontWeight(450), color = colors.onSurfaceVariant)) {
-                    append(text.meta)
-                }
-            },
-            style = MaterialTheme.typography.titleMedium.copy(color = colors.onSurface),
-            maxLines = if (LocalDensity.current.fontScale >= LARGE_FONT_SCALE) 2 else 1,
-            autoSize = TextAutoSize.StepBased(minFontSize = 14.sp, maxFontSize = 18.sp, stepSize = 0.5.sp),
-            modifier = Modifier.weight(1f),
-        )
+        // One line (text slot 258 dp): long Danish leads shrink a little first. When even 14 sp does not fit (a narrow
+        // screen, a larger font) the row takes a second line rather than clip (DESIGN_SPEC §9.3).
+        val annotated = buildAnnotatedString {
+            append(text.lead)
+            withStyle(SpanStyle(fontSize = (16f / 18f).em, fontWeight = FontWeight(450), color = colors.onSurfaceVariant)) {
+                append(text.meta)
+            }
+        }
+        val style = MaterialTheme.typography.titleMedium.copy(color = colors.onSurface)
+        val measurer = rememberTextMeasurer()
+        BoxWithConstraints(Modifier.weight(1f)) {
+            val oneLine = remember(annotated, style, constraints.maxWidth, measurer) {
+                !measurer.measure(annotated, style.copy(fontSize = MIN_ROW_SP.sp), maxLines = 1, softWrap = false)
+                    .let { it.size.width > constraints.maxWidth }
+            }
+            BasicText(
+                text = annotated,
+                style = style,
+                maxLines = if (oneLine && LocalDensity.current.fontScale < LARGE_FONT_SCALE) 1 else 2,
+                autoSize = TextAutoSize.StepBased(minFontSize = MIN_ROW_SP.sp, maxFontSize = 18.sp, stepSize = 0.5.sp),
+            )
+        }
         XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
     }
 }

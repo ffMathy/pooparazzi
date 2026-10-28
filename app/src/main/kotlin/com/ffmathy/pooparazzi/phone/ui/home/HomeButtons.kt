@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
@@ -29,8 +30,15 @@ import com.ffmathy.pooparazzi.core.R as CoreR
  * "Woke up". The toggle exposes no separate on/off state: the name and a state description carry it (§9.4).
  */
 @Composable
-internal fun HomeButtons(state: HomeUiState, formatters: Formatters, actions: HomeActions, modifier: Modifier = Modifier) {
+internal fun HomeButtons(
+    state: HomeUiState,
+    formatters: Formatters,
+    actions: HomeActions,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
     val events = LocalXPalette.current.events
+    val minHeight = if (compact) BigButtonDefaults.CompactHeight else BigButtonDefaults.Height
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BigButton(
@@ -41,6 +49,7 @@ internal fun HomeButtons(state: HomeUiState, formatters: Formatters, actions: Ho
                 container = events.feed.container,
                 labelColor = events.feed.onContainer,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
+                minHeight = minHeight,
             )
             BigButton(
                 onClick = actions::onDiaper,
@@ -50,14 +59,15 @@ internal fun HomeButtons(state: HomeUiState, formatters: Formatters, actions: Ho
                 container = events.diaper.container,
                 labelColor = events.diaper.onContainer,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
+                minHeight = minHeight,
             )
         }
-        SleepToggle(state, formatters, actions)
+        SleepToggle(state, formatters, actions, minHeight)
     }
 }
 
 @Composable
-private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: HomeActions) {
+private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: HomeActions, minHeight: Dp) {
     val sleep = LocalXPalette.current.events.sleep
     val zone = state.zone
     val running = state.runningSleep
@@ -75,6 +85,7 @@ private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: Hom
             container = sleep.container,
             labelColor = sleep.onContainer,
             modifier = Modifier.fillMaxWidth(),
+            minHeight = minHeight,
             onClickLabel = startLabel,
             semantics = { description?.let { stateDescription = it } },
         )
@@ -95,6 +106,7 @@ private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: Hom
             radius = BigButtonDefaults.CheckedRadius,
             border = BorderStroke(2.dp, sleep.strong),
             modifier = Modifier.fillMaxWidth(),
+            minHeight = minHeight,
             onClickLabel = stringResource(CoreR.string.action_end_sleep),
             semantics = {
                 contentDescription = name

@@ -334,7 +334,10 @@ internal fun OutlinePill(
     }
 }
 
-/** The M3 time picker in keyboard input mode, with the dial one toggle away (DESIGN_SPEC §10.4). */
+/**
+ * The M3 time picker, opening on the clock dial with keyboard input one toggle away. Keyboard-first (DESIGN_SPEC
+ * §10.4) read as "some picker" with two bare fields and a keyboard on a real phone, so the dial is the default now.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimeDialog(
@@ -346,7 +349,10 @@ private fun TimeDialog(
     onDismiss: () -> Unit,
 ) {
     val state = rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = is24Hour)
-    var mode by rememberSaveable { mutableStateOf(TimePickerDisplayMode.Input) }
+    // TimePickerDisplayMode can't go into a Bundle, so save "keyboard input?" as a Boolean (saving the mode itself
+    // crashed the app the moment the dialog opened).
+    var keyboard by rememberSaveable { mutableStateOf(false) }
+    val mode = if (keyboard) TimePickerDisplayMode.Input else TimePickerDisplayMode.Picker
     TimePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = { onConfirm(state.hour, state.minute) }) { Text(stringResource(R.string.action_ok)) } },
@@ -354,9 +360,7 @@ private fun TimeDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CoreR.string.action_cancel)) } },
         modeToggleButton = {
             TimePickerDialogDefaults.DisplayModeToggle(
-                onDisplayModeChange = {
-                    mode = if (mode == TimePickerDisplayMode.Input) TimePickerDisplayMode.Picker else TimePickerDisplayMode.Input
-                },
+                onDisplayModeChange = { keyboard = !keyboard },
                 displayMode = mode,
             )
         },

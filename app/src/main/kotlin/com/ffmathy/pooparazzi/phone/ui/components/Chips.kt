@@ -8,11 +8,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -31,6 +34,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
@@ -62,6 +66,8 @@ object ChipDefaults {
  * @param leading content before the label (e.g. a colour swatch).
  * @param showCheck false when [leading] shows the selection itself (a swatch with a check).
  * @param acceptsTaps false during a picker cooldown: the chip keeps its look but is exposed as disabled and ignores taps.
+ * @param fill the pill fills the width [modifier] gives it (an equal share of a row, see [OffsetChipRow]) and its label
+ *   shrinks rather than clip or wrap at large font scales and narrow widths.
  */
 @Composable
 fun XChip(
@@ -76,6 +82,7 @@ fun XChip(
     reserveCheck: Boolean = false,
     showCheck: Boolean = true,
     acceptsTaps: Boolean = true,
+    fill: Boolean = false,
     leading: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -98,20 +105,26 @@ fun XChip(
         Box(
             Modifier
                 .height(ChipDefaults.PillHeight)
-                .then(if (width != null) Modifier.widthIn(min = width) else Modifier)
+                .then(
+                    when {
+                        fill -> Modifier.fillMaxWidth()
+                        width != null -> Modifier.widthIn(min = width)
+                        else -> Modifier
+                    },
+                )
                 .alpha(if (enabled) 1f else ChipDefaults.DISABLED_ALPHA)
                 .clip(ChipDefaults.PillShape)
                 .background(if (selected) colors.primaryContainer else Color.Transparent)
                 .border(1.dp, colors.outline, ChipDefaults.PillShape)
                 .indication(interaction, ripple())
-                .padding(horizontal = if (width != null) 4.dp else 12.dp),
+                .padding(horizontal = if (fill || width != null) 4.dp else 12.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (reserveCheck && showCheck && !selected) {
+            if (reserveCheck && showCheck && !selected && !fill) {
                 // Invisible twin with the check: holds the selected width. Hidden from accessibility services.
                 ChipContent(true, label, labelColor, leading, Modifier.alpha(0f).clearAndSetSemantics { })
             }
-            ChipContent(selected && showCheck, label, labelColor, leading)
+            ChipContent(selected && showCheck, label, labelColor, leading, shrink = fill)
         }
     }
 }
@@ -123,11 +136,59 @@ private fun ChipContent(
     color: Color,
     leading: (@Composable RowScope.() -> Unit)?,
     modifier: Modifier = Modifier,
+    shrink: Boolean = false,
 ) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         if (showCheck) XIcon(XIcons.check, contentDescription = null, tint = color, size = 16.dp)
         leading?.invoke(this)
-        Text(label, style = MaterialTheme.typography.labelLarge, color = color, maxLines = 1, overflow = TextOverflow.Clip)
+        if (shrink) {
+            val style = MaterialTheme.typography.labelLarge
+            BasicText(
+                label,
+                style = style.copy(color = color),
+                maxLines = 1,
+                softWrap = false,
+                autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = style.fontSize, stepSize = 0.5.sp),
+            )
+        } else {
+            Text(label, style = MaterialTheme.typography.labelLarge, color = color, maxLines = 1, overflow = TextOverflow.Clip)
+        }
+    }
+}
+
+/**
+ * Offset chips sharing one row in equal widths (gap 8), so "Now −5m −10m −15m" never wraps a chip onto its own line:
+ * the labels shrink instead. [leading] and [trailing] sit before and after the chips at their own widths.
+ */
+@Composable
+fun OffsetChipRow(
+    chips: List<OffsetChipUi>,
+    formatters: Formatters,
+    onOffset: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    role: Role? = null,
+    acceptsTaps: Boolean = true,
+    leading: (@Composable RowScope.() -> Unit)? = null,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
+) {
+    Row(
+        modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        leading?.invoke(this)
+        chips.forEach { chip ->
+            OffsetChip(
+                chip,
+                formatters,
+                onClick = { onOffset(chip.minutes) },
+                modifier = Modifier.weight(1f),
+                role = role,
+                acceptsTaps = acceptsTaps,
+                fill = true,
+            )
+        }
+        trailing?.invoke(this)
     }
 }
 
@@ -140,6 +201,7 @@ fun OffsetChip(
     modifier: Modifier = Modifier,
     role: Role? = null,
     acceptsTaps: Boolean = true,
+    fill: Boolean = false,
 ) {
     val now = stringResource(CoreR.string.action_now)
     XChip(
@@ -153,5 +215,6 @@ fun OffsetChip(
         spokenLabel = if (chip.minutes == 0) null else formatters.relative.offsetSpoken(chip.minutes),
         reserveCheck = true,
         acceptsTaps = acceptsTaps,
+        fill = fill,
     )
 }

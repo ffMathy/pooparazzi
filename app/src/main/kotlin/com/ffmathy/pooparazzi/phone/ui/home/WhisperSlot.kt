@@ -10,11 +10,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,6 +50,9 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -66,7 +69,7 @@ import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.ui.history.deletedLabel
 import com.ffmathy.pooparazzi.phone.ui.history.spokenSideCapitalised
 import com.ffmathy.pooparazzi.phone.ui.components.ChipDefaults
-import com.ffmathy.pooparazzi.phone.ui.components.OffsetChip
+import com.ffmathy.pooparazzi.phone.ui.components.OffsetChipRow
 import com.ffmathy.pooparazzi.phone.ui.components.XChip
 import java.time.ZoneId
 import kotlinx.coroutines.delay
@@ -97,7 +100,15 @@ internal fun WhisperSlot(
     val lastCard = remember { mutableStateOf<UndoCardUi?>(null) }
     if (card != null) SideEffect { lastCard.value = card }
     val shown = card ?: lastCard.value
-    Box(modifier.heightIn(min = WhisperDefaults.SlotMinHeight), contentAlignment = Alignment.Center) {
+    // When the area above the buttons has to scroll (short screen, large font), a new card scrolls fully into view.
+    val requester = remember { BringIntoViewRequester() }
+    LaunchedEffect(card?.key) { if (card != null) requester.bringIntoView() }
+    Box(
+        modifier
+            .bringIntoViewRequester(requester)
+            .heightIn(min = WhisperDefaults.SlotMinHeight),
+        contentAlignment = Alignment.Center,
+    ) {
         if (card == null) TodayGrid(today, lightsDown, formatters, actions::onOpenHistory)
         AnimatedVisibility(visible = card != null, enter = EnterTransition.None, exit = fadeOut(tween(150))) {
             shown?.let { UndoCard(it, zone, formatters, actions) }
@@ -144,15 +155,22 @@ private fun TodayGrid(today: DayCounts, lightsDown: Boolean, formatters: Formatt
             Text(todayLabel, style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant, modifier = Modifier.weight(1f))
             XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
         }
-        // Four columns; 2 × 2 at large font scales so "7h 57m" never clips.
-        val columns = if (LocalDensity.current.fontScale >= LARGE_FONT_SCALE) 2 else 4
+        // Four columns whose numbers and captions shrink to fit ("7h 57m" on a 360 dp screen); 2 × 2 from 150 % font.
+        val columns = if (LocalDensity.current.fontScale >= TODAY_TWO_COLUMN_SCALE) 2 else 4
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             numbers.zip(captions).chunked(columns).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { (number, caption) ->
-                        Column(Modifier.weight(1f)) {
-                            Text(number, style = MaterialTheme.typography.titleMedium, color = numberColor, maxLines = 1, softWrap = false)
-                            Text(caption, style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                // One size per line across the row, so the numbers (and the captions) share a baseline even when one
+                // of them ("7h 57m", "måltider") has to shrink to fit its column.
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val cellWidth = (maxWidth - 8.dp * (columns - 1)) / columns
+                    val numberStyle = fitAll(row.map { it.first }, MaterialTheme.typography.titleMedium, cellWidth, minSp = 12f)
+                    val captionStyle = fitAll(row.map { it.second }, MaterialTheme.typography.labelMedium, cellWidth, minSp = 9f)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { (number, caption) ->
+                            Column(Modifier.weight(1f)) {
+                                Text(number, style = numberStyle, color = numberColor, maxLines = 1, softWrap = false)
+                                Text(caption, style = captionStyle, color = colors.onSurfaceVariant, maxLines = 1, softWrap = false)
+                            }
                         }
                     }
                 }
@@ -160,6 +178,30 @@ private fun TodayGrid(today: DayCounts, lightsDown: Boolean, formatters: Formatt
         }
     }
 }
+
+/**
+ * [style] at the largest size (stepping down 0.5 sp, not below [minSp]) at which every one of [texts] fits [width] on
+ * one line, with the line height scaled along so the texts keep a common baseline.
+ */
+@Composable
+private fun fitAll(texts: List<String>, style: TextStyle, width: androidx.compose.ui.unit.Dp, minSp: Float): TextStyle {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val maxPx = with(density) { width.roundToPx() }.coerceAtLeast(0)
+    return remember(texts, style, maxPx, minSp, density) {
+        var size = style.fontSize.value
+        fun fits(sp: Float) = texts.all { text ->
+            measurer.measure(text, style.copy(fontSize = sp.sp), maxLines = 1, softWrap = false, density = density).size.width <= maxPx
+        }
+        while (size > minSp && !fits(size)) size = (size - 0.5f).coerceAtLeast(minSp)
+        val scale = size / style.fontSize.value
+        if (scale >= 1f) style
+        else style.copy(fontSize = size.sp, lineHeight = if (style.lineHeight.isSp) (style.lineHeight.value * scale).sp else style.lineHeight)
+    }
+}
+
+/** From this font scale the Today grid is 2 × 2. */
+private const val TODAY_TWO_COLUMN_SCALE = 1.5f
 
 /**
  * The undo card: row 1 icon · title (time-free) · Undo/Done; row 2 one of the variants; the drain line shows the
@@ -191,17 +233,31 @@ private fun UndoCard(card: UndoCardUi, zone: ZoneId, formatters: Formatters, act
             XIcon(content.icon.icon, contentDescription = null, tint = content.icon.tint, size = 20.dp)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
-                // Long Danish titles ("Modermælks­erstatning registreret") wrap at the soft hyphen, then shrink.
-                BasicText(
-                    content.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = colors.onSurface,
-                        lineHeight = if (content.sub != null) 22.sp else 24.sp,
-                        hyphens = Hyphens.Auto,
-                    ),
-                    maxLines = if (content.sub != null) 1 else 2,
-                    autoSize = TextAutoSize.StepBased(minFontSize = 14.sp, maxFontSize = 18.sp, stepSize = 0.5.sp),
+                // Long Danish titles ("Modermælks­erstatning registreret") wrap at the soft hyphen, then shrink. If even
+                // 14 sp does not fit (narrow screen, larger font), the title takes one more line rather than clip.
+                val titleStyle = MaterialTheme.typography.titleMedium.copy(
+                    color = colors.onSurface,
+                    lineHeight = if (content.sub != null) 22.sp else 24.sp,
+                    hyphens = Hyphens.Auto,
                 )
+                val baseLines = if (content.sub != null) 1 else 2
+                val measurer = rememberTextMeasurer()
+                BoxWithConstraints {
+                    val fits = remember(content.title, titleStyle, constraints.maxWidth, baseLines) {
+                        !measurer.measure(
+                            content.title,
+                            titleStyle.copy(fontSize = 14.sp),
+                            maxLines = baseLines,
+                            constraints = Constraints(maxWidth = constraints.maxWidth),
+                        ).hasVisualOverflow
+                    }
+                    BasicText(
+                        content.title,
+                        style = titleStyle,
+                        maxLines = if (fits) baseLines else baseLines + 1,
+                        autoSize = TextAutoSize.StepBased(minFontSize = 14.sp, maxFontSize = 18.sp, stepSize = 0.5.sp),
+                    )
+                }
                 content.sub?.let { sub ->
                     // TalkBack reads the spoken form ("Left then right, 18 minutes"), not "→" and "18m" (§9.5).
                     val spoken = content.subSpoken ?: sub
@@ -292,38 +348,45 @@ private fun CardTextButton(icon: ImageVector, label: String, onClick: () -> Unit
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CardRowContent(row: CardRow, zone: ZoneId, formatters: Formatters, actions: HomeActions) {
     val colors = MaterialTheme.colorScheme
     val events = LocalXPalette.current.events
     when (row) {
         CardRow.None -> Unit
-        is CardRow.Earlier -> FlowRow(itemVerticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                stringResource(CoreR.string.action_earlier_question),
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.onSurfaceVariant,
-                maxLines = 1,
-                softWrap = false,
+        is CardRow.Earlier -> {
+            val onOffset: (Int) -> Unit = actions::onCardOffset
+            LeadAndChips(
+                lead = {
+                    Text(
+                        stringResource(CoreR.string.action_earlier_question),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.onSurfaceVariant,
+                        maxLines = 2,
+                    )
+                },
+                chips = { OffsetChipRow(row.chips, formatters, onOffset) },
             )
-            row.chips.forEach { chip -> OffsetChip(chip, formatters, onClick = { actions.onCardOffset(chip.minutes) }) }
         }
-        is CardRow.RunningSleep -> FlowRow(itemVerticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            XChip(
-                selected = false,
-                onClick = actions::onCardEndSleep,
-                label = stringResource(CoreR.string.action_end_sleep),
-                enabled = row.endSleepEnabled,
-                role = Role.Button,
-                leading = { XIcon(XIcons.wake, contentDescription = null, tint = colors.onSurface, size = 18.dp) },
-            )
-            row.chips.forEach { chip -> OffsetChip(chip, formatters, onClick = { actions.onCardOffset(chip.minutes) }) }
-        }
-        is CardRow.Adjust -> FlowRow(itemVerticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            row.chips.forEach { chip -> OffsetChip(chip, formatters, onClick = { actions.onCardOffset(chip.minutes) }) }
-            EditChip(onClick = { actions.onEditEntry(row.editEntryId) })
-        }
+        is CardRow.RunningSleep -> LeadAndChips(
+            lead = {
+                XChip(
+                    selected = false,
+                    onClick = actions::onCardEndSleep,
+                    label = stringResource(CoreR.string.action_end_sleep),
+                    enabled = row.endSleepEnabled,
+                    role = Role.Button,
+                    leading = { XIcon(XIcons.wake, contentDescription = null, tint = colors.onSurface, size = 18.dp) },
+                )
+            },
+            chips = { OffsetChipRow(row.chips, formatters, actions::onCardOffset) },
+        )
+        is CardRow.Adjust -> OffsetChipRow(
+            row.chips,
+            formatters,
+            actions::onCardOffset,
+            trailing = { EditChip(onClick = { actions.onEditEntry(row.editEntryId) }) },
+        )
         is CardRow.Guard -> {
             val (icon, tint, textColor, format) = when (row.kind) {
                 GuardKind.ASLEEP -> GuardStyle(XIcons.sleep, events.sleep.strong, events.sleep.text, CoreR.string.guard_already_asleep)
@@ -343,13 +406,33 @@ private fun CardRowContent(row: CardRow, zone: ZoneId, formatters: Formatters, a
     }
 }
 
+/**
+ * A lead ("Earlier?", "End sleep") before a row of equal offset chips. Side by side while the chips keep a usable width;
+ * at large font scales or on narrow screens the lead goes above them, so nothing shrinks to unreadable.
+ */
+@Composable
+private fun LeadAndChips(lead: @Composable () -> Unit, chips: @Composable () -> Unit) {
+    val stacked = LocalDensity.current.fontScale >= LARGE_FONT_SCALE
+    if (stacked) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            lead()
+            chips()
+        }
+    } else {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            lead()
+            Box(Modifier.weight(1f)) { chips() }
+        }
+    }
+}
+
 private data class GuardStyle(val icon: ImageVector, val tint: Color, val text: Color, val format: Int)
 
 @Composable
 private fun MessageRow(icon: ImageVector, tint: Color, text: String, textColor: Color) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         XIcon(icon, contentDescription = null, tint = tint, size = 18.dp)
-        Text(text, style = PhoneType.dataMedium, color = textColor, maxLines = 2)
+        Text(text, style = PhoneType.dataMedium, color = textColor)
     }
 }
 

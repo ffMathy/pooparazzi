@@ -7,8 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,7 +50,7 @@ import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.tokens.LocalXPalette
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
-import com.ffmathy.pooparazzi.phone.ui.components.OffsetChip
+import com.ffmathy.pooparazzi.phone.ui.components.OffsetChipRow
 import com.ffmathy.pooparazzi.phone.ui.history.spokenSideCapitalised
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import com.ffmathy.pooparazzi.phone.ui.home.OffsetChipUi
@@ -294,19 +292,17 @@ internal fun SheetColumn(title: String, content: @Composable () -> Unit) {
     ) { content() }
 }
 
-/** The single-select offset chips of a sheet (radio semantics). */
-@OptIn(ExperimentalLayoutApi::class)
+/** The single-select offset chips of a sheet (radio semantics): one row of equal chips at every width and font scale. */
 @Composable
 internal fun SheetChipRow(chips: List<OffsetChipUi>, formatters: Formatters, readiness: PickerReadiness, onOffset: (Int) -> Unit) {
-    // Wraps only at large font scales.
-    FlowRow(
-        Modifier
+    OffsetChipRow(
+        chips,
+        formatters,
+        onOffset,
+        modifier = Modifier
             .selectableGroup()
             .alpha(readiness.alpha),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        chips.forEach { chip ->
-            OffsetChip(chip, formatters, onClick = { onOffset(chip.minutes) }, role = Role.RadioButton, acceptsTaps = readiness.ready)
-        }
-    }
+        role = Role.RadioButton,
+        acceptsTaps = readiness.ready,
+    )
 }
