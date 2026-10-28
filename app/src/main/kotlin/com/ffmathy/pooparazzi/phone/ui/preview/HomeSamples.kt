@@ -34,9 +34,15 @@ object HomeSamples {
     fun asleep(): HomeUiState =
         build(SampleData.scenarioAt0312(zone), SampleData.NOW_0312, sync = SyncStatus.Synced(SampleData.SYNCED_0311))
 
-    /** A first day: only a sleep running since 13:45, at 14:32 (no feeds or diapers yet): Today 0 · 0 · 0 · 47m. */
-    fun firstSleep(): HomeUiState =
-        build(listOf(Entry.sleep(SampleData.NOW_1432 - 47 * 60_000L, null, id = "sample-first-sleep")), SampleData.NOW_1432)
+    /**
+     * A first day without a paired watch (no sync line): only a sleep running since 12:48, at 14:32 (no feeds or
+     * diapers yet): Today 0 · 0 · 0 · 1h 44m.
+     */
+    fun firstSleep(): HomeUiState = build(
+        listOf(Entry.sleep(SampleData.NOW_1432 - 104 * 60_000L, null, id = "sample-first-sleep")),
+        SampleData.NOW_1432,
+        sync = SyncStatus.Unavailable,
+    )
 
     /**
      * 14:50, a breast feed (Left → Right) just logged for 14:32 with the −15m chip from the Feed sheet opened at 14:47:
