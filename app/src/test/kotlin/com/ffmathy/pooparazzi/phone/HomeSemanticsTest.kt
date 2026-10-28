@@ -21,6 +21,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
+import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
@@ -57,7 +58,8 @@ class HomeSemanticsTest {
         override fun onOpenHistory() { calls += "history" }
         override fun onPoopColor(color: PoopColor?) { calls += "colour:$color" }
         override fun onSideTick(breast: Breast) { calls += "tick:$breast" }
-        override fun onEndFeed() { calls += "end" }
+        override fun onLogBreastfeed() { calls += "log-breast" }
+        override fun onFeedType(type: FeedType?) { calls += "type:$type" }
     }
 
     @Before
@@ -139,15 +141,10 @@ class HomeSemanticsTest {
     /** The receipt sub-lines have spoken forms: no "→", "m" or "<1m" read out (DESIGN_SPEC §9.5). */
     @Test
     fun receiptSubLinesHaveSpokenForms() {
-        val feed = Entry.breastfeed(SampleData.NOW_1432, SampleData.NOW_1450, BreastSide.LEFT_THEN_RIGHT, id = "ended-feed")
-        show(card(feed, CardSpec.FeedEnded(feed.id, BreastSide.LEFT_THEN_RIGHT), now = SampleData.NOW_1450))
-        compose.onNodeWithText("Left → Right · 18m").assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Left then right, 18 minutes")))
-    }
-
-    @Test
-    fun cancelledFeedAndWokeUpSubLinesHaveSpokenForms() {
-        show(card(null, CardSpec.FeedCancelled(BreastSide.LEFT)))
-        compose.onNodeWithText("Left · <1m").assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Left, less than a minute")))
+        val feed = Entry.breastfeed(SampleData.NOW_1432, BreastSide.LEFT_THEN_RIGHT, id = "breast-feed")
+        show(card(feed, CardSpec.FeedLogged(feed.id, FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT)))
+        compose.onNodeWithText("Breast logged").assertExists()
+        compose.onNodeWithText("Left → Right").assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Left then right")))
     }
 
     @Test
@@ -158,10 +155,21 @@ class HomeSemanticsTest {
     }
 
     @Test
-    fun theSideSheetSubLineHasASpokenForm() {
-        show(HomeSamples.sideSheet(), night = false)
-        compose.onNodeWithText("Breastfeeding · 14:32–14:50 · 18m")
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Breastfeeding, 14:32 to 14:50, 18 minutes")))
+    fun breastInTheFeedSheetOffersTheSidesNext() {
+        show(HomeSamples.feedSheet())
+        compose.onNodeWithText("Then the sides, if you like").assertExists()
+        compose.onNodeWithText("Starts a timer").assertDoesNotExist()
+        compose.onNodeWithText("Breast").performClick()
+        assertTrue(calls.contains("type:BREAST"))
+    }
+
+    @Test
+    fun theBreastStepLogsAtTheSheetsTime() {
+        show(HomeSamples.breastSheet(), night = false)
+        compose.onNodeWithText("Breast · 14:32").assertExists()
+        compose.onNodeWithText("Tick the sides in the order you fed. Optional.").assertExists()
+        compose.onNodeWithText("Log feed").performClick()
+        assertTrue(calls.contains("log-breast"))
     }
 
     @Test
@@ -200,7 +208,7 @@ class HomeSemanticsTest {
     /** Left and Right are checkboxes; the ticked order is spoken ("Right, first") and summarised without the arrow. */
     @Test
     fun sideCheckboxesSpeakTheirTickOrder() {
-        show(HomeSamples.sideSheet(), night = false)
+        show(HomeSamples.breastSheet(), night = false)
         compose.onNodeWithContentDescription("No side").assertExists()
         compose.onNodeWithContentDescription("Left").assertIsOff()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
@@ -210,7 +218,7 @@ class HomeSemanticsTest {
 
     @Test
     fun tickedSidesSpeakTheirPlace() {
-        show(HomeSamples.sideSheet(listOf(Breast.RIGHT, Breast.LEFT)), night = false)
+        show(HomeSamples.breastSheet(listOf(Breast.RIGHT, Breast.LEFT)), night = false)
         compose.onNodeWithContentDescription("Right, first").assertIsOn()
         compose.onNodeWithContentDescription("Left, second").assertIsOn()
         compose.onNodeWithContentDescription("Right then left").assertExists()

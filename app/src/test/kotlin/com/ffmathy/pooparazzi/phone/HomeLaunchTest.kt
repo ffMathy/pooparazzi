@@ -32,22 +32,13 @@ class HomeLaunchTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun feedWhileBreastfeedingAndSideOpenTheSideSheet() = homeTest { home ->
-        home.seed(listOf(SampleData.runningBreastfeed()))
+    fun feedAfterABreastFeedStillOpensTheFeedSheet() = homeTest { home ->
+        home.seed(listOf(SampleData.recentBreastfeed()))
         home.clock.set(SampleData.NOW_1450)
-        home.viewModel.onLaunch(HomeLaunch.Side)
-        val side = home.settle().sheet as HomeSheetUi.Side
-        assertEquals(SampleData.runningBreastfeed().id, side.feedId)
-
-        home.viewModel.onSheetDismiss()
         home.viewModel.onLaunch(HomeLaunch.Feed)
-        assertTrue(home.settle().sheet is HomeSheetUi.Side)
-    }
-
-    @Test
-    fun sideWithoutARunningFeedShowsNothing() = homeTest { home ->
-        home.viewModel.onLaunch(HomeLaunch.Side)
-        assertNull("the feed already ended (e.g. on the watch)", home.settle().sheet)
+        val sheet = home.settle().sheet as HomeSheetUi.Feed
+        assertEquals(false, sheet.breast)
+        assertEquals(SampleData.NOW_1450, sheet.stamp)
     }
 
     @Test

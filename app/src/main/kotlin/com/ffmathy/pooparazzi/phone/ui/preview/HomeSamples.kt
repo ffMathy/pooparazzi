@@ -32,9 +32,26 @@ object HomeSamples {
     fun asleep(): HomeUiState =
         build(SampleData.scenarioAt0312(zone), SampleData.NOW_0312, sync = SyncStatus.Synced(SampleData.SYNCED_0311))
 
-    /** 14:50, breastfeeding since 14:32 ("Breastfeeding 18m"), Feed button "End feed". */
-    fun breastfeeding(): HomeUiState =
-        build(SampleData.scenarioWithRunningFeed(zone), SampleData.NOW_1450, sync = SyncStatus.Synced(SampleData.at(14, 49)))
+    /**
+     * 14:50, a breast feed (Left → Right) just logged for 14:32 with the −15m chip from the Feed sheet opened at 14:47:
+     * "Last fed 18m ago · 14:32 · Breast" and the undo card "Breast logged · Left → Right".
+     */
+    fun breastLogged(): HomeUiState {
+        val feed = SampleData.recentBreastfeed(zone)
+        val stamp = SampleData.at(14, 47)
+        return build(
+            SampleData.scenarioWithRecentFeed(zone),
+            SampleData.NOW_1450,
+            sync = SyncStatus.Synced(SampleData.at(14, 49)),
+            card = CardModel(
+                key = 1,
+                spec = CardSpec.FeedLogged(feed.id, FeedType.BREAST, feed.breastSide),
+                baseTime = stamp,
+                offsetMinutes = -15,
+                undo = Undo.Delete(feed.id),
+            ),
+        )
+    }
 
     /**
      * 14:32, Formula just logged from the Feed sheet: the undo card with Earlier chips. The log is on its way to the
@@ -55,16 +72,12 @@ object HomeSamples {
     /** The Feed sheet opened at 14:32. */
     fun feedSheet(): HomeUiState = build(SampleData.scenario(zone), SampleData.NOW_1432, sheet = SheetModel.Feed(SampleData.NOW_1432))
 
-    /** The Side sheet at 14:50 for the breastfeed running since 14:32, with [ticks] ticked in that order. */
-    fun sideSheet(ticks: List<Breast> = emptyList()): HomeUiState {
-        val feed = SampleData.runningBreastfeed(zone)
-        return build(
-            SampleData.scenarioWithRunningFeed(zone),
-            SampleData.NOW_1450,
-            sync = SyncStatus.Synced(SampleData.at(14, 49)),
-            sheet = SheetModel.Side(feed.id, feed.startMillis, SampleData.NOW_1450, ticks = ticks),
-        )
-    }
+    /** The Feed sheet opened at 14:32 after tapping Breast: the side checkboxes, with [ticks] ticked in that order. */
+    fun breastSheet(ticks: List<Breast> = emptyList()): HomeUiState = build(
+        SampleData.scenario(zone),
+        SampleData.NOW_1432,
+        sheet = SheetModel.Feed(SampleData.NOW_1432, breast = true, ticks = ticks),
+    )
 
     /** The Diaper sheet with Pee and Poop on, Yellow and Seedy selected. */
     fun diaperSheet(): HomeUiState = build(

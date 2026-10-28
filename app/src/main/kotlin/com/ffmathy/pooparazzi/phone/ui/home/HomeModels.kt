@@ -29,17 +29,14 @@ internal data class CardModel(
 
 /** What the card is about. Entry ids point at the entry that the offsets move. */
 internal sealed interface CardSpec {
-    /** [type] null: a feed logged with just its time ("Feed logged"). */
-    data class FeedLogged(val entryId: String, val type: FeedType?) : CardSpec
+    /** [type] null: a feed logged with just its time ("Feed logged"). [side]: a breast feed's ticked order, if any. */
+    data class FeedLogged(val entryId: String, val type: FeedType?, val side: BreastSide? = null) : CardSpec
     data class DiaperLogged(val entryId: String, val kind: DiaperKind) : CardSpec
-    data class FeedStarted(val entryId: String) : CardSpec
-    /** [side] null: the feed ended with no side ticked. */
-    data class FeedEnded(val entryId: String, val side: BreastSide?) : CardSpec
-    data class FeedCancelled(val side: BreastSide?) : CardSpec
     data class SleepStarted(val entryId: String) : CardSpec
     data class WokeUp(val entryId: String) : CardSpec
     data object SleepCancelled : CardSpec
-    data class AdjustStart(val entryId: String, val sleep: Boolean) : CardSpec
+    /** "Adjust start" of the running sleep [entryId]. */
+    data class AdjustStart(val entryId: String) : CardSpec
     data class Notice(val guard: GuardKind) : CardSpec
 
     /** "Sleep deleted" after a delete in the edit sheet; Undo writes [previous] back. */
@@ -55,24 +52,22 @@ internal val CardSpec.subject: Pair<String, MoveField>?
     get() = when (this) {
         is CardSpec.FeedLogged -> entryId to MoveField.START
         is CardSpec.DiaperLogged -> entryId to MoveField.START
-        is CardSpec.FeedStarted -> entryId to MoveField.START
         is CardSpec.SleepStarted -> entryId to MoveField.START
         is CardSpec.AdjustStart -> entryId to MoveField.START
-        is CardSpec.FeedEnded -> entryId to MoveField.END
         is CardSpec.WokeUp -> entryId to MoveField.END
-        is CardSpec.FeedCancelled, CardSpec.SleepCancelled, is CardSpec.Notice, is CardSpec.Deleted, CardSpec.Undone -> null
+        CardSpec.SleepCancelled, is CardSpec.Notice, is CardSpec.Deleted, CardSpec.Undone -> null
     }
 
-/** A feed or diaper log (or a breastfeed start) may offer "End sleep" while a sleep runs. */
+/** A feed or diaper log may offer "End sleep" while a sleep runs. */
 internal val CardSpec.canEndSleep: Boolean
-    get() = this is CardSpec.FeedLogged || this is CardSpec.DiaperLogged || this is CardSpec.FeedStarted
+    get() = this is CardSpec.FeedLogged || this is CardSpec.DiaperLogged
 
 /** How Undo reverts the card's log. */
 internal sealed interface Undo {
-    /** Feed, diaper, sleep start, breastfeed start: remove the entry. */
+    /** Feed, diaper, sleep start: remove the entry. */
     data class Delete(val entryId: String) : Undo
 
-    /** Woke up, Feed ended, cancelled: write the running snapshot back (the interval runs again). */
+    /** Woke up, Sleep cancelled: write the running snapshot back (the sleep runs again). */
     data class Restore(val previous: Entry) : Undo
 }
 
@@ -87,14 +82,14 @@ internal sealed interface SheetModel {
     val stamp: Long
     val offsetMinutes: Int
 
-    data class Feed(override val stamp: Long, override val offsetMinutes: Int = 0) : SheetModel
-
-    /** [ticks]: the breasts ticked so far, in tick order (V1_ADDITIONS §2.1). */
-    data class Side(
-        val feedId: String,
-        val startMillis: Long,
+    /**
+     * The Feed sheet. [breast] is true once Breast was tapped: the sheet then shows the side checkboxes and "Log feed";
+     * [ticks] are the breasts ticked so far, in tick order (V1_ADDITIONS §2.1).
+     */
+    data class Feed(
         override val stamp: Long,
         override val offsetMinutes: Int = 0,
+        val breast: Boolean = false,
         val ticks: List<Breast> = emptyList(),
     ) : SheetModel
 

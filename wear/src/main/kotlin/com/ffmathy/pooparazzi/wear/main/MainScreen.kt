@@ -118,7 +118,6 @@ data class MainActions(
      * that crossed a change made on the phone is not taken the other way).
      */
     val onSleepToggle: (shownSleepId: String?) -> Unit = {},
-    val onEndFeed: () -> Unit = {},
     /** Adjust a time of an entry (status cards, "Adjust start"). */
     val onAdjust: (entry: Entry, field: TimeField) -> Unit = { _, _ -> },
     val onHistory: () -> Unit = {},
@@ -126,7 +125,7 @@ data class MainActions(
 
 /**
  * Main (DESIGN_SPEC §3.5.1–2, §10.2; V1_ADDITIONS §2.2): the first screen is the hero (status block + Feed | Diaper
- * when idle, the Lamp while a sleep or breastfeed runs) above a pinned EdgeButton that stays visible while the list
+ * when idle, the Lamp while a sleep runs) above a pinned EdgeButton that stays visible while the list
  * below scrolls. The list holds Adjust start, the buttons, status cards, History and the sync footer.
  */
 @Composable
@@ -162,12 +161,12 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                     Box(Modifier.fillMaxWidth().heightIn(min = screenHeight).padding(bottom = if (idle) edgeReserve else 0.dp)) {
                         when (state.mode) {
                             MainMode.IDLE -> IdleHero(state, f, actions, small)
-                            MainMode.ASLEEP, MainMode.FEEDING -> LampHero(state, f, small)
+                            MainMode.ASLEEP -> LampHero(state, f, small)
                         }
                     }
                 }
                 if (state.mode != MainMode.IDLE) {
-                    val running = state.runningFeed ?: state.runningSleep
+                    val running = state.runningSleep
                     if (running != null) {
                         item(key = "adjust-start") {
                             XListButton(
@@ -183,11 +182,6 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                     }
                     item(key = "feed-diaper") {
                         FeedDiaperGroup(actions, small, Modifier.transformedHeight(this, spec))
-                    }
-                }
-                if (state.mode == MainMode.FEEDING) {
-                    item(key = "sleep-toggle") {
-                        SleepListButton(state, actions, SurfaceTransformation(spec), Modifier.transformedHeight(this, spec))
                     }
                 }
                 cards.forEach { card ->
@@ -459,27 +453,25 @@ private fun EventTileButton(
 @Composable
 private fun LampHero(state: MainUiState, f: Formatters, small: Boolean) {
     val ambient = isAmbient()
-    val feeding = state.mode == MainMode.FEEDING
-    val running = (if (feeding) state.runningFeed else state.runningSleep) ?: return
-    val colors = if (feeding) events().feed else events().sleep
+    val running = state.runningSleep ?: return
+    val colors = events().sleep
     val elapsed = clockDurationMillis(running.startMillis, state.now)
-    val event = if (feeding) LampEvent.FEED else LampEvent.SLEEP
     val geometry = if (small) LampGeometry.WatchSmall else LampGeometry.Watch
     val top = if (small) 21.dp else 25.dp
-    val title = stringResource(if (feeding) CoreR.string.status_breastfeeding else CoreR.string.status_asleep)
+    val title = stringResource(CoreR.string.status_asleep)
     val spoken = f.spokenRunning(title, running.startMillis, state.now)
     val onSurface = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurface
 
     Box(Modifier.fillMaxWidth().padding(top = top), contentAlignment = Alignment.TopCenter) {
         Lamp(
-            event = event,
+            event = LampEvent.SLEEP,
             running = true,
             elapsedMinutes = elapsed / 60_000L,
             variant = if (ambient) LampVariant.WATCH_AMBIENT else LampVariant.WATCH,
             geometry = geometry,
             reducedMotion = rememberReducedMotion(),
             identity = running.id,
-            ambientColor = if (feeding) colors.strong else WatchAmbient.sleepRing,
+            ambientColor = WatchAmbient.sleepRing,
         )
         val lampSize = geometry.referenceSize
         if (small) {
@@ -498,7 +490,7 @@ private fun LampHero(state: MainUiState, f: Formatters, small: Boolean) {
                     .clearAndSetSemantics { contentDescription = spoken },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                LampLabel(title, if (feeding) XIcons.breast else XIcons.sleep, colors, ambient)
+                LampLabel(title, XIcons.sleep, colors, ambient)
                 Spacer(Modifier.height(4.dp))
                 Box(Modifier.height(34.dp), contentAlignment = Alignment.Center) {
                     LampNumeral(elapsed, f, onSurface, spoken, maxWidth = 106.dp, minSize = 28f)
@@ -560,56 +552,41 @@ private fun LampNumeral(elapsed: Long, f: Formatters, color: Color, spoken: Stri
     }
 }
 
-/** "Asleep since 02:05" / "Breastfeeding since 14:32" for the small-watch Adjust start item. */
+/** "Asleep since 02:05" for the small-watch Adjust start item. */
 @Composable
 private fun runningSince(state: MainUiState, f: Formatters): String? {
-    val feeding = state.mode == MainMode.FEEDING
-    val running = (if (feeding) state.runningFeed else state.runningSleep) ?: return null
-    val word = stringResource(if (feeding) CoreR.string.status_breastfeeding else CoreR.string.status_asleep)
-    return f.statusSince(word, running.startMillis)
+    val running = state.runningSleep ?: return null
+    return f.statusSince(stringResource(CoreR.string.status_asleep), running.startMillis)
 }
 
 // ---- Pinned EdgeButton -----------------------------------------------------------------------
 
 /**
- * The pinned EdgeButton (§3.5.1–2, §10.2; V1_ADDITIONS §2.2): "Start sleep" (SLEEP container), "Woke up" (SLEEP
- * containerLit + border) or "End feed" (FEED containerLit + border). A rejected toggle shows two centred lines
- * ("Already / asleep") instead of the content for 2 s.
+ * The pinned EdgeButton (§3.5.1–2, §10.2; V1_ADDITIONS §2.2): "Start sleep" (SLEEP container) or "Woke up" (SLEEP
+ * containerLit + border). A rejected toggle shows two centred lines ("Already / asleep") instead of the content for 2 s.
  */
 @Composable
 private fun PinnedEdgeButton(state: MainUiState, actions: MainActions, size: EdgeButtonSize, f: Formatters, modifier: Modifier) {
     val ambient = isAmbient()
-    val feeding = state.mode == MainMode.FEEDING
     val asleep = state.mode == MainMode.ASLEEP
-    val colors = if (feeding) events().feed else events().sleep
-    val guard = if (feeding) state.endFeedGuard else state.sleepGuard
-    val label = stringResource(
-        when {
-            feeding -> CoreR.string.action_end_feed
-            asleep -> CoreR.string.action_woke_up
-            else -> CoreR.string.action_start_sleep
-        },
-    )
-    val name = when {
-        feeding -> label
-        asleep -> stringResource(R.string.cd_woke_up_end_sleep)
-        else -> label
-    }
-    val guardText = guard?.let { stringResource(it.edgeText()) }
-    val sleepState = sleepStateDescription(state, f).takeUnless { feeding }
+    val colors = events().sleep
+    val label = stringResource(if (asleep) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
+    val name = if (asleep) stringResource(R.string.cd_woke_up_end_sleep) else label
+    val guardText = state.sleepGuard?.let { stringResource(it.edgeText()) }
+    val sleepState = sleepStateDescription(state, f)
     val container = when {
         ambient -> Color.Transparent
-        feeding || asleep -> colors.containerLit
+        asleep -> colors.containerLit
         else -> colors.container
     }
     val border = when {
-        ambient -> BorderStroke(2.dp, if (feeding) colors.strong else WatchAmbient.sleepRing)
-        feeding || asleep -> BorderStroke(1.5.dp, colors.strong)
+        ambient -> BorderStroke(2.dp, WatchAmbient.sleepRing)
+        asleep -> BorderStroke(1.5.dp, colors.strong)
         else -> null
     }
     val content = if (ambient) WatchAmbient.content else colors.onContainer
     EdgeButton(
-        onClick = if (feeding) actions.onEndFeed else ({ actions.onSleepToggle(state.runningSleep?.id) }),
+        onClick = { actions.onSleepToggle(state.runningSleep?.id) },
         modifier = modifier.semantics {
             contentDescription = guardText?.replace('\n', ' ') ?: name
             if (sleepState != null) stateDescription = sleepState
@@ -629,11 +606,7 @@ private fun PinnedEdgeButton(state: MainUiState, actions: MainActions, size: Edg
                 )
             } else if (fitsOneLine(label, MaterialTheme.typography.labelMedium, EDGE_LABEL_WIDTH)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val icon = when {
-                        feeding -> XIcons.breast
-                        asleep -> XIcons.wake
-                        else -> XIcons.sleep
-                    }
+                    val icon = if (asleep) XIcons.wake else XIcons.sleep
                     XIcon(
                         icon,
                         null,
@@ -654,7 +627,6 @@ private fun PinnedEdgeButton(state: MainUiState, actions: MainActions, size: Edg
 private fun GuardKind.edgeText(): Int = when (this) {
     GuardKind.ALREADY_ASLEEP -> R.string.edge_guard_already_asleep
     GuardKind.ALREADY_AWAKE -> R.string.edge_guard_already_awake
-    GuardKind.ALREADY_FEEDING -> R.string.edge_guard_already_feeding
 }
 
 /** §9.4: "Asleep since 02:05" / "Awake since 13:27" as the sleep toggle's state. */
@@ -663,32 +635,6 @@ private fun sleepStateDescription(state: MainUiState, f: Formatters): String? {
     state.runningSleep?.let { return f.statusSince(stringResource(CoreR.string.status_asleep), it.startMillis) }
     val end = state.lastSleep?.endMillis ?: return null
     return f.statusSince(stringResource(CoreR.string.status_awake), end)
-}
-
-/** The sleep toggle as a list button while a breastfeed holds the EdgeButton (V1_ADDITIONS §2.2). */
-@Composable
-private fun SleepListButton(state: MainUiState, actions: MainActions, transformation: SurfaceTransformation, modifier: Modifier) {
-    val f = rememberFormatters(state.zone)
-    val asleep = state.runningSleep != null
-    val sleep = events().sleep
-    val guardText = state.sleepGuard?.let { stringResource(it.edgeText()).replace('\n', ' ') }
-    val label = guardText ?: stringResource(if (asleep) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
-    val sleepState = sleepStateDescription(state, f)
-    XListButton(
-        label = label,
-        onClick = { actions.onSleepToggle(state.runningSleep?.id) },
-        modifier = modifier
-            .padding(horizontal = 13.dp)
-            .semantics { if (sleepState != null) stateDescription = sleepState },
-        icon = if (guardText == null) {
-            { XIcon(if (asleep) XIcons.wake else XIcons.sleep, null, tint = iconTint(sleep.strong), size = 24.dp) }
-        } else {
-            null
-        },
-        colors = eventButtonColors(sleep, if (asleep) sleep.containerLit else sleep.container),
-        border = if (isAmbient()) BorderStroke(2.dp, WatchAmbient.sleepRing) else if (asleep) BorderStroke(1.5.dp, sleep.strong) else null,
-        transformation = transformation,
-    )
 }
 
 // ---- Status cards ----------------------------------------------------------------------------
@@ -706,28 +652,19 @@ private class CardModel(
 
 /**
  * The status cards (§3.5.1–2, §3.5.9): idle shows Awake and the last diaper; asleep shows Last fed and the last
- * diaper; while a breastfeed runs, the running sleep (or Awake) and the last diaper. Each opens Adjust.
+ * diaper. Each opens Adjust.
  */
 @Composable
 private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
     val events = events()
     val cards = mutableListOf<CardModel>()
     val now = state.now
-    val asleepWord = stringResource(CoreR.string.status_asleep)
     val awakeWord = stringResource(CoreR.string.status_awake)
     val lastFedWord = stringResource(CoreR.string.status_last_fed)
     val lastFeedSpoken = stringResource(CoreR.string.spoken_last_feed)
     val lastDiaperSpoken = stringResource(CoreR.string.spoken_last_diaper)
     val bothIcon = rememberBothIcon(events.pee.strong, events.poop.strong)
 
-    if (state.mode == MainMode.FEEDING) {
-        state.runningSleep?.let { sleep ->
-            cards += CardModel(
-                "sleep", sleep, TimeField.START, XIcons.sleep, events.sleep.strong, asleepWord,
-                f.durationAndSince(sleep.startMillis, now), f.spokenRunning(asleepWord, sleep.startMillis, now),
-            )
-        }
-    }
     if (state.mode == MainMode.ASLEEP) {
         state.lastFeed?.let { feed ->
             cards += CardModel(
@@ -777,7 +714,3 @@ private fun MainIdlePreview() = XWearTheme { MainScreen(WearSamples.mainIdle(), 
 @WearPreviewDevices
 @Composable
 private fun MainAsleepPreview() = XWearTheme { MainScreen(WearSamples.mainAsleep(), MainActions()) }
-
-@WearPreviewDevices
-@Composable
-private fun MainFeedingPreview() = XWearTheme { MainScreen(WearSamples.mainFeeding(), MainActions()) }

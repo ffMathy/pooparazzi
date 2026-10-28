@@ -3,7 +3,7 @@ package com.ffmathy.pooparazzi.core.domain
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
 
-/** What the Lamp shows (DESIGN_SPEC §2.3, V1_ADDITIONS §2.1). A running feed takes priority over a running sleep. */
+/** What the Lamp shows (DESIGN_SPEC §2.3, V1_ADDITIONS §2.1). */
 sealed interface LampState {
     /** Whole minutes for the hero numeral and the ember (0 when nothing applies). */
     val elapsedMinutes: Long
@@ -18,18 +18,13 @@ sealed interface LampState {
         override val elapsedMinutes: Long get() = elapsedMillis / 60_000L
     }
 
-    /** A breastfeed runs: "Breastfeeding 18m · since 14:32", FEED orbit. */
-    data class FeedRunning(val feed: Entry, val elapsedMillis: Long) : LampState {
-        override val elapsedMinutes: Long get() = elapsedMillis / 60_000L
-    }
 }
 
 /**
- * The Lamp state for [summary]: running feed > running sleep > idle. Elapsed times are whole clock minutes
+ * The Lamp state for [summary]: running sleep > idle. Elapsed times are whole clock minutes
  * ([clockDurationMillis]), so the numeral and the ember agree with "since 02:05" and step on the minute.
  */
 fun lampState(summary: Summary): LampState {
-    summary.runningFeed?.let { return LampState.FeedRunning(it, clockDurationMillis(it.startMillis, summary.now)) }
     summary.runningSleep?.let { return LampState.SleepRunning(it, clockDurationMillis(it.startMillis, summary.now)) }
     return LampState.FeedIdle(summary.lastFeed, summary.sinceLastFeedMillis)
 }

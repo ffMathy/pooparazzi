@@ -16,11 +16,12 @@ import java.time.ZoneId
 /** Editing an existing entry, or adding a past one (DESIGN_SPEC §3.3.4 "Add past entry"). */
 enum class EditMode { EDIT, ADD }
 
-/** Which time of the draft a control changes: the start (or the instant's time) or the end of an interval. */
+/** Which time of the draft a control changes: the start (or the instant's time) or the end of a sleep. */
 enum class TimeField { START, END }
 
 /**
- * The form's values. An interval ([isInterval]) whose [end] is null is running ("Still asleep" / "Still feeding").
+ * The form's values. A sleep ([isInterval]) whose [end] is null is running ("Still asleep"). Feeds (breastfeeds too)
+ * and diapers are instants: one time.
  * Converted to an [Entry] with [toEntry]; the repository enforces the invariants again on save.
  */
 @Serializable
@@ -37,17 +38,13 @@ data class EditDraft(
     val texture: PoopTexture? = null,
 ) {
     val isBreastfeed: Boolean get() = kind == EntryKind.FEED && feedType == FeedType.BREAST
-    val isInterval: Boolean get() = kind == EntryKind.SLEEP || isBreastfeed
+    val isInterval: Boolean get() = kind == EntryKind.SLEEP
     val running: Boolean get() = isInterval && end == null
 
-    /** The entry this draft describes (instants drop any end; colour and texture only with poop). */
+    /** The entry this draft describes (instants drop any end; the side only on a breastfeed; colour and texture only with poop). */
     fun toEntry(updatedAtMillis: Long): Entry = when (kind) {
         EntryKind.SLEEP -> Entry.sleep(start, end, id = id, updatedAtMillis = updatedAtMillis)
-        EntryKind.FEED -> if (isBreastfeed) {
-            Entry.breastfeed(start, end, side.takeIf { end != null }, id = id, updatedAtMillis = updatedAtMillis)
-        } else {
-            Entry.feed(feedType, start, id = id, updatedAtMillis = updatedAtMillis)
-        }
+        EntryKind.FEED -> Entry.feed(feedType, start, side, id = id, updatedAtMillis = updatedAtMillis)
         EntryKind.DIAPER -> Entry.diaper(start, pee, poop, color, texture, id = id, updatedAtMillis = updatedAtMillis)
     }
 
@@ -72,7 +69,7 @@ data class EditDraft(
 sealed interface EditIssue {
     val blocksSave: Boolean
 
-    /** "Woke up must be after fell asleep." / "The feed must end after it starts." */
+    /** "Woke up must be after fell asleep." */
     data class EndBeforeStart(val kind: EntryKind) : EditIssue {
         override val blocksSave: Boolean get() = true
     }
@@ -82,7 +79,7 @@ sealed interface EditIssue {
         override val blocksSave: Boolean get() = true
     }
 
-    /** "Overlaps the 12:10 sleep. Save anyway?" (a warning: Save stays enabled). */
+    /** "Overlaps the 12:10 sleep. Save anyway?" (a warning: Save stays enabled; only sleeps can overlap). */
     data class Overlaps(val other: Entry) : EditIssue {
         override val blocksSave: Boolean get() = false
     }
@@ -113,7 +110,7 @@ enum class EditConflict { CHANGED, DELETED }
  * @property original the stored entry when editing ("was 12:40", "was 47m"); null when adding.
  * @property wasStart the original start, shown as "was 12:40" once the start's minute changed.
  * @property wasEnd the original end, shown once the end's minute changed.
- * @property durationMillis the interval's displayed duration (to now while running); null for instants.
+ * @property durationMillis the sleep's displayed duration (to now while running); null for instants.
  * @property wasDurationMillis the original duration, shown once the duration changed.
  */
 @Immutable
@@ -152,7 +149,7 @@ interface EditActions {
     /** Selects [type]; tapping the selected type again clears it (a feed with just its time). */
     fun onFeedType(type: FeedType) {}
 
-    /** Ticks or unticks [breast] on an ended breastfeed; the tick order is the side recorded. */
+    /** Ticks or unticks [breast] on a breastfeed; the tick order is the side recorded. */
     fun onSideTick(breast: Breast) {}
 
     /** ±1m / ±5m. */
@@ -167,7 +164,7 @@ interface EditActions {
     /** "Use yesterday" in the future-time message. */
     fun onUseYesterday() {}
 
-    /** "End now" on a running sleep or breastfeed. */
+    /** "End now" on a running sleep. */
     fun onEndNow() {}
     fun onPee(checked: Boolean) {}
     fun onPoop(checked: Boolean) {}

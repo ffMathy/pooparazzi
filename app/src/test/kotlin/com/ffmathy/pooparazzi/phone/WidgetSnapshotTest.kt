@@ -38,7 +38,6 @@ class WidgetSnapshotTest {
         assertEquals(SampleData.at(13, 44), idle.lastDiaper!!.startMillis)
         assertEquals(SampleData.at(13, 27), idle.awakeSinceMillis)
         assertFalse(idle.asleep)
-        assertFalse(idle.feeding)
         assertEquals(HomeLaunch.Home, idle.backgroundLaunch)
     }
 
@@ -58,10 +57,11 @@ class WidgetSnapshotTest {
     }
 
     @Test
-    fun breastfeedingAndAsleepStates() {
-        val feeding = WidgetSamples.breastfeeding(night = false)
-        assertEquals(SampleData.at(14, 32), feeding.runningFeedStart)
-        assertTrue(feeding.feeding)
+    fun afterABreastFeedAndAsleepStates() {
+        val fed = WidgetSamples.afterBreastfeed(night = false)
+        assertEquals(SampleData.at(14, 32), fed.lastFeed!!.startMillis)
+        assertEquals(FeedType.BREAST, fed.lastFeed!!.feedType)
+        assertFalse("a breast feed is an instant", fed.asleep)
         val asleep = WidgetSamples.asleep()
         assertEquals(SampleData.at(2, 5), asleep.runningSleepStart)
         assertNull("no awake-since while asleep", asleep.awakeSinceMillis)
@@ -93,7 +93,6 @@ class WidgetSnapshotTest {
         val launches = listOf(
             HomeLaunch.Home,
             HomeLaunch.Feed,
-            HomeLaunch.Side,
             HomeLaunch.Diaper,
             HomeLaunch.Receipt(ReceiptKind.WOKE_UP, "sleep-1"),
             HomeLaunch.Receipt(ReceiptKind.LOGGED, "diaper-2"),
@@ -102,7 +101,8 @@ class WidgetSnapshotTest {
         assertEquals("pooparazzi://home/feed", DeepLinks.uri(HomeLaunch.Feed).toString())
         assertNull("other links are ignored", DeepLinks.parse(Uri.parse("https://example.com/home/feed")))
         assertEquals("an unknown sheet opens Home", HomeLaunch.Home, DeepLinks.parse(Uri.parse("pooparazzi://home/nothing")))
-        assertTrue(HomeLaunch.Side.opensSheet)
+        assertTrue(HomeLaunch.Feed.opensSheet)
+        assertEquals("the old End feed link opens Home", HomeLaunch.Home, DeepLinks.parse(Uri.parse("pooparazzi://home/side")))
         assertFalse(HomeLaunch.Receipt(ReceiptKind.LOGGED, "x").opensSheet)
     }
 }

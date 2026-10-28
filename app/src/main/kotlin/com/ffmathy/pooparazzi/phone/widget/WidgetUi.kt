@@ -92,19 +92,15 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     /** "Fed at 12:22", "Pee at 13:44", "Formula logged at 14:32". */
     private fun atTime(label: String, millis: Long): String = string(CoreR.string.receipt_at_time, label, time(millis))
 
-    /** "Asleep since 02:05", "Breastfeeding since 14:32". */
+    /** "Asleep since 02:05", "Awake since 13:27". */
     private fun since(label: String, millis: Long): String =
         string(R.string.join_space, label, string(CoreR.string.rel_since_format, time(millis)))
 
     fun fedAt(millis: Long): String = atTime(string(CoreR.string.status_fed), millis)
     fun diaperAt(kind: DiaperKind, millis: Long): String = atTime(labels.diaperKindStatus(kind), millis)
     fun noFeeds(): String = string(R.string.lamp_no_feed)
-    fun breastfeedingSince(millis: Long): String = since(string(CoreR.string.status_breastfeeding), millis)
     fun asleepSince(millis: Long): String = since(string(CoreR.string.status_asleep), millis)
     fun awakeSince(millis: Long): String = since(string(CoreR.string.status_awake), millis)
-
-    /** "Since 14:32": the running breastfeed where the full line does not fit. */
-    fun sinceOnly(millis: Long): String = string(R.string.notification_since, time(millis))
 
     fun receipt(receipt: WidgetReceipt): String = when (receipt.kind) {
         ReceiptKind.LOGGED -> atTime(string(CoreR.string.receipt_logged, labels.diaperKind(receipt.diaperKind ?: DiaperKind.PLAIN)), receipt.atMillis)

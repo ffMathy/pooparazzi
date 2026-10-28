@@ -29,7 +29,6 @@ import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
-import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.wear.R
@@ -136,8 +135,8 @@ fun AdjustScreen(state: AdjustUiState, actions: AdjustActions, modifier: Modifie
 }
 
 /**
- * "Adjust start" for a running interval; "Pee · 13:44" for an instant; "Woke up · 13:27" / "Feed ended · 08:14" for
- * an end; the entry word ("Sleep") above Start / End groups.
+ * "Adjust start" for a running sleep; "Pee · 13:44" for an instant; "Woke up · 13:27" for a sleep's end; the entry
+ * word ("Sleep") above Start / End groups.
  */
 @Composable
 private fun adjustTitle(state: AdjustUiState, f: Formatters): String {
@@ -147,7 +146,6 @@ private fun adjustTitle(state: AdjustUiState, f: Formatters): String {
         group.field == TimeField.START && entry.isRunning -> stringResource(CoreR.string.action_adjust_start)
         group.field == TimeField.START && entry.endMillis == null -> entryWord(entry) + DOT_SEPARATOR + f.clock.format(group.base, f.zone)
         group.field == TimeField.START -> stringResource(R.string.adjust_start_at, f.clock.format(group.base, f.zone))
-        entry.isBreastfeed -> stringResource(CoreR.string.receipt_feed_ended) + DOT_SEPARATOR + f.clock.format(group.base, f.zone)
         else -> stringResource(CoreR.string.action_woke_up) + DOT_SEPARATOR + f.clock.format(group.base, f.zone)
     }
 }

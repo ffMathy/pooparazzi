@@ -33,10 +33,10 @@ PHONE = {
     "01-home-night.png": "home-night",
     "02-home-day.png": "home-day",
     "03-home-asleep-night.png": "home-asleep",
-    "04-home-breastfeeding.png": "home-breastfeeding",
+    "04-home-breast-logged.png": "home-breast-logged",
     "05-home-undo-card.png": "home-undo",
     "06-feed-sheet.png": "feed-sheet",
-    "07-side-sheet-ticked.png": "side-sheet",
+    "07-breast-sheet-ticked.png": "breast-sheet",
     "08-diaper-sheet.png": "diaper-sheet",
     "10-history-day.png": "history",
     "11-history-night.png": "history-night",
@@ -52,7 +52,7 @@ PHONE = {
 WATCH = {
     "01-main-idle.png": "main-idle",
     "02-main-asleep.png": "main-asleep",
-    "03-main-breastfeeding.png": "main-breastfeeding",
+    "03-main-after-breast.png": "main-after-breast",
     "05-feed-type.png": "feed-type",
     "06-side-ticked.png": "side",
     "07-diaper.png": "diaper",
@@ -61,7 +61,7 @@ WATCH = {
     "15-undone.png": "undone",
     "11-today.png": "today",
     "12-tile.png": "tile",
-    "12d-tile-breastfeeding.png": "tile-breastfeeding",
+    "12b-tile-asleep.png": "tile-asleep",
     "13-complications.png": "complications",
 }
 

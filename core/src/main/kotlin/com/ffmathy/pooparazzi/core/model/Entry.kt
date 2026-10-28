@@ -8,17 +8,17 @@ import java.util.UUID
 enum class EntryKind { SLEEP, FEED, DIAPER }
 
 /**
- * The kind of feed. Only [BREAST] is an interval (a timed breastfeed); the others are instants.
- * The type is optional: a FEED with no type ([Entry.feedType] == null) is an instant that records only its time.
+ * The kind of feed. Every feed is an instant (one time); a [BREAST] feed may also record the side order.
+ * The type is optional: a FEED with no type ([Entry.feedType] == null) records only its time.
  */
 @Serializable
 enum class FeedType { BREAST, FORMULA, FOOD }
 
-/** One breast, as ticked in the end-of-feed checkboxes. */
+/** One breast, as ticked in the side checkboxes of a breast feed. */
 enum class Breast { LEFT, RIGHT }
 
 /**
- * The breast side(s) of a breastfeed, picked (optionally) when the feed ends. The order of the two-sided values
+ * The breast side(s) of a breastfeed, picked (optionally) when it is logged. The order of the two-sided values
  * matters. The UI ticks [Breast]es in order; [fromOrder] maps that order to the stored value and [order] back.
  */
 @Serializable
@@ -85,24 +85,28 @@ enum class DiaperKind {
  * One logged event. Times are epoch milliseconds (UTC); display converts to local time.
  *
  * Invariants (V1_ADDITIONS §1) are checked by [validate] and enforced by the repository:
- * - an *interval* is a SLEEP or a FEED with [feedType] == BREAST; every other entry is an instant with [endMillis] == null;
- * - an interval is *running* while [endMillis] == null and it is not [deleted];
- * - a FEED's [feedType] is optional (null = just the time, an instant);
+ * - an *interval* is a SLEEP; every other entry (every FEED, breastfeeds included, and every DIAPER) is an instant
+ *   with [endMillis] == null;
+ * - a sleep is *running* while [endMillis] == null and it is not [deleted];
+ * - a FEED's [feedType] is optional (null = just the time);
  * - a DIAPER's [pee] and [poop] are optional (neither = a plain change); [poopColor] and [poopTexture] are null unless [poop];
- * - [breastSide] is null while a breastfeed runs and optional once it has ended.
+ * - [breastSide] is optional and only on a BREAST feed.
+ *
+ * Older app versions stored a breastfeed as a timed interval (with an [endMillis], or none while it ran). Such
+ * entries are read through [normalized], which turns them into instants at their start.
  */
 @Serializable
 data class Entry(
     /** UUID, stable across devices. */
     val id: String,
     val kind: EntryKind,
-    /** Start (intervals) or time (instants), epoch ms UTC. */
+    /** Start (sleep) or time (instants), epoch ms UTC. */
     val startMillis: Long,
-    /** End of an interval, epoch ms UTC; null while running and always null for instants. */
+    /** End of a sleep, epoch ms UTC; null while it runs and always null for instants. */
     val endMillis: Long? = null,
     /** FEED only; optional (null = a feed logged with just its time). */
     val feedType: FeedType? = null,
-    /** FEED + BREAST only; optionally set when the feed ends. */
+    /** FEED + BREAST only; optional, in the order the sides were fed. */
     val breastSide: BreastSide? = null,
     /** DIAPER only. */
     val pee: Boolean = false,
@@ -129,33 +133,39 @@ data class Entry(
             updatedAtMillis: Long = endMillis ?: startMillis,
         ) = Entry(id = id, kind = EntryKind.SLEEP, startMillis = startMillis, endMillis = endMillis, updatedAtMillis = updatedAtMillis)
 
-        /** A breastfeed starting at [startMillis]; running (and without a side) when [endMillis] is null. */
+        /** A breastfeed at [atMillis] with the optional side order [side] (null = just the time). */
         fun breastfeed(
-            startMillis: Long,
-            endMillis: Long? = null,
+            atMillis: Long,
             side: BreastSide? = null,
             id: String = newId(),
-            updatedAtMillis: Long = endMillis ?: startMillis,
+            updatedAtMillis: Long = atMillis,
         ) = Entry(
             id = id,
             kind = EntryKind.FEED,
-            startMillis = startMillis,
-            endMillis = endMillis,
+            startMillis = atMillis,
             feedType = FeedType.BREAST,
             breastSide = side,
             updatedAtMillis = updatedAtMillis,
         )
 
-        /** An instant feed (FORMULA, FOOD, or no type: null) at [atMillis]. Use [breastfeed] for BREAST. */
+        /**
+         * A feed at [atMillis] of [type] (null = just the time). [side] is kept only for [FeedType.BREAST]
+         * (see [breastfeed]).
+         */
         fun feed(
             type: FeedType?,
             atMillis: Long,
+            side: BreastSide? = null,
             id: String = newId(),
             updatedAtMillis: Long = atMillis,
-        ): Entry {
-            require(type != FeedType.BREAST) { "A breastfeed is an interval: use Entry.breastfeed()" }
-            return Entry(id = id, kind = EntryKind.FEED, startMillis = atMillis, feedType = type, updatedAtMillis = updatedAtMillis)
-        }
+        ): Entry = Entry(
+            id = id,
+            kind = EntryKind.FEED,
+            startMillis = atMillis,
+            feedType = type,
+            breastSide = side.takeIf { type == FeedType.BREAST },
+            updatedAtMillis = updatedAtMillis,
+        )
 
         /** A diaper at [atMillis]. Colour and texture are dropped unless [poop]. */
         fun diaper(
@@ -178,3 +188,11 @@ data class Entry(
         )
     }
 }
+
+/**
+ * This entry as the current model reads it. A breastfeed from an older app version was a timed interval: its end
+ * (or its "running" state, when it never ended) is dropped, so it becomes an instant at its start. Any other
+ * entry is returned unchanged. Every read path (Room rows, sync JSON) goes through this.
+ */
+fun Entry.normalized(): Entry =
+    if (kind == EntryKind.FEED && endMillis != null) copy(endMillis = null) else this

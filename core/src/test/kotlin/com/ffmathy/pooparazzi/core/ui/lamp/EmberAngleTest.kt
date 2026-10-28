@@ -51,12 +51,12 @@ class EmberAngleTest {
     }
 
     @Test
-    fun aRunningFeedTakingOverFromASleepSnapsInsteadOfSweepingBack() {
+    fun anOrbitOfAnotherEventSnapsInsteadOfSweepingBack() {
         start()
         assertEquals(402f, angle)
-        orbit = Orbit(0, LampEvent.FEED, id = "feed") // V1 §2.1: the running feed wins
+        orbit = Orbit(0, LampEvent.FEED, id = "feed") // another event's orbit (the Lamp API allows any event)
         assertEquals(0f, after(100))
-        orbit = Orbit(67, LampEvent.SLEEP, id = "sleep") // the feed ends: back to the sleep, at once
+        orbit = Orbit(67, LampEvent.SLEEP, id = "sleep") // back to the sleep, at once
         assertEquals(402f, after(100))
     }
 

@@ -61,38 +61,74 @@ import com.ffmathy.pooparazzi.phone.ui.home.titleWithTime
 import java.time.ZoneId
 import com.ffmathy.pooparazzi.core.R as CoreR
 
+/** What the Feed sheet can ask for. */
+internal class FeedSheetCallbacks(
+    val onOffset: (Int) -> Unit,
+    val onType: (FeedType?) -> Unit,
+    val onTick: (Breast) -> Unit,
+    val onLogBreast: () -> Unit,
+    val onCancel: () -> Unit,
+)
+
 /**
  * The Feed sheet (V1_ADDITIONS §2.1): "Feed · 14:32" stamped on the first tap, Now · −5m · −10m · −15m, three
- * full-width type rows and an outlined "Just the time" row. Breast starts a timer; Formula and Food log an instant at
- * stamp + offset; "Just the time" logs a feed with no type (the type is optional).
+ * full-width type rows and an outlined "Just the time" row. Formula and Food log an instant at stamp + offset;
+ * "Just the time" logs a feed with no type (the type is optional). Breast is an instant too: it opens the sheet's
+ * Breast step ([BreastStep]) for the optional side order, then "Log feed".
  */
 @Composable
 internal fun FeedSheetContent(
     sheet: HomeSheetUi.Feed,
     zone: ZoneId,
     formatters: Formatters,
-    onOffset: (Int) -> Unit,
-    onType: (FeedType?) -> Unit,
-    onCancel: () -> Unit,
+    callbacks: FeedSheetCallbacks,
 ) {
     val readiness = rememberPickerReadiness()
-    val title = titleWithTime(CoreR.string.kind_feed, formatters.clock.format(sheet.time, zone))
+    val time = formatters.clock.format(sheet.time, zone)
+    val title = titleWithTime(if (sheet.breast) CoreR.string.feed_type_breast else CoreR.string.kind_feed, time)
     SheetColumn(title) {
-        SheetHeader(title, onCancel)
+        SheetHeader(title, callbacks.onCancel)
         Spacer(Modifier.height(12.dp))
-        SheetChipRow(sheet.chips, formatters, readiness, onOffset)
+        SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
         Spacer(Modifier.height(12.dp))
-        Column(Modifier.alpha(readiness.alpha), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FeedType.entries.forEach { type ->
-                FeedTypeRow(
-                    type = type,
-                    supporting = if (type == FeedType.BREAST) stringResource(CoreR.string.feed_breast_starts_timer) else null,
-                    enabled = readiness.ready,
-                    onClick = { onType(type) },
-                )
+        if (sheet.breast) {
+            BreastStep(sheet, readiness, callbacks)
+        } else {
+            Column(Modifier.alpha(readiness.alpha), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FeedType.entries.forEach { type ->
+                    FeedTypeRow(
+                        type = type,
+                        supporting = if (type == FeedType.BREAST) stringResource(CoreR.string.feed_breast_sides_next) else null,
+                        enabled = readiness.ready,
+                        onClick = { callbacks.onType(type) },
+                    )
+                }
+                FeedTypeRow(type = null, supporting = null, enabled = readiness.ready, onClick = { callbacks.onType(null) })
             }
-            FeedTypeRow(type = null, supporting = null, enabled = readiness.ready, onClick = { onType(null) })
         }
+    }
+}
+
+/**
+ * The Feed sheet's Breast step (V1_ADDITIONS §2.1): the time stays on the chips above; two checkboxes Left and Right
+ * whose tick order is the order recorded (badges "1" / "2" and a summary line "Left → Right"), and "Log feed". The
+ * side is optional: logging with nothing ticked records only the time.
+ */
+@Composable
+private fun BreastStep(sheet: HomeSheetUi.Feed, readiness: PickerReadiness, callbacks: FeedSheetCallbacks) {
+    val colors = MaterialTheme.colorScheme
+    Text(stringResource(CoreR.string.side_order_hint), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+    Spacer(Modifier.height(8.dp))
+    BreastSideCheckboxes(sheet.ticks, callbacks.onTick, enabled = readiness.ready, modifier = Modifier.alpha(readiness.alpha))
+    Spacer(Modifier.height(16.dp))
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        SideSummary(sheet.ticks, Modifier.weight(1f))
+        Spacer(Modifier.width(12.dp))
+        SaveButton(
+            enabled = readiness.ready,
+            onClick = callbacks.onLogBreast,
+            label = stringResource(CoreR.string.action_log_feed),
+        )
     }
 }
 
@@ -130,63 +166,7 @@ private fun FeedTypeRow(type: FeedType?, supporting: String?, enabled: Boolean, 
 }
 
 /**
- * The Side sheet (V1_ADDITIONS §2.1): "Which side?", "Breastfeeding · 14:32–14:50 · 18m" (follows the chips), end
- * chips Now · −5m · −10m (disabled before the start), two checkboxes Left and Right whose tick order is the order
- * recorded (badges "1" / "2" and a summary line "Left → Right"), and "End feed". The side is optional: ending with
- * nothing ticked records only the times. Cancel keeps the feed running.
- */
-@Composable
-internal fun SideSheetContent(
-    sheet: HomeSheetUi.Side,
-    zone: ZoneId,
-    formatters: Formatters,
-    onOffset: (Int) -> Unit,
-    onTick: (Breast) -> Unit,
-    onEnd: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    val readiness = rememberPickerReadiness()
-    val colors = MaterialTheme.colorScheme
-    val title = stringResource(CoreR.string.side_question)
-    val end = maxOf(sheet.time, sheet.startMillis)
-    val range = formatters.clock.range(sheet.startMillis, end, zone, spaced = false)
-    val feed = stringResource(R.string.side_sheet_feed)
-    val sub = stringResource(
-        R.string.join_dot,
-        stringResource(R.string.join_dot, feed, range),
-        formatters.duration.between(sheet.startMillis, end),
-    )
-    // "Breastfeeding, 14:32 to 14:50, 18 minutes": no en dash or "18m" for TalkBack (DESIGN_SPEC §9.5).
-    val subSpoken = stringResource(
-        R.string.spoken_running,
-        feed,
-        stringResource(R.string.spoken_range, formatters.clock.format(sheet.startMillis, zone), formatters.clock.format(end, zone)),
-        formatters.duration.spokenBetween(sheet.startMillis, end),
-    )
-    SheetColumn(title) {
-        SheetHeader(title, onCancel)
-        Text(sub, style = PhoneType.dataMedium, color = colors.onSurfaceVariant, modifier = Modifier.semantics { contentDescription = subSpoken })
-        Spacer(Modifier.height(12.dp))
-        SheetChipRow(sheet.chips, formatters, readiness, onOffset)
-        Spacer(Modifier.height(16.dp))
-        Text(stringResource(CoreR.string.side_order_hint), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
-        Spacer(Modifier.height(8.dp))
-        BreastSideCheckboxes(sheet.ticks, onTick, enabled = readiness.ready, modifier = Modifier.alpha(readiness.alpha))
-        Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            SideSummary(sheet.ticks, Modifier.weight(1f))
-            Spacer(Modifier.width(12.dp))
-            SaveButton(
-                enabled = readiness.ready,
-                onClick = onEnd,
-                label = stringResource(CoreR.string.action_end_feed),
-            )
-        }
-    }
-}
-
-/**
- * Left and Right as two checkbox tiles side by side (V1_ADDITIONS §2.1), shared by the Side sheet and the edit sheet.
+ * Left and Right as two checkbox tiles side by side (V1_ADDITIONS §2.1), shared by the Feed sheet's Breast step and the edit sheet.
  * [ticks] is the tick order: a checked tile shows its place ("1" / "2") in a badge. `Role.Checkbox`; TalkBack reads
  * "Left, first, checkbox, checked".
  */

@@ -90,10 +90,10 @@ class AccessibilityTest {
     }
 
     @Test
-    fun breastfeedingMainNamesEndFeed() {
-        show { MainScreen(WearSamples.mainFeeding(), MainActions()) }
-        compose.onNode(hasContentDescription("Breastfeeding, 18 minutes, since 14:32")).assertExists()
-        compose.onNodeWithContentDescription("End feed").assertIsEnabled()
+    fun afterABreastFeedMainStaysIdle() {
+        show { MainScreen(WearSamples.mainAfterBreastfeed(), MainActions()) }
+        compose.onNodeWithContentDescription("Start sleep").assertIsEnabled()
+        compose.onAllNodes(hasContentDescription("End feed")).fetchSemanticsNodes().let { assert(it.isEmpty()) { "no End feed" } }
     }
 
     @Test
@@ -131,16 +131,17 @@ class AccessibilityTest {
         compose.onNodeWithContentDescription("Right, first").assert(hasRole(Role.Checkbox))
         compose.onNodeWithContentDescription("Left, second").assert(hasRole(Role.Checkbox))
         compose.onNodeWithContentDescription("Right then left").assertExists()
-        compose.onNodeWithContentDescription("End feed").assertIsEnabled()
-        // The feed being ended: no dash, no "18m".
-        compose.onNodeWithContentDescription("14:32 to 14:50, 18 minutes").assertExists()
+        compose.onNodeWithText("Save").assertIsEnabled()
+        // What Save logs: the time only, no range and no duration.
+        compose.onNodeWithContentDescription("Breast, 14:32").assertExists()
     }
 
     @Test
-    fun feedEndedReadsTheSideAndTheLengthInWords() {
+    fun aBreastReceiptReadsTheSideInWords() {
         compose.mainClock.autoAdvance = false
-        show { LoggedScreen(WearSamples.receiptFeedEnded(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {}) }
-        compose.onNodeWithContentDescription("Left then right, 18 minutes").assertExists()
+        show { LoggedScreen(WearSamples.receiptBreast(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {}) }
+        compose.onNodeWithContentDescription("Breast at 14:32").assertExists()
+        compose.onNodeWithContentDescription("Left then right").assertExists()
     }
 
     @Test

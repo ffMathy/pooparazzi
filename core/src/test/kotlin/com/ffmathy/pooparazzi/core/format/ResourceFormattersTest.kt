@@ -27,7 +27,7 @@ import java.util.Locale
 
 private const val MINUTE = 60_000L
 private val context: Context get() = ApplicationProvider.getApplicationContext()
-private fun entry(id: String) = SampleData.scenarioWithRunningFeed().first { it.id == id }
+private fun entry(id: String) = SampleData.scenarioWithRecentFeed().first { it.id == id }
 
 /** The resource-backed formatters in English (V1_ADDITIONS §5). */
 @RunWith(RobolectricTestRunner::class)
@@ -88,13 +88,14 @@ class EnglishResourceFormattersTest {
 
         val breast = entry("sample-breast-0140")
         assertEquals("Breast · Left → Right", l.historyTitle(breast, f.duration, SampleData.NOW_1432))
+        // A breast feed is an instant: its time only, no range and no duration.
         assertEquals(
-            "01:40–01:58 · 18m",
+            "01:40",
             l.historySupporting(breast, TODAY, ZONE, SampleData.NOW_1432, f.clock, f.duration, f.relative, spacedRange = false),
         )
-        val running = SampleData.runningBreastfeed()
-        assertEquals("Breast · running", l.historyTitle(running, f.duration, SampleData.NOW_1450))
-        assertEquals("since 14:32", l.historySupporting(running, TODAY, ZONE, SampleData.NOW_1450, f.clock, f.duration, f.relative))
+        val recent = SampleData.recentBreastfeed()
+        assertEquals("Breast · Left → Right", l.historyTitle(recent, f.duration, SampleData.NOW_1450))
+        assertEquals("14:32", l.historySupporting(recent, TODAY, ZONE, SampleData.NOW_1450, f.clock, f.duration, f.relative))
 
         val sleep = entry("sample-sleep-1240")
         assertEquals("Sleep · 47m", l.historyTitle(sleep, f.duration, SampleData.NOW_1432))
@@ -116,7 +117,7 @@ class EnglishResourceFormattersTest {
         assertEquals("Diaper", l.historyTitle(plain, f.duration, SampleData.NOW_1432))
         assertEquals("Diaper", l.diaperKindStatus(DiaperKind.PLAIN))
         assertEquals("13:44", l.historySupporting(plain, TODAY, ZONE, SampleData.NOW_1432, f.clock, f.duration, f.relative))
-        val noSide = Entry.breastfeed(SampleData.at(12, 0), SampleData.at(12, 18))
+        val noSide = Entry.breastfeed(SampleData.at(12, 0))
         assertEquals("Breast", l.historyTitle(noSide, f.duration, SampleData.NOW_1432))
         assertEquals("No side", l.sideOrNone(null))
         assertEquals("Left → Right", l.sideOrNone(BreastSide.LEFT_THEN_RIGHT))
@@ -193,9 +194,7 @@ class DanishResourceFormattersTest {
         assertEquals("måltider", l.feedsCaption(5))
         assertEquals("bæ", l.poopCaption())
         val res = context.resources
-        assertEquals("Afslut amning", res.getString(R.string.action_end_feed))
         assertEquals("Hvilken side?", res.getString(R.string.side_question))
-        assertEquals("Ammer", res.getString(R.string.status_breastfeeding))
         assertEquals("Sidste måltid", res.getString(R.string.status_last_fed))
         assertEquals("Ret start", res.getString(R.string.action_adjust_start))
         assertEquals("Tidligere?", res.getString(R.string.action_earlier_question))
@@ -207,7 +206,7 @@ class DanishResourceFormattersTest {
         val l = f.labels
         assertEquals("05:41 · Gul · Kornet", l.diaperDetail(entry("sample-both-0541"), f.clock, ZONE))
         assertEquals("Amning · Venstre → Højre", l.historyTitle(entry("sample-breast-0140"), f.duration, SampleData.NOW_1432))
-        assertEquals("Amning · i gang", l.historyTitle(SampleData.runningBreastfeed(), f.duration, SampleData.NOW_1450))
+        assertEquals("Amning", l.historyTitle(Entry.breastfeed(SampleData.at(14, 32)), f.duration, SampleData.NOW_1450))
         assertEquals("Søvn · 47m", l.historyTitle(entry("sample-sleep-1240"), f.duration, SampleData.NOW_1432))
         assertEquals("Måltid", l.historyTitle(Entry.feed(null, SampleData.at(12, 22)), f.duration, SampleData.NOW_1432))
         assertEquals("Ble", l.historyTitle(Entry.diaper(SampleData.at(13, 44), pee = false, poop = false), f.duration, SampleData.NOW_1432))
@@ -260,10 +259,8 @@ class OffMinuteLabelsTest {
         val sleep = com.ffmathy.pooparazzi.core.model.Entry.sleep(SampleData.at(12, 40) + 50 * second, SampleData.at(13, 27) + 10 * second, id = "s")
         assertEquals("Sleep · 47m", f.labels.historyTitle(sleep, f.duration, now))
         assertEquals("12:40 – 13:27", f.labels.historySupporting(sleep, TODAY, ZONE, now, f.clock, f.duration, f.relative))
-        val breast = com.ffmathy.pooparazzi.core.model.Entry.breastfeed(
-            SampleData.at(12, 0) + 40 * second, SampleData.at(12, 18) + 5 * second, BreastSide.LEFT, id = "b",
-        )
-        assertEquals("12:00 – 12:18 · 18m", f.labels.historySupporting(breast, TODAY, ZONE, now, f.clock, f.duration, f.relative))
+        val breast = com.ffmathy.pooparazzi.core.model.Entry.breastfeed(SampleData.at(12, 0) + 40 * second, BreastSide.LEFT, id = "b")
+        assertEquals("12:00", f.labels.historySupporting(breast, TODAY, ZONE, now, f.clock, f.duration, f.relative))
         assertEquals("1h 07m", f.duration.between(SampleData.at(2, 5) + 40 * second, SampleData.at(3, 12) + 20 * second))
     }
 }

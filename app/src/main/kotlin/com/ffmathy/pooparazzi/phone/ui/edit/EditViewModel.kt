@@ -162,7 +162,7 @@ class EditViewModel(
     }
 
     override fun onFeedType(type: FeedType) = edit { s ->
-        EditRules.withFeedType(s.draft, EditRules.tappedFeedType(s.draft, type), s.original, clock.now())
+        EditRules.withFeedType(s.draft, EditRules.tappedFeedType(s.draft, type), s.original)
     }
 
     override fun onSideTick(breast: Breast) = edit { s -> EditRules.withSideTick(s.draft, breast) }

@@ -1,10 +1,10 @@
 package com.ffmathy.pooparazzi.core.model
 
-/** True for SLEEP and for FEED with [FeedType.BREAST]: entries with a start and an end. */
+/** True for SLEEP, the only entry with a start and an end. Feeds (breastfeeds included) and diapers are instants. */
 val Entry.isInterval: Boolean
-    get() = kind == EntryKind.SLEEP || (kind == EntryKind.FEED && feedType == FeedType.BREAST)
+    get() = kind == EntryKind.SLEEP
 
-/** True for an interval that has not ended and is not deleted. */
+/** True for a sleep that has not ended and is not deleted. */
 val Entry.isRunning: Boolean
     get() = isInterval && endMillis == null && !deleted
 

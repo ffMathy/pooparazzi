@@ -104,7 +104,7 @@ class HistoryEditSettingsSemanticsTest {
         // Rows further down are composed once the list scrolls to them.
         val list = compose.onNode(hasScrollToIndexAction())
         list.performScrollToNode(hasContentDescription("Pee and poop, 05:41, Yellow, Seedy"))
-        list.performScrollToNode(hasContentDescription("Breast, left then right, 18 minutes, 01:40 to 01:58"))
+        list.performScrollToNode(hasContentDescription("Breast, left then right, 01:40"))
         assertEquals(listOf("edit:sample-sleep-1240", "delete:sample-sleep-1240"), calls)
     }
 

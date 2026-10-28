@@ -28,15 +28,17 @@ private fun SheetPreview(night: Boolean, content: @Composable () -> Unit) {
 @Composable
 private fun FeedSheetPreview() = SheetPreview(night = true) {
     val formatters = rememberFormatters(SampleData.ZONE)
-    FeedSheetContent(HomeSamples.feedSheet().sheet as HomeSheetUi.Feed, SampleData.ZONE, formatters, {}, {}, {})
+    FeedSheetContent(HomeSamples.feedSheet().sheet as HomeSheetUi.Feed, SampleData.ZONE, formatters, NoFeedCallbacks)
 }
 
-@Preview(name = "Side sheet", widthDp = 390)
+@Preview(name = "Feed sheet · Breast step", widthDp = 390)
 @Composable
-private fun SideSheetPreview() = SheetPreview(night = false) {
+private fun BreastSheetPreview() = SheetPreview(night = false) {
     val formatters = rememberFormatters(SampleData.ZONE)
-    SideSheetContent(HomeSamples.sideSheet().sheet as HomeSheetUi.Side, SampleData.ZONE, formatters, {}, {}, {}, {})
+    FeedSheetContent(HomeSamples.breastSheet().sheet as HomeSheetUi.Feed, SampleData.ZONE, formatters, NoFeedCallbacks)
 }
+
+private val NoFeedCallbacks = FeedSheetCallbacks({}, {}, {}, {}, {})
 
 @Preview(name = "Diaper sheet", widthDp = 390)
 @Composable

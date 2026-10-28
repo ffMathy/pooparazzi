@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.core.data
 
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.domain.summarize
+import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.isRunning
@@ -168,15 +169,16 @@ class TwoDeviceSyncTest {
     }
 
     @Test
-    fun breastfeedsStartedWhileApartConvergeToo() = runBlocking {
+    fun theSameBreastfeedLoggedOnBothDevicesWhileApartIsOneEntry() = runBlocking {
         clock.set(SampleData.at(14, 32))
-        watch.repo.startBreastfeed(clock.now()).getOrThrow()
-        clock.set(SampleData.at(14, 33))
-        phone.repo.startBreastfeed(clock.now() - 2 * minute).getOrThrow() // started 14:31, earlier
+        watch.repo.logFeed(FeedType.BREAST, clock.now(), BreastSide.LEFT)
+        phone.repo.logFeed(FeedType.BREAST, clock.now() - 2_000, BreastSide.LEFT_THEN_RIGHT) // 2 s earlier: it wins
         clock.set(SampleData.at(14, 40))
         settle()
-        assertEquals(1, phone.running().size)
-        assertEquals(phone.running(), watch.running())
+        val feeds = phone.visible().filter { it.feedType == FeedType.BREAST }
+        assertEquals(1, feeds.size)
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, feeds.single().breastSide)
+        assertTrue(phone.running().isEmpty())
         assertConverged()
     }
 

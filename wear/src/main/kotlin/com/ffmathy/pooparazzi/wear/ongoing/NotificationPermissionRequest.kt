@@ -15,7 +15,7 @@ import androidx.core.content.edit
 import com.ffmathy.pooparazzi.wear.WearApp
 
 /**
- * Asks for `POST_NOTIFICATIONS` (API 33+) in context: the first time a sleep or breastfeed runs, since the Ongoing
+ * Asks for `POST_NOTIFICATIONS` (API 33+) in context: the first time a sleep runs, since the Ongoing
  * Activity is what shows it on the watch face (DESIGN_SPEC §10.5 asks the same on the phone). Asked once; a refusal
  * only hides the Ongoing Activity, logging works as usual. On grant the activity appears at once.
  */

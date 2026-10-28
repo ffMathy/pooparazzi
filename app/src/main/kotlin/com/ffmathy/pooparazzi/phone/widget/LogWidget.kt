@@ -50,8 +50,7 @@ import com.ffmathy.pooparazzi.core.R as CoreR
  * The 4×2 home-screen widget (P5, DESIGN_SPEC §3.3.6 with V1_ADDITIONS §2.1): a status row (the latest feed and diaper
  * as absolute times, or the receipt of the last widget log with Undo), Feed · Pee · Poop · Both, and the sleep toggle.
  *
- * Pee, Poop, Both and the toggle log in place without opening the app. Feed opens the app's Feed sheet; while a
- * breastfeed runs it is "End feed", which opens the Side sheet.
+ * Pee, Poop, Both and the toggle log in place without opening the app. Feed opens the app's Feed sheet.
  */
 class LogWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(LogLayout.Sizes)
@@ -152,23 +151,13 @@ private fun StatusRow(
     }
 }
 
-/**
- * Idle and asleep: "Fed at 12:22" and "Pee at 13:44" (the diaper only when both fit); feeding: "Breastfeeding since
- * 14:32" ("Since 14:32" when that does not fit).
- */
+/** Idle and asleep: "Fed at 12:22" and "Pee at 13:44" (the diaper only when both fit). */
 @Composable
 private fun RowScope.StatusFacts(snapshot: WidgetSnapshot, strings: WidgetStrings, colors: WidgetColors, layout: LogLayout, measure: WidgetMeasure) {
     fun factWidth(text: String) = FactIconWidth + measure.width(text, FactSize)
-    val feedStart = snapshot.runningFeedStart
     val sleepStart = snapshot.runningSleepStart
     val lastFeed = snapshot.lastFeed
     when {
-        feedStart != null -> Fact(
-            icon = XDrawables.breast,
-            color = colors.feed.strong,
-            text = strings.breastfeedingSince(feedStart).takeIf { factWidth(it) <= layout.rowWidth } ?: strings.sinceOnly(feedStart),
-            colors = colors,
-        )
         // Narrow: the toggle row has no room for "Asleep since 02:05", so it moves up here (DESIGN_SPEC §10.11).
         sleepStart != null && !layout.wide -> Fact(XDrawables.sleepRunning, colors.sleep.strong, strings.asleepSince(sleepStart), colors)
         else -> {
@@ -248,7 +237,7 @@ private fun NoticeLine(notice: WidgetNotice, strings: WidgetStrings, colors: Wid
     WidgetText(strings.notice(notice), textColor, 15.sp)
 }
 
-/** Feed (or End feed while a breastfeed runs), Pee, Poop and Both: four equal buttons, gap 8, r 20. */
+/** Feed, Pee, Poop and Both: four equal buttons, gap 8, r 20. */
 @Composable
 private fun LogButtons(
     snapshot: WidgetSnapshot,
@@ -259,42 +248,28 @@ private fun LogButtons(
     modifier: GlanceModifier,
 ) {
     val context = LocalContext.current
-    val feedLabel = strings.string(if (snapshot.feeding) CoreR.string.action_end_feed else CoreR.string.kind_feed)
+    val feedLabel = strings.string(CoreR.string.kind_feed)
     val diaperLabels = DiaperKind.entries.associateWith { strings.string(diaperLabel(it)) }
-    // Each button picks its own face: only a label that needs two lines ("Afslut amning", or a narrow widget) takes the
-    // compact one, so Pee, Poop and Both look the same in every state. The compact face is laid out so that its icon
+    // Each button picks its own face: only a label that needs two lines (a narrow widget) takes the compact one, so Pee, Poop and Both look the same in every state. The compact face is laid out so that its icon
     // sits where the regular face's does, keeping the row's icons aligned.
     fun styleFor(label: String, inset: Dp): FaceStyle = when {
         !layout.labels -> FaceStyle.IconOnly
         measure.fits(label, LabelSize, layout.buttonWidth - 8.dp - inset) -> FaceStyle.Regular
         else -> FaceStyle.Compact
     }
-    val feedStyle = styleFor(feedLabel, inset = if (snapshot.feeding) 4.dp else 0.dp)
+    val feedStyle = styleFor(feedLabel, inset = 0.dp)
     // The three diaper buttons share one face (their labels are short; a narrow widget compacts all three).
     val diaperStyle = diaperLabels.values.map { styleFor(it, 0.dp) }.maxBy { it.ordinal }
     Row(modifier) {
         val cell = GlanceModifier.defaultWeight().fillMaxHeight()
-        if (snapshot.feeding) {
-            WidgetButton(
-                modifier = cell,
-                fill = colors.feed.containerLit,
-                border = colors.feed.strong,
-                radius = 20.dp,
-                action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Side)),
-                description = strings.string(R.string.cd_end_feed_choose_side),
-            ) {
-                ButtonFace(XDrawables.breast, colors.feed.strong, feedLabel, colors.feed.onContainer, feedStyle)
-            }
-        } else {
-            WidgetButton(
-                modifier = cell,
-                fill = colors.feed.container,
-                radius = 20.dp,
-                action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Feed)),
-                description = strings.string(R.string.widget_cd_log_feed),
-            ) {
-                ButtonFace(XDrawables.feed, colors.feed.strong, feedLabel, colors.feed.onContainer, feedStyle)
-            }
+        WidgetButton(
+            modifier = cell,
+            fill = colors.feed.container,
+            radius = 20.dp,
+            action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Feed)),
+            description = strings.string(R.string.widget_cd_log_feed),
+        ) {
+            ButtonFace(XDrawables.feed, colors.feed.strong, feedLabel, colors.feed.onContainer, feedStyle)
         }
         Spacer(GlanceModifier.width(8.dp))
         DiaperButton(DiaperKind.PEE, diaperLabels.getValue(DiaperKind.PEE), strings, colors, cell, diaperStyle)

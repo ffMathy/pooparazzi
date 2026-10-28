@@ -125,7 +125,7 @@ internal fun TimeBlock(
 }
 
 /**
- * The end block of a running interval: the label, then "Still asleep" / "Still feeding" in the field's place with an
+ * The end block of a running interval: the label, then "Still asleep" in the field's place with an
  * "End now" button at its end. Changing the start keeps the timer running.
  */
 @Composable

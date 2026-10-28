@@ -10,10 +10,8 @@ import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.ui.home.CardAction
 import com.ffmathy.pooparazzi.phone.ui.home.CardRow
 import com.ffmathy.pooparazzi.phone.ui.home.CardVariant
-import com.ffmathy.pooparazzi.phone.ui.home.GuardKind
 import com.ffmathy.pooparazzi.phone.ui.home.HomeHaptic
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
-import com.ffmathy.pooparazzi.phone.ui.home.OffsetChipUi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -71,71 +69,123 @@ class HomeFeedTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun breastStartsATimerAndEndFeedOpensTheSideSheet() = homeTest { home ->
+    fun breastOpensTheSideStepInsteadOfLogging() = homeTest { home ->
         home.tapFeed()
+        home.viewModel.onSheetOffset(-5)
         home.viewModel.onFeedType(FeedType.BREAST)
-        var state = home.settle()
-        val running = state.runningFeed!!
-        assertTrue(running.isRunning)
-        assertEquals(SampleData.NOW_1432, running.startMillis)
-        assertEquals(CardVariant.FeedStarted, state.card!!.variant)
-        assertTrue(state.lamp is LampState.FeedRunning)
-
-        home.viewModel.onSheetClosed()
-        home.scope.testScheduler.advanceTimeBy(700)
-        home.clock.advanceBy(18 * MINUTE)
-        home.tapFeed()
-        state = home.settle()
-        val side = state.sheet as HomeSheetUi.Side
-        assertEquals(running.id, side.feedId)
-        assertEquals(running.startMillis, side.startMillis)
-        assertEquals(listOf(0, -5, -10), side.chips.map { it.minutes })
-    }
-
-    @Test
-    fun aSideEndsTheBreastfeedWithItsDuration() = homeTest { home ->
-        val feed = home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
-        home.clock.advanceBy(18 * MINUTE)
-        home.tapFeed()
-        home.viewModel.onSideTick(Breast.LEFT)
-        home.viewModel.onSideTick(Breast.RIGHT)
-        assertEquals(BreastSide.LEFT_THEN_RIGHT, (home.settle().sheet as HomeSheetUi.Side).side)
-        home.viewModel.onEndFeed()
         val state = home.settle()
-
-        val ended = home.repository.get(feed.id)!!
-        assertEquals(SampleData.NOW_1450, ended.endMillis)
-        assertEquals(BreastSide.LEFT_THEN_RIGHT, ended.breastSide)
-        assertNull(state.runningFeed)
-        assertEquals(CardVariant.FeedEnded(BreastSide.LEFT_THEN_RIGHT, 18 * MINUTE), state.card!!.variant)
+        val sheet = state.sheet as HomeSheetUi.Feed
+        assertTrue(sheet.breast)
+        assertEquals(emptyList<Breast>(), sheet.ticks)
+        assertNull(sheet.side)
+        assertEquals("the time picked before Breast is kept", -5, sheet.offsetMinutes)
+        assertTrue("nothing is logged yet", home.entries().isEmpty())
+        assertNull(state.card)
         assertTrue(state.lamp is LampState.FeedIdle)
     }
 
     @Test
-    fun theSideFollowsTheTickOrderAndUntickingRemovesIt() = homeTest { home ->
-        home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
-        home.clock.advanceBy(18 * MINUTE)
+    fun logFeedLogsABreastFeedInstantWithTheTickedOrder() = homeTest { home ->
         home.tapFeed()
-        home.viewModel.onSideTick(Breast.RIGHT)
+        home.viewModel.onFeedType(FeedType.BREAST)
         home.viewModel.onSideTick(Breast.LEFT)
-        assertEquals(BreastSide.RIGHT_THEN_LEFT, (home.settle().sheet as HomeSheetUi.Side).side)
         home.viewModel.onSideTick(Breast.RIGHT)
-        assertEquals(listOf(Breast.LEFT), (home.settle().sheet as HomeSheetUi.Side).ticks)
-        home.viewModel.onSideTick(Breast.RIGHT)
-        assertEquals(BreastSide.LEFT_THEN_RIGHT, (home.settle().sheet as HomeSheetUi.Side).side)
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, (home.settle().sheet as HomeSheetUi.Feed).side)
+        // The time can still change in the Breast step.
+        home.viewModel.onSheetOffset(-15)
+        home.clock.advanceBy(20_000)
+        home.viewModel.onLogBreastfeed()
+        val state = home.settle()
+
+        val feed = home.entries().single()
+        assertEquals(FeedType.BREAST, feed.feedType)
+        assertEquals(SampleData.NOW_1432 - 15 * MINUTE, feed.startMillis)
+        assertNull("a breast feed has no end", feed.endMillis)
+        assertFalse(feed.isRunning)
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, feed.breastSide)
+        assertNull(state.sheet)
+        assertEquals(CardVariant.FeedLogged(FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT), state.card!!.variant)
+        assertTrue((state.card!!.row as CardRow.Earlier).chips.single { it.selected }.minutes == -15)
+        val lamp = state.lamp as LampState.FeedIdle
+        assertEquals(feed.id, lamp.lastFeed!!.id)
+        assertEquals(1, state.today.feeds)
+        assertEquals(HomeHaptic.CONFIRM, home.haptics.last())
     }
 
     @Test
-    fun endFeedWithNothingTickedRecordsNoSide() = homeTest { home ->
-        val feed = home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
-        home.clock.advanceBy(18 * MINUTE)
+    fun theSideFollowsTheTickOrderAndUntickingRemovesIt() = homeTest { home ->
         home.tapFeed()
-        home.viewModel.onEndFeed()
+        home.viewModel.onFeedType(FeedType.BREAST)
+        home.viewModel.onSideTick(Breast.RIGHT)
+        home.viewModel.onSideTick(Breast.LEFT)
+        assertEquals(BreastSide.RIGHT_THEN_LEFT, (home.settle().sheet as HomeSheetUi.Feed).side)
+        home.viewModel.onSideTick(Breast.RIGHT)
+        assertEquals(listOf(Breast.LEFT), (home.settle().sheet as HomeSheetUi.Feed).ticks)
+        home.viewModel.onSideTick(Breast.RIGHT)
+        assertEquals(BreastSide.LEFT_THEN_RIGHT, (home.settle().sheet as HomeSheetUi.Feed).side)
+    }
+
+    @Test
+    fun sideTicksAndLogFeedDoNothingBeforeBreastIsTapped() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onSideTick(Breast.LEFT)
+        home.viewModel.onLogBreastfeed()
+        val sheet = home.settle().sheet as HomeSheetUi.Feed
+        assertFalse(sheet.breast)
+        assertEquals(emptyList<Breast>(), sheet.ticks)
+        assertTrue(home.entries().isEmpty())
+    }
+
+    @Test
+    fun logFeedWithNothingTickedRecordsJustTheTime() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFeedType(FeedType.BREAST)
+        home.viewModel.onLogBreastfeed()
         val state = home.settle()
-        val ended = home.repository.get(feed.id)!!
-        assertEquals(SampleData.NOW_1450, ended.endMillis)
-        assertNull(ended.breastSide)
-        assertEquals(CardVariant.FeedEnded(null, 18 * MINUTE), state.card!!.variant)
+        val feed = home.entries().single()
+        assertEquals(FeedType.BREAST, feed.feedType)
+        assertEquals(SampleData.NOW_1432, feed.startMillis)
+        assertNull(feed.breastSide)
+        assertNull(feed.endMillis)
+        assertEquals(CardVariant.FeedLogged(FeedType.BREAST, null), state.card!!.variant)
+    }
+
+    @Test
+    fun cancellingTheBreastStepLogsNothing() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFeedType(FeedType.BREAST)
+        home.viewModel.onSideTick(Breast.LEFT)
+        home.viewModel.onSheetDismiss()
+        val state = home.settle()
+        assertNull(state.sheet)
+        assertNull(state.card)
+        assertTrue(home.entries().isEmpty())
+    }
+
+    @Test
+    fun undoRemovesTheBreastFeed() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFeedType(FeedType.BREAST)
+        home.viewModel.onSideTick(Breast.RIGHT)
+        home.viewModel.onLogBreastfeed()
+        home.settle()
+        home.viewModel.onUndo()
+        val state = home.settle()
+        assertEquals(CardVariant.Undone, state.card!!.variant)
+        assertTrue(home.entries().isEmpty())
+    }
+
+    @Test
+    fun aBreastFeedNeverBlocksTheNextOne() = homeTest { home ->
+        // A breastfeed logged on the watch a minute ago (an older version would have shown it as running).
+        home.repository.logFeed(FeedType.BREAST, SampleData.NOW_1432 - MINUTE, BreastSide.LEFT)
+        home.tapFeed()
+        home.viewModel.onFeedType(FeedType.BREAST)
+        home.viewModel.onLogBreastfeed()
+        val state = home.settle()
+        assertEquals(2, home.entries().count { it.feedType == FeedType.BREAST })
+        assertTrue(state.card!!.variant is CardVariant.FeedLogged)
+        assertFalse(state.anythingRunning)
     }
 
     @Test
@@ -150,66 +200,6 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertEquals(CardVariant.FeedLogged(null), state.card!!.variant)
         assertEquals(1, state.today.feeds)
         assertEquals(feed.id, (state.lamp as LampState.FeedIdle).lastFeed!!.id)
-    }
-
-    @Test
-    fun sideEndChipsBeforeTheStartAreDisabled() = homeTest { home ->
-        home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
-        home.clock.advanceBy(7 * MINUTE)
-        home.tapFeed()
-        val side = home.settle().sheet as HomeSheetUi.Side
-        assertEquals(
-            listOf(OffsetChipUi(0, true, true), OffsetChipUi(-5, false, true), OffsetChipUi(-10, false, false)),
-            side.chips,
-        )
-        home.viewModel.onSheetOffset(-10)
-        assertEquals(0, (home.settle().sheet as HomeSheetUi.Side).offsetMinutes)
-    }
-
-    @Test
-    fun cancellingTheSideSheetKeepsTheFeedRunning() = homeTest { home ->
-        home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
-        home.clock.advanceBy(5 * MINUTE)
-        home.tapFeed()
-        home.settle()
-        home.viewModel.onSheetDismiss()
-        val state = home.settle()
-        assertNull(state.sheet)
-        assertTrue(state.runningFeed!!.isRunning)
-        assertNull(state.card)
-    }
-
-    @Test
-    fun aBreastfeedEndedWithinAMinuteIsCancelledAndUndoResumesIt() = homeTest { home ->
-        val feed = home.repository.startBreastfeed(SampleData.NOW_1432).getOrThrow()
-        home.clock.advanceBy(30_000)
-        home.tapFeed()
-        home.viewModel.onSideTick(Breast.LEFT)
-        home.viewModel.onEndFeed()
-        var state = home.settle()
-        assertEquals(CardVariant.FeedCancelled(BreastSide.LEFT), state.card!!.variant)
-        assertEquals(CardRow.None, state.card!!.row)
-        assertTrue(home.repository.get(feed.id)!!.deleted)
-        assertNull(state.runningFeed)
-
-        home.viewModel.onUndo()
-        state = home.settle()
-        assertEquals(CardVariant.Undone, state.card!!.variant)
-        assertEquals(feed.id, state.runningFeed!!.id)
-        assertNull(state.runningFeed!!.breastSide)
-    }
-
-    @Test
-    fun breastWhileOneRunsShowsTheFeedingGuard() = homeTest { home ->
-        home.tapFeed()
-        home.settle()
-        // The watch starts a breastfeed while the sheet is open.
-        val other = home.repository.startBreastfeed(SampleData.NOW_1432 - 2 * MINUTE).getOrThrow()
-        home.viewModel.onFeedType(FeedType.BREAST)
-        val state = home.settle()
-        assertEquals(CardRow.Guard(GuardKind.FEEDING, other.startMillis), state.card!!.row)
-        assertEquals(HomeHaptic.REJECT, home.haptics.last())
-        assertEquals(1, home.entries().count { it.isRunning })
     }
 
     @Test
@@ -240,18 +230,19 @@ class HomeFeedTest : HomeViewModelTestBase() {
         val sleep = home.repository.startSleep(SampleData.at(13, 50)).getOrThrow()
         home.tapFeed()
         home.viewModel.onFeedType(FeedType.BREAST)
+        home.viewModel.onLogBreastfeed()
         var state = home.settle()
         val row = state.card!!.row as CardRow.RunningSleep
         assertTrue(row.endSleepEnabled)
         assertEquals(listOf(-5, -10), row.chips.map { it.minutes })
-        // A running feed takes the Lamp; since-row 1 shows the sleep.
-        assertTrue(state.lamp is LampState.FeedRunning)
+        // The sleep keeps the Lamp: a breast feed is an instant.
+        assertTrue(state.lamp is LampState.SleepRunning)
 
         home.viewModel.onCardEndSleep()
         state = home.settle()
         assertEquals(SampleData.NOW_1432, home.repository.get(sleep.id)!!.endMillis)
         assertEquals(CardVariant.WokeUp(42 * MINUTE), state.card!!.variant)
         assertFalse(state.sleepRunning)
-        assertTrue("the breastfeed keeps running", state.feedRunning)
+        assertFalse(state.anythingRunning)
     }
 }

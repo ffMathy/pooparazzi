@@ -156,26 +156,20 @@ class LabelFormatter(private val strings: StringResolver) {
     }
 
     /**
-     * History row title: "Sleep · 47m" / "Sleep · running", "Breast · Left → Right" / "Breast · running",
+     * History row title: "Sleep · 47m" / "Sleep · running", "Breast" / "Breast · Left → Right",
      * "Formula", "Food", "Feed" (no type), "Pee", "Poop", "Pee + poop", "Diaper" (a plain change).
      */
     fun historyTitle(entry: Entry, duration: DurationFormatter, now: Long): String = when (entry.kind) {
         EntryKind.SLEEP -> kind(EntryKind.SLEEP) + DOT_SEPARATOR +
             if (entry.isRunning) strings.string(R.string.status_running) else duration.format(entry.clockDurationMillis(now))
-        EntryKind.FEED -> {
-            val type = entry.feedType
-            when {
-                !entry.isBreastfeed -> feedType(type)
-                entry.isRunning -> feedType(type) + DOT_SEPARATOR + strings.string(R.string.status_running)
-                else -> feedType(type) + (entry.breastSide?.let { DOT_SEPARATOR + side(it) } ?: "")
-            }
-        }
+        EntryKind.FEED -> feedType(entry.feedType) +
+            (entry.breastSide?.takeIf { entry.isBreastfeed }?.let { DOT_SEPARATOR + side(it) } ?: "")
         EntryKind.DIAPER -> entry.diaperKind?.let(::diaperKind) ?: kind(EntryKind.DIAPER)
     }
 
     /**
-     * History row supporting line: intervals "12:40 – 13:27" (a day prefix when they start on another day;
-     * breastfeeds add " · 18m"), running intervals "since 14:32", instants "12:22", diapers [diaperDetail].
+     * History row supporting line: sleeps "12:40 – 13:27" (a day prefix when they start on another day), a running
+     * sleep "since 14:32", feeds (breastfeeds included) "12:22", diapers [diaperDetail].
      */
     fun historySupporting(
         entry: Entry,
@@ -188,10 +182,7 @@ class LabelFormatter(private val strings: StringResolver) {
         spacedRange: Boolean = true,
     ): String = when {
         entry.isRunning -> relative.since(entry.startMillis, zone)
-        entry.kind == EntryKind.SLEEP || entry.isBreastfeed -> {
-            val range = clock.rangeOnDay(entry.startMillis, entry.endMillis ?: now, day, zone, spacedRange)
-            if (entry.isBreastfeed) range + DOT_SEPARATOR + duration.format(entry.clockDurationMillis(now)) else range
-        }
+        entry.kind == EntryKind.SLEEP -> clock.rangeOnDay(entry.startMillis, entry.endMillis ?: now, day, zone, spacedRange)
         entry.kind == EntryKind.DIAPER -> diaperDetail(entry, clock, zone)
         else -> clock.format(entry.startMillis, zone)
     }

@@ -167,17 +167,12 @@ class WearNavHostTest {
     }
 
     @Test
-    fun breastfeedThenEndWithTickedSides() {
+    fun breastThenSideThenSaveLogsAnInstantWithTheTickOrder() {
         waitFor("Feed").performClick()
         settle(600)
         compose.onNodeWithText("Breast").performClick()
-        waitForDescription("End feed")
-
-        clock.advanceBy(18 * 60_000L)
-        vm.refresh()
-        settle()
-        compose.onNodeWithContentDescription("End feed").performClick()
         waitFor("Which side?")
+        assertTrue("nothing is logged before Save", entries().isEmpty())
         settle(600)
         // Tick Left, then Right: the order is the order recorded, read as "Left then right".
         compose.onNodeWithContentDescription("Left").performClick()
@@ -185,14 +180,17 @@ class WearNavHostTest {
         compose.onNodeWithContentDescription("Right").performClick()
         settle()
         compose.onNodeWithContentDescription("Left then right").assertExists()
-        // Main (with its own "End feed") has slid away once the transition is over.
+        // The Feed type screen has slid away once the transition is over.
         settle(1_000)
-        compose.onNodeWithContentDescription("End feed").performClick()
+        compose.onNodeWithText("Save").performClick()
 
-        waitFor("Feed ended")
+        waitFor("Breast at 14:32")
         // The side label is kept on one line with no-break spaces around the arrow.
-        waitFor("Left\u00A0→\u00A0Right · 18m")
-        assertTrue(!entries().single().isRunning)
+        waitFor("Left\u00A0→\u00A0Right")
+        val feed = entries().single()
+        assertEquals(com.ffmathy.pooparazzi.core.model.BreastSide.LEFT_THEN_RIGHT, feed.breastSide)
+        assertEquals(SampleData.NOW_1432, feed.startMillis)
+        assertTrue(feed.endMillis == null && !feed.isRunning)
     }
 
     @Test

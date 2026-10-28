@@ -185,7 +185,7 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
         val sleep = home.repository.startSleep(SampleData.at(14, 30)).getOrThrow()
         home.viewModel.onAdjustStart()
         var state = home.settle()
-        assertEquals(CardVariant.AdjustStart(sleep = true), state.card!!.variant)
+        assertEquals(CardVariant.AdjustStart, state.card!!.variant)
         assertEquals(CardAction.DONE, state.card!!.action)
         val row = state.card!!.row as CardRow.Adjust
         assertEquals(sleep.id, row.editEntryId)
@@ -204,13 +204,20 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun adjustStartTargetsTheRunningFeedFirst() = homeTest { home ->
-        home.repository.startSleep(SampleData.at(13, 0)).getOrThrow()
-        val feed = home.repository.startBreastfeed(SampleData.at(14, 20)).getOrThrow()
+    fun adjustStartTargetsTheRunningSleepNeverABreastFeed() = homeTest { home ->
+        val sleep = home.repository.startSleep(SampleData.at(13, 0)).getOrThrow()
+        home.repository.logFeed(com.ffmathy.pooparazzi.core.model.FeedType.BREAST, SampleData.at(14, 20))
         home.viewModel.onAdjustStart()
         val card = home.settle().card!!
-        assertEquals(CardVariant.AdjustStart(sleep = false), card.variant)
-        assertEquals(feed.id, (card.row as CardRow.Adjust).editEntryId)
+        assertEquals(CardVariant.AdjustStart, card.variant)
+        assertEquals(sleep.id, (card.row as CardRow.Adjust).editEntryId)
+    }
+
+    @Test
+    fun adjustStartDoesNothingWithoutARunningSleep() = homeTest { home ->
+        home.repository.logFeed(com.ffmathy.pooparazzi.core.model.FeedType.BREAST, SampleData.at(14, 20))
+        home.viewModel.onAdjustStart()
+        assertNull(home.settle().card)
     }
 
     @Test

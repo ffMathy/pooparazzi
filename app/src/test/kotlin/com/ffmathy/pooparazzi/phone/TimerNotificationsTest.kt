@@ -33,7 +33,7 @@ import org.robolectric.annotation.Config
 import java.util.TimeZone
 
 /**
- * The ongoing notifications of a running sleep and breastfeed (DESIGN_SPEC §3.3.7, §10.5): content, the silent channel,
+ * The ongoing notification of a running sleep (DESIGN_SPEC §3.3.7, §10.5): content, the silent channel,
  * the lock-screen "Woke up" action, cancelling when the entry ends (also from sync), dismissal and denied permission.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -54,7 +54,6 @@ class TimerNotificationsTest : CoreTestBase() {
 
     private fun asleep(language: AppLanguage = AppLanguage.SYSTEM, name: String = "Noa") = TimerState(
         sleep = RunningTimer("sleep-1", SampleData.at(2, 5)),
-        feed = null,
         lastFeedStartMillis = SampleData.at(1, 40),
         babyName = name,
         language = language,
@@ -94,19 +93,18 @@ class TimerNotificationsTest : CoreTestBase() {
     }
 
     @Test
-    fun aRunningBreastfeedOffersEndFeedAndBothCanRunTogether() {
-        val state = asleep().copy(feed = RunningTimer("feed-1", SampleData.at(2, 40)))
+    fun breastFeedsNeverPostANotificationAndAnOldOneIsCleared() {
+        // A breastfeed notification left by an older version (when breastfeeds were timed).
+        manager.notify(
+            TimerNotifications.LEGACY_FEED_ID,
+            Notification.Builder(app, "legacy").setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Noa is breastfeeding").build(),
+        )
+        val entries = SampleData.scenarioWithRecentFeed()
+        val state = TimerState.of(entries, SampleData.settings, SampleData.NOW_1450, zone)
+        assertNull("a breast feed is an instant", state.sleep)
         TimerNotifications(app).render(state)
-        val feed = posted(TimerNotifications.FEED_ID)!!
-        assertEquals("Noa is breastfeeding", feed.extras.getString(Notification.EXTRA_TITLE))
-        assertEquals("Since 02:40", feed.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
-        assertEquals("End feed", feed.actions.single().title.toString())
-        assertTrue("End feed opens the app", shadowOf(feed.actions.single().actionIntent).isActivityIntent)
-        assertNotNull(posted(TimerNotifications.SLEEP_ID))
-
-        TimerNotifications(app).render(state.copy(sleep = null, feed = null))
+        assertNull(posted(TimerNotifications.LEGACY_FEED_ID))
         assertNull(posted(TimerNotifications.SLEEP_ID))
-        assertNull(posted(TimerNotifications.FEED_ID))
     }
 
     @Test

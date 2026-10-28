@@ -8,7 +8,6 @@
 
     <string name="lamp_no_feed">Ingen måltider endnu</string>
 
-    <string name="side_sheet_feed">Amning</string>
 
     <string name="spoken_range">%1$s til %2$s</string>
     <string name="spoken_pee_and_poop">Tis og bæ</string>
@@ -32,13 +31,10 @@
     <string name="edit_title_diaper">Rediger ble</string>
     <string name="edit_title_add">Tilføj registrering</string>
     <string name="edit_fell_asleep">Faldt i søvn</string>
-    <string name="edit_started">Startede</string>
-    <string name="edit_ended">Sluttede</string>
     <string name="edit_time">Tidspunkt</string>
     <string name="edit_type">Type</string>
     <string name="edit_side">Side</string>
     <string name="edit_still_asleep">Sover stadig</string>
-    <string name="edit_still_feeding">Ammer stadig</string>
     <string name="edit_end_now">Afslut nu</string>
     <string name="edit_duration">Varighed %1$s</string>
     <string name="edit_was">var %1$s</string>
@@ -47,11 +43,9 @@
     <string name="edit_change_day">Skift dag</string>
     <string name="edit_spoken_day">%1$s, dag: %2$s</string>
     <string name="edit_error_wake_before_sleep">Opvågningen skal ligge efter, at barnet faldt i søvn.</string>
-    <string name="edit_error_feed_end_before_start">Amningen skal slutte efter den startede.</string>
     <string name="edit_error_future">Kl. %1$s er ikke kommet endnu. Registrér den i går i stedet?</string>
     <string name="edit_use_yesterday">Brug i går</string>
     <string name="edit_warning_overlap_sleep">Overlapper søvnen kl. %1$s. Gem alligevel?</string>
-    <string name="edit_warning_overlap_feed">Overlapper amningen kl. %1$s. Gem alligevel?</string>
     <string name="edit_error_save_failed">Ændringen blev ikke gemt. Prøv igen.</string>
     <string name="edit_notice_changed_on_watch">Ændret på uret imens. Tjek og gem igen.</string>
     <string name="edit_error_deleted_on_watch">Slettet på uret imens.</string>
@@ -75,7 +69,6 @@
     <string name="widget_cd_log_pee">Registrér tis</string>
     <string name="widget_cd_log_poop">Registrér bæ</string>
     <string name="widget_cd_log_both">Registrér tis og bæ</string>
-    <string name="cd_end_feed_choose_side">Afslut amning, vælg side</string>
     <string name="widget_undo_pee">Fortryd tis</string>
     <string name="widget_undo_poop">Fortryd bæ</string>
     <string name="widget_undo_both">Fortryd tis og bæ</string>
@@ -84,18 +77,17 @@
     <string name="widget_undo_sleep_cancelled">Fortryd annulleret søvn</string>
 
     <!-- Igangværende notifikationer -->
-    <string name="notification_channel_timers">Søvn og amning i gang</string>
-    <string name="notification_channel_timers_description">Viser en igangværende søvn eller amning med Vågnede og Afslut amning</string>
+    <string name="notification_channel_timers">Søvn i gang</string>
+    <string name="notification_channel_timers_description">Viser en igangværende søvn med Vågnede</string>
     <string name="notification_asleep_title">%1$s sover</string>
-    <string name="notification_breastfeeding_title">%1$s bliver ammet</string>
     <string name="notification_since">Siden kl. %1$s</string>
     <string name="notification_metric_since">Siden</string>
     <!-- Indstillinger › Notifikationer -->
     <string name="settings_section_notifications">Notifikationer</string>
     <string name="settings_live_updates">Liveopdateringer</string>
-    <string name="settings_live_updates_summary">Vis en igangværende søvn eller amning i statuslinjen og på låseskærmen</string>
+    <string name="settings_live_updates_summary">Vis en igangværende søvn i statuslinjen og på låseskærmen</string>
     <string name="settings_notifications">Indstillinger for notifikationer</string>
-    <string name="settings_notifications_summary">En igangværende søvn eller amning vises som en notifikation med Vågnede eller Afslut amning</string>
+    <string name="settings_notifications_summary">En igangværende søvn vises som en notifikation med Vågnede</string>
     <string name="settings_notifications_off">Notifikationer er slået fra</string>
-    <string name="settings_notifications_off_summary">Slå dem til for at se en igangværende søvn eller amning uden for appen</string>
+    <string name="settings_notifications_off_summary">Slå dem til for at se en igangværende søvn uden for appen</string>
 </resources>

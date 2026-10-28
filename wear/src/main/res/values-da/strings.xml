@@ -5,7 +5,6 @@
 
     <string name="edge_guard_already_asleep">Sover\nallerede</string>
     <string name="edge_guard_already_awake">Allerede\nvågen</string>
-    <string name="edge_guard_already_feeding">Ammer\nallerede</string>
 
     <string name="cd_woke_up_end_sleep">Vågnede, afslut søvn</string>
     <string name="action_adjust">Juster</string>
@@ -43,7 +42,6 @@
     <string name="tile_cd_asleep">Sover, %1$s</string>
     <string name="tile_cd_feed">Måltid. Sidste måltid %1$s</string>
     <string name="tile_cd_feed_none">Måltid. Ingen måltider endnu</string>
-    <string name="tile_cd_end_feed">Afslut amning. Ammer i %1$s</string>
     <string name="tile_cd_log_pee">Registrér tis</string>
     <string name="tile_cd_log_poop">Registrér bæ</string>
     <string name="tile_cd_log_both">Registrér begge, tis og bæ</string>
@@ -63,9 +61,8 @@
     <string name="complication_preview_caption">Forhåndsvisning af komplikationsdata</string>
 
     <string name="ongoing_channel_name">Igangværende tidtagning</string>
-    <string name="ongoing_channel_description">Viser igangværende søvn eller amning på urskiven.</string>
+    <string name="ongoing_channel_description">Viser igangværende søvn på urskiven.</string>
     <string name="ongoing_asleep_since">Sover siden kl. #start#</string>
-    <string name="ongoing_breastfeeding_since">Ammer siden kl. #start#</string>
     <string name="spoken_side_first">først</string>
     <string name="spoken_side_second">bagefter</string>
 </resources>

@@ -247,11 +247,14 @@ private fun rowSpoken(entry: Entry, state: TodayUiState, f: Formatters, supporti
             parts += f.relative.since(entry.startMillis, f.zone)
         }
         entry.isInterval -> {
-            entry.breastSide?.let { parts += stringResource(SpokenLabels.side(it)) }
             parts += f.duration.spoken(clockDurationMillis(entry.startMillis, entry.endMillis ?: state.now))
             parts += spoken.range(f, entry.startMillis, entry.endMillis ?: state.now, state.day)
         }
-        else -> parts += supporting.split(DOT_SEPARATOR)
+        else -> {
+            // A breast feed: "Breast, left then right, 01:40".
+            if (entry.isBreastfeed) entry.breastSide?.let { parts += stringResource(SpokenLabels.side(it)) }
+            parts += supporting.split(DOT_SEPARATOR)
+        }
     }
     return spoken.all(parts)
 }

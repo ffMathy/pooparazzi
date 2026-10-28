@@ -23,7 +23,7 @@ private fun LogWidgetAsleepPreview() = LogWidgetContent(WidgetSamples.asleep())
 @OptIn(ExperimentalGlancePreviewApi::class)
 @Preview(widthDp = 358, heightDp = 208)
 @Composable
-private fun LogWidgetBreastfeedingPreview() = LogWidgetContent(WidgetSamples.breastfeeding(night = false))
+private fun LogWidgetAfterBreastfeedPreview() = LogWidgetContent(WidgetSamples.afterBreastfeed(night = false))
 
 @OptIn(ExperimentalGlancePreviewApi::class)
 @Preview(widthDp = 276, heightDp = 190)
@@ -43,4 +43,4 @@ private fun QuickWidgetAsleepPreview() = QuickWidgetContent(WidgetSamples.asleep
 @OptIn(ExperimentalGlancePreviewApi::class)
 @Preview(widthDp = 171, heightDp = 100)
 @Composable
-private fun QuickWidgetBreastfeedingPreview() = QuickWidgetContent(WidgetSamples.breastfeeding(night = false))
+private fun QuickWidgetAfterBreastfeedPreview() = QuickWidgetContent(WidgetSamples.afterBreastfeed(night = false))

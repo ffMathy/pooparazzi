@@ -14,11 +14,8 @@ sealed interface HomeLaunch {
     /** Home with nothing extra (the widget background, a notification body). */
     data object Home : HomeLaunch
 
-    /** The Feed sheet (Breast / Formula / Food); the Side sheet instead while a breastfeed runs. */
+    /** The Feed sheet (Breast / Formula / Food / Just the time). */
     data object Feed : HomeLaunch
-
-    /** The Side sheet that ends the running breastfeed (notification "End feed", widget "End feed"). */
-    data object Side : HomeLaunch
 
     /** The Diaper sheet. */
     data object Diaper : HomeLaunch
@@ -33,7 +30,7 @@ sealed interface HomeLaunch {
     data class Receipt(val kind: ReceiptKind, val entryId: String) : HomeLaunch
 
     /** True for the launches that open a logging sheet (which replaces an open edit sheet). */
-    val opensSheet: Boolean get() = this == Feed || this == Side || this == Diaper
+    val opensSheet: Boolean get() = this == Feed || this == Diaper
 }
 
 /** Which widget log a [HomeLaunch.Receipt] card describes. */
@@ -61,7 +58,8 @@ object DeepLinks {
     /** `pooparazzi://history`: the one link the manifest exposes to other apps (VIEW + BROWSABLE). */
     const val HISTORY_HOST = "history"
     private const val FEED = "feed"
-    private const val SIDE = "side"
+    /** The old "End feed" link of a timed breastfeed (no longer made); it now opens plain Home. */
+    private const val LEGACY_SIDE = "side"
     private const val DIAPER = "diaper"
     private const val RECEIPT = "receipt"
 
@@ -71,7 +69,6 @@ object DeepLinks {
         when (launch) {
             HomeLaunch.Home, HomeLaunch.History -> Unit
             HomeLaunch.Feed -> builder.appendPath(FEED)
-            HomeLaunch.Side -> builder.appendPath(SIDE)
             HomeLaunch.Diaper -> builder.appendPath(DIAPER)
             is HomeLaunch.Receipt -> builder.appendPath(RECEIPT).appendPath(launch.kind.path).appendPath(launch.entryId)
         }
@@ -87,7 +84,7 @@ object DeepLinks {
         return when (segments.firstOrNull()) {
             null -> HomeLaunch.Home
             FEED -> HomeLaunch.Feed
-            SIDE -> HomeLaunch.Side
+            LEGACY_SIDE -> HomeLaunch.Home
             DIAPER -> HomeLaunch.Diaper
             RECEIPT -> {
                 val kind = ReceiptKind.fromPath(segments.getOrNull(1)) ?: return HomeLaunch.Home

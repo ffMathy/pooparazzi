@@ -76,9 +76,6 @@ sealed interface WearDeepLink {
     /** Feed type screen (Tile row A, idle). */
     data object FeedType : WearDeepLink
 
-    /** Side screen for the running breastfeed (Tile row A while it runs). */
-    data object EndFeed : WearDeepLink
-
     /** Logged for an entry the Tile just wrote, with Undo active at once. */
     data class Logged(val entryId: String) : WearDeepLink
 
@@ -140,7 +137,6 @@ fun WearNavHost(
                 viewModel.beginFeed()
                 go(WearRoutes.FEED_TYPE)
             }
-            WearDeepLink.EndFeed -> viewModel.requestEndFeed()
             is WearDeepLink.Logged -> viewModel.openReceipt(deepLink.entryId, fromTile = true)
             WearDeepLink.Today -> go(WearRoutes.TODAY)
         }
@@ -176,7 +172,6 @@ fun WearNavHost(
                         go(WearRoutes.DIAPER)
                     },
                     onSleepToggle = gate.tapWith { shown -> viewModel.toggleSleep(shown) },
-                    onEndFeed = gate.tap { viewModel.requestEndFeed() },
                     onAdjust = gate.tapWith2 { entry, field ->
                         viewModel.beginAdjust(entry.id, listOf(field))
                         go(WearRoutes.ADJUST)
@@ -207,7 +202,7 @@ fun WearNavHost(
                     it,
                     SideActions(
                         onTick = gate.tapWith { breast -> viewModel.tickSide(breast) },
-                        onEnd = gate.tap { viewModel.endFeed() },
+                        onSave = gate.tap { viewModel.saveBreastfeed() },
                     ),
                 )
             }

@@ -223,7 +223,7 @@ private fun DiaperCheckbox(
 
 /** Save (V1_ADDITIONS §3.2): pinned Medium EdgeButton in the neutral chrome container. */
 @Composable
-private fun SaveEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Boolean, modifier: Modifier) {
+internal fun SaveEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Boolean, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
     EdgeButton(
         onClick = onClick,

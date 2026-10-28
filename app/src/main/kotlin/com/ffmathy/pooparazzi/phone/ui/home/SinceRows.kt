@@ -115,14 +115,6 @@ private fun sinceRowText(row: SinceRow, zone: ZoneId, formatters: Formatters): S
             zone = zone,
             formatters = formatters,
         )
-        is SinceRow.Asleep -> statusRow(
-            icon = TintedIcon(XIcons.sleep, events.sleep.strong),
-            status = stringResource(CoreR.string.status_asleep),
-            elapsedMillis = row.elapsedMillis,
-            sinceMillis = row.sleep.startMillis,
-            zone = zone,
-            formatters = formatters,
-        )
         is SinceRow.LastFed -> {
             val type = row.feed.feedType
             SinceRowText(

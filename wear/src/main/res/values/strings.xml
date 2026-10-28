@@ -12,7 +12,6 @@
     <!-- Pinned EdgeButton guard (DESIGN_SPEC §3.5.2): two centred lines, so keep the line break. -->
     <string name="edge_guard_already_asleep">Already\nasleep</string>
     <string name="edge_guard_already_awake">Already\nawake</string>
-    <string name="edge_guard_already_feeding">Already\nfeeding</string>
 
     <!-- TalkBack name of the running-sleep EdgeButton (DESIGN_SPEC §9.4) -->
     <string name="cd_woke_up_end_sleep">Woke up, end sleep</string>
@@ -78,8 +77,6 @@
     <!-- Row A. %1$s is spoken time since the last feed ("2 hours 10 minutes ago"). -->
     <string name="tile_cd_feed">Feed. Last feed %1$s</string>
     <string name="tile_cd_feed_none">Feed. No feeds yet</string>
-    <!-- Row A while a breastfeed runs. %1$s is a spoken duration. -->
-    <string name="tile_cd_end_feed">End feed. Breastfeeding for %1$s</string>
     <string name="tile_cd_log_pee">Log pee diaper</string>
     <string name="tile_cd_log_poop">Log poop diaper</string>
     <string name="tile_cd_log_both">Log both, pee and poop diaper</string>
@@ -107,10 +104,9 @@
 
     <!-- ===== Ongoing Activity (DESIGN_SPEC §3.8, §10.6) ===== -->
     <string name="ongoing_channel_name">Running timers</string>
-    <string name="ongoing_channel_description">Shows a running sleep or breastfeed on the watch face.</string>
+    <string name="ongoing_channel_description">Shows a running sleep on the watch face.</string>
     <!-- "Asleep since 02:05" (no ticking duration). Keep the #start# token: the system fills it in. -->
     <string name="ongoing_asleep_since">Asleep since #start#</string>
-    <string name="ongoing_breastfeeding_since">Breastfeeding since #start#</string>
     <!-- TalkBack, the place of a ticked side checkbox: "Left, first, checkbox, checked" -->
     <string name="spoken_side_first">first</string>
     <string name="spoken_side_second">second</string>

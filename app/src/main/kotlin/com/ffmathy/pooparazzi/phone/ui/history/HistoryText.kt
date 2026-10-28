@@ -43,7 +43,7 @@ internal fun dayLabel(day: LocalDate, today: LocalDate, formatters: Formatters):
 }
 
 /**
- * "Sleep · 47m", "Breast · Left → Right", "Breast · running", "Formula", "Pee + poop" (V1_ADDITIONS §4). Formula uses
+ * "Sleep · 47m", "Breast · Left → Right", "Breast", "Formula", "Pee + poop" (V1_ADDITIONS §4). Formula uses
  * the soft-hyphen form so Danish can break it in the list.
  */
 @Composable
@@ -55,12 +55,12 @@ internal fun historyTitle(entry: Entry, now: Long, formatters: Formatters): Stri
         formatters.labels.historyTitle(entry, formatters.duration, now)
     }
 
-/** "12:40 – 13:27", "Sun 22:40 – 01:35", "12:00 – 12:18 · 18m", "since 14:32", "12:22", "05:41 · Yellow · Seedy". */
+/** "12:40 – 13:27", "Sun 22:40 – 01:35", "since 14:32", "12:22", "05:41 · Yellow · Seedy". */
 internal fun historySupporting(entry: Entry, day: LocalDate, zone: ZoneId, now: Long, formatters: Formatters): String =
     formatters.labels.historySupporting(entry, day, zone, now, formatters.clock, formatters.duration, formatters.relative)
 
 /**
- * The row's TalkBack name: "Sleep, 47 minutes, 12:40 to 13:27", "Breast, left then right, 18 minutes, 12:00 to 12:18",
+ * The row's TalkBack name: "Sleep, 47 minutes, 12:40 to 13:27", "Breast, left then right, 12:00",
  * "Sleep, running, since 14:32", "Formula, 12:22", "Pee and poop, 05:41, Yellow, Seedy".
  */
 @Composable
@@ -74,8 +74,7 @@ internal fun historySpoken(entry: Entry, day: LocalDate, zone: ZoneId, now: Long
             parts += stringResource(CoreR.string.status_running)
             parts += formatters.relative.since(entry.startMillis, zone)
         }
-        entry.kind == EntryKind.SLEEP || entry.isBreastfeed -> {
-            entry.breastSide?.let { parts += spokenSide(it) }
+        entry.kind == EntryKind.SLEEP -> {
             val end = entry.endMillis ?: now
             parts += formatters.duration.spoken(entry.clockDurationMillis(now))
             val startDay = localDate(entry.startMillis, zone)
@@ -83,6 +82,7 @@ internal fun historySpoken(entry: Entry, day: LocalDate, zone: ZoneId, now: Long
             parts += stringResource(R.string.spoken_range, start, clock.format(end, zone))
         }
         else -> {
+            if (entry.isBreastfeed) entry.breastSide?.let { parts += spokenSide(it) }
             parts += clock.format(entry.startMillis, zone)
             if (entry.poop) {
                 entry.poopColor?.let { parts += stringResource(Labels.poopColor(it)) }

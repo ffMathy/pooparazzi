@@ -23,7 +23,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** The Ongoing Activities for a running sleep and breastfeed (DESIGN_SPEC §3.8, §10.6). */
+/** The Ongoing Activity for a running sleep (DESIGN_SPEC §3.8, §10.6); breast feeds are instants and have none. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class RunningActivitiesTest {
@@ -55,21 +55,20 @@ class RunningActivitiesTest {
         assertEquals("Asleep since 02:05", activity?.status?.getText(app, 0L).toString())
         val touch = shadowOf(activity?.touchIntent).savedIntent
         assertEquals(MainActivity.OPEN_MAIN, touch.getStringExtra(MainActivity.EXTRA_OPEN))
-        // No breastfeed runs.
+        // Nothing else runs.
         assertNull(shadowOf(notifications).getNotification(1002))
     }
 
     @Test
-    fun aRunningBreastfeedHasItsOwnActivityAndBothGoWhenTheyEnd() {
-        val running = RunningActivities(app)
-        running.sync(summarize(SampleData.scenarioWithRunningFeed(), SampleData.NOW_1450, SampleData.ZONE))
-        val feed = shadowOf(notifications).getNotification(1002)
-        assertEquals("Breastfeeding since 14:32", feed.extras.getString(NotificationCompat.EXTRA_TITLE))
-
-        // Ended (here, on the phone: the merge changes the entries and the updater syncs again).
-        running.sync(summarize(SampleData.scenario(), SampleData.NOW_1450, SampleData.ZONE))
-        assertNull(shadowOf(notifications).getNotification(1002))
-        assertNull(shadowOf(notifications).getNotification(1001))
+    fun aBreastFeedHasNoActivityAndAnOldOneIsRemoved() {
+        // The running-breastfeed activity of an older version (when breastfeeds were timed).
+        notifications.notify(
+            LEGACY_NOTIFICATION_FEED,
+            NotificationCompat.Builder(app, "legacy").setSmallIcon(XDrawables.breast).setContentTitle("Breastfeeding since 14:32").build(),
+        )
+        RunningActivities(app).sync(summarize(SampleData.scenarioWithRecentFeed(), SampleData.NOW_1450, SampleData.ZONE))
+        assertNull(shadowOf(notifications).getNotification(LEGACY_NOTIFICATION_FEED))
+        assertNull("nothing runs: a breast feed is an instant", shadowOf(notifications).getNotification(1001))
     }
 
     @Test

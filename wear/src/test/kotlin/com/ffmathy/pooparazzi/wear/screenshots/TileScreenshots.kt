@@ -69,8 +69,9 @@ abstract class TileScreenshots(private val lang: String) {
     @Test
     fun s12c_tileJustLogged() = capture("12c-tile-just-logged", WearSamples.tileJustLogged())
 
+    /** After the 14:32 breast feed: Row A stays "Feed", with "18m ago" (nothing runs). */
     @Test
-    fun s12d_tileBreastfeeding() = capture("12d-tile-breastfeeding", WearSamples.tileBreastfeeding())
+    fun s12d_tileAfterBreast() = capture("12d-tile-after-breast", WearSamples.tileAfterBreastfeed())
 
     /** No baby name set: the title is the last diaper, as in the approved mockup. */
     @Test

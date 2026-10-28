@@ -1,14 +1,18 @@
 package com.ffmathy.pooparazzi.phone
 
 import com.ffmathy.pooparazzi.core.domain.LampState
+import com.ffmathy.pooparazzi.core.model.Breast
+import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.ui.home.CardRow
+import com.ffmathy.pooparazzi.phone.ui.home.CardVariant
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import com.ffmathy.pooparazzi.phone.ui.home.SinceRow
 import com.ffmathy.pooparazzi.phone.ui.preview.HomeSamples
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,12 +54,14 @@ class HomeStateBuilderTest {
     }
 
     @Test
-    fun breastfeedingAt1450() {
-        val state = HomeSamples.breastfeeding()
-        val lamp = state.lamp as LampState.FeedRunning
+    fun aBreastFeedLeavesTheLampIdleAt1450() {
+        val state = HomeSamples.breastLogged()
+        val lamp = state.lamp as LampState.FeedIdle
         assertEquals(18L, lamp.elapsedMinutes)
+        assertEquals(FeedType.BREAST, lamp.lastFeed!!.feedType)
         assertTrue(state.row1 is SinceRow.Awake)
-        assertTrue(state.feedRunning)
+        assertFalse(state.anythingRunning)
+        assertEquals(CardVariant.FeedLogged(FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT), state.card!!.variant)
     }
 
     @Test
@@ -65,9 +71,12 @@ class HomeStateBuilderTest {
     }
 
     @Test
-    fun theSideSheetDisablesEndsBeforeTheStart() {
-        val side = HomeSamples.sideSheet().sheet as HomeSheetUi.Side
-        assertTrue(side.chips.all { it.enabled })
-        assertEquals(SampleData.NOW_1450, side.time)
+    fun theBreastStepKeepsTheSheetChipsAndTicks() {
+        val sheet = HomeSamples.breastSheet(listOf(Breast.RIGHT, Breast.LEFT)).sheet as HomeSheetUi.Feed
+        assertTrue(sheet.breast)
+        assertEquals(listOf(0, -5, -10, -15), sheet.chips.map { it.minutes })
+        assertTrue(sheet.chips.all { it.enabled })
+        assertEquals(BreastSide.RIGHT_THEN_LEFT, sheet.side)
+        assertEquals(SampleData.NOW_1432, sheet.time)
     }
 }
