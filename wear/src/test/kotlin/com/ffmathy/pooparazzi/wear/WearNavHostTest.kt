@@ -221,10 +221,13 @@ class WearNavHostTest {
         minusFive.performClick()
         settle(600)
 
-        assertEquals("once, not −10m", at(13, 22), runBlocking { repo.get("sample-sleep-1240") }?.endMillis)
+        // The write lands off the main thread: wait for it rather than for a fixed time (slow CI runners).
+        fun sleepEnd() = runBlocking { repo.get("sample-sleep-1240") }?.endMillis
+        compose.waitUntil(5_000) { sleepEnd() != at(13, 27) }
         // Back on Main (a second pop used to remove Main itself and leave a blank screen).
         waitForDescription("Start sleep")
         waitForDescription("Last feed, formula")
+        assertEquals("once, not −10m", at(13, 22), sleepEnd())
     }
 
     @Test

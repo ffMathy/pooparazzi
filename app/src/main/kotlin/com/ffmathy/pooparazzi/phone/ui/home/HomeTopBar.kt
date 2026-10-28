@@ -61,10 +61,12 @@ internal fun HomeTopBar(
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val pill = historyPillStyle(formatters.labels.syncLine(sync, SyncPeer.WATCH, formatters.clock, zone), maxWidth)
         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Centred, so the name lines up with History and Settings when the sync line is hidden (no watch).
             Box(
                 Modifier
                     .weight(1f)
                     .heightIn(min = 64.dp),
+                contentAlignment = Alignment.CenterStart,
             ) {
                 Column(Modifier.padding(start = 20.dp, end = TopBarGap, top = 6.dp, bottom = 4.dp)) {
                     val name = babyName.ifBlank { stringResource(CoreR.string.baby_name_hint) }
