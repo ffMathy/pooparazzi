@@ -12,8 +12,11 @@ import kotlinx.coroutines.flow.asStateFlow
  * @property google signed in with Google: deleting the account asks for Google again instead of a password.
  */
 data class AccountUser(val uid: String, val email: String, val google: Boolean) {
-    /** What the backup needs of it. */
-    val cloud: CloudAccount get() = CloudAccount(uid, email)
+    /**
+     * What the backup needs of it. The family is not resolved here yet (FAMILIES: `users/{uid}.familyId`), so nothing
+     * is synced until it is.
+     */
+    val cloud: CloudAccount get() = CloudAccount(uid, email, familyId = null)
 }
 
 /** Why an account action failed, as the Account screen words it. */

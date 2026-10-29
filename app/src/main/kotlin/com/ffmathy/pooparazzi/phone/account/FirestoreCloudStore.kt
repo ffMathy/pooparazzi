@@ -5,6 +5,8 @@ import com.ffmathy.pooparazzi.core.cloud.CloudError
 import com.ffmathy.pooparazzi.core.cloud.CloudException
 import com.ffmathy.pooparazzi.core.cloud.CloudPage
 import com.ffmathy.pooparazzi.core.cloud.CloudStore
+import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BabyJson
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryJson
 import com.google.android.gms.tasks.Task
@@ -29,9 +31,9 @@ import java.io.IOException
 import java.util.concurrent.Executor
 
 /**
- * The backup in Cloud Firestore (BABIES_AND_BACKUP §4.1): `users/{uid}/entries/{entryId}` holding exactly
- * `{ json, syncedAt }`, the entry's [EntryJson] and the server time of the write, as `firebase/firestore.rules`
- * requires. Nothing else is ever written: no settings, no babies, no names.
+ * The family's backup in Cloud Firestore (BABIES_AND_BACKUP §4.1, FAMILIES): `families/{fid}/entries/{entryId}` and
+ * `families/{fid}/babies/{babyId}`, each holding exactly `{ json, syncedAt }` (the entry's [EntryJson] or the baby's
+ * [BabyJson], and the server time of the write), as `firebase/firestore.rules` requires. No settings are ever written.
  *
  * Reads go to the server only ([Source.SERVER]): the backup decides what is new by the stored cursor, not by a cache.
  * Firestore holds a write until the server confirms it, which offline (or with the day's write quota used up) means
@@ -47,37 +49,63 @@ class FirestoreCloudStore(
 ) : CloudStore {
     private val commits = CommitGate(timeoutMillis)
 
-    override suspend fun upload(uid: String, entries: List<Entry>) {
-        if (entries.isEmpty()) return
-        require(entries.size <= CloudStore.UPLOAD_BATCH) { "At most ${CloudStore.UPLOAD_BATCH} entries per upload" }
+    override suspend fun upload(familyId: String, entries: List<Entry>) =
+        write(collection(familyId, COLLECTION_ENTRIES), entries.map { it.id to EntryJson.encode(it) })
+
+    override suspend fun changesAfter(familyId: String, cursor: CloudCursor?, limit: Int): CloudPage<Entry> =
+        pageOf(read(collection(familyId, COLLECTION_ENTRIES), cursor, limit))
+
+    override suspend fun uploadBabies(familyId: String, babies: List<Baby>) =
+        write(collection(familyId, COLLECTION_BABIES), babies.map { it.id to BabyJson.encode(it) })
+
+    override suspend fun babiesAfter(familyId: String, cursor: CloudCursor?, limit: Int): CloudPage<Baby> =
+        babyPageOf(read(collection(familyId, COLLECTION_BABIES), cursor, limit))
+
+    override suspend fun deleteAll(uid: String, familyId: String) = call {
+        // An upload still queued must not land after the deletion.
+        commits.drain()
+        val family = firestore.collection(COLLECTION_FAMILIES).document(familyId)
+        // Read while still a member (the rules let members alone read): the last one out takes the family's data along.
+        val members = family.collection(COLLECTION_MEMBERS).limit(2).get(Source.SERVER).awaitWithin()
+        if (members.documents.all { it.id == uid }) {
+            deleteCollection(family.collection(COLLECTION_ENTRIES))
+            deleteCollection(family.collection(COLLECTION_BABIES))
+            commits.commit { family.delete() }
+        }
+        commits.commit { family.collection(COLLECTION_MEMBERS).document(uid).delete() }
+        Unit
+    }
+
+    private fun collection(familyId: String, name: String): CollectionReference =
+        firestore.collection(COLLECTION_FAMILIES).document(familyId).collection(name)
+
+    /** Writes `{ json, syncedAt }` for each (id, json) in one batch (at most [CloudStore.UPLOAD_BATCH]). */
+    private suspend fun write(collection: CollectionReference, documents: List<Pair<String, String>>) {
+        if (documents.isEmpty()) return
+        require(documents.size <= CloudStore.UPLOAD_BATCH) { "At most ${CloudStore.UPLOAD_BATCH} documents per upload" }
         call {
-            val collection = entries(uid)
             val batch = firestore.batch()
-            entries.forEach { entry ->
-                val data = mapOf(FIELD_JSON to EntryJson.encode(entry), FIELD_SYNCED_AT to FieldValue.serverTimestamp())
-                batch.set(collection.document(entry.id), data)
+            documents.forEach { (id, json) ->
+                batch.set(collection.document(id), mapOf(FIELD_JSON to json, FIELD_SYNCED_AT to FieldValue.serverTimestamp()))
             }
             commits.commit { batch.commit() }
         }
     }
 
-    override suspend fun changesAfter(uid: String, cursor: CloudCursor?, limit: Int): CloudPage = call {
-        var query: Query = entries(uid).orderBy(FIELD_SYNCED_AT).orderBy(FieldPath.documentId())
+    /** Up to [limit] documents of [collection] written after [cursor], in the order of changes. */
+    private suspend fun read(collection: CollectionReference, cursor: CloudCursor?, limit: Int): List<StoredDocument> = call {
+        var query: Query = collection.orderBy(FIELD_SYNCED_AT).orderBy(FieldPath.documentId())
         if (cursor != null) query = query.startAfter(Timestamp(cursor.seconds, cursor.nanos), cursor.documentId)
         val snapshot = query.limit(limit.toLong()).get(Source.SERVER).awaitWithin()
-        pageOf(
-            snapshot.documents.map { doc ->
-                // A pending server timestamp reads as null (ServerTimestampBehavior.NONE).
-                val syncedAt = doc.get(FIELD_SYNCED_AT) as? Timestamp
-                StoredDocument(doc.id, doc.get(FIELD_JSON) as? String, syncedAt?.let { Stamp(it.seconds, it.nanoseconds) })
-            },
-        )
+        snapshot.documents.map { doc ->
+            // A pending server timestamp reads as null (ServerTimestampBehavior.NONE).
+            val syncedAt = doc.get(FIELD_SYNCED_AT) as? Timestamp
+            StoredDocument(doc.id, doc.get(FIELD_JSON) as? String, syncedAt?.let { Stamp(it.seconds, it.nanoseconds) })
+        }
     }
 
-    override suspend fun deleteAll(uid: String) = call {
-        // An upload still queued must not land after the deletion.
-        commits.drain()
-        val collection = entries(uid)
+    /** Deletes every document of [collection], a page at a time. */
+    private suspend fun deleteCollection(collection: CollectionReference) {
         while (true) {
             val page = collection.limit(DELETE_PAGE.toLong()).get(Source.SERVER).awaitWithin()
             if (page.isEmpty) break
@@ -86,9 +114,6 @@ class FirestoreCloudStore(
             commits.commit { batch.commit() }
         }
     }
-
-    private fun entries(uid: String): CollectionReference =
-        firestore.collection(COLLECTION_USERS).document(uid).collection(COLLECTION_ENTRIES)
 
     private suspend fun <T> Task<T>.awaitWithin(): T = awaitWithin(timeoutMillis)
 
@@ -142,8 +167,10 @@ class FirestoreCloudStore(
     }
 
     companion object {
-        const val COLLECTION_USERS = "users"
+        const val COLLECTION_FAMILIES = "families"
+        const val COLLECTION_MEMBERS = "members"
         const val COLLECTION_ENTRIES = "entries"
+        const val COLLECTION_BABIES = "babies"
         const val FIELD_JSON = "json"
         const val FIELD_SYNCED_AT = "syncedAt"
 
@@ -172,8 +199,15 @@ class FirestoreCloudStore(
             else -> CloudError.OTHER
         }
 
-        internal fun pageOf(documents: List<StoredDocument>): CloudPage {
-            val entries = mutableListOf<Entry>()
+        internal fun pageOf(documents: List<StoredDocument>): CloudPage<Entry> =
+            pageOf(documents, EntryJson::decodeOrNull) { it.id }
+
+        /** [pageOf] for the family's babies. */
+        internal fun babyPageOf(documents: List<StoredDocument>): CloudPage<Baby> =
+            pageOf(documents, BabyJson::decodeOrNull) { it.id }
+
+        private fun <T> pageOf(documents: List<StoredDocument>, decode: (String) -> T?, idOf: (T) -> String): CloudPage<T> {
+            val items = mutableListOf<T>()
             var last: CloudCursor? = null
             var pending = false
             for (doc in documents) {
@@ -183,9 +217,9 @@ class FirestoreCloudStore(
                     continue
                 }
                 if (!pending) last = CloudCursor(at.seconds, at.nanos, doc.id)
-                doc.json?.let(EntryJson::decodeOrNull)?.takeIf { it.id == doc.id }?.let(entries::add)
+                doc.json?.let(decode)?.takeIf { idOf(it) == doc.id }?.let(items::add)
             }
-            return CloudPage(entries, last, documents.size)
+            return CloudPage(items, last, documents.size)
         }
     }
 }

@@ -32,10 +32,12 @@ enum class AppLanguage(val tag: String?) {
 
 /**
  * User settings, mirrored between phone and watch through the `/settings` data item (last-writer-wins on
- * [updatedAtMillis]). They are never uploaded to the backend, so the babies' names stay on the parent's devices.
+ * [updatedAtMillis]). Only the [babies] go further: with an account, the phone backs them up (names included) to the
+ * account's family, where every member sees them, and merges the family's babies in one by one ([Baby.winsOver]).
+ * The appearance and the language never leave the parent's devices.
  *
- * [babies] are listed in the order they were added; there is always at least one ([normalized]). Only the phone edits
- * the list. Each device has its own current baby, [selectedBabyId], which is never synced or merged.
+ * [babies] are listed in the order they were added (or arrived); there is always at least one ([normalized]). Only the
+ * phone edits the list. Each device has its own current baby, [selectedBabyId], which is never synced or merged.
  */
 @Serializable
 data class Settings(
@@ -66,28 +68,63 @@ data class Settings(
         return copy(babies = clean.ifEmpty { listOf(Baby(Baby.FIRST_ID)) })
     }
 
-    /** These settings with baby [id] renamed to [name] ([sanitizeName]d); unchanged for an unknown id. */
-    fun withBabyName(id: String, name: String): Settings =
-        copy(babies = babies.map { if (it.id == id) it.copy(name = sanitizeName(name)) else it })
+    /**
+     * These settings with baby [id] renamed to [name] ([sanitizeName]d); unchanged for an unknown id or the same name.
+     * A positive [atMillis] stamps the renamed baby ([Baby.updatedAtMillis]), at least one past its stamp so far so the
+     * rename wins everywhere; 0 leaves its stamp as it is.
+     */
+    fun withBabyName(id: String, name: String, atMillis: Long = 0L): Settings {
+        val clean = sanitizeName(name)
+        return copy(
+            babies = babies.map {
+                when {
+                    it.id != id || it.name == clean -> it
+                    atMillis > 0 -> it.copy(name = clean, updatedAtMillis = maxOf(atMillis, it.updatedAtMillis + 1))
+                    else -> it.copy(name = clean)
+                }
+            },
+        )
+    }
 
-    /** These settings with unnamed babies appended for the unknown, non-blank [ids], in the given order. */
-    fun withBabies(ids: Collection<String>): Settings {
+    /**
+     * These settings with unnamed babies appended for the unknown, non-blank [ids], in the given order, stamped
+     * [atMillis] (0, unstamped, for babies adopted from their entries: any stamped version of them wins).
+     */
+    fun withBabies(ids: Collection<String>, atMillis: Long = 0L): Settings {
         val known = babies.mapTo(mutableSetOf()) { it.id }
-        val added = ids.filter { it.isNotBlank() && known.add(it) }.map { Baby(it) }
+        val added = ids.filter { it.isNotBlank() && known.add(it) }.map { Baby(it, updatedAtMillis = atMillis) }
         return if (added.isEmpty()) this else copy(babies = babies + added)
+    }
+
+    /**
+     * These settings with [incoming] babies (from the family's backup) merged in, one by one: unknown babies are
+     * appended, and a version that [Baby.winsOver] the stored one replaces it in its place. Names are [sanitizeName]d.
+     */
+    fun withMergedBabies(incoming: Collection<Baby>): Settings {
+        val merged = babies.toMutableList()
+        for (raw in incoming) {
+            if (raw.id.isBlank()) continue
+            val baby = raw.copy(name = sanitizeName(raw.name))
+            val at = merged.indexOfFirst { it.id == baby.id }
+            when {
+                at < 0 -> merged += baby
+                baby.winsOver(merged[at]) -> merged[at] = baby
+            }
+        }
+        return if (merged == babies) this else copy(babies = merged)
     }
 
     /**
      * These settings with what a device from before several babies sent ([SettingsJson.decodeRemoteOrNull] with
      * `legacy`), or null when nothing is taken. Such a device knows one baby only, so the list is never replaced: only
      * the [legacyBaby]'s name and the appearance and language are taken, and only from strictly newer settings (an older
-     * device echoes the stamp it was sent). A blank name never erases one: names are kept on the parent's devices alone
-     * and cannot be recovered.
+     * device echoes the stamp it was sent). A blank name never erases one. A taken name is stamped with the remote
+     * settings' stamp, so it goes on to the family like a rename on this phone.
      */
     fun withLegacyRemote(remote: Settings): Settings? {
         if (remote.updatedAtMillis <= updatedAtMillis) return null
         val name = remote.babies.first().name
-        val renamed = if (name.isBlank()) this else withBabyName(legacyBaby.id, name)
+        val renamed = if (name.isBlank()) this else withBabyName(legacyBaby.id, name, remote.updatedAtMillis)
         val next = renamed.copy(appearance = remote.appearance, language = remote.language, updatedAtMillis = remote.updatedAtMillis)
         return next.takeIf { it.copy(updatedAtMillis = updatedAtMillis) != this }
     }
@@ -114,7 +151,8 @@ data class Settings(
  * JSON form of [Settings] for the Data Layer. Lenient: unknown keys ignored, unknown enum values fall back to defaults.
  * [Settings.selectedBabyId] is never written. Settings from a device from before several babies (no `babies`) read as
  * the first baby with their `babyName`; for such devices the JSON also carries `babyName`, the [Settings.legacyBaby]'s
- * name, so they keep it. Decoded settings are [Settings.normalized].
+ * name, so they keep it. Each baby carries its [Baby.updatedAtMillis] (babies from before families read as 0); the
+ * phone's flags for the family's backup are never written. Decoded settings are [Settings.normalized].
  */
 object SettingsJson {
     /** Settings as received, and whether they came in the form of a device from before several babies. */

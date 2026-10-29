@@ -46,7 +46,7 @@ class FirebaseMappingTest {
     @Test
     fun aPageDecodesItsEntriesAndEndsAtItsLastDocument() {
         val page = FirestoreCloudStore.pageOf(listOf(doc(0, 10), doc(1, 11), doc(2, 12)))
-        assertEquals(entries, page.entries)
+        assertEquals(entries, page.items)
         assertEquals(CloudCursor(12, 7, entries[2].id), page.last)
         assertEquals(3, page.documents)
     }
@@ -55,7 +55,7 @@ class FirebaseMappingTest {
     fun badDocumentsAreSkippedButMoveTheCursorOn() {
         val otherId = StoredDocument("someone-else", EntryJson.encode(entries[1]), Stamp(11, 7))
         val page = FirestoreCloudStore.pageOf(listOf(doc(0, 10, json = "{not json"), otherId, doc(2, 12, json = null)))
-        assertEquals(emptyList<Any>(), page.entries)
+        assertEquals(emptyList<Any>(), page.items)
         assertEquals(CloudCursor(12, 7, entries[2].id), page.last)
         assertEquals(3, page.documents)
     }
@@ -63,7 +63,7 @@ class FirebaseMappingTest {
     @Test
     fun aPendingWriteIsSkippedAndTheCursorStopsBeforeIt() {
         val page = FirestoreCloudStore.pageOf(listOf(doc(0, 10), doc(1, null), doc(2, 12)))
-        assertEquals(listOf(entries[0], entries[2]), page.entries)
+        assertEquals(listOf(entries[0], entries[2]), page.items)
         assertEquals(CloudCursor(10, 7, entries[0].id), page.last)
         assertEquals(3, page.documents)
 
