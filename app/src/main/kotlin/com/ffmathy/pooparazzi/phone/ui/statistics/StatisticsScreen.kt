@@ -7,7 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -60,7 +59,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -110,9 +108,8 @@ fun StatisticsRoute(onBack: () -> Unit) {
 }
 
 /**
- * Statistics (P8, V1_ADDITIONS §8): averages per day of feeds, pee, poop and sleep, the last 7 days (left, large) next
- * to a range (right; the last 30 days unless the chip picks the last 90 days, all days or dates from a dialog). The
- * rows open one at a time; the open row shows its bar chart of the range. Only whole days up to yesterday count, and a
+ * Statistics (P8, V1_ADDITIONS §8): averages per day of feeds, pee, poop and sleep over one range (the last 30 days
+ * unless the chip picks the last 7 or 90 days, all days or dates from a dialog). The rows open one at a time; the open row shows its bar chart of the range. Only whole days up to yesterday count, and a
  * day counts for a kind only if one was logged that day. Settings' skeleton: one scrolling column under the top bar,
  * laid out edge to edge from [windowInsets].
  */
@@ -183,8 +180,8 @@ fun StatisticsScreen(
     }
     if (choosing && report != null) {
         StatisticsRangeDialog(
-            initialFrom = maxOf(report.comparison.from, report.firstDay),
-            initialTo = report.comparison.to,
+            initialFrom = maxOf(report.window.from, report.firstDay),
+            initialTo = report.window.to,
             firstDay = report.firstDay,
             lastDay = report.lastDay,
             onConfirm = { from, to ->
@@ -200,11 +197,8 @@ fun StatisticsScreen(
 internal object StatisticsDefaults {
     val Gutter = 20.dp
 
-    /** The rows' content inset; the header starts at it too, so the columns line up. */
+    /** The rows' content inset; the header starts at it too, so the numbers line up with it. */
     val RowInset = 16.dp
-
-    /** Between the 7-day column and the range column. */
-    val ColumnGap = 12.dp
 }
 
 /** The period header, the four rows and the footnote. */
@@ -217,94 +211,65 @@ private fun StatisticsContent(
     onChooseDates: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        // Both number columns line up from the header through every row: (350 − 2 × 16 − 12) / 2 = 153 dp at 390 dp.
-        val column = (maxWidth - StatisticsDefaults.RowInset * 2 - StatisticsDefaults.ColumnGap) / 2
-        Column {
-            PeriodHeader(report, state.today, column, formatters, onRange = actions::onRange, onChooseDates = onChooseDates)
-            Column(
-                Modifier
-                    .padding(top = 12.dp)
-                    .selectableGroup(),
-                verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap),
-            ) {
-                StatsMetric.entries.forEachIndexed { index, metric ->
-                    val open = metric == state.metric
-                    MetricRow(
-                        metric = metric,
-                        report = report,
-                        chart = if (open) state.chart else null,
-                        open = open,
-                        first = index == 0,
-                        last = index == StatsMetric.entries.lastIndex,
-                        column = column,
-                        today = state.today,
-                        formatters = formatters,
-                        onClick = { actions.onMetric(metric) },
-                    )
-                }
+    Column {
+        PeriodHeader(report, state.today, formatters, onRange = actions::onRange, onChooseDates = onChooseDates)
+        Column(
+            Modifier
+                .padding(top = 12.dp)
+                .selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap),
+        ) {
+            StatsMetric.entries.forEachIndexed { index, metric ->
+                val open = metric == state.metric
+                MetricRow(
+                    metric = metric,
+                    report = report,
+                    chart = if (open) state.chart else null,
+                    open = open,
+                    first = index == 0,
+                    last = index == StatsMetric.entries.lastIndex,
+                    today = state.today,
+                    formatters = formatters,
+                    onClick = { actions.onMetric(metric) },
+                )
             }
-            Text(
-                // Until a whole day has been logged, the averages count today so far (V1_ADDITIONS §8).
-                stringResource(if (report.soFar) R.string.statistics_footnote_so_far else R.string.statistics_footnote),
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.onSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp, start = 4.dp, end = 4.dp),
-            )
         }
+        Text(
+            // Until a whole day has been logged, the averages count today so far (V1_ADDITIONS §8).
+            stringResource(if (report.soFar) R.string.statistics_footnote_so_far else R.string.statistics_footnote),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+            modifier = Modifier.padding(top = 12.dp, start = 4.dp, end = 4.dp),
+        )
     }
 }
 
 /**
- * "Last 7 days" with its dates (a heading for TalkBack: "Last 7 days, 19 October to 25 October") over the left
- * column, and the range chip with the range's dates over the right one. A coverage line ("3 of 7 days logged") follows
- * the dates whenever a window has days with nothing logged.
+ * The range chip with the range's dates under it, and a coverage line ("3 of 30 days logged") when the range has days
+ * with nothing logged. The chip's TalkBack name says the dates and the coverage.
  */
 @Composable
 private fun PeriodHeader(
     report: StatsReport,
     today: LocalDate,
-    column: Dp,
     formatters: Formatters,
     onRange: (StatsRange) -> Unit,
     onChooseDates: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val week = report.lastSevenDays
-    val comparison = report.comparison
-    val weekLabel = stringResource(R.string.statistics_last_7_days)
-    val weekSpoken = windowSpoken(weekLabel, week, today, formatters)
+    val window = report.window
     val label = rangeLabel(report.range)
-    val chipSpoken = windowSpoken(label, comparison, today, formatters)
-    // The range column may run into the 16 dp end inset (169 dp at 390 dp).
-    Row(Modifier.fillMaxWidth().padding(start = StatisticsDefaults.RowInset)) {
-        Column(
-            Modifier
-                .width(column)
-                .semantics(mergeDescendants = true) {
-                    heading()
-                    contentDescription = weekSpoken
-                },
-        ) {
-            Box(Modifier.heightIn(min = ChipDefaults.TargetHeight), contentAlignment = Alignment.CenterStart) {
-                Text(weekLabel, style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
-            }
-            Text(visibleRange(week.from, week.to, today, formatters), style = PhoneType.dataSmall, color = colors.onSurfaceVariant)
-            coverageText(week)?.let { Text(it, style = PhoneType.dataSmall, color = colors.onSurfaceVariant) }
-        }
-        Spacer(Modifier.width(StatisticsDefaults.ColumnGap))
-        Column(Modifier.weight(1f)) {
-            RangeChip(report.range, label, chipSpoken, onRange, onChooseDates)
-            // The chip's TalkBack name already says the dates and the coverage.
-            Text(
-                visibleRange(comparison.from, comparison.to, today, formatters),
-                style = PhoneType.dataSmall,
-                color = colors.onSurfaceVariant,
-                modifier = Modifier.clearAndSetSemantics { },
-            )
-            coverageText(comparison)?.let {
-                Text(it, style = PhoneType.dataSmall, color = colors.onSurfaceVariant, modifier = Modifier.clearAndSetSemantics { })
-            }
+    val chipSpoken = windowSpoken(label, window, today, formatters)
+    Column(Modifier.fillMaxWidth().padding(start = StatisticsDefaults.RowInset, end = StatisticsDefaults.RowInset)) {
+        RangeChip(report.range, label, chipSpoken, onRange, onChooseDates)
+        Text(
+            visibleRange(window.from, window.to, today, formatters),
+            style = PhoneType.dataSmall,
+            color = colors.onSurfaceVariant,
+            modifier = Modifier.clearAndSetSemantics { },
+        )
+        coverageText(window)?.let {
+            Text(it, style = PhoneType.dataSmall, color = colors.onSurfaceVariant, modifier = Modifier.clearAndSetSemantics { })
         }
     }
 }
@@ -334,7 +299,7 @@ private fun RangeChip(range: StatsRange, label: String, spoken: String, onRange:
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                // One line that shrinks rather than wraps ("Seneste 30 dage" is wider than the column on a 390 dp phone).
+                // One line that shrinks rather than wraps (a very large font on a 360 dp phone).
                 val style = MaterialTheme.typography.labelLarge
                 BasicText(
                     label,
@@ -371,9 +336,10 @@ private fun RangeChip(range: StatsRange, label: String, spoken: String, onRange:
     }
 }
 
-/** The range menu: Last 30 days · Last 90 days · All days · Choose dates… (selected when the range is chosen dates). */
+/** The range menu: Last 7 days · Last 30 days · Last 90 days · All days · Choose dates… (selected when the range is chosen dates). */
 @Composable
 internal fun ColumnScope.StatisticsRangeMenuItems(range: StatsRange, onRange: (StatsRange) -> Unit, onChooseDates: () -> Unit) {
+    RangeMenuItem(stringResource(R.string.statistics_last_7_days), selected = range == StatsRange.Last7Days) { onRange(StatsRange.Last7Days) }
     RangeMenuItem(stringResource(R.string.statistics_last_30_days), selected = range == StatsRange.Last30Days) { onRange(StatsRange.Last30Days) }
     RangeMenuItem(stringResource(R.string.statistics_last_90_days), selected = range == StatsRange.Last90Days) { onRange(StatsRange.Last90Days) }
     RangeMenuItem(stringResource(R.string.statistics_all_days), selected = range == StatsRange.AllDays) { onRange(StatsRange.AllDays) }
@@ -458,8 +424,7 @@ private fun utcDate(millis: Long): LocalDate = Instant.ofEpochMilli(millis).atZo
 
 /**
  * One row (r 20 / r 6 group corners, surfaceContainer): the kind's glyph in its strong colour and its name, then the
- * 7-day average (displaySmall) and the range's (titleLarge) on one baseline, and "Last 30 days 1.8" under the range's
- * when the range is another. The tappable part is one radio-button node for TalkBack; the open row adds its chart.
+ * range's average (displaySmall). The tappable part is one radio-button node for TalkBack; the open row adds its chart.
  */
 @Composable
 private fun MetricRow(
@@ -469,7 +434,6 @@ private fun MetricRow(
     open: Boolean,
     first: Boolean,
     last: Boolean,
-    column: Dp,
     today: LocalDate,
     formatters: Formatters,
     onClick: () -> Unit,
@@ -501,42 +465,16 @@ private fun MetricRow(
                 if (!open) XIcon(XIcons.chevronDown, contentDescription = null, tint = colors.onSurfaceVariant, size = 20.dp)
             }
             Spacer(Modifier.height(4.dp))
-            // The numbers shrink rather than clip (a 360 dp phone, a large font): "14h 01m" is about 38 sp in 153 dp.
-            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                val large = MaterialTheme.typography.displaySmall
-                BasicText(
-                    averageText(report.lastSevenDays.average(metric), metric, formatters),
-                    style = large.copy(color = colors.onSurface),
-                    maxLines = 1,
-                    softWrap = false,
-                    autoSize = TextAutoSize.StepBased(minFontSize = 12.sp, maxFontSize = large.fontSize, stepSize = 0.5.sp),
-                    modifier = Modifier.width(column).alignByBaseline(),
-                )
-                Spacer(Modifier.width(StatisticsDefaults.ColumnGap))
-                val small = MaterialTheme.typography.titleLarge
-                BasicText(
-                    averageText(report.comparison.average(metric), metric, formatters),
-                    style = small.copy(color = colors.onSurface),
-                    maxLines = 1,
-                    softWrap = false,
-                    autoSize = TextAutoSize.StepBased(minFontSize = 12.sp, maxFontSize = small.fontSize, stepSize = 0.5.sp),
-                    modifier = Modifier.weight(1f).alignByBaseline(),
-                )
-            }
-            if (report.range != StatsRange.Last30Days) {
-                Row(Modifier.padding(top = 2.dp)) {
-                    Spacer(Modifier.width(column + StatisticsDefaults.ColumnGap))
-                    Text(
-                        stringResource(
-                            R.string.join_space,
-                            stringResource(R.string.statistics_last_30_days),
-                            averageText(report.lastThirtyDays.average(metric), metric, formatters),
-                        ),
-                        style = PhoneType.dataSmall,
-                        color = colors.onSurfaceVariant,
-                    )
-                }
-            }
+            // The number shrinks rather than clips (a 360 dp phone, a very large font).
+            val large = MaterialTheme.typography.displaySmall
+            BasicText(
+                averageText(report.window.average(metric), metric, formatters),
+                style = large.copy(color = colors.onSurface),
+                maxLines = 1,
+                softWrap = false,
+                autoSize = TextAutoSize.StepBased(minFontSize = 12.sp, maxFontSize = large.fontSize, stepSize = 0.5.sp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+            )
         }
         if (open && chart != null) {
             StatisticsChart(

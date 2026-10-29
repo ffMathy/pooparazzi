@@ -454,9 +454,77 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun removingABabyLeavesATombstoneThatIsFlaggedAndMirrored() = runBlocking {
+        signedIn = true
+        repo.setBabyName("Noa")
+        val ida = repo.renameBaby(repo.addBaby().id, "Ida").babies.last()
+        repo.selectBaby(ida.id)
+        repo.markBabiesCloudSynced(repo.cloudPendingBabies())
+        sync.pushedSettings.clear()
+
+        val after = repo.removeBaby(ida.id)
+        val tombstone = Baby(ida.id, updatedAtMillis = ida.updatedAtMillis + 1, removed = true)
+        assertEquals(listOf(Baby.FIRST_ID), after.babies.map { it.id })
+        assertEquals("nameless", listOf(tombstone), after.removedBabies)
+        assertEquals("the current baby falls back to the first", Baby.FIRST_ID, repo.current().selectedBaby.id)
+        assertEquals("the tombstone goes to the family", listOf(tombstone), repo.cloudPendingBabies())
+        assertEquals("and to the watch", listOf(repo.current()), sync.pushedSettings)
+        assertEquals(after.removedBabies, SettingsJson.decodeOrNull(SettingsJson.encode(after))!!.removedBabies)
+
+        // The last baby stays; unknown ids and renames of the removed baby change nothing.
+        assertEquals(after, repo.removeBaby(Baby.FIRST_ID))
+        assertEquals(after, repo.removeBaby("unknown"))
+        assertEquals(after, repo.renameBaby(ida.id, "Ida again"))
+        // Its entries never adopt it again.
+        assertEquals(after, repo.ensureBabies(listOf(ida.id)))
+    }
+
+    @Test
+    fun settingsWithoutTombstonesNeverBringARemovedBabyBack() = runBlocking {
+        val ida = repo.addBaby()
+        val removed = repo.removeBaby(ida.id)
+        // A watch from before tombstones echoes our settings with a newer appearance and no removedBabies.
+        val fromWatch = removed.copy(removedBabies = emptyList(), appearance = Appearance.DAY, updatedAtMillis = removed.updatedAtMillis + 1)
+        assertTrue(repo.applyRemote(fromWatch))
+        assertEquals(removed.removedBabies, repo.current().removedBabies)
+        assertEquals(Appearance.DAY, repo.current().appearance)
+        // Even when it still lists the baby (it never got the removal).
+        repo.applyRemote(fromWatch.copy(babies = removed.babies + ida, updatedAtMillis = removed.updatedAtMillis + 2))
+        assertEquals(listOf(Baby.FIRST_ID), repo.current().babies.map { it.id })
+    }
+
+    @Test
+    fun tombstonesFromTheBackupRemoveAndLaterVersionsRestore() = runBlocking {
+        signedIn = true
+        val ida = repo.addBaby()
+        repo.markBabiesCloudSynced(repo.cloudPendingBabies())
+
+        // Another member removed Ida.
+        val tombstone = ida.tombstone(ida.updatedAtMillis + 5)
+        assertEquals(1, repo.applyCloudBabies(listOf(tombstone)))
+        assertEquals(listOf(Baby.FIRST_ID), repo.current().babies.map { it.id })
+        assertEquals(listOf(tombstone), repo.current().removedBabies)
+        assertTrue("what the backup holds is not sent back", repo.cloudPendingBabies().isEmpty())
+
+        // An older version of Ida changes nothing; a later rename brings her back, at the end.
+        repo.applyCloudBabies(listOf(ida.copy(name = "Ida")))
+        assertEquals(1, repo.current().babies.size)
+        val back = Baby(ida.id, "Ida", tombstone.updatedAtMillis + 1)
+        repo.applyCloudBabies(listOf(back))
+        assertEquals(listOf(Baby.FIRST_ID, ida.id), repo.current().babies.map { it.id })
+        assertTrue(repo.current().removedBabies.isEmpty())
+
+        // A tombstone of the only baby left is not taken: there is always one.
+        val only = Settings(listOf(Baby(Baby.FIRST_ID, "Noa", 3)))
+        assertEquals(only, only.withMergedBabies(listOf(Baby(Baby.FIRST_ID).tombstone(10))))
+    }
+
+    @Test
     fun babyJson() {
         val baby = Baby("b2", "Ida", 42)
         assertEquals("""{"id":"b2","name":"Ida","updatedAtMillis":42}""", BabyJson.encode(baby))
+        assertEquals("""{"id":"b2","name":"","updatedAtMillis":43,"removed":true}""", BabyJson.encode(baby.tombstone(0)))
+        assertEquals(baby.tombstone(0), BabyJson.decodeOrNull(BabyJson.encode(baby.tombstone(0))))
         assertEquals(baby, BabyJson.decodeOrNull(BabyJson.encode(baby)))
         assertEquals(Baby("b2"), BabyJson.decodeOrNull("""{"id":"b2","future":true}"""))
         assertNull(BabyJson.decodeOrNull("""{"id":" "}"""))

@@ -203,7 +203,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | P5 | Phone | Home-screen widgets 4×2, 3×1 | Feed and Diaper open the app's sheets; the sleep toggle logs in one tap |
 | P6 | Phone | Live Update (running sleep) | Status chip and an ongoing notification with "Woke up" |
 | P7 | Phone | Splash | System splash, dark at night and light by day |
-| P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day: the last 7 days next to a chosen range (default the last 30 days), with a bar chart of one kind |
+| P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day over a chosen range (the last 7, 30 or 90 days, all days or chosen dates; default the last 30 days), with a bar chart of one kind |
 | W1 | Watch | Main, idle | Status block, Feed / Diaper, "Start sleep"; scroll list below |
 | W2 | Watch | Main, asleep | Lamp, "Woke up"; scroll list with Adjust start |
 | W3 | Watch | Diaper picker | Pee / Poop / Both; Earlier |
@@ -308,7 +308,7 @@ Receipt rules:
 
 **Sleep toggle**: 350 × 96, a button whose name changes with its state (it exposes no separate on/off state; §9.4).
 - Unchecked: r 48, SLEEP container, `sleep` 32 SLEEP strong + 12 + "Start sleep" headlineSmall SLEEP onContainer.
-- Checked: r 28, SLEEP containerLit, 2 dp SLEEP strong border, `wake` 32 + "Woke up". Day has no containerLit: it uses SLEEP container + the border.
+- Checked: r 48 (the shape stays; fill, border and icon tell the state), SLEEP containerLit, 2 dp SLEEP strong border, `wake` 32 + "Woke up". Day has no containerLit: it uses SLEEP container + the border.
 
 **Adjust-start chip** (inside the running Lamp, under the sub-line, ≈147 wide): 48 target / 40 pill, r 20, padding start 12 / end 16, `clock` 18 onSurfaceVariant + 8 + "Adjust start" labelLarge onSurface, 1 dp outline border. Fill: Night surfaceContainerHigh, Day background. Opens the Adjust start sheet. The timer keeps running.
 
@@ -424,7 +424,8 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 - **Night dimmer**: re-offer and level (default 10 %, adjustable 5–30 %).
 - Link to the system promoted-notifications setting (§10.5).
 - "Day starts at" (default 00:00; pending open question 4).
-- With the optional account (BABIES_AND_BACKUP §3): Account first, then **Family** while signed in (the members, "Invite someone", "Leave family", "Remove" for the family's creator; §3.4), and a **Privacy policy** row and a **Download my data** row (the log and the babies' names as JSON, BABIES_AND_BACKUP §3.2) in About.
+- With the optional account (BABIES_AND_BACKUP §3): Account first, then **Family** while signed in (the members, "Invite someone", "Leave family", "Remove" for the family's creator; §3.4), and a **Privacy policy** row and a **Download my data** row (the log and the babies' names as a ZIP file of JSON files, BABIES_AND_BACKUP §3.2) and an **Import data** row (merges such a file into the log) in About.
+- **Babies** (BABIES_AND_BACKUP §2.4): a name field per baby, "Add a baby", and with two or more babies a remove button (`delete` icon) at the end of each field that asks "Remove <label>?" before it removes the baby and deletes its log.
 - After signing in, a full-screen **consent** ("Back up to Google Firebase?": what is uploaded, who sees it, where, how to change your mind; "I agree" filled, "Not now, sign out" as text; BABIES_AND_BACKUP §3.6) comes before anything else until the account has agreed on the phone; it is laid out like the Welcome.
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
@@ -437,7 +438,7 @@ Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (
 |---|---|---|---|
 | 1 (24, not a separate target) | `feed` 16 + 6 + "Fed at 12:22" labelLarge 15 sp onSurface; 16 gap; `pee` 16 + "Pee at 13:44" | "Fed at 01:40", "Pee at 01:52" | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
 | 2 (68) | 2 equal buttons, gap 8, r 20; icon 24 at +10, label 15 sp at +40: Feed (FEED colours, opens the Feed sheet), Diaper (DIAPER colours, `diaper`, opens the Diaper sheet) | unchanged | unchanged |
-| 3 (68) | Sleep toggle, full width, r 34, SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake since 13:27" dataSmall | checked: r 20, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned `sleepRunning` 16 + 6 + "Asleep since 02:05" | unchanged |
+| 3 (68) | Sleep toggle, full width, r 34, SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake since 13:27" dataSmall | checked: r 34, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned `sleepRunning` 16 + 6 + "Asleep since 02:05" | unchanged |
 
 - Just logged: nothing else changes. No button moves, relabels or changes colour, and Undo never sits where a log button is. The receipt reverts on the next log or after 10 s.
 - The widget background (outside the buttons) opens the app with the receipt for the last widget log.
@@ -921,7 +922,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 |---|---|---|
 | Lamp | Ø264; ring r 129, track 6; ember Ø10; tail 48° | outer Ø126; ring r 60.5, track 5; ember Ø8; tail 48° |
 | Feed / Diaper buttons | 169 × 96, full pill r 48; pressed r 16 | 98 × 60, r 26 |
-| Sleep toggle | 350 × 96; unchecked r 48; checked r 28 | EdgeButton Medium 70 (system shape, 143 wide D-shape; content area ≈ 99 × 56, so the icon is stacked over the label) |
+| Sleep toggle | 350 × 96; r 48, checked or not | EdgeButton Medium 70 (system shape, 143 wide D-shape; content area ≈ 99 × 56, so the icon is stacked over the label) |
 | EdgeButton Small | — | 56 (content ≈ 92 × 42; icon + label in a row; Undo only) |
 | Tile EdgeButton | — | 46 drawn, 48 hit box |
 | Diaper tiles | 106 × 128, r 28 | 62 × 88, r 31 |
@@ -933,7 +934,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 | History rows | 56 tall, gap 2, group corners 20, inner corners 6 | 60 tall, r 26, gap 4 |
 | Avatars | 40, shape-coded, outlined | 32, shape-coded, outlined |
 | Ribbon | card r 20; sleep bars 14 tall, rx 3, min width 6; feed ticks 4 × 14, rx 2; diaper marks Ø10–12 | — |
-| Widget | system radius (reference r 24); buttons r 20; 4×2 sleep toggle r 34 (checked r 20) | — |
+| Widget | system radius (reference r 24); buttons r 20; 4×2 sleep toggle r 34, checked or not | — |
 | Save button / FAB | 160 × 56 r 28 / extended FAB r 16 | — |
 
 ### 5.9 Spacing, targets, elevation
@@ -1369,7 +1370,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 - Update the widget on every log and every sleep change.
 - **Palette**: build every colour as a single-value `ColorProvider` chosen at update time from the NIGHT / DAY token sets. No day/night pairs and no `GlanceTheme` dynamic colours. Call `updateAll()` at sunset, at sunrise, on an Appearance change and on every sleep start/stop.
 - **Type**: device font (`FontFamily.SansSerif`, sizes in sp as drawn). No ROND, opsz or tnum.
-- **Checked toggle stroke**: `GlanceModifier` has no border, so the 2 dp stroke is a background drawable (a shape with a 2 dp stroke and 20 dp corners) set through `GlanceModifier.background(ImageProvider)`.
+- **Checked toggle stroke**: `GlanceModifier` has no border, so the 2 dp stroke is a background drawable (a shape with a 2 dp stroke and the button's own corners) set through `GlanceModifier.background(ImageProvider)`.
 - **Receipt and Undo**: after a widget log, row 1 shows the receipt and an in-widget "Undo" (48 dp target, `actionRunCallback(UndoLast)` for that event UUID, no app launch) until the next log or for 10 s (one-time WorkManager work). Undo never sits where a log button is.
 - **Background tap**: opens the app with the receipt for the last widget log. Row 1 is not a separate target (it is only 24 dp tall).
 - **Breakpoints**:

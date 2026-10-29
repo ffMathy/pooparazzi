@@ -125,10 +125,8 @@
     <string name="statistics_no_value" translatable="false">–</string>
     <!-- A range of visible dates: "26 Sep – 25 Oct" -->
     <string name="join_dash" translatable="false">%1$s – %2$s</string>
-    <!-- TalkBack, a row: "Feeds. Last 7 days: 6.7 a day. Last 30 days: 7.1 a day." -->
-    <string name="statistics_spoken_row" translatable="false">%1$s. %2$s: %3$s. %4$s: %5$s.</string>
-    <!-- TalkBack, a row with another range: "Feeds. Last 7 days: 6.7 a day. Chosen dates: 7.1 a day. Last 30 days: 7.1 a day." -->
-    <string name="statistics_spoken_row_compare" translatable="false">%1$s. %2$s: %3$s. %4$s: %5$s. %6$s: %7$s.</string>
+    <!-- TalkBack, a row: "Feeds. Last 30 days: 7.1 a day." -->
+    <string name="statistics_spoken_row" translatable="false">%1$s. %2$s: %3$s.</string>
 
     <!-- Edit sheet (P4) -->
     <string name="edit_title_sleep">Edit sleep</string>
@@ -169,6 +167,11 @@
     <string name="settings_baby_field">Name</string>
     <string name="settings_add_baby">Add a baby</string>
     <string name="settings_add_baby_watch_update">Update Pooparazzi on your watch first.</string>
+    <string name="settings_remove_baby_cd">Remove %1$s</string>
+    <string name="settings_remove_baby_title">Remove %1$s?</string>
+    <string name="settings_remove_baby_body">Their log is deleted from this phone and your watch. This can\'t be undone.</string>
+    <string name="settings_remove_baby_body_family">Their log is deleted for everyone in your family and from your backup. This can\'t be undone.</string>
+    <string name="settings_remove_baby_confirm">Remove</string>
     <string name="settings_babies_hint">Names stay on this phone and your watch.</string>
     <string name="settings_appearance_hint">Auto uses Night in the evening and at night, while a sleep runs, and when the phone is in dark theme.</string>
     <string name="settings_section_watch">Watch</string>
@@ -343,13 +346,22 @@
     <string name="settings_privacy">Privacy policy</string>
     <string name="settings_privacy_summary">What is stored, where, and your rights</string>
     <string name="settings_export">Download my data</string>
-    <string name="settings_export_summary">The whole log and the babies\' names as a JSON file</string>
+    <string name="settings_export_summary">The whole log and the babies\' names as a ZIP file</string>
     <!-- %1$d is the number of entries in the saved file -->
     <plurals name="settings_export_done">
         <item quantity="one">Saved %1$d entry</item>
         <item quantity="other">Saved %1$d entries</item>
     </plurals>
     <string name="settings_export_failed">Couldn\'t save the file. Try again.</string>
+    <string name="settings_import">Import data</string>
+    <string name="settings_import_summary">Merge a downloaded ZIP file into the log</string>
+    <!-- %1$d is the number of entries added or updated from the file -->
+    <plurals name="settings_import_done">
+        <item quantity="one">Imported %1$d entry</item>
+        <item quantity="other">Imported %1$d entries</item>
+    </plurals>
+    <string name="settings_import_none">Nothing new to import</string>
+    <string name="settings_import_failed">Couldn\'t read the file. Pick a ZIP file from Download my data.</string>
 
     <!-- Home buttons' second line (V1_ADDITIONS §9): what the last 7 days say comes next. -->
     <string name="forecast_in">in %1$s</string>

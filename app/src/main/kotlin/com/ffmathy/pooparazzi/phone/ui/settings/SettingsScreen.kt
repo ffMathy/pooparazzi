@@ -29,7 +29,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -123,6 +126,10 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
     val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(LogExportFile.MIME_TYPE)) { uri ->
         if (uri != null) scope.launch { context.exportLog(viewModel, uri) }
     }
+    // "Import data": the system's file picker chooses the export; it is merged into the log, and a toast says how it went.
+    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch { context.importLog(viewModel, uri) }
+    }
     val actions = remember(viewModel, context, uriHandler) {
         object : SettingsActions by viewModel {
             override fun onBack() = back()
@@ -133,6 +140,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
                 viewModel.state.value?.let { runCatching { uriHandler.openUri(it.privacyUrl) } }
             }
             override fun onExport() = exporter.launch(LogExportFile.name(LocalDate.now()))
+            override fun onImport() = importer.launch(LogExportFile.IMPORT_TYPES)
         }
     }
     // "Invite someone": the share sheet with the invite's link and text.
@@ -217,7 +225,7 @@ fun SettingsScreen(
                 NotificationsRow(notifications, actions::onOpenNotificationSettings)
             }
             Section(stringResource(R.string.settings_section_about)) {
-                AboutGroup(state.versionName, actions::onOpenPrivacy, actions::onExport, actions::onOpenLicences)
+                AboutGroup(state.versionName, actions)
             }
         }
     }
@@ -257,6 +265,12 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
                     onChange = { actions.onBabyNameChange(baby.id, it) },
                     onDone = { actions.onBabyNameDone(baby.id) },
                     modifier = Modifier.focusRequester(requester),
+                    removeLabel = if (state.canRemoveBaby) {
+                        stringResource(R.string.settings_remove_baby_cd, labels.baby(baby, state.babies))
+                    } else {
+                        null
+                    },
+                    onRemove = { actions.onRemoveBaby(baby.id) },
                 )
             }
         }
@@ -289,16 +303,46 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
         }
     }
     // Signed in, the names go to the family's backup too (BABIES_AND_BACKUP §1).
-    val hint = if (state.account is AccountSummary.SignedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint
+    val signedIn = state.account is AccountSummary.SignedIn
+    val hint = if (signedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint
     Text(
         stringResource(hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
     )
+    state.removing?.let { RemoveBabyDialog(labels.baby(it, state.babies), signedIn, actions) }
 }
 
-/** A baby's name (shown in the top bar and notifications); empty shows its [placeholder] label. Done saves at once. */
+/** "Remove Noa?": the baby's log goes with it (for the whole family when signed in), with Cancel and "Remove". */
+@Composable
+private fun RemoveBabyDialog(label: String, signedIn: Boolean, actions: SettingsActions) {
+    val colors = MaterialTheme.colorScheme
+    val body = if (signedIn) R.string.settings_remove_baby_body_family else R.string.settings_remove_baby_body
+    AlertDialog(
+        onDismissRequest = actions::onDismissRemoveBaby,
+        title = { Text(stringResource(R.string.settings_remove_baby_title, label)) },
+        text = { Text(stringResource(body)) },
+        confirmButton = {
+            TextButton(onClick = actions::onConfirmRemoveBaby) {
+                Text(stringResource(R.string.settings_remove_baby_confirm), color = colors.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = actions::onDismissRemoveBaby) {
+                Text(stringResource(CoreR.string.action_cancel), color = colors.onSurface)
+            }
+        },
+        containerColor = colors.surfaceContainerHigh,
+        titleContentColor = colors.onSurface,
+        textContentColor = colors.onSurfaceVariant,
+    )
+}
+
+/**
+ * A baby's name (shown in the top bar and notifications); empty shows its [placeholder] label. Done saves at once.
+ * With a [removeLabel] (two or more babies) a 48 dp remove button ends the field.
+ */
 @Composable
 private fun NameField(
     name: String,
@@ -306,6 +350,8 @@ private fun NameField(
     onChange: (String) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    removeLabel: String? = null,
+    onRemove: () -> Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
     val focus = LocalFocusManager.current
@@ -315,6 +361,13 @@ private fun NameField(
         modifier = modifier.fillMaxWidth(),
         label = { Text(stringResource(R.string.settings_baby_field)) },
         placeholder = { Text(placeholder) },
+        trailingIcon = removeLabel?.let { label ->
+            {
+                IconButton(onClick = onRemove) {
+                    XIcon(XIcons.delete, contentDescription = label, tint = colors.onSurfaceVariant)
+                }
+            }
+        },
         singleLine = true,
         textStyle = MaterialTheme.typography.titleMedium,
         shape = RoundedCornerShape(16.dp),
@@ -459,10 +512,11 @@ private fun LinkRow(
 
 /**
  * "Pooparazzi · Version 0.1.0", "Privacy policy" (opens it in the browser, BABIES_AND_BACKUP §3.2), "Download my data"
- * (the log and the babies' names as a JSON file, wherever the parent saves it) and "Font licences" (opens the OFL texts).
+ * (the log and the babies' names as one ZIP file, wherever the parent saves it), "Import data" (merges such a file into
+ * the log) and "Font licences" (opens the OFL texts).
  */
 @Composable
-private fun AboutGroup(versionName: String, onOpenPrivacy: () -> Unit, onExport: () -> Unit, onOpenLicences: () -> Unit) {
+private fun AboutGroup(versionName: String, actions: SettingsActions) {
     val colors = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
         GroupRow(first = true, last = false) {
@@ -479,13 +533,16 @@ private fun AboutGroup(versionName: String, onOpenPrivacy: () -> Unit, onExport:
             }
         }
         GroupRow(first = false, last = false) {
-            LinkRow(stringResource(R.string.settings_privacy), stringResource(R.string.settings_privacy_summary), onOpenPrivacy)
+            LinkRow(stringResource(R.string.settings_privacy), stringResource(R.string.settings_privacy_summary), actions::onOpenPrivacy)
         }
         GroupRow(first = false, last = false) {
-            LinkRow(stringResource(R.string.settings_export), stringResource(R.string.settings_export_summary), onExport)
+            LinkRow(stringResource(R.string.settings_export), stringResource(R.string.settings_export_summary), actions::onExport)
+        }
+        GroupRow(first = false, last = false) {
+            LinkRow(stringResource(R.string.settings_import), stringResource(R.string.settings_import_summary), actions::onImport)
         }
         GroupRow(first = false, last = true) {
-            LinkRow(stringResource(R.string.settings_font_licences), stringResource(R.string.settings_font_licences_summary), onOpenLicences)
+            LinkRow(stringResource(R.string.settings_font_licences), stringResource(R.string.settings_font_licences_summary), actions::onOpenLicences)
         }
     }
 }
@@ -504,12 +561,29 @@ private suspend fun Context.exportLog(viewModel: SettingsViewModel, uri: Uri) {
     Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 }
 
-/** The export's file type and suggested name. */
-internal object LogExportFile {
-    const val MIME_TYPE = "application/json"
+/** Merges the export at [uri] into the log ("Import data") and says how it went. */
+private suspend fun Context.importLog(viewModel: SettingsViewModel, uri: Uri) {
+    val message = try {
+        val count = viewModel.importData(checkNotNull(contentResolver.openInputStream(uri)) { "No stream for $uri" })
+        if (count == 0) getString(R.string.settings_import_none) else resources.getQuantityString(R.plurals.settings_import_done, count, count)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w("Settings", "Could not import", e)
+        getString(R.string.settings_import_failed)
+    }
+    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+}
 
-    /** "pooparazzi-log-2026-10-29.json". */
-    fun name(date: LocalDate): String = "pooparazzi-log-$date.json"
+/** The export's file type and suggested name, and what "Import data" offers to open. */
+internal object LogExportFile {
+    const val MIME_TYPE = "application/zip"
+
+    /** The ZIP file (as file managers label it), and the JSON file of earlier versions. */
+    val IMPORT_TYPES = arrayOf(MIME_TYPE, "application/x-zip-compressed", "application/json", "application/octet-stream")
+
+    /** "pooparazzi-log-2026-10-29.zip". */
+    fun name(date: LocalDate): String = "pooparazzi-log-$date.zip"
 }
 
 @Preview(name = "Night", widthDp = 390, heightDp = 1000)

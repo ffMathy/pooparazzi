@@ -133,6 +133,12 @@ interface EntryRepository {
     /** Soft-deletes [id]. Returns the snapshot before deletion (for Undo via [restore]), or null for an unknown id. */
     suspend fun delete(id: String): Entry?
 
+    /**
+     * Soft-deletes every entry of baby [babyId] (removing the baby, BABIES_AND_BACKUP §2.4): each is pushed to the
+     * other device and, with an account, goes to the family's backup as a tombstone. Returns how many were deleted.
+     */
+    suspend fun deleteBabyEntries(babyId: String): Int
+
     /** Undo: writes [previous] back (re-inserting it when needed, for its own baby) with a new [Entry.updatedAtMillis]. */
     suspend fun restore(previous: Entry): Entry
 
@@ -145,6 +151,14 @@ interface EntryRepository {
      * batch. Returns how many entries were stored.
      */
     suspend fun applyRemoteAll(entries: List<Entry>): Int = entries.count { applyRemote(it) }
+
+    /**
+     * Settings › About › "Import data": merges the entries of an export ([com.ffmathy.pooparazzi.core.export.LogExport])
+     * with the rules of [applyRemoteAll] (last-writer-wins by [Entry.updatedAtMillis], each baby's conflicts resolved
+     * once), so importing the same file twice, or a file older than the log, changes nothing. What is stored goes on
+     * to the other device and the backend like a local write. Returns how many entries were stored.
+     */
+    suspend fun importEntries(entries: List<Entry>): Int = applyRemoteAll(entries)
 
     /**
      * Removes soft-deleted entries whose deletion is older than [EntryRules.SOFT_DELETE_RETENTION_MILLIS] and has

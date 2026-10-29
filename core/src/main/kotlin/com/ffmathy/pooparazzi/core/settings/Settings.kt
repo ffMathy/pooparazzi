@@ -37,7 +37,9 @@ enum class AppLanguage(val tag: String?) {
  * The appearance and the language never leave the parent's devices.
  *
  * [babies] are listed in the order they were added (or arrived); there is always at least one ([normalized]). Only the
- * phone edits the list. Each device has its own current baby, [selectedBabyId], which is never synced or merged.
+ * phone edits the list. [removedBabies] are the tombstones of the babies the parent removed ([Baby.removed]): no baby
+ * is in both lists, and a removed baby comes back only when a later version of it wins ([withMergedBabies]). Each
+ * device has its own current baby, [selectedBabyId], which is never synced or merged.
  */
 @Serializable
 data class Settings(
@@ -46,6 +48,8 @@ data class Settings(
     val language: AppLanguage = AppLanguage.SYSTEM,
     /** 0 means "never changed on any device". */
     val updatedAtMillis: Long = 0L,
+    /** The removed babies' tombstones, in the order they were removed (or arrived). */
+    val removedBabies: List<Baby> = emptyList(),
     /** This device's current baby. Local to the device: never synced (hence @Transient) and never merged. */
     @Transient val selectedBabyId: String = Baby.FIRST_ID,
 ) {
@@ -59,13 +63,25 @@ data class Settings(
     /** True with two or more babies, when the switcher and the extra name lines appear (BABIES_AND_BACKUP §2.2). */
     val hasSeveralBabies: Boolean get() = babies.size > 1
 
+    /** The babies and the removed babies' tombstones: every baby the family's backup knows of. */
+    val allBabies: List<Baby> get() = babies + removedBabies
+
+    /** True when [babies] can lose one: there is more than one ([withRemovedBaby]). */
+    val canRemoveBaby: Boolean get() = babies.size > 1
+
     /**
      * These settings as stored: babies with a blank id are dropped, of babies sharing an id only the first is kept,
-     * names are [sanitizeName]d, and an empty list becomes the first baby alone. [selectedBabyId] is left as is.
+     * names are [sanitizeName]d, and an empty list becomes the first baby alone. Tombstones are [Baby.removed] and
+     * nameless, and one whose baby is in [babies] is dropped. [selectedBabyId] is left as is.
      */
     fun normalized(): Settings {
-        val clean = babies.filter { it.id.isNotBlank() }.distinctBy { it.id }.map { it.copy(name = sanitizeName(it.name)) }
-        return copy(babies = clean.ifEmpty { listOf(Baby(Baby.FIRST_ID)) })
+        val clean = babies.filter { it.id.isNotBlank() }.distinctBy { it.id }
+            .map { it.copy(name = sanitizeName(it.name), removed = false) }
+            .ifEmpty { listOf(Baby(Baby.FIRST_ID)) }
+        val live = clean.mapTo(mutableSetOf()) { it.id }
+        val gone = removedBabies.filter { it.id.isNotBlank() && it.id !in live }.distinctBy { it.id }
+            .map { it.copy(name = "", removed = true) }
+        return copy(babies = clean, removedBabies = gone)
     }
 
     /**
@@ -87,31 +103,61 @@ data class Settings(
     }
 
     /**
-     * These settings with unnamed babies appended for the unknown, non-blank [ids], in the given order, stamped
+     * These settings with unnamed babies appended for the unknown (and not removed), non-blank [ids], in the given order, stamped
      * [atMillis] (0, unstamped, for babies adopted from their entries: any stamped version of them wins).
      */
     fun withBabies(ids: Collection<String>, atMillis: Long = 0L): Settings {
-        val known = babies.mapTo(mutableSetOf()) { it.id }
+        // A removed baby's entries never bring it back.
+        val known = (babies + removedBabies).mapTo(mutableSetOf()) { it.id }
         val added = ids.filter { it.isNotBlank() && known.add(it) }.map { Baby(it, updatedAtMillis = atMillis) }
         return if (added.isEmpty()) this else copy(babies = babies + added)
     }
 
     /**
-     * These settings with [incoming] babies (from the family's backup) merged in, one by one: unknown babies are
-     * appended, and a version that [Baby.winsOver] the stored one replaces it in its place. Names are [sanitizeName]d.
+     * These settings with [incoming] babies (from the family's backup, or tombstones from the other device) merged in,
+     * one by one: unknown babies are appended, and a version that [Baby.winsOver] the stored one replaces it in its
+     * place. A winning tombstone moves its baby to [removedBabies] (never the last baby, which stays), and a winning
+     * live version of a removed baby brings it back at the end. Names are [sanitizeName]d.
      */
     fun withMergedBabies(incoming: Collection<Baby>): Settings {
-        val merged = babies.toMutableList()
+        val live = babies.toMutableList()
+        val gone = removedBabies.toMutableList()
         for (raw in incoming) {
             if (raw.id.isBlank()) continue
-            val baby = raw.copy(name = sanitizeName(raw.name))
-            val at = merged.indexOfFirst { it.id == baby.id }
+            val baby = if (raw.removed) raw.copy(name = "") else raw.copy(name = sanitizeName(raw.name))
+            val liveAt = live.indexOfFirst { it.id == baby.id }
+            val goneAt = gone.indexOfFirst { it.id == baby.id }
+            val stored = live.getOrNull(liveAt) ?: gone.getOrNull(goneAt)
+            if (stored != null && !baby.winsOver(stored)) continue
             when {
-                at < 0 -> merged += baby
-                baby.winsOver(merged[at]) -> merged[at] = baby
+                baby.removed && liveAt >= 0 && live.size == 1 -> continue
+                baby.removed -> {
+                    if (liveAt >= 0) live.removeAt(liveAt)
+                    if (goneAt >= 0) gone[goneAt] = baby else gone += baby
+                }
+                else -> {
+                    if (goneAt >= 0) gone.removeAt(goneAt)
+                    if (liveAt >= 0) live[liveAt] = baby else live += baby
+                }
             }
         }
-        return if (merged == babies) this else copy(babies = merged)
+        return if (live == babies && gone == removedBabies) this else copy(babies = live, removedBabies = gone)
+    }
+
+    /**
+     * These settings with baby [id] removed: it leaves [babies] and its tombstone ([Baby.tombstone], stamped [atMillis])
+     * joins [removedBabies], and the first baby becomes the current one if it was. Unchanged for an unknown id and for
+     * the last baby (there is always one).
+     */
+    fun withRemovedBaby(id: String, atMillis: Long): Settings {
+        val baby = babies.firstOrNull { it.id == id } ?: return this
+        if (!canRemoveBaby) return this
+        val left = babies - baby
+        return copy(
+            babies = left,
+            removedBabies = removedBabies.filter { it.id != id } + baby.tombstone(atMillis),
+            selectedBabyId = if (selectedBabyId == id) left.first().id else selectedBabyId,
+        )
     }
 
     /**

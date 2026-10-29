@@ -53,6 +53,7 @@ import java.io.IOException
  * | Local write on this device (conflict losers included) | true | [cloudBackup] |
  * | Merged from the other device ([applyRemoteAll]) | false | [cloudBackup] |
  * | Merged from the backend ([applyCloudEntries]) | true | false |
+ * | Imported from an export ([importEntries]) | true | [cloudBackup] |
  * | A row identical to the backend's version | unchanged | cleared |
  * | A row that beats the backend's version | unchanged | [cloudBackup] |
  *
@@ -196,6 +197,18 @@ class RoomEntryRepository(
         return before
     }
 
+    override suspend fun deleteBabyEntries(babyId: String): Int {
+        val ids = database.withTransaction {
+            dao.activeOf(babyId).map { row ->
+                val stored = row.toEntry()
+                writeLocal(stored.copy(deleted = true, updatedAtMillis = nextStamp(stored.updatedAtMillis)), row)
+                row.id
+            }
+        }
+        push(ids)
+        return ids.size
+    }
+
     override suspend fun restore(previous: Entry): Entry {
         val restoring = previous.normalized().requireValid()
         val written = database.withTransaction {
@@ -250,6 +263,12 @@ class RoomEntryRepository(
         val merged = merge(entries, MergeSource.CLOUD)
         push(merged.written + merged.losers)
         if (merged.failed > 0) throw IOException("Could not merge ${merged.failed} of ${entries.size} entries from the backend")
+        return merged.written.size
+    }
+
+    override suspend fun importEntries(entries: List<Entry>): Int {
+        val merged = merge(entries, MergeSource.IMPORT)
+        push(merged.written + merged.losers)
         return merged.written.size
     }
 
@@ -317,7 +336,7 @@ class RoomEntryRepository(
     // ---- Internals ----------------------------------------------------------------------------
 
     /** Where a merged batch comes from; decides the pending flags of the rows it writes (see the class table). */
-    private enum class MergeSource { PEER, CLOUD }
+    private enum class MergeSource { PEER, CLOUD, IMPORT }
 
     /**
      * What a merge did: the ids it wrote, this device's conflict losers it soft-deleted, and how many entries could
@@ -328,8 +347,8 @@ class RoomEntryRepository(
     private enum class Merge { SKIPPED, INSERTED, UPDATED }
 
     /**
-     * The merge shared by [applyRemoteAll] and [applyCloudEntries]: entries are applied oldest write first
-     * (last-writer-wins, invalid and purged ones skipped), then conflicts are resolved once ([resolveConflicts]).
+     * The merge shared by [applyRemoteAll], [applyCloudEntries] and [importEntries]: entries are applied oldest write
+     * first (last-writer-wins, invalid and purged ones skipped), then conflicts are resolved once ([resolveConflicts]).
      */
     private suspend fun merge(entries: List<Entry>, source: MergeSource): Merged {
         val written = mutableListOf<String>()
@@ -369,7 +388,7 @@ class RoomEntryRepository(
         val fromCloud = source == MergeSource.CLOUD
         val incoming = EntryEntity.from(
             kept,
-            pendingSync = fromCloud,
+            pendingSync = source != MergeSource.PEER,
             createdLocally = false,
             cloudPending = !fromCloud && cloudBackup(),
         )

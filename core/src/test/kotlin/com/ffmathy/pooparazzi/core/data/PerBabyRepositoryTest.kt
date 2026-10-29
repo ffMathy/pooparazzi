@@ -229,4 +229,21 @@ class PerBabyRepositoryTest {
         assertTrue(repo.applyRemote(Entry.feed(FeedType.FORMULA, now - minute, id = "remote-blank").copy(babyId = "")))
         assertEquals(listOf("remote-blank"), repo.observeEntries().first().map { it.id })
     }
+
+    @Test
+    fun removingABabyDeletesItsEntriesOnly() = test {
+        val noa = repo.logFeed(FeedType.FORMULA, now - 10 * minute)
+        selected.value = twin
+        val sleep = repo.startSleep(now - 20 * minute).getOrThrow()
+        val diaper = repo.logDiaper(now - 5 * minute, pee = true, poop = false)
+        repo.delete(diaper.id)
+        sync.pushed.clear()
+
+        assertEquals("the running sleep; the deleted diaper stays as it is", 1, repo.deleteBabyEntries(twin))
+        assertEquals(listOf(noa), repo.observeAllEntries().first())
+        assertTrue(repo.get(sleep.id)!!.deleted)
+        assertEquals("pushed to the other device", listOf(sleep.id), sync.pushed.map { it.id })
+        assertTrue(sync.pushed.single().deleted)
+        assertEquals(0, repo.deleteBabyEntries(twin))
+    }
 }

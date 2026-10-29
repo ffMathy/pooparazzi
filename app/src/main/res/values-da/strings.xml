@@ -109,6 +109,11 @@
     <string name="settings_baby_field">Navn</string>
     <string name="settings_add_baby">Tilføj et barn</string>
     <string name="settings_add_baby_watch_update">Opdatér Pooparazzi på dit ur først.</string>
+    <string name="settings_remove_baby_cd">Fjern %1$s</string>
+    <string name="settings_remove_baby_title">Fjern %1$s?</string>
+    <string name="settings_remove_baby_body">Barnets log bliver slettet fra telefonen og dit ur. Det kan ikke fortrydes.</string>
+    <string name="settings_remove_baby_body_family">Barnets log bliver slettet for alle i din familie og fra din backup. Det kan ikke fortrydes.</string>
+    <string name="settings_remove_baby_confirm">Fjern</string>
     <string name="settings_babies_hint">Navnene bliver på telefonen og dit ur.</string>
     <string name="settings_appearance_hint">Auto bruger Nat om aftenen og natten, mens barnet sover, og når telefonen bruger mørkt tema.</string>
     <string name="settings_section_watch">Ur</string>
@@ -261,12 +266,20 @@
     <string name="settings_privacy">Privatlivspolitik</string>
     <string name="settings_privacy_summary">Hvad der gemmes, hvor, og dine rettigheder</string>
     <string name="settings_export">Download mine data</string>
-    <string name="settings_export_summary">Hele loggen og børnenes navne som en JSON-fil</string>
+    <string name="settings_export_summary">Hele loggen og børnenes navne som en ZIP-fil</string>
     <plurals name="settings_export_done">
         <item quantity="one">Gemte %1$d registrering</item>
         <item quantity="other">Gemte %1$d registreringer</item>
     </plurals>
     <string name="settings_export_failed">Kunne ikke gemme filen. Prøv igen.</string>
+    <string name="settings_import">Importér data</string>
+    <string name="settings_import_summary">Flet en downloadet ZIP-fil ind i loggen</string>
+    <plurals name="settings_import_done">
+        <item quantity="one">Importerede %1$d registrering</item>
+        <item quantity="other">Importerede %1$d registreringer</item>
+    </plurals>
+    <string name="settings_import_none">Intet nyt at importere</string>
+    <string name="settings_import_failed">Kunne ikke læse filen. Vælg en ZIP-fil fra Download mine data.</string>
 
     <string name="forecast_in">om %1$s</string>
     <string name="forecast_soon">snart</string>

@@ -8,7 +8,7 @@ This document extends [`DESIGN_SPEC.md`](DESIGN_SPEC.md), which stays the source
 2. **A breast feed is one time, not a timer.** Like Formula and Food it records only its time (Now or −5m / −10m / −15m), plus an optional **side order**, ticked with two checkboxes, Left and Right, before it is logged. The **order of the ticks is the order recorded** (Left then Right = Left → Right). Nothing asks for a duration. (An earlier version timed breastfeeds with a start and an end; see "Compatibility" in §1.)
 3. **Diaper Pee and Poop are independent toggles** (checkboxes). When Poop is on, the parent can also pick a **colour** and a **texture**. All of these are **optional**: a diaper with nothing ticked is a plain diaper change.
 4. **The whole app is in English and Danish**, through Android string resources, with an in-app language choice.
-5. **Statistics** (§8): averages per day of feeds, pee, poop and sleep, the last 7 days next to a chosen range, with a bar chart. It opens from History.
+5. **Statistics** (§8): averages per day of feeds, pee, poop and sleep over a chosen range, with a bar chart. It opens from History.
 
 **Minimal data.** The user asked that the data required be minimal: only the times are ever required. Feed type, breast side, pee, poop, colour and texture are all optional extras.
 
@@ -360,7 +360,7 @@ These names are what the apps code against.
   - `dayEntries(day)` for History.
 - `fun lampState(summary): LampState`, one of `FeedIdle`, `SleepRunning`.
 - `fun dailyCounts(entries, from, to, now, zone): List<DayCounts>`: History's counts for every day of a range, in one pass.
-- Statistics (§8): `fun statsReport(entries, now, zone, range): StatsReport?` (the last 7 days, the last 30 days and the comparison window; null only when nothing is logged), `StatsReport.chart(metric): StatsChart`, `binDays(dayCount)`, and `StatsRange.clamped` / `normalised` for chosen dates.
+- Statistics (§8): `fun statsReport(entries, now, zone, range): StatsReport?` (the chosen range's window; null only when nothing is logged), `StatsReport.chart(metric): StatsChart`, `binDays(dayCount)`, and `StatsRange.clamped` / `normalised` for chosen dates.
 
 **`format/`**
 - `DurationFormatter` (units injected; resource-backed factory `DurationFormatter.from(context)`).
@@ -396,7 +396,7 @@ These names are what the apps code against.
 
 **Placement.** Statistics is a destination over History. The `chart` icon button at the end of History's top bar opens it (TalkBack: "Statistics"); Back, in the top bar or from the system, returns to History with its day kept, and a second tap during the transition is dropped. There is no deep link, widget or Home entry point; a widget or notification link still returns to Home. History's list, its single scrollable node and its single "Back" are unchanged: History stays "one day", Statistics is "many days".
 
-**What it shows.** Averages per day of feeds · pee · poop · sleep (§4's order). The **last 7 days** are always the left column (displaySmall); the right column (titleLarge) is a **comparison range**, the **last 30 days** by default. The rows are a single-select accordion: the open row shows a bar chart of the comparison range. Poop is open on every new visit.
+**What it shows.** Averages per day of feeds · pee · poop · sleep (§4's order) over **one range**, chosen with the range chip: the **last 30 days** by default. Only that range is shown; there is no second column to compare with. The rows are a single-select accordion: the open row shows a bar chart of the range. Poop is open on every new visit.
 
 ### 8.1 Ranges
 
@@ -404,14 +404,14 @@ Only whole days count: every window ends **yesterday**, and the **first logged d
 
 | Range | Days | Reference (`history()` at Mon 26 Oct 2026) |
 |---|---|---|
-| Last 7 days (left column, always) | yesterday − 6 … yesterday | Mon 19 – Sun 25 Oct |
-| Last 30 days (default comparison) | yesterday − 29 … yesterday | Sat 26 Sep – Sun 25 Oct |
+| Last 7 days | yesterday − 6 … yesterday | Mon 19 – Sun 25 Oct |
+| Last 30 days (default) | yesterday − 29 … yesterday | Sat 26 Sep – Sun 25 Oct |
 | Last 90 days | yesterday − 89 … yesterday | Tue 28 Jul – Sun 25 Oct ("33 of 90 days logged") |
 | All days | `firstDay` … yesterday | Wed 23 Sep – Sun 25 Oct |
 | Chosen dates | picked in the date range dialog | e.g. 5 – 18 Oct |
 
 - **Presets are nominal.** "Last 30 days" is always 30 days, even for a new user: days before `firstDay` are drawn empty and counted in "n of N days logged". Presets are relative (they move at midnight); chosen dates are absolute.
-- **The range chip** (like the edit sheet's day chip) shows "Last 30 days", "Last 90 days", "All days" or "Chosen dates". Its menu offers the presets and "Choose dates…", which opens the M3 `DateRangePicker` in a `DatePickerDialog`: selectable days are `firstDay` … yesterday, a start alone is a one-day range, and Cancel changes nothing. Its day, weekday and year labels use dataMedium (Google Sans Flex, tabular figures) instead of the default bodyLarge, so the dialog keeps the digit rule (DESIGN_SPEC §5.7).
+- **The range chip** (like the edit sheet's day chip) shows "Last 7 days", "Last 30 days", "Last 90 days", "All days" or "Chosen dates". Its menu offers the presets and "Choose dates…", which opens the M3 `DateRangePicker` in a `DatePickerDialog`: selectable days are `firstDay` … yesterday, a start alone is a one-day range, and Cancel changes nothing. Its day, weekday and year labels use dataMedium (Google Sans Flex, tabular figures) instead of the default bodyLarge, so the dialog keeps the digit rule (DESIGN_SPEC §5.7).
 - **Chosen dates are cut** to `firstDay` … yesterday on every build (entirely outside: the last 30 days). On OK, dates equal to a preset's become that preset.
 - **Saved state:** the open row and the range survive rotation (view model) and process death (`statistics_metric`, `statistics_range`, and `statistics_from` / `statistics_to` as epoch days for chosen dates). Anything unknown restores as the last 30 days with Poop open.
 
@@ -427,34 +427,33 @@ Only whole days count: every window ends **yesterday**, and the **first logged d
 - **"Forgot to log" is never 0.** A real zero is a counted day with diapers logged and no poop: averaged in, and drawn as a 2 dp mark.
 - **Daily values** are History's counts for the day (`dailyCounts`): sleep is the clock minutes inside the day, including the part of a sleep that began the evening before. DST days count as one day with their real minutes.
 - **Averages** use integers and round half up: counts to tenths, `(20·S + n) / (2·n)` ("6.7" / "6,7" through `formatTenths`), sleep to whole minutes, `(2·S + n) / (2·n)` ("14h 01m" / "14t 01m"). No counted day shows "–".
-- **Coverage:** a window with days with nothing logged (or before logging) adds "3 of 7 days logged" under its dates.
+- **Coverage:** a range with days with nothing logged (or before logging) adds "3 of 30 days logged" under its dates.
 
 ### 8.3 Layout (390 × 844, Night and Day alike)
 
 | Band | Content |
 |---|---|
 | Top bar | Back; "Statistics" titleLarge (a heading); under it "Average per day" labelMedium onSurfaceVariant (not in the empty state). No action at the end |
-| Period header | "Last 7 days" labelLarge with its dates ("19 Oct – 25 Oct", dataSmall onSurfaceVariant) over the left column; the range chip with its dates over the right one; coverage lines when they apply |
-| Rows | 4 grouped cards (gap 2, r 20 / r 6, surfaceContainer, padding 16 / 12 / 8): the kind's glyph 20 in its strong colour + name labelLarge + `chevronDown` 20 when closed; then the 7-day average (displaySmall) and the range's (titleLarge) on one baseline, both shrinking to 12 sp rather than clip; under another range, "Last 30 days 1.8" (dataSmall) keeps the 30-day figure on screen |
+| Period header | the range chip, inset 16 like the rows' content, with its dates under it ("26 Sep – 25 Oct", dataSmall onSurfaceVariant) and a coverage line when it applies |
+| Rows | 4 grouped cards (gap 2, r 20 / r 6, surfaceContainer, padding 16 / 12 / 8): the kind's glyph 20 in its strong colour + name labelLarge + `chevronDown` 20 when closed; then the range's average (displaySmall), shrinking to 12 sp rather than clip |
 | Open row | adds its chart; the card grows with `animateContentSize` (left out with reduced motion) |
 | Footnote | "Averages count whole days up to yesterday. …" bodySmall onSurfaceVariant |
 
-The column width is `(content width − 2 × 16 − 12) / 2`: 153 dp at 390 dp, 138 dp at 360 dp. Everything scrolls in one column (the menu and the dialog are popups). At large font sizes labels and dates wrap; the numbers and the range chip's label stay on one line and shrink.
+Everything scrolls in one column (the menu and the dialog are popups). At large font sizes labels and dates wrap; the numbers and the range chip's label stay on one line and shrink.
 
 ### 8.4 Chart
 
 - **Block:** the scale label (labelSmall: the top count "5", or "16h 00m" for sleep) over a decorative 1 dp outlineVariant hairline; the plot (full width × 112 dp, a `Canvas`); the first and last dates; the legend; "Days with no diapers logged are left out." (per kind) when the window has gaps. With nothing counted the block is "Nothing logged on these days."
 - **Bars:** one per day up to 62 days; longer windows use 7-day bars cut from the end (14-, 21-day … beyond 434 days), so there are never more than 62 bars and the newest bar is exactly the last 7 days. A bar's value is the average per counted day. Bars are 60 % of their slot (2–12 dp wide, at least 3 tall), r 3, in the kind's strong colour; a gap draws nothing.
-- **The last 7 days** sit on a band (surfaceContainerHighest, r 6, with a 1 dp outline so it reaches 3 : 1 even where no line crosses it) when the window ends yesterday and is longer than a week, with their average as a solid 2 dp onSurface line across the band (daily bars only). **The range's average** is a dashed 2 dp onSurfaceVariant line across the plot. Both lines sit on 4 dp halos (band and card colour) so they stay visible over the bars.
+- **The range's average** is a dashed 2 dp onSurfaceVariant line across the plot, on a 4 dp halo in the card colour so it stays visible over the bars. Nothing else is marked: no second range is drawn.
 - **Scale:** counts up to the next whole number (at least 1), sleep up to the next whole hour.
-- **Legend:** "Last 7 days" (outlined band swatch, with the line when drawn), the range's name (dashed swatch), "Each bar is 7 days" for binned bars; in a row, or stacked for three items or from 130 % font.
-- **Not by colour alone:** band + solid line versus dashed line, legend words, a zero mark versus no mark, one series per chart named by the row. Bars reach 3 : 1 on the card and on the band in both themes (weakest: Night poop 3.13 on the band).
+- **Legend:** the range's name (dashed swatch), "Each bar is 7 days" for binned bars; in a row, or stacked from 130 % font.
+- **Not by colour alone:** the dashed line, legend words, a zero mark versus no mark, one series per chart named by the row. Bars reach 3 : 1 on the card in both themes.
 
 ### 8.5 TalkBack
 
-- **Header:** "Last 7 days, 19 October to 25 October" (a heading), with ", 3 of 7 days logged" when it applies.
-- **Range chip:** a button, click label "Change range": "Last 30 days, 26 September to 25 October" or "Chosen dates, 5 October to 18 October".
-- **Rows** are radio buttons in a selectable group: "Poop. Last 7 days: 0.7 a day. Last 30 days: 1.8 a day."; under another range "Feeds. Last 7 days: 6.7 a day. Chosen dates: 7.1 a day. Last 30 days: 7.1 a day."; durations in words ("14 hours 1 minute a day"); "not logged" instead of "–".
+- **Range chip:** a button, click label "Change range": "Last 30 days, 26 September to 25 October" or "Chosen dates, 5 October to 18 October", with ", 3 of 30 days logged" when it applies.
+- **Rows** are radio buttons in a selectable group: "Poop. Last 30 days: 1.8 a day."; under another range "Feeds. Chosen dates: 7.1 a day."; durations in words ("14 hours 1 minute a day"); "not logged" instead of "–".
 - **Chart:** one node: "Poop per day, 26 September to 25 October. Highest 5 on Wednesday 7 October. Lowest 0 on Friday 23 October.", for bars of several days "…, each bar 7 days. Highest 3.3 from 11 May to 17 May. …" (the oldest bar can be a single day, and is then said like a day: "Lowest 1.0 on Sunday 23 August."), then "2 days with no diapers logged are left out." and "Days before 23 October are left out." when they apply.
 - Spoken dates use full month names; the year is added when a range spans two years or is not in the current year.
 
