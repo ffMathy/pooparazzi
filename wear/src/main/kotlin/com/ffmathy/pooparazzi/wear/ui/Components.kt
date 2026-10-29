@@ -302,6 +302,7 @@ fun StatusCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     transformation: SurfaceTransformation? = null,
+    forecast: String? = null,
 ) {
     val ambient = isAmbient()
     val colors = MaterialTheme.colorScheme
@@ -341,7 +342,15 @@ fun StatusCard(
                 style = WatchType.labelSmall,
                 color = if (ambient) WatchAmbient.content else colors.onSurfaceVariant,
                 minSize = 11,
-            )
+            )            // What the last week expects next ("Next sleep in 55m"; V1_ADDITIONS §9), under the facts.
+            if (forecast != null) {
+                AutoSizeLine(
+                    text = forecast,
+                    style = WatchType.labelSmall,
+                    color = if (ambient) WatchAmbient.content else colors.onSurfaceVariant,
+                    minSize = 11,
+                )
+            }
         }
     }
 }

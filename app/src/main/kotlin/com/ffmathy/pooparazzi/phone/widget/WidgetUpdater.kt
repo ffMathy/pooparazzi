@@ -71,6 +71,7 @@ object WidgetUpdater {
         val zone = ZoneId.systemDefault()
         val work = WorkManager.getInstance(context)
         PrefsWidgetMemoStore.get(context).memo.value.nextExpiry(now)?.let { at -> work.refreshAt(context, "expiry", at, now) }
+        WidgetSource.from(context).current().forecastExpiry(now)?.let { at -> work.refreshAt(context, "forecast", at, now) }
         if (graph.settings.current().appearance == Appearance.AUTO) {
             work.refreshAt(context, "night", nextNightBoundary(now, zone), now)
         }

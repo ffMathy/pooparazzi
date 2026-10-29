@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.phone.widget
 
+import androidx.annotation.StringRes
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -303,16 +304,23 @@ private fun LogButtons(
         listOf(feedLabel, diaperLabel).all { measure.fits(it, LabelSize, layout.buttonWidth - 8.dp) } -> FaceStyle.Regular
         else -> FaceStyle.Compact
     }
+    // What the last week expects next (V1_ADDITIONS §9), under the label of the regular face only. When either button
+    // has a line, both keep its room, so the icons stay aligned.
+    val feedNext = snapshot.feedForecast?.takeIf { style == FaceStyle.Regular }
+    val poopNext = snapshot.poopForecast?.takeIf { style == FaceStyle.Regular }
+    val sub = feedNext != null || poopNext != null
+    fun described(@StringRes name: Int, spoken: String?) =
+        strings.forBaby(strings.string(name), baby).let { if (spoken == null) it else strings.string(R.string.spoken_pair, it, spoken) }
     Row(modifier) {
         val cell = GlanceModifier.defaultWeight().fillMaxHeight()
         val feed = colors.feed
-        SheetButton(HomeLaunch.Feed, feed, strings.forBaby(strings.string(R.string.widget_cd_log_feed), baby), cell) {
-            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style)
+        SheetButton(HomeLaunch.Feed, feed, described(R.string.widget_cd_log_feed, feedNext?.let(strings::feedForecastSpoken)), cell) {
+            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style, sub = feedNext?.let(strings::feedForecast) ?: "\u00A0".takeIf { sub })
         }
         Spacer(GlanceModifier.width(8.dp))
         val diaper = colors.diaper
-        SheetButton(HomeLaunch.Diaper, diaper, strings.forBaby(strings.string(R.string.widget_cd_log_diaper), baby), cell) {
-            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style)
+        SheetButton(HomeLaunch.Diaper, diaper, described(R.string.widget_cd_log_diaper, poopNext?.let(strings::poopForecastSpoken)), cell) {
+            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style, sub = poopNext?.let(strings::poopForecast) ?: "\u00A0".takeIf { sub })
         }
     }
 }
@@ -331,12 +339,13 @@ private val CompactTopSpace = 10.dp
  * the regular face's.
  */
 @Composable
-private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle) {
+private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle, sub: String? = null) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
         if (style == FaceStyle.Compact) Spacer(GlanceModifier.height(CompactTopSpace))
-        WidgetIcon(icon, iconColor, if (style == FaceStyle.Compact) 20.dp else 24.dp)
+        // With the forecast line the face tightens (icon 20, gap 2), so the three lines keep their padding in the button.
+        WidgetIcon(icon, iconColor, if (style == FaceStyle.Compact || sub != null) 20.dp else 24.dp)
         if (style != FaceStyle.IconOnly) {
-            Spacer(GlanceModifier.height(if (style == FaceStyle.Compact) 0.dp else 6.dp))
+            Spacer(GlanceModifier.height(if (style == FaceStyle.Compact) 0.dp else if (sub != null) 2.dp else 6.dp))
             WidgetText(
                 text = label,
                 color = labelColor,
@@ -345,13 +354,15 @@ private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: 
                 align = TextAlign.Center,
                 modifier = GlanceModifier.padding(horizontal = 4.dp),
             )
+            if (sub != null) WidgetText(sub, labelColor, 11.sp, maxLines = 1, align = TextAlign.Center)
         }
     }
 }
 
 /**
  * The sleep toggle: "Start sleep" with "Awake since 13:27" at the end, or the checked "Woke up" (r 20, lit fill, 2 dp
- * strong border) with "Asleep since 02:05". The end text wraps rather than clips, and is dropped when narrow.
+ * strong border) with "Asleep since 02:05". Under it, what the last week expects: "Next sleep ~15:25" or "Wakes ~05:30"
+ * (V1_ADDITIONS §9). The end text wraps rather than clips when alone, and is dropped when narrow.
  */
 @Composable
 private fun SleepToggle(snapshot: WidgetSnapshot, strings: WidgetStrings, colors: WidgetColors, layout: LogLayout, modifier: GlanceModifier) {
@@ -364,6 +375,8 @@ private fun SleepToggle(snapshot: WidgetSnapshot, strings: WidgetStrings, colors
         awakeSince != null -> strings.awakeSince(awakeSince)
         else -> null
     }
+    val forecast = snapshot.sleepForecast?.let { strings.sleepForecast(it, sleepStart != null) }
+    val forecastSpoken = snapshot.sleepForecast?.let { strings.sleepForecastSpoken(it, sleepStart != null) }
     val name = strings.forBaby(
         strings.string(if (sleepStart != null) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep),
         strings.babyLabel(snapshot),
@@ -374,19 +387,19 @@ private fun SleepToggle(snapshot: WidgetSnapshot, strings: WidgetStrings, colors
         border = if (sleepStart != null) sleep.strong else null,
         radius = if (sleepStart != null) 20.dp else 34.dp,
         action = actionRunCallback<ToggleSleepAction>(),
-        description = status?.let { strings.string(R.string.spoken_pair, name, it) } ?: name,
+        description = listOfNotNull(status, forecastSpoken).fold(name) { said, part -> strings.string(R.string.spoken_pair, said, part) },
     ) {
         val icon = if (sleepStart != null) XDrawables.wake else XDrawables.sleep
         if (!layout.labels) {
             WidgetIcon(icon, sleep.strong, 24.dp)
         } else {
-            SleepToggleRow(icon, label, status, sleepStart != null, layout, colors)
+            SleepToggleRow(icon, label, status, forecast, sleepStart != null, layout, colors)
         }
     }
 }
 
 @Composable
-private fun SleepToggleRow(icon: Int, label: String, status: String?, asleep: Boolean, layout: LogLayout, colors: WidgetColors) {
+private fun SleepToggleRow(icon: Int, label: String, status: String?, forecast: String?, asleep: Boolean, layout: LogLayout, colors: WidgetColors) {
     val sleep = colors.sleep
     Row(
         // Inside the 2 dp border the content keeps its 20 dp inset.
@@ -403,7 +416,15 @@ private fun SleepToggleRow(icon: Int, label: String, status: String?, asleep: Bo
                 WidgetIcon(XDrawables.sleepRunning, sleep.strong, 16.dp)
                 Spacer(GlanceModifier.width(6.dp))
             }
-            WidgetText(status, sleep.onContainer, 14.sp, maxLines = 2, align = TextAlign.End)
+            if (forecast == null) {
+                WidgetText(status, sleep.onContainer, 14.sp, maxLines = 2, align = TextAlign.End)
+            } else {
+                // The forecast goes under the status, one line each (V1_ADDITIONS §9).
+                Column(horizontalAlignment = Alignment.End) {
+                    WidgetText(status, sleep.onContainer, 14.sp, maxLines = 1, align = TextAlign.End)
+                    WidgetText(forecast, sleep.onContainer, 13.sp, maxLines = 1, align = TextAlign.End)
+                }
+            }
         }
     }
 }

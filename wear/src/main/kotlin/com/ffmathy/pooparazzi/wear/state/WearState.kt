@@ -1,7 +1,9 @@
 package com.ffmathy.pooparazzi.wear.state
 
 import androidx.compose.runtime.Immutable
+import com.ffmathy.pooparazzi.core.domain.Expected
 import com.ffmathy.pooparazzi.core.domain.Summary
+import com.ffmathy.pooparazzi.core.domain.forecast
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
@@ -48,6 +50,10 @@ data class MainUiState(
     val sync: SyncStatus,
     val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),
     val babyId: String = Baby.FIRST_ID,
+    /** The expected wake-up while asleep, else the expected next sleep (V1_ADDITIONS §9); null when unpredictable. */
+    val sleepForecast: Expected? = null,
+    /** The expected next feed (V1_ADDITIONS §9); null when unpredictable. */
+    val feedForecast: Expected? = null,
 ) {
     val mode: MainMode
         get() = if (runningSleep != null) MainMode.ASLEEP else MainMode.IDLE
@@ -77,7 +83,7 @@ data class MainUiState(
             sync = sync,
             babies = babies,
             babyId = babyId,
-        )
+        ).let { state -> forecast(summary).let { state.copy(sleepForecast = it.sleep, feedForecast = it.feed) } }
 
         /** Before the first database read. */
         fun loading(now: Long, zone: ZoneId) = MainUiState(

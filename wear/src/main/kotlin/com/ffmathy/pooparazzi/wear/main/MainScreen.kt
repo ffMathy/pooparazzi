@@ -193,7 +193,10 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                         item(key = "adjust-start") {
                             XListButton(
                                 label = stringResource(CoreR.string.action_adjust_start),
-                                secondaryLabel = if (small) runningSince(state, f) else null,
+                                // The expected wake-up as a clock time ("Wakes ~05:25", short enough for one line; V1_ADDITIONS
+                                // §9); small watches put it under "Asleep since 02:05".
+                                secondaryLabel = listOfNotNull(if (small) runningSince(state, f) else null, wakeForecastClock(state, f))
+                                    .joinToString("\n").ifEmpty { null },
                                 onClick = { actions.onAdjust(running, TimeField.START) },
                                 icon = { XIcon(XIcons.clock, null, tint = iconTint(MaterialTheme.colorScheme.onSurface), size = 26.dp) },
                                 border = ambientBorder(MaterialTheme.colorScheme.outline),
@@ -214,6 +217,7 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                             title = card.title,
                             detail = card.detail,
                             spoken = card.spoken,
+                            forecast = card.forecast,
                             onClick = { actions.onAdjust(card.entry, card.field) },
                             transformation = SurfaceTransformation(spec),
                             modifier = Modifier.transformedHeight(this, spec).padding(horizontal = 24.dp),
@@ -582,6 +586,28 @@ private fun LampNumeral(elapsed: Long, f: Formatters, color: Color, spoken: Stri
     }
 }
 
+/**
+ * What the last week expects next for sleep (V1_ADDITIONS §9): "Wakes in 2h 15m" while asleep, "Next sleep in 55m"
+ * while awake, "… soon" when due; null when the week cannot predict it. [spoken] says the duration in words.
+ */
+@Composable
+private fun sleepForecastLine(state: MainUiState, f: Formatters, spoken: Boolean = false): String? {
+    val expected = state.sleepForecast ?: return null
+    val asleep = state.runningSleep != null
+    val remaining = expected.remainingMillis(state.now)
+        ?: return stringResource(if (asleep) CoreR.string.forecast_wakes_soon else CoreR.string.forecast_next_sleep_soon)
+    val amount = if (spoken) f.duration.spoken(remaining) else f.duration.format(remaining)
+    return stringResource(if (asleep) CoreR.string.forecast_wakes_in else CoreR.string.forecast_next_sleep_in, amount)
+}
+
+/** "Wakes ~05:25" (or "Wakes soon") while asleep; null when the week cannot predict it. */
+@Composable
+private fun wakeForecastClock(state: MainUiState, f: Formatters): String? {
+    val expected = state.sleepForecast?.takeIf { state.runningSleep != null } ?: return null
+    if (expected.remainingMillis(state.now) == null) return stringResource(CoreR.string.forecast_wakes_soon)
+    return stringResource(CoreR.string.forecast_wakes_at, f.clock.format(expected.roundedAtMillis, f.zone))
+}
+
 /** "Asleep since 02:05" for the small-watch Adjust start item. */
 @Composable
 private fun runningSince(state: MainUiState, f: Formatters): String? {
@@ -678,6 +704,7 @@ private class CardModel(
     val title: String,
     val detail: String,
     val spoken: String,
+    val forecast: String? = null,
 )
 
 /**
@@ -695,22 +722,49 @@ private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
     val lastDiaperSpoken = stringResource(CoreR.string.spoken_last_diaper)
     val bothIcon = rememberBothIcon(events.pee.strong, events.poop.strong)
 
+    val feedForecast = state.feedForecast
     if (state.mode == MainMode.ASLEEP) {
         state.lastFeed?.let { feed ->
+            // The expected next feed as the card's third line (V1_ADDITIONS §9).
+            val next = feedForecast?.let { expected ->
+                expected.remainingMillis(now)
+                    ?.let { stringResource(CoreR.string.forecast_next_feed_in, f.duration.format(it)) to stringResource(CoreR.string.forecast_next_feed_in, f.duration.spoken(it)) }
+                    ?: stringResource(CoreR.string.forecast_next_feed_soon).let { it to it }
+            }
+            val spoken = f.spokenAgo(lastFeedSpoken, spokenFeedType(feed), feed.startMillis, now)
             cards += CardModel(
                 "last-feed", feed, TimeField.START, XIcons.forFeedType(feed.feedType), events.feed.strong,
                 lastFedWord, f.agoAndClock(feed.startMillis, now) + feedSideSuffix(feed),
-                f.spokenAgo(lastFeedSpoken, spokenFeedType(feed), feed.startMillis, now),
+                next?.let { stringResource(R.string.spoken_pair, spoken, it.second) } ?: spoken,
+                next?.first,
             )
+        }
+    } else {
+        // Idle, the hero shows the last feed; the expected next one gets its own card, first (V1_ADDITIONS §9). It opens
+        // the last feed, like the hero.
+        val feed = state.lastFeed
+        if (feed != null && feedForecast != null) {
+            val title = stringResource(CoreR.string.forecast_next_feed)
+            val remaining = feedForecast.remainingMillis(now)
+            val clock = f.clock.format(feedForecast.roundedAtMillis, f.zone)
+            val detail = remaining?.let { stringResource(CoreR.string.forecast_in_at, f.duration.format(it), clock) }
+                ?: stringResource(CoreR.string.forecast_soon_word)
+            val spoken = remaining?.let { stringResource(CoreR.string.forecast_next_feed_in, f.duration.spoken(it)) }
+                ?: stringResource(CoreR.string.forecast_next_feed_soon)
+            cards += CardModel("next-feed", feed, TimeField.START, XIcons.feed, events.feed.strong, title, detail, spoken)
         }
     }
     if (state.runningSleep == null) {
         val lastSleep = state.lastSleep
         val end = lastSleep?.endMillis
         if (lastSleep != null && end != null) {
+            val forecast = sleepForecastLine(state, f)
+            val spoken = f.spokenDurationSince(awakeWord, end, now)
             cards += CardModel(
                 "awake", lastSleep, TimeField.END, XIcons.awake, events.sleep.strong, awakeWord,
-                f.durationAndSince(end, now), f.spokenDurationSince(awakeWord, end, now),
+                f.durationAndSince(end, now),
+                sleepForecastLine(state, f, spoken = true)?.let { stringResource(R.string.spoken_pair, spoken, it) } ?: spoken,
+                forecast,
             )
         }
     }

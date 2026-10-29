@@ -169,4 +169,24 @@
     <!-- "man. 26. okt." -->
     <string name="format_language">da</string>
     <string name="pattern_weekday_day_month">EEE d. MMM</string>
+
+    <string name="forecast_next_sleep_in">Sover igen om %1$s</string>
+    <string name="forecast_wakes_in">Vågner om %1$s</string>
+    <string name="forecast_next_sleep_at">Sover igen ~%1$s</string>
+    <string name="forecast_wakes_at">Vågner ~%1$s</string>
+    <string name="forecast_next_sleep_soon">Sover igen snart</string>
+    <string name="forecast_wakes_soon">Vågner snart</string>
+    <string name="spoken_forecast_sleep_at">forventes at sove igen omkring kl. %1$s</string>
+    <string name="spoken_forecast_wake_at">forventes at vågne omkring kl. %1$s</string>
+    <string name="forecast_next_feed">Næste måltid</string>
+    <string name="forecast_in_at">om %1$s · ~%2$s</string>
+    <string name="forecast_soon_word">snart</string>
+    <string name="forecast_next_feed_in">Næste måltid om %1$s</string>
+    <string name="forecast_next_feed_soon">Næste måltid snart</string>
+    <string name="forecast_feed_at">Næste ~%1$s</string>
+    <string name="forecast_feed_soon_short">Næste snart</string>
+    <string name="forecast_poop_at">Bæ ~%1$s</string>
+    <string name="forecast_poop_soon_short">Bæ snart</string>
+    <string name="spoken_forecast_feed_at">næste måltid forventes omkring kl. %1$s</string>
+    <string name="spoken_forecast_poop_at">næste bæ forventes omkring kl. %1$s</string>
 </resources>

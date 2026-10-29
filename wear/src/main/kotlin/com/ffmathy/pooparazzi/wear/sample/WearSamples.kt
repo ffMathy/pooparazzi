@@ -29,7 +29,8 @@ import com.ffmathy.pooparazzi.wear.tile.TileUiState
 
 /**
  * Screen states for the reference scenario (V1_ADDITIONS §6) at its snapshots: 14:32 idle, 03:12 asleep,
- * 14:50 after the 14:32 breast feed. Used by previews and screenshot tests.
+ * 14:50 after the 14:32 breast feed. Main builds on the weeks of [SampleData.history] before them, so it has a sleep
+ * forecast (V1_ADDITIONS §9). Used by previews and screenshot tests.
  */
 object WearSamples {
     val zone = SampleData.ZONE
@@ -38,14 +39,14 @@ object WearSamples {
     private val synced0311 = SyncStatus.Synced(SampleData.SYNCED_0311)
 
     fun mainIdle(): MainUiState =
-        MainUiState.from(summarize(SampleData.scenario(), SampleData.NOW_1432, zone), guard = null, sync = synced1431)
+        MainUiState.from(summarize(SampleData.history(), SampleData.NOW_1432, zone), guard = null, sync = synced1431)
 
     fun mainAsleep(): MainUiState =
-        MainUiState.from(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, zone), guard = null, sync = synced0311)
+        MainUiState.from(summarize(SampleData.historyAt0312(), SampleData.NOW_0312, zone), guard = null, sync = synced0311)
 
     /** 14:50, 18 minutes after the 14:32 breast feed (Left → Right): idle, "Fed at 14:32 · L → R". */
     fun mainAfterBreastfeed(): MainUiState =
-        MainUiState.from(summarize(SampleData.scenarioWithRecentFeed(), SampleData.NOW_1450, zone), guard = null, sync = synced1431)
+        MainUiState.from(summarize(SampleData.history() + SampleData.recentBreastfeed(), SampleData.NOW_1450, zone), guard = null, sync = synced1431)
 
     /** Twins (Noa, the current baby, and Ida) at 14:32: "Noa · 14:32" and the baby button below the hero. */
     fun mainIdleTwins(): MainUiState = mainIdle().copy(babies = SampleData.twinSettings.babies, babyId = Baby.FIRST_ID)
