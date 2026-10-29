@@ -94,7 +94,8 @@ internal fun FeedSheetContent(
     val time = formatters.clock.format(sheet.time, zone)
     val titleRes = when {
         sheet.breast -> CoreR.string.feed_type_breast
-        sheet.formula -> CoreR.string.feed_type_formula
+        // The soft-hyphen form, so Danish "Modermælks­erstatning" breaks at its hyphen, not inside a word.
+        sheet.formula -> CoreR.string.feed_type_formula_compact
         else -> CoreR.string.kind_feed
     }
     val title = titleWithTime(titleRes, time)

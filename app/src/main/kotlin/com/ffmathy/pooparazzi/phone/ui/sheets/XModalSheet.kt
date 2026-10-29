@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -117,7 +118,8 @@ internal fun SheetHeader(title: String, onCancel: () -> Unit, modifier: Modifier
     Row(modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
             title,
-            style = MaterialTheme.typography.titleLarge,
+            // Hyphens.Auto honours the soft hyphen of a long Danish title ("Modermælks­erstatning · 14:32").
+            style = MaterialTheme.typography.titleLarge.copy(hyphens = Hyphens.Auto),
             color = colors.onSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
