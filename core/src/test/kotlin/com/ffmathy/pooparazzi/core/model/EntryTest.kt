@@ -90,6 +90,25 @@ class EntryJsonTest {
     }
 
     @Test
+    fun theBabyRoundTripsAndOlderJsonIsTheFirstBaby() {
+        val twin = Entry.diaper(1_000L, pee = true, poop = false, id = "t", babyId = "baby-2")
+        assertTrue(EntryJson.encode(twin).contains("\"babyId\":\"baby-2\""))
+        assertEquals(twin, EntryJson.decode(EntryJson.encode(twin)))
+        for (entry in listOf(Entry.sleep(0L, babyId = "b"), Entry.breastfeed(0L, babyId = "b"), Entry.feed(null, 0L, babyId = "b"))) {
+            assertEquals("b", entry.babyId)
+            assertEquals(entry, EntryJson.decode(EntryJson.encode(entry)))
+        }
+        // JSON from before several babies has no babyId: the first baby's. A blank one is read the same way.
+        val older = EntryJson.decode("""{"id":"x","kind":"FEED","startMillis":1,"feedType":"FORMULA","updatedAtMillis":1}""")
+        assertEquals(Baby.FIRST_ID, older.babyId)
+        assertEquals(Entry.feed(FeedType.FORMULA, 1L, id = "x"), older)
+        val blank = EntryJson.decode("""{"id":"y","kind":"DIAPER","startMillis":1,"updatedAtMillis":1,"babyId":" "}""")
+        assertEquals(Baby.FIRST_ID, blank.babyId)
+        assertEquals(Baby.FIRST_ID, Entry.sleep(0L).copy(babyId = "").normalized().babyId)
+        assertEquals(twin, twin.normalized())
+    }
+
+    @Test
     fun rejectsGarbage() {
         assertNull(EntryJson.decodeOrNull("not json"))
         assertNull(EntryJson.decodeOrNull("""{"id":"x","kind":"NAP","startMillis":1,"updatedAtMillis":1}"""))

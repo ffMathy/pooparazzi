@@ -21,6 +21,11 @@ android {
     testOptions { unitTests.isIncludeAndroidResources = true }
 }
 
+// The exported Room schemas, for the migration tests (MigrationTestHelper reads them from the assets).
+extensions.configure<com.android.build.api.dsl.LibraryExtension> {
+    sourceSets.getByName("test").assets.directories.add(file("schemas").path)
+}
+
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
@@ -42,6 +47,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.room.testing)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.compose.ui.test.junit4)

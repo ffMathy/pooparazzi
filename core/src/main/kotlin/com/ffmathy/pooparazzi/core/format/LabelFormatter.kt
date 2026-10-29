@@ -5,6 +5,7 @@ import android.content.res.Resources
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import com.ffmathy.pooparazzi.core.R
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -18,9 +19,11 @@ import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
+import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Locale
 
 /** Looks up string and plural resources (an indirection so labels can be tested per locale). */
 interface StringResolver {
@@ -152,6 +155,21 @@ class LabelFormatter(private val strings: StringResolver) {
     fun appearance(appearance: Appearance): String = strings.string(Labels.appearance(appearance))
 
     fun language(language: AppLanguage): String = strings.string(Labels.language(language))
+
+    /**
+     * A baby's label (BABIES_AND_BACKUP §2.2): its name; an unnamed baby is "Baby" when it is the only one of
+     * [babies] (or not one of them), else "Baby 2", "Baby 3" … by its position in [babies].
+     */
+    fun baby(baby: Baby, babies: List<Baby>): String {
+        val name = Settings.sanitizeName(baby.name)
+        if (name.isNotEmpty()) return name
+        val position = babies.indexOfFirst { it.id == baby.id }
+        if (babies.size < 2 || position < 0) return strings.string(R.string.baby_name_hint)
+        return String.format(Locale.ROOT, strings.string(R.string.baby_name_numbered), position + 1)
+    }
+
+    /** The label of this device's current baby ([Settings.selectedBaby]). */
+    fun currentBaby(settings: Settings): String = baby(settings.selectedBaby, settings.babies)
 
     /** Today-grid captions: "feed"/"feeds", "pee", "poop", "sleep" (Danish "måltid"/"måltider", "tis", "bæ", "søvn"). */
     fun feedsCaption(count: Int): String = strings.plural(R.plurals.count_feeds, count)

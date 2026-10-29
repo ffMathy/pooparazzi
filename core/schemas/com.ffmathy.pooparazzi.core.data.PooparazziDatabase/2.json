@@ -1,0 +1,174 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "558f94e5f0fe87bf1d423115f90f77d8",
+    "entities": [
+      {
+        "tableName": "entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `kind` TEXT NOT NULL, `startMillis` INTEGER NOT NULL, `endMillis` INTEGER, `feedType` TEXT, `breastSide` TEXT, `pee` INTEGER NOT NULL, `poop` INTEGER NOT NULL, `poopColor` TEXT, `poopTexture` TEXT, `updatedAtMillis` INTEGER NOT NULL, `deleted` INTEGER NOT NULL, `pendingSync` INTEGER NOT NULL, `createdLocally` INTEGER NOT NULL, `babyId` TEXT NOT NULL DEFAULT 'default', `cloudPending` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startMillis",
+            "columnName": "startMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endMillis",
+            "columnName": "endMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "feedType",
+            "columnName": "feedType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "breastSide",
+            "columnName": "breastSide",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pee",
+            "columnName": "pee",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "poop",
+            "columnName": "poop",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "poopColor",
+            "columnName": "poopColor",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "poopTexture",
+            "columnName": "poopTexture",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "updatedAtMillis",
+            "columnName": "updatedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deleted",
+            "columnName": "deleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pendingSync",
+            "columnName": "pendingSync",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdLocally",
+            "columnName": "createdLocally",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "babyId",
+            "columnName": "babyId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'default'"
+          },
+          {
+            "fieldPath": "cloudPending",
+            "columnName": "cloudPending",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_entries_startMillis",
+            "unique": false,
+            "columnNames": [
+              "startMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entries_startMillis` ON `${TABLE_NAME}` (`startMillis`)"
+          },
+          {
+            "name": "index_entries_deleted_kind",
+            "unique": false,
+            "columnNames": [
+              "deleted",
+              "kind"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entries_deleted_kind` ON `${TABLE_NAME}` (`deleted`, `kind`)"
+          },
+          {
+            "name": "index_entries_babyId_deleted_kind",
+            "unique": false,
+            "columnNames": [
+              "babyId",
+              "deleted",
+              "kind"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entries_babyId_deleted_kind` ON `${TABLE_NAME}` (`babyId`, `deleted`, `kind`)"
+          }
+        ]
+      },
+      {
+        "tableName": "purged_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `purgedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "purgedAtMillis",
+            "columnName": "purgedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '558f94e5f0fe87bf1d423115f90f77d8')"
+    ]
+  }
+}

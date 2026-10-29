@@ -42,6 +42,9 @@ interface SyncSink {
 
     suspend fun applyRemoteSettings(settings: Settings): Boolean
 
+    /** Merges settings from a device from before several babies (see `SettingsRepository.applyLegacyRemote`). */
+    suspend fun applyRemoteLegacySettings(settings: Settings): Boolean
+
     /**
      * Re-pushes the local entry writes that sync has not accepted yet, through the same ordered path as new writes
      * (the current version of each entry). Returns true when all were accepted.

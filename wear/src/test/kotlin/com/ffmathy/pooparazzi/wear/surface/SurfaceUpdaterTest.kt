@@ -15,6 +15,7 @@ import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
 import com.ffmathy.pooparazzi.wear.SurfacesRestoreReceiver
 import com.ffmathy.pooparazzi.wear.testing.FakeSettingsRepository
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,7 +54,7 @@ class SurfaceUpdaterTest {
     @Before
     fun setUp() {
         db = PooparazziDatabase.inMemory(ApplicationProvider.getApplicationContext())
-        repo = RoomEntryRepository(db, clock)
+        repo = RoomEntryRepository(db, clock, selectedBaby = settings.state.map { it.selectedBaby.id })
         SurfaceUpdater(ApplicationProvider.getApplicationContext(), repo, settings, clock, surfaces = { updates += it }).start(scope)
     }
 
@@ -100,7 +101,7 @@ class SurfaceUpdaterTest {
     @Test
     fun aNewNameOrLanguageRefreshesTheSurfaces() {
         awaitUpdates(1)
-        settings.state.update { it.copy(babyName = "Noa", updatedAtMillis = 1) }
+        settings.state.update { it.withBabyName(it.selectedBaby.id, "Noa").copy(updatedAtMillis = 1) }
         awaitUpdates(2)
         settings.state.update { it.copy(language = AppLanguage.DA, updatedAtMillis = 2) }
         awaitUpdates(3)
