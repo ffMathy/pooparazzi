@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.phone.ui.home
 import androidx.compose.runtime.Immutable
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.domain.DayCounts
+import com.ffmathy.pooparazzi.core.domain.Forecast
 import com.ffmathy.pooparazzi.core.domain.LampState
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Breast
@@ -24,8 +25,9 @@ import java.time.ZoneId
  * @property babyName empty until the parent sets one (the screen then shows the "Baby" hint).
  * @property row1 since-row 1: "Awake …" when idle, "Last fed …" while a sleep runs (each fact appears once per screen).
  * @property row2 since-row 2: the last diaper, kind first.
- * @property card the undo card in the whisper slot; null shows the Today grid.
- * @property sheet the open logging sheet, if any.
+ * @property forecast what the last 7 days say comes next (V1_ADDITIONS §9), shown under the buttons.
+ * @property card a brief notice in the whisper slot ("Undone", a guard); null shows the Today grid.
+ * @property sheet the open sheet (logging, receipt or Adjust start), if any.
  * @property babies all babies, in order (BABIES_AND_BACKUP §2.1); with two or more the name is the switcher.
  * @property babyId the current baby's id, the one [babyName] belongs to.
  * @property switchingBaby the Switch baby sheet is open.
@@ -42,7 +44,8 @@ data class HomeUiState(
     val row2: SinceRow?,
     val today: DayCounts,
     val runningSleep: Entry?,
-    val card: UndoCardUi? = null,
+    val forecast: Forecast = Forecast.NONE,
+    val card: NoticeCardUi? = null,
     val sheet: HomeSheetUi? = null,
     val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID, babyName)),
     val babyId: String = babies.first().id,
@@ -85,85 +88,49 @@ sealed interface SinceRow {
 @Immutable
 data class OffsetChipUi(val minutes: Int, val selected: Boolean, val enabled: Boolean = true)
 
-/**
- * The undo card (DESIGN_SPEC §3.3.1). Titles are time-free; the effective time shows once, in the Lamp or a since-row.
- *
- * @property key identity of the card: a new log gets a new key (and fades in).
- * @property windowKey changes whenever the 10 s window restarts (chip taps, dedupe), restarting the drain line.
- * @property timeoutMillis the window length the drain line shows.
- */
+/** The whisper slot's notice card (2 s, DESIGN_SPEC §3.3.1). [key] changes with each new notice (it fades in). */
 @Immutable
-data class UndoCardUi(
-    val key: Long,
-    val windowKey: Int,
-    val timeoutMillis: Long,
-    val variant: CardVariant,
-    val action: CardAction,
-    val row: CardRow,
-)
+data class NoticeCardUi(val key: Long, val variant: NoticeVariant)
 
-/** The end-of-row button: "Undo", "Done" (Adjust start) or nothing ("Undone", notices). */
-enum class CardAction { UNDO, DONE, NONE }
-
-/** What the card says in row 1. */
 @Immutable
-sealed interface CardVariant {
-    /**
-     * "Breast logged" / "Formula logged" / "Food logged"; "Feed logged" for a feed with no type (null). A breast feed
-     * with a side order adds it as the sub-line ("Left → Right").
-     */
-    data class FeedLogged(val type: FeedType?, val side: BreastSide? = null) : CardVariant
+sealed interface NoticeVariant {
+    /** "Asleep" + "Already asleep since 14:32" / "Awake" + "Already awake since 14:40" (DESIGN_SPEC §4.4). */
+    data class Guard(val kind: GuardKind, val sinceMillis: Long) : NoticeVariant
 
-    /** "Pee logged" / "Poop logged" / "Pee + poop logged" / "Diaper logged". */
-    data class DiaperLogged(val kind: DiaperKind) : CardVariant
-
-    /** "Sleep started". */
-    data object SleepStarted : CardVariant
-
-    /** "Woke up" + "Slept 1h 07m". */
-    data class WokeUp(val sleptMillis: Long) : CardVariant
-
-    /** "Sleep cancelled" + "Slept <1m". */
-    data object SleepCancelled : CardVariant
-
-    /** "Adjust start" of the running sleep (the button reads "Done"). */
-    data object AdjustStart : CardVariant
-
-    /** A guard with no card to attach to: shows the current state ("Asleep", "Awake"). */
-    data class Notice(val guard: GuardKind) : CardVariant
-
-    /** "Sleep deleted" / "Pee + poop deleted" (DESIGN_SPEC §3.3.4), with Undo. */
-    data class Deleted(val entry: Entry) : CardVariant
-
-    /** "Undone" (2 s, no drain line). */
-    data object Undone : CardVariant
+    /** "Undone", after Undo in a receipt. */
+    data object Undone : NoticeVariant
 }
 
 /** The guard lines (DESIGN_SPEC §4.4). */
 enum class GuardKind { ASLEEP, AWAKE }
 
-/** Row 2 of the card. */
+/** What a receipt says. Titles carry the effective time where there is one ("Formula logged · 14:27"). */
 @Immutable
-sealed interface CardRow {
-    data object None : CardRow
+sealed interface ReceiptVariant {
+    /**
+     * "Breast logged" / "Formula logged" / "Food logged"; "Feed logged" for a feed with no type (null). A breast feed
+     * with a side order adds it after the time ("14:32 · Left → Right"), a formula feed with an amount the amount
+     * ("14:32 · 120 ml").
+     */
+    data class FeedLogged(val type: FeedType?, val side: BreastSide? = null, val amountMl: Int? = null) : ReceiptVariant
 
-    /** "Earlier?" + "−5m" "−10m" "−15m". */
-    data class Earlier(val chips: List<OffsetChipUi>) : CardRow
+    /** "Pee logged" / "Poop logged" / "Pee + poop logged" / "Diaper logged". */
+    data class DiaperLogged(val kind: DiaperKind) : ReceiptVariant
 
-    /** A feed or diaper logged while a sleep runs: "End sleep" + "−5m" "−10m". */
-    data class RunningSleep(val endSleepEnabled: Boolean, val chips: List<OffsetChipUi>) : CardRow
+    /** "Sleep started". */
+    data object SleepStarted : ReceiptVariant
 
-    /** "−15m" "−5m" "+5m" + the Edit chip for [editEntryId]. */
-    data class Adjust(val chips: List<OffsetChipUi>, val editEntryId: String) : CardRow
+    /** "Woke up" + "Slept 1h 07m". */
+    data class WokeUp(val sleptMillis: Long) : ReceiptVariant
 
-    /** "Already asleep since 14:32" / "Already awake since 14:40" (2 s). */
-    data class Guard(val kind: GuardKind, val sinceMillis: Long) : CardRow
+    /** "Sleep cancelled" + "Slept <1m". */
+    data object SleepCancelled : ReceiptVariant
 
-    /** "Already logged at 14:32" (2 s), with the icon of [entry]. */
-    data class Dedupe(val entry: Entry) : CardRow
+    /** "Sleep deleted" / "Pee + poop deleted" (DESIGN_SPEC §3.3.4). */
+    data class Deleted(val entry: Entry) : ReceiptVariant
 }
 
-/** The open logging sheet. [stamp] is the moment the sheet was opened; the chosen time is stamp + offset. */
+/** The open sheet. [stamp] is the moment the sheet was opened (or the receipt's base time); the chosen time is stamp + offset. */
 @Immutable
 sealed interface HomeSheetUi {
     val stamp: Long
@@ -174,7 +141,8 @@ sealed interface HomeSheetUi {
     /**
      * Feed sheet (V1_ADDITIONS §2.1): Breast / Formula / Food / Just the time. Once Breast is tapped ([breast]), the
      * sheet shows the optional side [ticks] (Left / Right checkboxes, in the order ticked; [side] is what that order
-     * records, null for none) and "Log feed", which logs the breast feed at [time].
+     * records, null for none) and "Log feed", which logs the breast feed at [time]. Once Formula is tapped
+     * ([formula]), the sheet shows the optional amount slider ([amountMl], null for none) and "Log feed".
      */
     data class Feed(
         override val stamp: Long,
@@ -182,6 +150,8 @@ sealed interface HomeSheetUi {
         override val chips: List<OffsetChipUi>,
         val breast: Boolean = false,
         val ticks: List<Breast> = emptyList(),
+        val formula: Boolean = false,
+        val amountMl: Int? = null,
     ) : HomeSheetUi {
         val side: BreastSide? get() = BreastSide.fromOrder(ticks)
     }
@@ -198,6 +168,34 @@ sealed interface HomeSheetUi {
         val poop: Boolean,
         val color: PoopColor?,
         val texture: PoopTexture?,
+    ) : HomeSheetUi
+
+    /**
+     * "Adjust start" on the running Lamp: moves the sleep's start by an offset from [stamp] (its start when the sheet
+     * opened), on Save, with no timeout. "Edit" opens the edit sheet for [entryId].
+     */
+    data class Adjust(
+        override val stamp: Long,
+        override val offsetMinutes: Int,
+        override val chips: List<OffsetChipUi>,
+        val entryId: String,
+    ) : HomeSheetUi
+
+    /**
+     * The receipt after a log (DESIGN_SPEC §3.3.1): [variant] with the effective [time] when [chips] move it, Undo when
+     * [undoable], the offset chips (applied at once), "End sleep" when [endSleep] is non-null (enabled or not), the
+     * dedupe line for [dedupe], and "Edit" for [editEntryId] beside Done. No timeout: it stays until Done or a dismiss.
+     */
+    data class Receipt(
+        override val stamp: Long,
+        override val offsetMinutes: Int,
+        override val chips: List<OffsetChipUi>,
+        val key: Long,
+        val variant: ReceiptVariant,
+        val undoable: Boolean,
+        val editEntryId: String?,
+        val endSleep: Boolean? = null,
+        val dedupe: Entry? = null,
     ) : HomeSheetUi
 }
 

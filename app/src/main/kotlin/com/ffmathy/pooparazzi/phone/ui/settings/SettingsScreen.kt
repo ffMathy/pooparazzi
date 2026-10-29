@@ -1,11 +1,5 @@
 package com.ffmathy.pooparazzi.phone.ui.settings
 
-import android.content.Context
-import android.net.Uri
-import android.util.Log
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +33,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -75,7 +69,6 @@ import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.notify.NotificationLink
-import com.ffmathy.pooparazzi.phone.privacy.openPrivacyPolicy
 import com.ffmathy.pooparazzi.phone.ui.account.backupStatusText
 import com.ffmathy.pooparazzi.phone.notify.openNotificationSettings
 import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
@@ -85,12 +78,14 @@ import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
 import com.ffmathy.pooparazzi.phone.ui.components.syncLineText
 import com.ffmathy.pooparazzi.phone.ui.components.watchGlyph
 import com.ffmathy.pooparazzi.phone.ui.edit.OutlinePill
+import com.ffmathy.pooparazzi.phone.ui.family.FamilyActions
+import com.ffmathy.pooparazzi.phone.ui.family.FamilySection
+import com.ffmathy.pooparazzi.phone.ui.family.FamilyUiState
+import com.ffmathy.pooparazzi.phone.ui.family.FamilyViewModel
+import com.ffmathy.pooparazzi.phone.ui.family.inviteShareIntent
 import com.ffmathy.pooparazzi.phone.ui.history.HistoryRowDefaults
 import com.ffmathy.pooparazzi.phone.ui.preview.SettingsSamples
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
-import java.time.LocalDate
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Settings wired to its view model and navigation. */
@@ -98,6 +93,9 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount: () -> Unit = {}) {
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val familyViewModel: FamilyViewModel = viewModel(factory = FamilyViewModel.Factory)
+    val family by familyViewModel.state.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
     // Only while this screen is resumed: a second tap during a transition must not pop Home or stack Licences twice.
     val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
     val licences by rememberUpdatedState(dropUnlessResumed(block = onOpenLicences))
@@ -110,24 +108,26 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
         onPauseOrDispose {}
     }
     val link by rememberUpdatedState(notifications)
-    val scope = rememberCoroutineScope()
-    // "Download my data": the system's file picker chooses where; the file is written there, and a toast says so.
-    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(LogExportFile.MIME_TYPE)) { uri ->
-        if (uri != null) scope.launch { context.exportLog(viewModel, uri) }
-    }
-    val actions = remember(viewModel, context) {
+    val actions = remember(viewModel, context, uriHandler) {
         object : SettingsActions by viewModel {
             override fun onBack() = back()
             override fun onOpenLicences() = licences()
             override fun onOpenAccount() = account()
             override fun onOpenNotificationSettings() = context.openNotificationSettings(link)
-            override fun onOpenPrivacyPolicy() = context.openPrivacyPolicy()
-            override fun onExport() = exporter.launch(LogExportFile.name(LocalDate.now()))
+            override fun onOpenPrivacy() {
+                viewModel.state.value?.let { runCatching { uriHandler.openUri(it.privacyUrl) } }
+            }
+        }
+    }
+    // "Invite someone": the share sheet with the invite's link and text.
+    LaunchedEffect(familyViewModel, context) {
+        familyViewModel.shares.collect { invite ->
+            runCatching { context.startActivity(inviteShareIntent(context, invite)) }
         }
     }
     val loaded = state
     if (loaded != null) {
-        SettingsScreen(loaded, actions, notifications = notifications)
+        SettingsScreen(loaded, actions, notifications = notifications, family = family, familyActions = familyViewModel)
     } else {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
     }
@@ -137,8 +137,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
  * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the account and backup
  * (BABIES_AND_BACKUP §3.2), the babies, Appearance
  * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry, Notifications (the link
- * to the system's Live Update setting, §10.5), Privacy (the policy, "Download my data") and About (version, font
- * licences). Section headings are labelMedium;
+ * to the system's Live Update setting, §10.5) and About (version, font licences). Section headings are labelMedium;
  * grouped rows use the History list's r 20 / r 6 corners.
  *
  * @param notifications what the Notifications row offers; the route reads it from the system.
@@ -150,6 +149,8 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     notifications: NotificationLink = NotificationLink.LIVE_UPDATES,
     windowInsets: WindowInsets = WindowInsets.safeDrawing,
+    family: FamilyUiState = FamilyUiState(),
+    familyActions: FamilyActions = FamilyActions.None,
 ) {
     val colors = MaterialTheme.colorScheme
     val bottomInset = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
@@ -175,6 +176,9 @@ fun SettingsScreen(
                 .padding(bottom = 24.dp + bottomInset),
         ) {
             Section(stringResource(R.string.settings_section_account)) { AccountRow(state, actions) }
+            if (state.account is AccountSummary.SignedIn && family.signedIn) {
+                Section(stringResource(R.string.settings_section_family)) { FamilySection(family, familyActions) }
+            }
             val babiesTitle = if (state.babies.size > 1) R.string.settings_section_babies else R.string.settings_section_baby
             Section(stringResource(babiesTitle)) { BabiesGroup(state, actions) }
             Section(stringResource(CoreR.string.settings_appearance)) {
@@ -196,8 +200,9 @@ fun SettingsScreen(
             Section(stringResource(R.string.settings_section_notifications)) {
                 NotificationsRow(notifications, actions::onOpenNotificationSettings)
             }
-            Section(stringResource(R.string.settings_section_privacy)) { PrivacyGroup(actions) }
-            Section(stringResource(R.string.settings_section_about)) { AboutGroup(state.versionName, actions::onOpenLicences) }
+            Section(stringResource(R.string.settings_section_about)) {
+                AboutGroup(state.versionName, actions::onOpenPrivacy, actions::onOpenLicences)
+            }
         }
     }
 }
@@ -267,8 +272,10 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
             )
         }
     }
+    // Signed in, the names go to the family's backup too (BABIES_AND_BACKUP §1).
+    val hint = if (state.account is AccountSummary.SignedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint
     Text(
-        stringResource(R.string.settings_babies_hint),
+        stringResource(hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
@@ -346,11 +353,7 @@ private fun AccountRow(state: SettingsUiState, actions: SettingsActions) {
                         actions.onOpenAccount()
                     },
                     // "Backup deleted": nothing is backed up, but only "Back up now" on the Account screen starts again.
-                    summaryColor = if (failed || account.status == CloudStatus.Deleted || account.status == CloudStatus.Paused) {
-                        colors.error
-                    } else {
-                        colors.onSurfaceVariant
-                    },
+                    summaryColor = if (failed || account.status == CloudStatus.Deleted) colors.error else colors.onSurfaceVariant,
                     // "Backed up · 14:31" has digits: Google Sans Flex with tabular figures (the digit rule).
                     summaryStyle = PhoneType.dataSmall,
                 )
@@ -439,46 +442,11 @@ private fun LinkRow(
 }
 
 /**
- * Settings › Privacy (docs/PRIVACY.md): "Privacy policy" (opens it in the browser) and "Download my data" (the whole log
- * and the babies' names as a JSON file, wherever the parent saves it).
+ * "Pooparazzi · Version 0.1.0", "Privacy policy" (opens it in the browser, BABIES_AND_BACKUP §3.2) and "Font licences"
+ * (opens the OFL texts).
  */
 @Composable
-private fun PrivacyGroup(actions: SettingsActions) {
-    Column(verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
-        GroupRow(first = true, last = false) {
-            LinkRow(stringResource(R.string.settings_privacy_policy), stringResource(R.string.settings_privacy_policy_summary), actions::onOpenPrivacyPolicy)
-        }
-        GroupRow(first = false, last = true) {
-            LinkRow(stringResource(R.string.settings_export), stringResource(R.string.settings_export_summary), actions::onExport)
-        }
-    }
-}
-
-/** Writes "Download my data" to [uri] and says how it went. */
-private suspend fun Context.exportLog(viewModel: SettingsViewModel, uri: Uri) {
-    val message = try {
-        val count = checkNotNull(contentResolver.openOutputStream(uri)) { "No stream for $uri" }.use { viewModel.export(it) }
-        resources.getQuantityString(R.plurals.settings_export_done, count, count)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Log.w("Settings", "Could not save the export", e)
-        getString(R.string.settings_export_failed)
-    }
-    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-}
-
-/** The export's file type and suggested name. */
-internal object LogExportFile {
-    const val MIME_TYPE = "application/json"
-
-    /** "pooparazzi-log-2026-10-29.json". */
-    fun name(date: LocalDate): String = "pooparazzi-log-$date.json"
-}
-
-/** "Pooparazzi · Version 0.1.0" and "Font licences" (opens the OFL texts). */
-@Composable
-private fun AboutGroup(versionName: String, onOpenLicences: () -> Unit) {
+private fun AboutGroup(versionName: String, onOpenPrivacy: () -> Unit, onOpenLicences: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
         GroupRow(first = true, last = false) {
@@ -493,6 +461,9 @@ private fun AboutGroup(versionName: String, onOpenLicences: () -> Unit) {
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
                 Text(stringResource(R.string.settings_version, versionName), style = PhoneType.dataMedium, color = colors.onSurfaceVariant)
             }
+        }
+        GroupRow(first = false, last = false) {
+            LinkRow(stringResource(R.string.settings_privacy), stringResource(R.string.settings_privacy_summary), onOpenPrivacy)
         }
         GroupRow(first = false, last = true) {
             LinkRow(stringResource(R.string.settings_font_licences), stringResource(R.string.settings_font_licences_summary), onOpenLicences)

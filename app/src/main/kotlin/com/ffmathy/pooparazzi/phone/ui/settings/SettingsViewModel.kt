@@ -11,10 +11,6 @@ import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.cloud.CloudSync
 import com.ffmathy.pooparazzi.core.cloud.NoopCloudSync
-import com.ffmathy.pooparazzi.core.data.Clock
-import com.ffmathy.pooparazzi.core.data.EntryRepository
-import com.ffmathy.pooparazzi.core.data.SystemClock
-import com.ffmathy.pooparazzi.core.export.LogExport
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
@@ -27,24 +23,21 @@ import com.ffmathy.pooparazzi.phone.BuildConfig
 import com.ffmathy.pooparazzi.phone.account.Accounts
 import com.ffmathy.pooparazzi.phone.account.AppAccounts
 import com.ffmathy.pooparazzi.phone.account.NoAccounts
+import com.ffmathy.pooparazzi.phone.account.PrivacyPolicy
 import com.ffmathy.pooparazzi.phone.app.AppLocales
 import com.ffmathy.pooparazzi.phone.app.LocaleApplier
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import java.io.OutputStream
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 
@@ -70,6 +63,7 @@ sealed interface AccountSummary {
  * @property canAddBaby false at [Settings.MAX_BABIES] (the "Add a baby" pill is hidden then).
  * @property watchNeedsUpdate the paired watch runs a version from before several babies: "Add a baby" is disabled, with
  *   "Update Pooparazzi on your watch first." under it.
+ * @property privacyUrl where Settings › About › Privacy policy opens ([PrivacyPolicy]).
  */
 @Immutable
 data class SettingsUiState(
@@ -82,6 +76,7 @@ data class SettingsUiState(
     val account: AccountSummary = AccountSummary.Unavailable,
     val canAddBaby: Boolean = babies.size < Settings.MAX_BABIES,
     val watchNeedsUpdate: Boolean = false,
+    val privacyUrl: String = PrivacyPolicy.REPOSITORY_URL,
 )
 
 /** Everything the parent can do in Settings. Defaults do nothing, so previews and screenshots can pass [None]. */
@@ -106,14 +101,11 @@ interface SettingsActions {
     fun onRetryBackup() {}
     fun onOpenLicences() {}
 
+    /** Settings › About › Privacy policy: opens it in the browser. */
+    fun onOpenPrivacy() {}
+
     /** Settings › Notifications: the system setting for Live Updates or notifications. */
     fun onOpenNotificationSettings() {}
-
-    /** Settings › Privacy › "Privacy policy": opens it in the browser. */
-    fun onOpenPrivacyPolicy() {}
-
-    /** Settings › Privacy › "Download my data": asks where to save the file, then writes it ([SettingsViewModel.export]). */
-    fun onExport() {}
 
     object None : SettingsActions
 }
@@ -138,8 +130,6 @@ class SettingsViewModel(
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val nameDebounceMillis: Long = NAME_DEBOUNCE_MILLIS,
     private val watchNeedsUpdate: suspend () -> Boolean = { false },
-    private val entries: EntryRepository? = null,
-    private val clock: Clock = SystemClock,
 ) : ViewModel(), SettingsActions {
 
     /** An old watch would resolve conflicts across babies: no second baby until it is updated. */
@@ -177,6 +167,7 @@ class SettingsViewModel(
             versionName = versionName,
             account = account,
             watchNeedsUpdate = old,
+            privacyUrl = PrivacyPolicy.url(accounts.hostingDomain),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -230,20 +221,6 @@ class SettingsViewModel(
         pendingNames.keys.toList().forEach { id -> writeScope.launch { flushName(id) } }
     }
 
-    /**
-     * "Download my data": writes the whole log and the babies' names ([LogExport]) to [out], with the names as typed
-     * (also a name not saved yet). Returns how many entries were written.
-     */
-    suspend fun export(out: OutputStream): Int {
-        val repository = checkNotNull(entries) { "No log to export" }
-        val drafts = nameDrafts.value
-        val babies = settings.settings.first().babies.map { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby }
-        val log = repository.observeAllEntries().first()
-        val text = LogExport.encode(babies, log, clock.now())
-        withContext(Dispatchers.IO) { out.bufferedWriter(Charsets.UTF_8).use { it.write(text) } }
-        return log.size
-    }
-
     /** Writes the latest typed name of baby [id], one write at a time (an older name never lands after a newer one). */
     private suspend fun flushName(id: String) = nameWrites.withLock {
         val name = pendingNames.remove(id) ?: return@withLock
@@ -260,8 +237,6 @@ class SettingsViewModel(
                 SettingsViewModel(
                     Core.settings, Core.sync, AppLocales, Core.graph.scope, AppAccounts.accounts, Core.cloud,
                     watchNeedsUpdate = watch::needsUpdate,
-                    entries = Core.repository,
-                    clock = Core.clock,
                 )
             }
         }

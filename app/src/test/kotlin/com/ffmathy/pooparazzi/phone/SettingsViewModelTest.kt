@@ -2,10 +2,7 @@ package com.ffmathy.pooparazzi.phone
 
 import android.app.Application
 import androidx.lifecycle.ViewModelStore
-import com.ffmathy.pooparazzi.core.export.LogExport
 import com.ffmathy.pooparazzi.core.model.Baby
-import com.ffmathy.pooparazzi.core.model.Entry
-import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
@@ -17,7 +14,6 @@ import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.phone.ui.settings.AccountSummary
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -27,7 +23,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.runner.RunWith
-import java.io.ByteArrayOutputStream
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -223,34 +218,6 @@ class SettingsViewModelTest : CoreTestBase() {
         // An up-to-date watch (or none): as before.
         assertFalse(settings(core).state.value!!.watchNeedsUpdate)
     }
-
-    @Test
-    fun downloadMyDataWritesTheWholeLogAndTheNames() = coreTest { core ->
-        core.settings.renameBaby(Baby.FIRST_ID, "Noa")
-        val feed = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432 - 30 * MINUTE)
-        val twin = Entry.diaper(SampleData.NOW_1432 - 20 * MINUTE, pee = true, poop = false, babyId = "baby-2")
-        val gone = Entry.feed(FeedType.FOOD, SampleData.NOW_1432 - 10 * MINUTE)
-        core.seed(listOf(feed, twin, gone))
-        core.repository.delete(gone.id)
-        val vm = SettingsViewModel(
-            core.settings, NoopEntrySync, LocaleApplier { applied += it }, backgroundScope,
-            versionName = "0.1.0", entries = core.repository, clock = core.clock,
-        ).also { core.collect(it.state) }
-        runCurrent()
-        // A name typed but not saved yet is exported as typed.
-        vm.onBabyNameChange(Baby.FIRST_ID, "Noa Marie")
-
-        val out = ByteArrayOutputStream()
-        val active = core.repository.observeAllEntries().first()
-        assertEquals(active.size, vm.export(out))
-        val export = LogExport.decode(out.toString(Charsets.UTF_8))
-        assertEquals(LogExport.FORMAT, export.format)
-        assertEquals(core.clock.now(), export.exportedAtMillis)
-        assertEquals(listOf("Noa Marie"), export.babies.map { it.name })
-        assertEquals("every baby's entries, oldest first", active.sortedBy { it.startMillis }, export.entries)
-        assertTrue(export.entries.map { it.id }.containsAll(listOf(feed.id, twin.id)))
-        assertTrue("deleted ones are left out", export.entries.none { it.id == gone.id })
-    }
 }
 
 /** Settings › Account (BABIES_AND_BACKUP §3.2). */
@@ -286,6 +253,19 @@ class SettingsAccountTest : CoreTestBase() {
         runCurrent()
         assertEquals(1, cloud.syncs)
     }
+
+    @Test
+    fun aboutLinksThePrivacyPolicy() = coreTest { core ->
+        assertEquals(
+            "https://demo-pooparazzi.web.app/privacy",
+            settings(core, FakeAccounts(), FakeCloudSync()).state.value!!.privacyUrl,
+        )
+        assertEquals(
+            "without a Firebase configuration, the policy in the repository",
+            "https://github.com/ffMathy/pooparazzi/blob/main/docs/PRIVACY.md",
+            settings(core, FakeAccounts(available = false, hostingDomain = null), FakeCloudSync()).state.value!!.privacyUrl,
+        )
+    }
 }
 
 /** Settings whose renames take a second each, to race the name writes. */
@@ -297,5 +277,4 @@ private class SlowSettings(private val delegate: SettingsRepository) : SettingsR
         delay(1_000)
         return delegate.renameBaby(id, name)
     }
-
 }

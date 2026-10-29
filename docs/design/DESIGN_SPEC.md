@@ -55,8 +55,8 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 | One-tap logging of Feed and Sleep start/stop; Diaper in 2 taps (Diaper → Pee / Poop / Both) | Phone Home, watch Main |
 | Feed and Diaper open the app's own sheets/screens (offset, type, side order, pee/poop, colour, texture); sleep toggles in one tap | Phone widgets (4×2, 3×1, Samsung cover screen), watch Tile |
 | Status at a glance: time since last feed, awake/asleep duration, last diaper | Phone Home, watch Main, Tile, complications, widget, Live Update |
-| Undo after every log | Phone undo card, watch Logged screen, widget receipt, Tile title |
-| Backdating at log time and later editing | Diaper picker offsets, undo-card offsets, Adjust start, phone edit sheet, watch Adjust screen |
+| Undo after every log | Phone receipt sheet, watch Logged screen, widget receipt, Tile title |
+| Backdating at log time and later editing | Diaper picker offsets, phone receipt-sheet offsets, Adjust start, phone edit sheet, watch Adjust screen |
 | History: day ribbon, counts, list | Phone History, watch Today list |
 | Phone-to-watch sync status | Phone top bar, watch Logged and Main list footer |
 | Automatic Night appearance (dark, low-blue, "lights-down" while asleep) | Phone, widget; the watch is always dark |
@@ -82,7 +82,7 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 2. **Colour means an event and nothing else.** FEED is amber, SLEEP moon-blue, DIAPER dew-teal (PEE the light end of the teal ramp, POOP the deep end, BOTH two-tone). All chrome (buttons such as Save, the FAB, selected chips, Undo, the History now-line) uses warm neutral roles.
 3. **Warm, low-blue neutrals.** Night text is parchment `#E8D8C3`, never pure white. No large bright fill at night (every Night fill has L* ≤ 25).
 4. **Lights-down.** While a sleep runs at night, the top bar and the glow dim. Every control stays where it is and keeps its fill. Nothing bright appears.
-5. **Each fact appears once per screen.** Time-since lives in the since-rows, never on the action buttons. Receipts (undo cards) are time-free.
+5. **Each fact appears once per screen.** Time-since lives in the since-rows, never on the action buttons. Receipt titles are time-free; the phone receipt sheet shows the effective time on its own line.
 6. **Nothing ticks.** No seconds anywhere. The ember steps once per minute. No system chronometer is used.
 7. **Fixed palette.** No dynamic colour on phone, watch, tile or widget, so a wallpaper hue cannot pass for an event colour.
 
@@ -97,7 +97,7 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 - The ring is **never** used for progress, countdowns or idle states. The watch Undo countdown is a separate neutral bezel arc (§3.5.6).
 - No breathing. The glow is static. The ember steps once per minute with a 600 ms ease and is otherwise still.
 - The phone keeps a subtle static idle glow at night. It is the nightlight identity and gives the idle Lamp a form without a ring. Its core is L* 10 and every text pair on it passes contrast. Day uses a disc instead, because a glow on paper reads as a stain.
-- Lamp text is real text laid out over the canvas, never drawn into it. **The Lamp digits are never a tap target.**
+- Lamp text is real text laid out over the canvas, never drawn into it. **The Lamp text (label, hero and sub-line) is one tap target**, like a since-row: idle it opens the edit sheet of the last feed (a 16 dp `chevronRight` in outline after the label marks it); while a sleep runs it opens the Adjust start sheet, as the chip does. Neither writes anything until Save. Before the first feed it is not a target.
 
 ### 2.3 Lamp states
 
@@ -130,7 +130,7 @@ Under one minute: the phone hero shows "just now" (heroWord) with the sub-line "
 
 | Element | Idle | Running | Style |
 |---|---|---|---|
-| Label row: icon 20 + 8 + text | 65–85 | 39–59 | labelLarge; colours per §2.3 |
+| Label row: icon 20 + 8 + text (+ 8 + `chevronRight` 16 outline when idle with a feed) | 65–85 | 39–59 | labelLarge; colours per §2.3 |
 | Hero | 93–173 | 67–147 | heroNumeral + heroUnit in onSurface; "just now" in heroWord, centred in the 80 box |
 | Sub-line | 177–199 | 151–173 | dataMedium, onSurfaceVariant |
 | Adjust-start chip | — | visual 185–225 (target 181–229) | §3.3.1 |
@@ -162,14 +162,15 @@ Under one minute: the phone hero shows "just now" (heroWord) with the sub-line "
 **Phone**
 
 ```
-Home ──Diaper──────────────▶ Diaper sheet ──Pee/Poop/Both──▶ Home + undo card
+Home ──Diaper──────────────▶ Diaper sheet ──Pee/Poop/Both──▶ Receipt sheet ──Done──▶ Home
  │ ├─since-row 1 / 2──────▶ Edit sheet (latest entry of that row)
- │ ├─Adjust start (Lamp)──▶ Adjust card in the whisper slot ──Edit chip──▶ Edit sheet (running sleep)
+ │ ├─Adjust start (Lamp)──▶ Adjust start sheet ──Edit──▶ Edit sheet (running sleep)
+ │ ├─Receipt sheet ──Edit──▶ Edit sheet (that entry) · ──Undo──▶ Home + "Undone" notice
  │ ├─History pill / Today grid ──▶ History ──row──▶ Edit sheet
  │ │                                        ├─Statistics icon──▶ Statistics (P8) ──range chip──▶ menu / date range dialog
  │ │                                        └─"Add entry" FAB──▶ Edit sheet ("Add past entry" mode)
  │ └─Settings ──────────────▶ Settings (not designed; Appendix B)
-Widget buttons ──▶ log in place (no app launch) · Widget background ──▶ Home with the undo card for the last widget log
+Widget buttons ──▶ log in place (no app launch) · Widget background ──▶ Home with the receipt for the last widget log
 Live Update ──"Woke up" action──▶ ends the sleep
 ```
 
@@ -231,7 +232,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | Since-row 1 | 48 | 364–412 | |
 | Since-row 2 | 48 | 412–460 | |
 | gap | 4 | | |
-| Whisper slot | 128 (fixed min) | 464–592 | Today grid, or the undo card, or a one-off prompt |
+| Whisper slot | 128 (fixed min) | 464–592 | Today grid, or a 2 s notice card, or a one-off prompt |
 | gap | 12 | | |
 | Feed · Diaper | 96 | 604–700 | two buttons 169 wide, gap 12 |
 | gap | 12 | | |
@@ -254,47 +255,46 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | Diaper just logged | (idle row 1) | "Pee just now" + " · 14:32" |
 
 - Row 2 uses the **kind icon** (`pee` PEE strong, `poop` POOP strong, two-tone `both`), never the generic `diaper`. Its lead starts with the kind word: Pee / Poop / Both.
+- Both rows share one text size: the largest from 18 sp down to 14 sp (0.5 sp steps) at which each fits one line. A row that needs two lines even at 14 sp wraps at that shared size and does not pull the other row down.
 - Measured worst cases: row 1 "Last fed 10h 45m ago · 01:40" = 257.9 dp; row 2 "Poop 10h 45m ago · 03:47" = 231.5 dp.
 - Tap → the edit sheet for that row's latest entry (row 1: the last sleep, or the last feed while asleep; row 2: the last diaper). This is the one-tap correction path.
 
-**Whisper slot: Today grid** (default). The whole block is a link to History (r 20, padding 14 16). Header "Today" labelMedium onSurfaceVariant + `chevronRight` 16 outline. Below it, a 4-column equal grid (gap 8): number titleMedium onSurface over caption labelMedium onSurfaceVariant. 14:32: "5" feeds, "4" pee, "2" poop, "7h 57m" sleep. 03:12: "1" feed, "1" pee, "0" poop, "2h 42m" sleep (the caption is singular "feed" for 1). In lights-down the numbers are onSurfaceVariant.
+**Whisper slot: Today grid** (default). The whole block is a link to History (r 20, padding 14 16). Header "Today" labelMedium onSurfaceVariant + `chevronRight` 16 outline. Below it, a 4-column equal grid (gap 8): number titleMedium onSurface over caption labelMedium onSurfaceVariant; the numbers share one baseline across the row, and so do the captions. 14:32: "5" feeds, "4" pee, "2" poop, "7h 57m" sleep. 03:12: "1" feed, "1" pee, "0" poop, "2h 42m" sleep (the caption is singular "feed" for 1). In lights-down the numbers are onSurfaceVariant.
 
-**Whisper slot: undo card** (replaces the grid, same slot). Card 350 × 120, r 28, surfaceContainerHighest, no border or shadow. Polite live region. Fades in over 150 ms with no slide. The window is 10 s (§10.7).
+**Whisper slot: notice card** (replaces the grid, same slot, for 2 s). Card 350 × ≥120, r 28, surfaceContainerHighest, no border or shadow. Polite live region. Fades in over 150 ms with no slide. Row 1 (48): icon 20 + 8 + title titleMedium onSurface; for a guard, row 2 is the guard line in dataMedium SLEEP text. No buttons and no drain line.
 
-- Row 1 (48): event icon 20 (event strong) · title (≤ 198 dp wide) · Undo text button at the end (92 × 48, r 24, `undo` 18 + 6 + "Undo" labelLarge, primary).
-  - Single-line title: titleMedium onSurface, vertically centred.
-  - Two-line title (Woke up, Sleep cancelled): title titleMedium 18/22 + sub dataSmall onSurfaceVariant.
-- Row 2 (44, chip targets 48): one of the variants below.
-- Drain line: 2 dp, solid outline, inset 16 from each side (318 at full), 6 dp above the card bottom, anchored at the start. Width = remaining fraction. Hidden in the "Undone" state.
-- **Titles are time-free.** The effective time of the logged event shows once, in the Lamp or the since-row directly above, and updates on every chip tap. The only cards that restate a time are the guard and dedupe lines.
-
-| Variant | Icon | Title | Row 2 |
+| Notice | Icon | Title | Row 2 |
 |---|---|---|---|
-| Feed | `feed` | "Feed logged" | Earlier |
-| Pee / Poop / Both | `pee` / `poop` / `both` | "Pee logged" / "Poop logged" / "Pee + poop logged" | Earlier |
-| Sleep start | `sleep` | "Sleep started" | Earlier (moves the start) |
-| Woke up | `wake` | "Woke up" + sub "Slept 1h 07m" | Earlier (moves the end) |
-| Sleep cancelled (stopped < 60 s after start) | `wake` | "Sleep cancelled" + sub "Slept <1m" | none |
-| Adjust start (from the Lamp chip) | `sleep` | "Adjust start"; the Undo button reads **"Done"** with a `check` icon | Adjust |
-| Feed or diaper logged while a sleep runs | as Feed / Pee… | as Feed / Pee… | Running-sleep log |
-| Undone (2 s) | `undo` onSurfaceVariant | "Undone" | nothing (no drain line) |
+| Guard, asleep (§4.4) | `sleep` SLEEP strong | "Asleep" | "Already asleep since 14:32" |
+| Guard, awake | `awake` SLEEP strong | "Awake" | "Already awake since 14:40" |
+| Undone (after Undo in a receipt) | `undo` onSurfaceVariant | "Undone" | — |
 
-Row 2 variants:
+**Receipt sheet** (after every log: Feed, Diaper, Start sleep, Woke up, End sleep, a widget log opened in the app, and a delete in the edit sheet). A modal sheet like the logging sheets (§3.3.2), opened as the logging sheet closes. **No timeout**: it stays until Done, Undo, Edit or a dismiss (scrim, back, swipe), and the log stays as shown.
+- Header (≥56): event icon 24 (event strong) + 12 · title titleLarge onSurface (time-free, as below) over the **effective time** in dataMedium onSurfaceVariant, joined with the sub-line ("14:27", "14:32 · Left → Right", "14:32 · Slept 1h 07m"); the time line follows every chip tap and is a polite live region · Undo text button at the end (48 tall, r 24, `undo` 18 + 6 + "Undo" labelLarge, primary). The pane title is "Formula logged · 14:27".
+- Dedupe line (2 s): `feed` 18 FEED strong + "Already logged at 14:32" dataMedium onSurfaceVariant.
+- Offset chips "−15m" "−10m" "−5m" "+5m" (one row, equal widths) when the receipt moves a time.
+- "End sleep" chip (`wake` 18, hugs its content) for a feed or diaper logged while a sleep still runs.
+- Bottom row: outlined "Edit" (56 tall, r 28, `edit` 20 + 8 + labelLarge) at the start when there is an entry to edit, and "Done" (the Save button style, `check`) at the end.
+- Everything ignores taps for 500 ms when the sheet appears (the picker cooldown, §5.9), so a double tap on a Feed type cannot hit Undo.
 
-| Row 2 | Content |
-|---|---|
-| Earlier | "Earlier?" bodyMedium (Atkinson) onSurfaceVariant, then offset chips "−5m" "−10m" "−15m" |
-| Running-sleep log | chip `wake` 18 + "End sleep" (hugs its content), then "−5m" "−10m"; no "Earlier?" label |
-| Adjust | "−15m" "−5m" "+5m", then an icon-only Edit chip (48 × 40 visual, `edit` 18, outline border, description "Edit start time") that opens the edit sheet for the running sleep. "+5m" is disabled while start + 5 min > now |
-| Guard (2 s) | `sleep` 18 SLEEP strong + "Already asleep since 14:32" dataMedium SLEEP text. After Woke up: `awake` + "Already awake since 14:40" |
-| Dedupe (2 s) | `feed` 18 FEED strong + "Already logged at 14:32" dataMedium onSurfaceVariant; the drain restarts |
+| Receipt | Icon | Title | Time line | Chips move |
+|---|---|---|---|---|
+| Feed | `feed` (or the type's icon) | "Formula logged" / "Breast logged" / "Feed logged" | "14:27", breast adds " · Left → Right" | the time |
+| Pee / Poop / Both / plain | `pee` / `poop` / `both` / `diaper` | "Pee logged" / "Poop logged" / "Pee + poop logged" / "Diaper logged" | "14:27" | the time |
+| Sleep start | `sleep` | "Sleep started" | "14:32" | the start |
+| Woke up | `wake` | "Woke up" | "14:32 · Slept 1h 07m" | the end |
+| Sleep cancelled (stopped < 60 s after start) | `wake` | "Sleep cancelled" | "Slept <1m" | — |
+| Deleted (from the edit sheet) | the entry's icon | "Sleep deleted" / "Pee + poop deleted" | — | — (no Edit) |
 
-Card rules:
-- Offsets are relative to the card's base time and never cumulative. Re-tapping the selected chip returns it to 0. Each tap applies at once (event time, sleep start or sleep end), plays `SegmentTick` and restarts the 10 s window.
-- A chip is disabled if it would put a sleep end before its start, or a start or end in the future.
-- "End sleep" ends the running sleep at the logged event's time. The card then switches to the Woke up variant for that sleep.
-- Undo: feed/diaper → remove the entry. Sleep start → no running sleep. Woke up → the sleep is running again (its entry removed). Sleep cancelled → the sleep is running again. Then "Undone" shows for 2 s. Haptic `Reject`.
-- A new log while a card is showing replaces the card. The previous log stays committed.
+Receipt rules:
+- Offsets are relative to the receipt's base time (the sheet's stamp for a log from a sheet, with its offset pre-selected) and never cumulative. Re-tapping the selected chip returns it to 0. Each tap applies at once (event time, sleep start or sleep end) and plays `SegmentTick`.
+- A chip is disabled if it would put a sleep end before its start, or a start or end in the future ("+5m" while the time + 5 min > now).
+- "End sleep" ends the running sleep at the logged event's time. The receipt then becomes Woke up for that sleep.
+- Undo: feed/diaper → remove the entry. Sleep start → no running sleep. Woke up → the sleep is running again. Sleep cancelled → the sleep is running again. Deleted → the entry is back. The sheet closes and the "Undone" notice shows for 2 s. Haptic `Reject`.
+- Edit closes the sheet and opens the edit sheet for that entry. Done closes it (Home's 600 ms cooldown follows, as after a committed sheet).
+- Feed, Diaper and the Sleep toggle sit under the scrim while a receipt is open: the next log starts after Done or a dismiss.
+
+**Adjust start sheet** (from "Adjust start" on the running Lamp). Same sheet: header "Adjust start · 01:50" (the start Save writes) + Cancel; the same offset chips relative to the start when the sheet opened; "Edit" and Save. Chips write nothing until Save (`Confirm`); the timer keeps running. Cancel, a scrim tap, back or a swipe move nothing. Edit saves the chosen offset, then opens the edit sheet for the sleep. No timeout.
 
 **Chip** (used in cards and sheets): a 48 dp tall button holding a 40 dp pill, r 20, labelLarge onSurface, 1 dp outline border, transparent fill.
 - Offset chips (Now, −5m, −10m, −15m, +5m) are a **fixed 76 dp wide** (content centred, padding 0 4), so selecting one never moves its neighbours. Other chips hug or fill their content, padding 0 12.
@@ -304,18 +304,20 @@ Card rules:
 
 **Feed and Diaper buttons**: 169 × 96, full pill r 48 (pressed r 16). Fill FEED / DIAPER container. Content row: icon 32 (event strong) + 12 + headlineSmall "Feed" / "Diaper" (event onContainer). **Unchanged in lights-down.**
 
+**Forecast line**: under the label of Feed, Diaper and the Sleep toggle, what the last 7 days expect next ("in 1h 05m"; Diaper "poop in 3h"; Woke up the expected wake-up). See V1_ADDITIONS §9.
+
 **Sleep toggle**: 350 × 96, a button whose name changes with its state (it exposes no separate on/off state; §9.4).
 - Unchecked: r 48, SLEEP container, `sleep` 32 SLEEP strong + 12 + "Start sleep" headlineSmall SLEEP onContainer.
 - Checked: r 28, SLEEP containerLit, 2 dp SLEEP strong border, `wake` 32 + "Woke up". Day has no containerLit: it uses SLEEP container + the border.
 
-**Adjust-start chip** (inside the running Lamp, under the sub-line, ≈147 wide): 48 target / 40 pill, r 20, padding start 12 / end 16, `clock` 18 onSurfaceVariant + 8 + "Adjust start" labelLarge onSurface, 1 dp outline border. Fill: Night surfaceContainerHigh, Day background. Opens the Adjust card. The timer keeps running.
+**Adjust-start chip** (inside the running Lamp, under the sub-line, ≈147 wide): 48 target / 40 pill, r 20, padding start 12 / end 16, `clock` 18 onSurfaceVariant + 8 + "Adjust start" labelLarge onSurface, 1 dp outline border. Fill: Night surfaceContainerHigh, Day background. Opens the Adjust start sheet. The timer keeps running.
 
 **Home states**
 
 | State | Trigger | Visible change |
 |---|---|---|
 | Idle | no running sleep | FEED Lamp (Night glow / Day disc); rows Awake + last diaper; Today grid |
-| Just logged | any log or toggle (10 s) | undo card in the whisper slot |
+| Just logged | any log or toggle | the receipt sheet (no timeout) |
 | Running, Night = **lights-down** | Night active and a sleep running | "Noa", status icons and Settings in onSurfaceVariant; History pill unfilled with onSurfaceVariant label; glow 0.45 SLEEP + orbit; Today numbers onSurfaceVariant; toggle checked. Nothing else changes |
 | Running, Day | Day active and a sleep running | no dimming; SLEEP disc + track + cut-out ember |
 | Diaper sheet open | Diaper | scrim + sheet (P2) |
@@ -341,7 +343,7 @@ Card rules:
 | Undo | revert; "Undone" | `Reject` |
 | Since-row | edit sheet of that latest entry | — |
 | History pill, Today grid | History | — |
-| Lamp digits | nothing (never a target) | — |
+| Lamp text | idle: edit sheet of the last feed; running sleep: Adjust start sheet | — |
 
 Input cooldowns apply (§5.9): after a sheet tile commits, Feed, Diaper and the Sleep toggle ignore taps for 600 ms after the sheet has finished closing.
 
@@ -389,7 +391,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 
 #### 3.3.4 P4 Edit sheet
 
-Only the **Edit sleep** form is drawn. It opens from History rows, since-row 1 and the Adjust card's Edit chip.
+Only the **Edit sleep** form is drawn. It opens from History rows, since-row 1 and Edit in a receipt or Adjust start.
 
 | Part (top → bottom) | Spec |
 |---|---|
@@ -422,7 +424,8 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 - **Night dimmer**: re-offer and level (default 10 %, adjustable 5–30 %).
 - Link to the system promoted-notifications setting (§10.5).
 - "Day starts at" (default 00:00; pending open question 4).
-- **Privacy**: "Privacy policy" (opens [`docs/PRIVACY.md`](../PRIVACY.md) in the browser) and "Download my data" (the log and the babies' names as a JSON file); see BABIES_AND_BACKUP §3.4.
+- With the optional account (BABIES_AND_BACKUP §3): Account first, then **Family** while signed in (the members, "Invite someone", "Leave family", "Remove" for the family's creator; §3.4), and a **Privacy policy** row in About.
+- After signing in, a full-screen **consent** ("Back up to Google Firebase?": what is uploaded, who sees it, where, how to change your mind; "I agree" filled, "Not now, sign out" as text; BABIES_AND_BACKUP §3.6) comes before anything else until the account has agreed on the phone; it is laid out like the Welcome.
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
 
@@ -437,11 +440,11 @@ Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (
 | 3 (68) | Sleep toggle, full width, r 34, SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake since 13:27" dataSmall | checked: r 20, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned `sleepRunning` 16 + 6 + "Asleep since 02:05" | unchanged |
 
 - Just logged: nothing else changes. No button moves, relabels or changes colour, and Undo never sits where a log button is. The receipt reverts on the next log or after 10 s.
-- The widget background (outside the buttons) opens the app with the undo card for the last widget log.
+- The widget background (outside the buttons) opens the app with the receipt for the last widget log.
 
 **3×1** (reference 260 × 100, padding 12, minimum 160 wide): three equal buttons 76 tall, gap 8, r 20, content column (icon 24, label 14 sp, max 2 lines, never broken inside a word): Feed (`feed`, opens the Feed sheet); Diaper (`diaper`, DIAPER colours, opens the Diaper sheet); Sleep ("Start sleep", the toggle). When asleep, Sleep shows `wake` + "Woke up" with the checked style. Every widget offers all three: Feed, Diaper and Sleep. (It was a 2×1 with Feed and Sleep; the provider keeps its receiver so placed widgets survive.)
 
-**Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else. It is drawn at that one fixed size (`SizeMode.Single`): with the per-size RemoteViews of `SizeMode.Responsive` the widget stayed on its loading layout on a Flip's cover screen. Refreshes go to every placed widget by its provider's ids, so a widget the host never asked to update is still drawn. Feed and Diaper open the app's sheet on the cover screen; when that sheet closes (logged, or dismissed with Back) the app finishes and the cover screen shows the widget again, since Home has no room there. On the main screen Home stays, with its undo card.
+**Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else. It is drawn at that one fixed size (`SizeMode.Single`): with the per-size RemoteViews of `SizeMode.Responsive` the widget stayed on its loading layout on a Flip's cover screen. Refreshes go to every placed widget by its provider's ids, so a widget the host never asked to update is still drawn. Feed and Diaper open the app's sheet on the cover screen; when that sheet closes (logged, or dismissed with Back) the app finishes and the cover screen shows the widget again, since Home has no room there. On the main screen Home stays, with its receipt sheet.
 
 Breakpoints: §10.11.
 
@@ -455,7 +458,7 @@ Breakpoints: §10.11.
 | Action | "Woke up" (works from the lock screen) |
 | Metrics (Android 17 `MetricStyle`) | "Asleep for" 1h 07m (system TimeDifference), "Since" 02:05 (fixed time), "Last fed · L → R" 1h 32m (system TimeDifference) |
 
-**Woke-up notification.** "Woke up" on the notification ends the sleep and posts a silent, dismissable notification on the same channel, so the wake-up time can be moved without opening the app, as the undo card's Earlier row does:
+**Woke-up notification.** "Woke up" on the notification ends the sleep and posts a silent, dismissable notification on the same channel, so the wake-up time can be moved without opening the app, as the receipt sheet's chips do:
 
 | Element | Content |
 |---|---|
@@ -704,7 +707,7 @@ Counts: Both adds 1 to pee **and** 1 to poop.
 | Offsets | relative to the base time, never cumulative; re-tap returns to 0 |
 | Time limits | no start or end in the future; no end before start (chips disabled; edit sheet validation) |
 | Day boundary | "Today" starts at 00:00 by default (configurable; open question 4). A sleep crossing the boundary is drawn as one bar (flush at 00:00 on the later day) and listed as one row with a day prefix |
-| Deletes | soft for 7 days, with an Undo card |
+| Deletes | soft for 7 days, with an Undo receipt |
 | Writes | local-first on each device; watch → phone via `DataClient` with `setUrgent()` |
 
 ### 4.5 Sync state (device-level, shown in UI)
@@ -728,7 +731,6 @@ The backup's cloud (phone only, hidden when nobody is signed in or the build has
 | Offline | `offline` · "Saved on phone · will back up" |
 | Error | `cloudError` in error colour, a 48 dp retry button (backs up again) · "Couldn't back up · Tap to retry" |
 | Backup deleted | `cloudError` in error colour, not a button · "Backup deleted · Back up now to start again" |
-| Backup paused (no consent, BABIES_AND_BACKUP §3.4) | `cloudError` in error colour, not a button · "Backup paused · Agree to back up" |
 
 Phone ↔ watch sync never goes through the backend; the backup is the phone's alone (BABIES_AND_BACKUP §1).
 
@@ -741,7 +743,7 @@ Event colours are **not** M3 roles. They form a separate fixed palette (containe
 ### 5.1 Colour principles
 
 1. Warm, low-blue neutrals. Night text `#E8D8C3` (≥ 10.23:1), never pure white.
-2. No large bright fills at night (Night fills L* ≤ 25). Strong event colours appear only in icons, rings, outlines and marks. Undo cards use surfaceContainerHighest, never inverseSurface.
+2. No large bright fills at night (Night fills L* ≤ 25). Strong event colours appear only in icons, rings, outlines and marks. Notice cards use surfaceContainerHighest, never inverseSurface.
 3. Colour = event only. FEED amber, SLEEP moon-blue, DIAPER dew-teal; PEE = light teal, POOP = deep teal, BOTH = two-tone.
 4. Lightness ladder (strong L*): Night FEED 78 > DIAPER 68 > SLEEP 58 (PEE 79, POOP 50). Day FEED 47 > DIAPER 39 > SLEEP 30. SLEEP vs POOP is also separated by shape (bar vs dot, circle vs rounded square).
 5. Fixed tokens, no dynamic colour anywhere.
@@ -755,7 +757,7 @@ Event colours are **not** M3 roles. They form a separate fixed palette (containe
 | surfaceContainerLow | `#14110E` | bottom sheets |
 | surfaceContainer | `#1C1713` | ribbon card, list rows, widget body |
 | surfaceContainerHigh | `#26201A` | History pill, time fields, Adjust-start chip |
-| surfaceContainerHighest | `#312922` | undo card |
+| surfaceContainerHighest | `#312922` | notice card |
 | onSurface | `#E8D8C3` | |
 | onSurfaceVariant | `#B8A48E` | |
 | outline | `#8A7864` | chip outlines, chevrons, drain lines |
@@ -779,7 +781,7 @@ Event colours are **not** M3 roles. They form a separate fixed palette (containe
 | surfaceContainerLow | `#F6EEE5` | bottom sheets |
 | surfaceContainer | `#F0E6DA` | ribbon card, list rows, widget body |
 | surfaceContainerHigh | `#EADDCF` | History pill, time fields, ribbon night bands |
-| surfaceContainerHighest | `#E3D5C5` | undo card |
+| surfaceContainerHighest | `#E3D5C5` | notice card |
 | onSurface | `#221A12` | |
 | onSurfaceVariant | `#54473A` | |
 | outline | `#7A6B5E` | |
@@ -923,7 +925,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 | EdgeButton Small | — | 56 (content ≈ 92 × 42; icon + label in a row; Undo only) |
 | Tile EdgeButton | — | 46 drawn, 48 hit box |
 | Diaper tiles | 106 × 128, r 28 | 62 × 88, r 31 |
-| Undo card | 350 × 120, r 28 | — |
+| Notice card | 350 × ≥120, r 28 | — |
 | Bottom sheets | top corners r 28; handle 32 × 4 | — |
 | Chips | 40 visual / 48 target, r 20; offset chips fixed 76 wide | CompactButton 32 visual / 48 target, r 16 |
 | Tonal list buttons | — | ≥ 52 tall, r 26 |
@@ -956,7 +958,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 |---|---|
 | Scheme | Night: `MotionScheme.standard()`, no overshoot. Day: `expressive()` |
 | Ember | one 6° step per minute, 600 ms, easing cubic-bezier(0.2, 0, 0, 1). **Nothing else moves continuously** |
-| Undo card | fade in 150 ms, no slide |
+| Notice card | fade in 150 ms, no slide |
 | Sheets | standard default-spatial spring |
 | Cooldown fades | 0.6 → 1 over 500 ms (pickers); watch Undo 0.4 → 1 over 1000 ms |
 | Reduced motion | the ember jumps, no tail, no drain-line transition |
@@ -978,8 +980,8 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 
 | Constant | Value |
 |---|---|
-| Phone undo window | 10 s (`calculateRecommendedTimeoutMillis(…, containsControls = true)`); restarted by each chip tap |
-| Adjust card idle timeout | 10 s, restarted by each chip tap |
+| Phone receipt and Adjust start sheets | no timeout |
+| Phone notices (Undone, guards) | 2 s |
 | Watch Logged window | 5 s (`getRecommendedTimeoutMillis`) |
 | Tile feedback | 10 s timeline entry |
 | Widget receipt | until the next log or 10 s |
@@ -1005,7 +1007,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 |---|---|---|
 | Big buttons | 32 | ButtonGroup 26 |
 | EdgeButton | — | 24 (Small: 20) |
-| Rows, undo card, Lamp label | 20 | Lamp label 14; status line 16 |
+| Rows, notice card, Lamp label | 20 | Lamp label 14; status line 16 |
 | Chips | 18 (selected check 16) | CompactButton 20 |
 | Lists / avatars | 22 inside a 40 avatar | 18 inside a 32 avatar; status cards 18 |
 | Diaper tiles | 40 | 32 |
@@ -1140,7 +1142,7 @@ Consequence: with Auto and naps on, a running sleep always gets the Night theme 
 | top-bar text and icons → onSurfaceVariant | every control's position |
 | History pill loses its fill | Feed / Diaper / Sleep fills |
 | glow → SLEEP at 0.45 (+ orbit) | layout bands |
-| Today grid numbers → onSurfaceVariant (captions unchanged) | since-rows, undo card |
+| Today grid numbers → onSurfaceVariant (captions unchanged) | since-rows, notice card |
 
 Day with a running sleep: no dimming, and the Lamp is the SLEEP disc with track.
 
@@ -1223,7 +1225,7 @@ Text needs 4.5:1 and graphics 3:1. 125 token pairs were verified with 0 failures
 | Sleep toggle (phone, widget) | `ToggleButton` with the on/off announcement overridden: `stateDescription` "Asleep since 02:05" / "Awake since 13:27"; click label "End sleep" / "Start sleep". The name switches "Start sleep" / "Woke up, end sleep" and does not double-announce a pressed state |
 | Lamp | canvas `clearAndSetSemantics {}`; the text carries `stateDescription` "Asleep, 1 hour 7 minutes, since 02:05". **Never a live region on the ticking value** |
 | Since-rows | `mergeDescendants`, click label "Edit". Spoken name e.g. "Last diaper, pee, 48 minutes ago, at 13:44. Edit"; "Awake 1 hour 5 minutes, since 13:27. Edit" |
-| Undo card | `liveRegion = Polite` |
+| Notice card; receipt time line | `liveRegion = Polite` |
 | Watch Logged | title `liveRegion = Polite`; content in a status layer above the dismiss target |
 | Single-select chips | expose the selected state |
 | Disabled chips | disabled (0.38) |
@@ -1334,7 +1336,7 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 - Undo is never the only recovery path:
   - phone: since-rows and History rows open the edit sheet;
   - watch: status cards and Today rows open Adjust (Today rows add "Set time").
-- Deletes are soft for 7 days, with an Undo card.
+- Deletes are soft for 7 days, with an Undo receipt.
 
 ### 10.8 History swipe
 
@@ -1369,7 +1371,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 - **Type**: device font (`FontFamily.SansSerif`, sizes in sp as drawn). No ROND, opsz or tnum.
 - **Checked toggle stroke**: `GlanceModifier` has no border, so the 2 dp stroke is a background drawable (a shape with a 2 dp stroke and 20 dp corners) set through `GlanceModifier.background(ImageProvider)`.
 - **Receipt and Undo**: after a widget log, row 1 shows the receipt and an in-widget "Undo" (48 dp target, `actionRunCallback(UndoLast)` for that event UUID, no app launch) until the next log or for 10 s (one-time WorkManager work). Undo never sits where a log button is.
-- **Background tap**: opens the app with the undo card for the last widget log. Row 1 is not a separate target (it is only 24 dp tall).
+- **Background tap**: opens the app with the receipt for the last widget log. Row 1 is not a separate target (it is only 24 dp tall).
 - **Breakpoints**:
 
 | Condition | Change |
@@ -1411,10 +1413,10 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 | The orbit ring means only "a sleep is running" | One meaning per visual. Idle Lamps have no ring; the watch Undo countdown is a separate neutral bezel arc |
 | Chrome is neutral; colour = event | Save, FAB, selected chips, Undo and the now-line never share an event hue (e.g. amber means FEED only) |
 | Time-since lives in the since-rows, not on buttons | The rows double as the one-tap correction path. The Lamp already holds the top fact. Button labels never change length (stable at 200 % and identical day/night) |
-| Undo-card titles are time-free | The effective time shows once (Lamp or since-row) and follows every chip tap. Exception: the watch Logged title keeps the time, since nothing else on that screen shows it |
+| Receipt titles are time-free | The phone receipt sheet puts the effective time on its own line under the title, following every chip tap. Exception: the watch Logged title keeps the time, since nothing else on that screen shows it |
 | Diaper stamps the time on the first tap | The picker title shows the stamp; backdate with chips (phone) or Earlier (watch) |
 | Lights-down keeps fills and positions | Muscle memory at 3 am; only the chrome and the glow dim |
-| Lamp digits are never a tap target; "Adjust start" is a separate chip / list item | Prevents accidental edits of a running sleep |
+| The Lamp text opens the edit sheet of the last feed (idle) or the Adjust start sheet (running); "Adjust start" is also a separate chip / list item | The top fact is the first thing a parent wants to correct. Both sheets write nothing until Save, so a stray tap edits nothing |
 | Watch "Woke up" = pinned Medium EdgeButton | Large and always visible, at rest and while scrolling |
 | No "Earlier" on watch Logged | It would sit where Feed / Diaper just were (double-tap hazard). Backdating on the watch goes through status cards and Today rows → Adjust |
 | Input cooldowns and the 2 s guard | A double tap must never land on a different target or toggle a sleep twice |
@@ -1430,7 +1432,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 ## 12. Open questions for the user
 
-1. **Two caregivers.** Do you want a shared log for two parents (each with a phone/watch)? It needs a cloud backend and accounts, and brings "who logged it", partner notifications (muted at night) and duplicate merging. The mockups assume one family account with phone + watch only.
+1. **Two caregivers.** Answered by families (BABIES_AND_BACKUP §3.4–3.5): members invited by a single-use link share the log and the babies. "Who logged it" and partner notifications are not part of it.
 2. **Feeding details.** Is one "Fed" timestamp enough, or do you want breast side (left/right), bottle amount or feed duration? Each adds a step after the tap.
 3. **Diaper on the phone Home.** Keep "Diaper → Pee / Poop / Both" (2 taps, big buttons; the widget and tile are 1 tap), or put Pee | Poop | Both directly on Home as three smaller buttons?
 4. **Day boundary.** Should "Today" start at midnight (designed) or at a time like 07:00, so a night is not split across two days?

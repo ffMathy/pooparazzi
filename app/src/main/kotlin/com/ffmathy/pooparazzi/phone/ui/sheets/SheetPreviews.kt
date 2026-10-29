@@ -38,7 +38,14 @@ private fun BreastSheetPreview() = SheetPreview(night = false) {
     FeedSheetContent(HomeSamples.breastSheet().sheet as HomeSheetUi.Feed, SampleData.ZONE, formatters, NoFeedCallbacks)
 }
 
-private val NoFeedCallbacks = FeedSheetCallbacks({}, {}, {}, {}, {})
+@Preview(name = "Feed sheet · Formula step", widthDp = 390)
+@Composable
+private fun FormulaSheetPreview() = SheetPreview(night = false) {
+    val formatters = rememberFormatters(SampleData.ZONE)
+    FeedSheetContent(HomeSamples.formulaSheet().sheet as HomeSheetUi.Feed, SampleData.ZONE, formatters, NoFeedCallbacks)
+}
+
+private val NoFeedCallbacks = FeedSheetCallbacks({}, {}, {}, {}, {}, {}, {})
 
 @Preview(name = "Diaper sheet", widthDp = 390)
 @Composable
@@ -61,5 +68,29 @@ private fun DiaperSheetHintPreview() = SheetPreview(night = true) {
         SampleData.ZONE,
         formatters,
         DiaperSheetCallbacks({}, {}, {}, {}, {}, {}, {}),
+    )
+}
+
+@Preview(name = "Adjust start sheet", widthDp = 390)
+@Composable
+private fun AdjustSheetPreview() = SheetPreview(night = true) {
+    val formatters = rememberFormatters(SampleData.ZONE)
+    AdjustSheetContent(
+        HomeSamples.adjustingStart().sheet as HomeSheetUi.Adjust,
+        SampleData.ZONE,
+        formatters,
+        AdjustSheetCallbacks({}, {}, {}, {}),
+    )
+}
+
+@Preview(name = "Receipt sheet", widthDp = 390)
+@Composable
+private fun ReceiptSheetPreview() = SheetPreview(night = true) {
+    val formatters = rememberFormatters(SampleData.ZONE)
+    ReceiptSheetContent(
+        HomeSamples.justLogged().sheet as HomeSheetUi.Receipt,
+        SampleData.ZONE,
+        formatters,
+        ReceiptSheetCallbacks({}, {}, {}, {}, {}),
     )
 }

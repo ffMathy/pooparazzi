@@ -29,7 +29,7 @@ interface HomeActions {
     /** Switch baby sheet: Cancel, a scrim tap, back or a swipe. */
     fun onSwitchBabyDismiss() {}
 
-    /** A since-row or the Adjust card's Edit chip: the edit sheet for [entryId]. */
+    /** A since-row: the edit sheet for [entryId]. */
     fun onEditEntry(entryId: String) {}
 
     // Big buttons
@@ -44,20 +44,33 @@ interface HomeActions {
     fun onSleepToggle(shownRunning: Boolean) {}
 
     // Lamp
+    /** "Adjust start": the Adjust start sheet for the running sleep's start. */
     fun onAdjustStart() {}
 
-    // Undo card
-    fun onCardOffset(minutes: Int) {}
-    fun onCardEndSleep() {}
+    // Receipt sheet
+    /** "End sleep": ends the running sleep at the logged event's time; the receipt becomes Woke up. */
+    fun onEndSleep() {}
     fun onUndo() {}
-    fun onCardDone() {}
+
+    /** "Done": closes the receipt (its offset is already applied). */
+    fun onReceiptDone() {}
 
     // Sheets
+    /**
+     * Selects an offset chip. In a receipt it applies at once; in Adjust start, on Save. In both, re-tapping the
+     * selected chip returns it to 0.
+     */
     fun onSheetOffset(minutes: Int) {}
 
+    /** Adjust start, "Save": moves the start to the sheet's time and closes the sheet. */
+    fun onAdjustSave() {}
+
+    /** "Edit" in a receipt or Adjust start (which saves its offset first): closes the sheet, then edits [entryId]. */
+    fun onSheetEdit(entryId: String) {}
+
     /**
-     * Feed sheet: Breast reveals the side checkboxes and "Log feed"; Formula / Food log an instant, null ("Just the
-     * time") logs an untyped feed.
+     * Feed sheet: Breast reveals the side checkboxes and "Log feed", Formula the amount slider and "Log feed"; Food
+     * logs an instant, null ("Just the time") logs an untyped feed.
      */
     fun onFeedType(type: FeedType?) {}
 
@@ -66,6 +79,12 @@ interface HomeActions {
 
     /** Feed sheet, Breast step, "Log feed": logs a breast feed at the sheet's time with the ticked order (or none). */
     fun onLogBreastfeed() {}
+
+    /** Feed sheet, Formula step: the slider's amount in millilitres; null is no amount (the slider at its start). */
+    fun onFormulaAmount(amountMl: Int?) {}
+
+    /** Feed sheet, Formula step, "Log feed": logs a formula feed at the sheet's time with the amount (or none). */
+    fun onLogFormula() {}
     fun onDiaperPee(checked: Boolean) {}
     fun onDiaperPoop(checked: Boolean) {}
 
@@ -76,7 +95,7 @@ interface HomeActions {
     fun onPoopTexture(texture: PoopTexture?) {}
     fun onDiaperSave() {}
 
-    /** Cancel, a scrim tap, back or a swipe: the sheet closes without logging. */
+    /** Cancel, a scrim tap, back or a swipe: the sheet closes without logging (a receipt keeps its log). */
     fun onSheetDismiss() {}
 
     /** The sheet has finished its closing animation (starts the 600 ms Home cooldown after a commit). */

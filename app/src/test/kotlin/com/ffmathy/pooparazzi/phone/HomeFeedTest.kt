@@ -7,9 +7,8 @@ import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.sample.SampleData
-import com.ffmathy.pooparazzi.phone.ui.home.CardAction
-import com.ffmathy.pooparazzi.phone.ui.home.CardRow
-import com.ffmathy.pooparazzi.phone.ui.home.CardVariant
+import com.ffmathy.pooparazzi.phone.ui.home.NoticeVariant
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
 import com.ffmathy.pooparazzi.phone.ui.home.HomeHaptic
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import org.junit.Assert.assertEquals
@@ -36,25 +35,58 @@ class HomeFeedTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun formulaLogsAnInstantAtStampPlusOffsetAndShowsTheCard() = homeTest { home ->
+    fun formulaLogsAnInstantAtStampPlusOffsetAndShowsTheReceipt() = homeTest { home ->
         home.tapFeed()
         home.viewModel.onSheetOffset(-10)
         home.settle()
         home.clock.advanceBy(20_000) // the stamp was taken on the first tap
         home.viewModel.onFeedType(FeedType.FORMULA)
+        val step = home.settle().sheet as HomeSheetUi.Feed
+        assertTrue("Formula offers the optional amount first", step.formula)
+        assertNull(step.amountMl)
+        home.viewModel.onLogFormula()
         val state = home.settle()
 
         val feed = home.entries().single { it.feedType == FeedType.FORMULA && it.startMillis > SampleData.at(13, 0) }
         assertEquals(SampleData.NOW_1432 - 10 * MINUTE, feed.startMillis)
         assertNull(feed.endMillis)
-        assertNull(state.sheet)
-        val card = state.card!!
-        assertEquals(CardVariant.FeedLogged(FeedType.FORMULA), card.variant)
-        assertEquals(CardAction.UNDO, card.action)
-        val row = card.row as CardRow.Earlier
-        assertEquals(listOf(-5, -10, -15), row.chips.map { it.minutes })
-        assertTrue("the sheet's offset is pre-selected", row.chips.single { it.selected }.minutes == -10)
-        assertEquals(listOf(HomeHaptic.SEGMENT_TICK, HomeHaptic.CONFIRM), home.haptics)
+        assertNull("the amount is optional", feed.amountMl)
+        val receipt = state.receipt
+        assertEquals(ReceiptVariant.FeedLogged(FeedType.FORMULA), receipt.variant)
+        assertTrue(receipt.undoable)
+        assertEquals(feed.id, receipt.editEntryId)
+        assertEquals(listOf(-15, -10, -5, 5), receipt.chips.map { it.minutes })
+        assertTrue("the sheet's offset is pre-selected", receipt.chips.single { it.selected }.minutes == -10)
+        assertEquals(feed.startMillis, receipt.time)
+        assertEquals(listOf(HomeHaptic.SEGMENT_TICK, HomeHaptic.SEGMENT_TICK, HomeHaptic.CONFIRM), home.haptics)
+    }
+
+    @Test
+    fun formulaRecordsTheAmountFromTheSlider() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFormulaAmount(120)
+        assertEquals(120, (home.settle().sheet as HomeSheetUi.Feed).amountMl)
+        home.viewModel.onFormulaAmount(null)
+        assertNull("back to no amount", (home.settle().sheet as HomeSheetUi.Feed).amountMl)
+        home.viewModel.onFormulaAmount(150)
+        home.viewModel.onLogFormula()
+        val state = home.settle()
+
+        val feed = home.entries().single { it.feedType == FeedType.FORMULA && it.startMillis >= SampleData.NOW_1432 }
+        assertEquals(150, feed.amountMl)
+        assertEquals(ReceiptVariant.FeedLogged(FeedType.FORMULA, amountMl = 150), state.receipt.variant)
+    }
+
+    @Test
+    fun theAmountIsOnlyTakenInTheFormulaStep() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFormulaAmount(120)
+        home.viewModel.onLogFormula()
+        val sheet = home.settle().sheet as HomeSheetUi.Feed
+        assertFalse(sheet.formula)
+        assertNull(sheet.amountMl)
+        assertTrue("nothing logged", home.entries().none { it.startMillis >= SampleData.NOW_1432 })
     }
 
     @Test
@@ -62,7 +94,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
         home.tapFeed()
         home.viewModel.onFeedType(FeedType.FOOD)
         val state = home.settle()
-        assertEquals(CardVariant.FeedLogged(FeedType.FOOD), state.card!!.variant)
+        assertEquals(ReceiptVariant.FeedLogged(FeedType.FOOD), state.receipt.variant)
         val lamp = state.lamp as LampState.FeedIdle
         assertEquals(FeedType.FOOD, lamp.lastFeed!!.feedType)
         assertEquals(1, state.today.feeds)
@@ -80,7 +112,6 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertNull(sheet.side)
         assertEquals("the time picked before Breast is kept", -5, sheet.offsetMinutes)
         assertTrue("nothing is logged yet", home.entries().isEmpty())
-        assertNull(state.card)
         assertTrue(state.lamp is LampState.FeedIdle)
     }
 
@@ -103,9 +134,8 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertNull("a breast feed has no end", feed.endMillis)
         assertFalse(feed.isRunning)
         assertEquals(BreastSide.LEFT_THEN_RIGHT, feed.breastSide)
-        assertNull(state.sheet)
-        assertEquals(CardVariant.FeedLogged(FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT), state.card!!.variant)
-        assertTrue((state.card!!.row as CardRow.Earlier).chips.single { it.selected }.minutes == -15)
+        assertEquals(ReceiptVariant.FeedLogged(FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT), state.receipt.variant)
+        assertEquals(-15, state.receipt.chips.single { it.selected }.minutes)
         val lamp = state.lamp as LampState.FeedIdle
         assertEquals(feed.id, lamp.lastFeed!!.id)
         assertEquals(1, state.today.feeds)
@@ -147,7 +177,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertEquals(SampleData.NOW_1432, feed.startMillis)
         assertNull(feed.breastSide)
         assertNull(feed.endMillis)
-        assertEquals(CardVariant.FeedLogged(FeedType.BREAST, null), state.card!!.variant)
+        assertEquals(ReceiptVariant.FeedLogged(FeedType.BREAST, null), state.receipt.variant)
     }
 
     @Test
@@ -171,7 +201,8 @@ class HomeFeedTest : HomeViewModelTestBase() {
         home.settle()
         home.viewModel.onUndo()
         val state = home.settle()
-        assertEquals(CardVariant.Undone, state.card!!.variant)
+        assertNull(state.sheet)
+        assertEquals(NoticeVariant.Undone, state.card!!.variant)
         assertTrue(home.entries().isEmpty())
     }
 
@@ -184,7 +215,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
         home.viewModel.onLogBreastfeed()
         val state = home.settle()
         assertEquals(2, home.entries().count { it.feedType == FeedType.BREAST })
-        assertTrue(state.card!!.variant is CardVariant.FeedLogged)
+        assertTrue(state.receipt.variant is ReceiptVariant.FeedLogged)
         assertFalse(state.anythingRunning)
     }
 
@@ -197,7 +228,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertNull(feed.feedType)
         assertNull(feed.endMillis)
         assertEquals(SampleData.NOW_1432, feed.startMillis)
-        assertEquals(CardVariant.FeedLogged(null), state.card!!.variant)
+        assertEquals(ReceiptVariant.FeedLogged(null), state.receipt.variant)
         assertEquals(1, state.today.feeds)
         assertEquals(feed.id, (state.lamp as LampState.FeedIdle).lastFeed!!.id)
     }
@@ -205,24 +236,23 @@ class HomeFeedTest : HomeViewModelTestBase() {
     @Test
     fun theSameFeedTwiceWithinFiveSecondsIsDeduplicated() = homeTest { home ->
         home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFeedType(FeedType.FOOD)
         home.settle()
-        home.viewModel.onSheetClosed()
-        home.scope.testScheduler.advanceTimeBy(700)
+        home.closeReceipt()
         home.clock.advanceBy(2_000)
         home.tapFeed()
         home.settle()
         home.clock.advanceBy(1_000)
         // Same stamp window: the sheet was opened 2 s after the first log.
-        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFeedType(FeedType.FOOD)
         val state = home.settle()
-        assertEquals(1, home.entries().count { it.feedType == FeedType.FORMULA && it.startMillis >= SampleData.NOW_1432 })
-        val row = state.card!!.row as CardRow.Dedupe
-        assertEquals(SampleData.NOW_1432, row.entry.startMillis)
+        assertEquals(1, home.entries().count { it.feedType == FeedType.FOOD && it.startMillis >= SampleData.NOW_1432 })
+        assertEquals(SampleData.NOW_1432, state.receipt.dedupe!!.startMillis)
+        assertEquals("the receipt is for the existing entry", SampleData.NOW_1432, state.receipt.time)
         assertEquals(HomeHaptic.REJECT, home.haptics.last())
 
         home.scope.testScheduler.advanceTimeBy(2_100)
-        assertTrue("the dedupe line lasts 2 s", home.settle().card!!.row is CardRow.Earlier)
+        assertNull("the dedupe line lasts 2 s", home.settle().receipt.dedupe)
     }
 
     @Test
@@ -232,16 +262,14 @@ class HomeFeedTest : HomeViewModelTestBase() {
         home.viewModel.onFeedType(FeedType.BREAST)
         home.viewModel.onLogBreastfeed()
         var state = home.settle()
-        val row = state.card!!.row as CardRow.RunningSleep
-        assertTrue(row.endSleepEnabled)
-        assertEquals(listOf(-5, -10), row.chips.map { it.minutes })
+        assertEquals(true, state.receipt.endSleep)
         // The sleep keeps the Lamp: a breast feed is an instant.
         assertTrue(state.lamp is LampState.SleepRunning)
 
-        home.viewModel.onCardEndSleep()
+        home.viewModel.onEndSleep()
         state = home.settle()
         assertEquals(SampleData.NOW_1432, home.repository.get(sleep.id)!!.endMillis)
-        assertEquals(CardVariant.WokeUp(42 * MINUTE), state.card!!.variant)
+        assertEquals(ReceiptVariant.WokeUp(42 * MINUTE), state.receipt.variant)
         assertFalse(state.sleepRunning)
         assertFalse(state.anythingRunning)
     }

@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.catch
@@ -14,48 +13,55 @@ import kotlinx.serialization.json.Json
 import java.io.IOException
 
 /**
- * What the backup remembers on this device between runs. Each value names the account it belongs to, so signing in to
- * another account starts afresh. Never synced and never backed up.
+ * What the backup remembers on this device between runs. Each value names the family it belongs to (the backup is the
+ * family's, FAMILIES), so joining or leaving a family, or signing in to an account in another family, starts afresh.
+ * Never synced and never backed up.
  *
- * @property cursor where the last pull for [cursorUid] stopped.
- * @property fullUploadUid the account every row was last flagged for ("everything logged so far is backed up").
- * @property lastSyncAtMillis when the last sync for [lastSyncUid] succeeded.
- * @property deletedUid the account whose backup was deleted while the account itself is still there (deleting the
- *   account failed, or has not run yet): nothing is uploaded for it, also after a restart, until another account (or
- *   nobody) is signed in or the parent backs up again ("Back up now").
- * @property consentVersion the consent version last recorded in the backend for [consentUid] ([CloudStore.recordConsent]).
+ * @property cursor where the last pull of the family's entries for [cursorFamilyId] stopped.
+ * @property babiesCursor where the last pull of the family's babies for [cursorFamilyId] stopped.
+ * @property fullUploadFamilyId the family every row and baby was last flagged for ("everything so far is backed up").
+ * @property lastSyncAtMillis when the last sync for [lastSyncFamilyId] succeeded.
+ * @property deletedFamilyId the family the account was taken out of ([CloudSync.deleteBackup]) while the account itself
+ *   is still there (deleting the account failed, or has not run yet): nothing is uploaded to it, also after a restart,
+ *   until another family (or nobody) is signed in or the parent backs up again ("Back up now").
  */
 data class CloudBookkeeping(
-    val cursorUid: String? = null,
+    val cursorFamilyId: String? = null,
     val cursor: CloudCursor? = null,
-    val fullUploadUid: String? = null,
-    val lastSyncUid: String? = null,
+    val babiesCursor: CloudCursor? = null,
+    val fullUploadFamilyId: String? = null,
+    val lastSyncFamilyId: String? = null,
     val lastSyncAtMillis: Long? = null,
-    val deletedUid: String? = null,
-    val consentUid: String? = null,
-    val consentVersion: Int? = null,
+    val deletedFamilyId: String? = null,
 ) {
-    /** The cursor to pull [uid] from: null (from the start) when the stored one belongs to another account. */
-    fun cursorFor(uid: String): CloudCursor? = cursor.takeIf { cursorUid == uid }
+    /** The entries' cursor to pull [familyId] from: null (from the start) when the stored one belongs to another family. */
+    fun cursorFor(familyId: String): CloudCursor? = cursor.takeIf { cursorFamilyId == familyId }
 
-    /** When the last sync for [uid] succeeded, or null. */
-    fun lastSyncFor(uid: String): Long? = lastSyncAtMillis.takeIf { lastSyncUid == uid }
+    /** The babies' cursor to pull [familyId] from: null (from the start) when the stored one belongs to another family. */
+    fun babiesCursorFor(familyId: String): CloudCursor? = babiesCursor.takeIf { cursorFamilyId == familyId }
 
-    /** The consent version the backend holds for [uid], as far as this device knows; null when none was recorded. */
-    fun consentFor(uid: String): Int? = consentVersion.takeIf { consentUid == uid }
+    /** These values with the entries' cursor for [familyId] at [at] (the babies' cursor kept only if it is [familyId]'s). */
+    fun withCursor(familyId: String, at: CloudCursor): CloudBookkeeping =
+        copy(cursorFamilyId = familyId, cursor = at, babiesCursor = babiesCursorFor(familyId))
 
-    /** True while [uid]'s backup is deleted and nothing may be uploaded for it. */
-    fun isDeleted(uid: String): Boolean = deletedUid == uid
+    /** These values with the babies' cursor for [familyId] at [at] (the entries' cursor kept only if it is [familyId]'s). */
+    fun withBabiesCursor(familyId: String, at: CloudCursor): CloudBookkeeping =
+        copy(cursorFamilyId = familyId, cursor = cursorFor(familyId), babiesCursor = at)
 
-    /** These values with everything about [uid] forgotten (its backup is being deleted). [deletedUid] is kept. */
-    fun forget(uid: String): CloudBookkeeping = copy(
-        cursorUid = cursorUid.takeUnless { it == uid },
-        cursor = cursor.takeUnless { cursorUid == uid },
-        fullUploadUid = fullUploadUid.takeUnless { it == uid },
-        lastSyncUid = lastSyncUid.takeUnless { it == uid },
-        lastSyncAtMillis = lastSyncAtMillis.takeUnless { lastSyncUid == uid },
-        consentUid = consentUid.takeUnless { it == uid },
-        consentVersion = consentVersion.takeUnless { consentUid == uid },
+    /** When the last sync for [familyId] succeeded, or null. */
+    fun lastSyncFor(familyId: String): Long? = lastSyncAtMillis.takeIf { lastSyncFamilyId == familyId }
+
+    /** True while the account was taken out of [familyId]'s backup and nothing may be uploaded to it. */
+    fun isDeleted(familyId: String): Boolean = deletedFamilyId == familyId
+
+    /** These values with everything about [familyId] forgotten (its backup is being deleted). [deletedFamilyId] is kept. */
+    fun forget(familyId: String): CloudBookkeeping = copy(
+        cursorFamilyId = cursorFamilyId.takeUnless { it == familyId },
+        cursor = cursor.takeUnless { cursorFamilyId == familyId },
+        babiesCursor = babiesCursor.takeUnless { cursorFamilyId == familyId },
+        fullUploadFamilyId = fullUploadFamilyId.takeUnless { it == familyId },
+        lastSyncFamilyId = lastSyncFamilyId.takeUnless { it == familyId },
+        lastSyncAtMillis = lastSyncAtMillis.takeUnless { lastSyncFamilyId == familyId },
     )
 }
 
@@ -67,7 +73,13 @@ interface CloudBookkeepingStore {
     suspend fun update(transform: (CloudBookkeeping) -> CloudBookkeeping)
 }
 
-/** [CloudBookkeepingStore] on Preferences DataStore (the `pooparazzi_cloud` file). Unreadable values read as absent. */
+/**
+ * [CloudBookkeepingStore] on Preferences DataStore (the `pooparazzi_cloud` file). Unreadable values read as absent.
+ *
+ * The keys of the backup from before families (named by account: `cursor_uid`, `full_upload_uid`, …) are not read, so
+ * the first sync after the update counts as the first for the family: everything on the phone is flagged and uploaded
+ * to it (FAMILIES, "existing accounts"). They are removed at the first write.
+ */
 class DataStoreCloudBookkeepingStore(private val dataStore: DataStore<Preferences>) : CloudBookkeepingStore {
 
     override suspend fun get(): CloudBookkeeping = dataStore.data
@@ -80,25 +92,24 @@ class DataStoreCloudBookkeepingStore(private val dataStore: DataStore<Preference
     }
 
     private fun Preferences.toBookkeeping() = CloudBookkeeping(
-        cursorUid = this[KEY_CURSOR_UID],
-        cursor = this[KEY_CURSOR]?.let { runCatching { json.decodeFromString(CloudCursor.serializer(), it) }.getOrNull() },
-        fullUploadUid = this[KEY_FULL_UPLOAD_UID],
-        lastSyncUid = this[KEY_LAST_SYNC_UID],
+        cursorFamilyId = this[KEY_CURSOR_FAMILY],
+        cursor = this[KEY_CURSOR]?.let(::decodeCursor),
+        babiesCursor = this[KEY_BABIES_CURSOR]?.let(::decodeCursor),
+        fullUploadFamilyId = this[KEY_FULL_UPLOAD_FAMILY],
+        lastSyncFamilyId = this[KEY_LAST_SYNC_FAMILY],
         lastSyncAtMillis = this[KEY_LAST_SYNC_AT],
-        deletedUid = this[KEY_DELETED_UID],
-        consentUid = this[KEY_CONSENT_UID],
-        consentVersion = this[KEY_CONSENT_VERSION],
+        deletedFamilyId = this[KEY_DELETED_FAMILY],
     )
 
     private fun MutablePreferences.write(values: CloudBookkeeping) {
-        putOrRemove(KEY_CURSOR_UID, values.cursorUid)
-        putOrRemove(KEY_CURSOR, values.cursor?.let { json.encodeToString(CloudCursor.serializer(), it) })
-        putOrRemove(KEY_FULL_UPLOAD_UID, values.fullUploadUid)
-        putOrRemove(KEY_LAST_SYNC_UID, values.lastSyncUid)
+        LEGACY_KEYS.forEach { remove(it) }
+        putOrRemove(KEY_CURSOR_FAMILY, values.cursorFamilyId)
+        putOrRemove(KEY_CURSOR, values.cursor?.let(::encodeCursor))
+        putOrRemove(KEY_BABIES_CURSOR, values.babiesCursor?.let(::encodeCursor))
+        putOrRemove(KEY_FULL_UPLOAD_FAMILY, values.fullUploadFamilyId)
+        putOrRemove(KEY_LAST_SYNC_FAMILY, values.lastSyncFamilyId)
         putOrRemove(KEY_LAST_SYNC_AT, values.lastSyncAtMillis)
-        putOrRemove(KEY_DELETED_UID, values.deletedUid)
-        putOrRemove(KEY_CONSENT_UID, values.consentUid)
-        putOrRemove(KEY_CONSENT_VERSION, values.consentVersion)
+        putOrRemove(KEY_DELETED_FAMILY, values.deletedFamilyId)
     }
 
     /** Sets [key] to [value], or removes it for null. */
@@ -108,13 +119,28 @@ class DataStoreCloudBookkeepingStore(private val dataStore: DataStore<Preference
 
     private companion object {
         val json = Json { ignoreUnknownKeys = true }
-        val KEY_CURSOR_UID = stringPreferencesKey("cursor_uid")
-        val KEY_CURSOR = stringPreferencesKey("cursor")
-        val KEY_FULL_UPLOAD_UID = stringPreferencesKey("full_upload_uid")
-        val KEY_LAST_SYNC_UID = stringPreferencesKey("last_sync_uid")
-        val KEY_LAST_SYNC_AT = longPreferencesKey("last_sync_at")
-        val KEY_DELETED_UID = stringPreferencesKey("deleted_uid")
-        val KEY_CONSENT_UID = stringPreferencesKey("consent_uid")
-        val KEY_CONSENT_VERSION = intPreferencesKey("consent_version")
+
+        fun decodeCursor(text: String): CloudCursor? =
+            runCatching { json.decodeFromString(CloudCursor.serializer(), text) }.getOrNull()
+
+        fun encodeCursor(cursor: CloudCursor): String = json.encodeToString(CloudCursor.serializer(), cursor)
+
+        val KEY_CURSOR_FAMILY = stringPreferencesKey("cursor_family")
+        val KEY_CURSOR = stringPreferencesKey("family_cursor")
+        val KEY_BABIES_CURSOR = stringPreferencesKey("family_babies_cursor")
+        val KEY_FULL_UPLOAD_FAMILY = stringPreferencesKey("full_upload_family")
+        val KEY_LAST_SYNC_FAMILY = stringPreferencesKey("last_sync_family")
+        val KEY_LAST_SYNC_AT = longPreferencesKey("family_last_sync_at")
+        val KEY_DELETED_FAMILY = stringPreferencesKey("deleted_family")
+
+        /** The keys from before families, named by account. Never read; removed at the first write. */
+        val LEGACY_KEYS: List<Preferences.Key<*>> = listOf(
+            stringPreferencesKey("cursor_uid"),
+            stringPreferencesKey("cursor"),
+            stringPreferencesKey("full_upload_uid"),
+            stringPreferencesKey("last_sync_uid"),
+            longPreferencesKey("last_sync_at"),
+            stringPreferencesKey("deleted_uid"),
+        )
     }
 }

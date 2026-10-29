@@ -167,6 +167,8 @@ class EditViewModel(
 
     override fun onSideTick(breast: Breast) = edit { s -> EditRules.withSideTick(s.draft, breast) }
 
+    override fun onAmount(amountMl: Int?) = edit { s -> EditRules.withAmount(s.draft, amountMl) }
+
     override fun onNudge(field: TimeField, minutes: Int) = edit(HomeHaptic.SEGMENT_TICK) { s -> EditRules.nudge(s.draft, field, minutes) }
 
     override fun onTimeSet(field: TimeField, hour: Int, minute: Int) = edit { s -> EditRules.setTime(s.draft, field, hour, minute, zone) }

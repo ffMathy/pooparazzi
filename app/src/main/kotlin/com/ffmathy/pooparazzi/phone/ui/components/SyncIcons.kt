@@ -62,10 +62,9 @@ internal fun syncIcons(
     if (cloud != CloudStatus.Off) {
         val text = backupStatusText(cloud, formatters.clock, zone)
         val retry = if (cloud == CloudStatus.Error) onRetryBackup else null
-        // "Backup deleted" and "Backup paused": nothing is backed up (error colour), but only the Account screen starts
-        // it again ("Back up now", "Agree and back up"), so they offer no retry.
-        val warning = cloud == CloudStatus.Error || cloud == CloudStatus.Deleted || cloud == CloudStatus.Paused
-        add(SyncIcon(cloudGlyph(cloud), text, warning, retry))
+        // "Backup deleted": nothing is backed up (error colour), but only "Back up now" on the Account screen starts
+        // again, so it offers no retry.
+        add(SyncIcon(cloudGlyph(cloud), text, cloud == CloudStatus.Error || cloud == CloudStatus.Deleted, retry))
     }
 }
 
@@ -155,5 +154,5 @@ internal fun cloudGlyph(cloud: CloudStatus): ImageVector = when (cloud) {
     is CloudStatus.Synced -> XIcons.synced
     CloudStatus.Syncing -> XIcons.pending
     CloudStatus.Offline, CloudStatus.Off -> XIcons.offline
-    CloudStatus.Error, CloudStatus.Deleted, CloudStatus.Paused -> XIcons.cloudError
+    CloudStatus.Error, CloudStatus.Deleted -> XIcons.cloudError
 }

@@ -1,42 +1,22 @@
 package com.ffmathy.pooparazzi.phone.account
 
 import android.app.Activity
-import com.ffmathy.pooparazzi.core.cloud.BackupConsent
-import com.ffmathy.pooparazzi.core.cloud.CloudAccount
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * The signed-in account (BABIES_AND_BACKUP §3).
+ * The signed-in account (BABIES_AND_BACKUP §3). Its family is resolved by [FamilyService], which hands the backup a
+ * [com.ffmathy.pooparazzi.core.cloud.CloudAccount] with the family once it is known.
  *
- * @property google signed in with Google: deleting the account asks for Google again instead of a password.
- * @property consentVersion the backup consent this account agreed to on this phone (§3.4), or null.
+ * @property google signed in with Google: deleting the account asks for Google again instead of an email link.
  */
-data class AccountUser(val uid: String, val email: String, val google: Boolean, val consentVersion: Int? = null) {
-    /** What the backup needs of it. */
-    val cloud: CloudAccount get() = CloudAccount(uid, email, consentVersion)
-
-    /** Agreed to the backup as it is now: false pauses the backup until the parent agrees ([Accounts.agreeToBackup]). */
-    val consented: Boolean get() = cloud.consented
-}
+data class AccountUser(val uid: String, val email: String, val google: Boolean)
 
 /** Why an account action failed, as the Account screen words it. */
 enum class AccountError {
-    /** "Enter your email address" / not an address. */
+    /** "Enter a valid email address" (also: the address does not match the one the link was sent to). */
     INVALID_EMAIL,
-
-    /** "Enter your password". */
-    MISSING_PASSWORD,
-
-    /** "Wrong email or password". */
-    WRONG_CREDENTIALS,
-
-    /** "That email already has an account". */
-    EMAIL_IN_USE,
-
-    /** "Use at least 6 characters". */
-    WEAK_PASSWORD,
 
     /** "No connection. Try again." */
     NO_CONNECTION,
@@ -50,6 +30,15 @@ enum class AccountError {
     /** Too many attempts from this phone: "Too many tries. Wait a moment and try again." */
     TOO_MANY_ATTEMPTS,
 
+    /**
+     * The project's daily allowance of sign-in emails is used up (the free Spark plan sends few, docs/BACKEND.md ›
+     * Cost): "Too many sign-in emails today. Try again tomorrow, or use Google."
+     */
+    EMAIL_QUOTA,
+
+    /** An email link that expired, was used already or is not one: "That link has expired or was already used. Send a new one." */
+    LINK_INVALID,
+
     /** The phone has no Google account to offer (or Google sign-in is not possible on it). */
     NO_GOOGLE_ACCOUNT,
 
@@ -58,9 +47,6 @@ enum class AccountError {
 
     /** Signing in again for account deletion chose another account than the signed-in one. */
     WRONG_ACCOUNT,
-
-    /** Signing in without ticking the consent: "Tick the box to agree to the backup first." */
-    CONSENT_REQUIRED,
 
     /** Anything else: "Something went wrong. Try again." */
     OTHER,
@@ -76,12 +62,22 @@ sealed interface AccountResult {
     data class Failed(val error: AccountError) : AccountResult
 }
 
+/** What the last email link this phone asked for is for. */
+enum class LinkPurpose {
+    /** "Email me a sign-in link": signs in (creating the account the first time). */
+    SIGN_IN,
+
+    /** "Email me a link" in "Delete account?": signs the signed-in account in again, and the deletion goes on. */
+    DELETE_ACCOUNT,
+}
+
+/** The email link this phone asked for last: where it went and what it is for. Kept on this phone only. */
+data class SentLink(val email: String, val purpose: LinkPurpose)
+
 /**
  * The optional account of the phone app (BABIES_AND_BACKUP §3): Firebase Authentication in builds with a Firebase
- * configuration ([FirebaseAccounts]), [NoAccounts] otherwise. Nothing here throws: failures are [AccountResult.Failed].
- *
- * Signing in (or creating an account) is agreeing to the backup ([BackupConsent]): the form asks for the consent before
- * it calls any of them, and the account signed in is recorded as agreed on this phone ([AccountUser.consentVersion]).
+ * configuration ([FirebaseAccounts]), [NoAccounts] otherwise. There are no passwords: sign-in is Google or a link sent
+ * by email. Nothing here throws: failures are [AccountResult.Failed].
  */
 interface Accounts {
     /** False in builds without a Firebase configuration: no Welcome, and Settings says the backup isn't set up. */
@@ -90,34 +86,51 @@ interface Accounts {
     /** Google sign-in is possible: the configuration carries the web client id (the Google provider is enabled). */
     val googleAvailable: Boolean
 
+    /** The project's website, `<project-id>.web.app` (invite links, sign-in links, the privacy policy), or null. */
+    val hostingDomain: String?
+
     /** The signed-in account, or null. */
     val user: StateFlow<AccountUser?>
+
+    /** The email link asked for last on this phone, until it is used (or another is asked for, or forgotten). */
+    val sentLink: SentLink?
+
+    /**
+     * Forgets [sentLink]: the "Delete account?" confirmation was cancelled, so its link must not delete the account
+     * when it opens the app later.
+     */
+    fun forgetSentLink()
 
     /** Signs in with a Google account chosen in the system's account picker. Creating an account is the same thing. */
     suspend fun signInWithGoogle(activity: Activity): AccountResult
 
-    suspend fun signIn(email: String, password: String): AccountResult
+    /** Emails a sign-in link to [email] and remembers the address on this phone ([sentLink]). */
+    suspend fun sendSignInLink(email: String): AccountResult
 
-    /** Creates an email account and signs in to it; the backup starts at once. */
-    suspend fun createAccount(email: String, password: String): AccountResult
+    /** Whether [link] (an App Link that opened the app) is an email sign-in link. */
+    fun isSignInLink(link: String): Boolean
 
-    /** Sends a password reset link to [email]. */
-    suspend fun sendPasswordReset(email: String): AccountResult
+    /** Signs in with an email [link] sent to [email]. Creating an account is the same thing. */
+    suspend fun signInWithLink(email: String, link: String): AccountResult
 
     /** Signs out. The log stays on the phone. */
     suspend fun signOut()
 
-    /** Signs in again with the password, as deleting the account requires. */
-    suspend fun reauthenticate(password: String): AccountResult
-
     /** Signs in again with a fresh Google credential of the same account, as deleting the account requires. */
     suspend fun reauthenticateWithGoogle(activity: Activity): AccountResult
 
-    /** Deletes the account (after [reauthenticate]); its backup must be deleted first. Signs out on success. */
-    suspend fun deleteAccount(): AccountResult
+    /** Emails a link to the signed-in address that signs it in again for deleting the account ([LinkPurpose.DELETE_ACCOUNT]). */
+    suspend fun sendReauthenticationLink(): AccountResult
 
-    /** Records that the signed-in account agrees to the backup as it is now, which starts it ("Agree and back up"). */
-    fun agreeToBackup(): AccountResult
+    /** Signs the signed-in account in again with an email [link] ([sendReauthenticationLink]). */
+    suspend fun reauthenticateWithLink(link: String): AccountResult
+
+    /**
+     * Deletes the account (after signing in again); its backup must be deleted first. Deletes the rest of its Firestore
+     * data ([Families.deleteAccountData]: its outstanding invites, the backup from before families and its
+     * `users/{uid}` document), then the account itself. Signs out on success.
+     */
+    suspend fun deleteAccount(): AccountResult
 }
 
 /** Builds without a Firebase configuration: no accounts, nothing signed in. */
@@ -126,32 +139,26 @@ object NoAccounts : Accounts {
     private val unavailable = AccountResult.Failed(AccountError.OTHER)
     override val available = false
     override val googleAvailable = false
+    override val hostingDomain: String? = null
     override val user: StateFlow<AccountUser?> = nobody
+    override val sentLink: SentLink? = null
+    override fun forgetSentLink() = Unit
     override suspend fun signInWithGoogle(activity: Activity): AccountResult = unavailable
-    override suspend fun signIn(email: String, password: String): AccountResult = unavailable
-    override suspend fun createAccount(email: String, password: String): AccountResult = unavailable
-    override suspend fun sendPasswordReset(email: String): AccountResult = unavailable
+    override suspend fun sendSignInLink(email: String): AccountResult = unavailable
+    override fun isSignInLink(link: String): Boolean = false
+    override suspend fun signInWithLink(email: String, link: String): AccountResult = unavailable
     override suspend fun signOut() = Unit
-    override suspend fun reauthenticate(password: String): AccountResult = unavailable
     override suspend fun reauthenticateWithGoogle(activity: Activity): AccountResult = unavailable
+    override suspend fun sendReauthenticationLink(): AccountResult = unavailable
+    override suspend fun reauthenticateWithLink(link: String): AccountResult = unavailable
     override suspend fun deleteAccount(): AccountResult = unavailable
-    override fun agreeToBackup(): AccountResult = unavailable
 }
 
 /** Checks done before anything is sent, so the common mistakes are worded at once and cost nothing. */
 object AccountInput {
-    /** Firebase Authentication's minimum password length. */
-    const val MIN_PASSWORD_LENGTH = 6
-
     fun emailError(email: String): AccountError? {
         val trimmed = email.trim()
         val at = trimmed.indexOf('@')
         return if (at <= 0 || at == trimmed.lastIndex || trimmed.any { it.isWhitespace() }) AccountError.INVALID_EMAIL else null
     }
-
-    fun signInError(email: String, password: String): AccountError? =
-        emailError(email) ?: if (password.isEmpty()) AccountError.MISSING_PASSWORD else null
-
-    fun createError(email: String, password: String): AccountError? =
-        emailError(email) ?: if (password.length < MIN_PASSWORD_LENGTH) AccountError.WEAK_PASSWORD else null
 }

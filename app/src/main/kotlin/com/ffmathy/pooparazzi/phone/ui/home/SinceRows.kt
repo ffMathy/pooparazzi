@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -26,7 +25,9 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
@@ -52,12 +53,60 @@ internal const val LARGE_FONT_SCALE = 1.3f
 /** The smallest since-row text before it wraps to a second line. */
 private const val MIN_ROW_SP = 14f
 
-/** The two since-rows (DESIGN_SPEC §3.3.1): the one-tap correction path into the edit sheet. */
+/** The largest since-row text; both rows step down from here together. */
+private const val MAX_ROW_SP = 18f
+
+/**
+ * The two since-rows (DESIGN_SPEC §3.3.1): the one-tap correction path into the edit sheet. Both rows share one text
+ * size: the largest (18 sp, stepping down 0.5 sp to 14 sp) at which each fits one line, so "Last fed …" and "Pee …"
+ * never differ. A row that does not fit even at 14 sp (a narrow screen, a larger font) takes a second line at that
+ * shared size.
+ */
 @Composable
 internal fun SinceRows(row1: SinceRow?, row2: SinceRow?, zone: ZoneId, formatters: Formatters, onEdit: (String) -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier) {
-        SinceRowItem(row1, zone, formatters, onEdit)
-        SinceRowItem(row2, zone, formatters, onEdit)
+    val colors = MaterialTheme.colorScheme
+    val texts = listOf(row1, row2).map { row -> row?.let { sinceRowText(it, zone, formatters) } }
+    val annotated = texts.map { text ->
+        text?.let {
+            buildAnnotatedString {
+                append(it.lead)
+                withStyle(SpanStyle(fontSize = (16f / 18f).em, fontWeight = FontWeight(450), color = colors.onSurfaceVariant)) {
+                    append(it.meta)
+                }
+            }
+        }
+    }
+    val style = MaterialTheme.typography.titleMedium.copy(color = colors.onSurface)
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    BoxWithConstraints(modifier) {
+        // The text slot: the row minus its 16 dp insets, the 20 dp icon, the 16 dp chevron and two 12 dp gaps.
+        val slot = with(density) { (maxWidth - 32.dp - 20.dp - 16.dp - 24.dp).roundToPx() }.coerceAtLeast(0)
+        val fontSp = remember(annotated, style, slot, measurer, density) {
+            fun fits(text: AnnotatedString, sp: Float) =
+                measurer.measure(text, style.copy(fontSize = sp.sp), maxLines = 1, softWrap = false, density = density).size.width <= slot
+            // A row that needs two lines even at 14 sp wraps anyway: it does not pull the other row down.
+            val singleLine = annotated.filterNotNull().filter { fits(it, MIN_ROW_SP) }
+            var sp = MAX_ROW_SP
+            while (sp > MIN_ROW_SP && singleLine.any { !fits(it, sp) }) sp -= 0.5f
+            sp
+        }
+        val wrapAllowed = density.fontScale >= LARGE_FONT_SCALE
+        Column {
+            listOf(row1, row2).forEachIndexed { index, row ->
+                val text = texts[index]
+                val line = annotated[index]
+                if (row == null || text == null || line == null) {
+                    // Nothing logged yet: the band keeps its height so the layout never jumps.
+                    Spacer(Modifier.fillMaxWidth().height(48.dp))
+                } else {
+                    val oneLine = remember(line, style, fontSp, slot, measurer, density) {
+                        measurer.measure(line, style.copy(fontSize = fontSp.sp), maxLines = 1, softWrap = false, density = density).size.width <= slot
+                    }
+                    SinceRowItem(row, text, line, style.copy(fontSize = fontSp.sp, lineHeight = (fontSp * 24f / 18f).sp), maxLines = if (oneLine && !wrapAllowed) 1 else 2, onEdit = onEdit)
+                }
+            }
+        }
     }
 }
 
@@ -65,14 +114,8 @@ internal fun SinceRows(row1: SinceRow?, row2: SinceRow?, zone: ZoneId, formatter
 private class SinceRowText(val icon: TintedIcon, val lead: String, val meta: String, val spoken: String)
 
 @Composable
-private fun SinceRowItem(row: SinceRow?, zone: ZoneId, formatters: Formatters, onEdit: (String) -> Unit) {
-    if (row == null) {
-        // Nothing logged yet: the band keeps its height so the layout never jumps.
-        Spacer(Modifier.fillMaxWidth().height(48.dp))
-        return
-    }
+private fun SinceRowItem(row: SinceRow, text: SinceRowText, line: AnnotatedString, style: TextStyle, maxLines: Int, onEdit: (String) -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val text = sinceRowText(row, zone, formatters)
     val editLabel = stringResource(CoreR.string.action_edit)
     val open = { onEdit(row.entryId) }
     Row(
@@ -91,28 +134,7 @@ private fun SinceRowItem(row: SinceRow?, zone: ZoneId, formatters: Formatters, o
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         XIcon(text.icon.icon, contentDescription = null, tint = text.icon.tint, size = 20.dp)
-        // One line (text slot 258 dp): long Danish leads shrink a little first. When even 14 sp does not fit (a narrow
-        // screen, a larger font) the row takes a second line rather than clip (DESIGN_SPEC §9.3).
-        val annotated = buildAnnotatedString {
-            append(text.lead)
-            withStyle(SpanStyle(fontSize = (16f / 18f).em, fontWeight = FontWeight(450), color = colors.onSurfaceVariant)) {
-                append(text.meta)
-            }
-        }
-        val style = MaterialTheme.typography.titleMedium.copy(color = colors.onSurface)
-        val measurer = rememberTextMeasurer()
-        BoxWithConstraints(Modifier.weight(1f)) {
-            val oneLine = remember(annotated, style, constraints.maxWidth, measurer) {
-                !measurer.measure(annotated, style.copy(fontSize = MIN_ROW_SP.sp), maxLines = 1, softWrap = false)
-                    .let { it.size.width > constraints.maxWidth }
-            }
-            BasicText(
-                text = annotated,
-                style = style,
-                maxLines = if (oneLine && LocalDensity.current.fontScale < LARGE_FONT_SCALE) 1 else 2,
-                autoSize = TextAutoSize.StepBased(minFontSize = MIN_ROW_SP.sp, maxFontSize = 18.sp, stepSize = 0.5.sp),
-            )
-        }
+        BasicText(text = line, style = style, maxLines = maxLines, modifier = Modifier.weight(1f))
         XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
     }
 }

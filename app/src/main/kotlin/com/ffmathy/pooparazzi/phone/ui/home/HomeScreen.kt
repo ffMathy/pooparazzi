@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,10 +51,10 @@ internal object HomeDefaults {
 }
 
 /**
- * Home wired to its view model and to navigation. Since-rows and the Adjust card's Edit chip open the edit sheet over
- * Home; a delete there shows the "… deleted" card with Undo.
+ * Home wired to its view model and to navigation. Since-rows and Edit in a receipt or Adjust start open the edit sheet
+ * over Home; a delete there shows the "… deleted" receipt with Undo.
  *
- * [launch] is a deep link from a widget or notification (DESIGN_SPEC §3.1): Home opens the sheet or undo card it asks
+ * [launch] is a deep link from a widget or notification (DESIGN_SPEC §3.1): Home opens the sheet or receipt it asks
  * for and reports it through [onLaunchHandled]; when such a sheet closes, [onLaunchedSheetClosed]. The first sleep started here asks for the notification permission, so
  * the running sleep can show its ongoing notification (§3.3.1, §10.5).
  */
@@ -67,19 +66,7 @@ fun HomeRoute(
     onLaunchHandled: (HomeLaunch) -> Unit = {},
     onLaunchedSheetClosed: () -> Unit = {},
 ) {
-    val accessibility = LocalAccessibilityManager.current
-    val timings = remember(accessibility) {
-        val window = HomeTimings().undoWindowMillis
-        HomeTimings(
-            undoWindowMillis = accessibility?.calculateRecommendedTimeoutMillis(
-                window,
-                containsIcons = true,
-                containsText = true,
-                containsControls = true,
-            ) ?: window,
-        )
-    }
-    val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.factory(timings))
+    val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.factory())
     val editViewModel: EditViewModel = viewModel(factory = EditViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val edit by editViewModel.state.collectAsStateWithLifecycle()
@@ -111,6 +98,7 @@ fun HomeRoute(
             override fun onOpenHistory() = history()
             override fun onOpenSettings() = settings()
             override fun onEditEntry(entryId: String) = editViewModel.openEntry(entryId)
+            override fun onSheetEdit(entryId: String) = viewModel.onSheetEdit(entryId) { editViewModel.openEntry(entryId) }
         }
     }
     val loaded = state
@@ -231,6 +219,7 @@ fun HomeScreen(
                                 size = size,
                                 formatters = formatters,
                                 onAdjustStart = actions::onAdjustStart,
+                                onEditEntry = actions::onEditEntry,
                             )
                         },
                         below = {
@@ -307,9 +296,9 @@ private fun HomeBreastLoggedPreview() {
     NightLightTheme(night = false) { HomeScreen(HomeSamples.breastLogged(), HomeActions.None) }
 }
 
-@Preview(name = "Night · undo card", widthDp = 390, heightDp = 844)
+@Preview(name = "Night · receipt", widthDp = 390, heightDp = 844)
 @Composable
-private fun HomeUndoCardPreview() {
+private fun HomeReceiptPreview() {
     NightLightTheme(night = true) { HomeScreen(HomeSamples.justLogged(), HomeActions.None) }
 }
 
