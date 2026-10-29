@@ -55,6 +55,81 @@
     <!-- Custom accessibility action on a History row (DESIGN_SPEC §9.4) -->
     <string name="action_edit_time">Edit time</string>
 
+    <!-- Statistics (P8). Also the name of History's chart button. -->
+    <string name="statistics_title">Statistics</string>
+    <string name="statistics_subtitle">Average per day</string>
+    <string name="statistics_last_7_days">Last 7 days</string>
+    <string name="statistics_last_30_days">Last 30 days</string>
+    <string name="statistics_last_90_days">Last 90 days</string>
+    <string name="statistics_all_days">All days</string>
+    <!-- The range chip and the legend for a range picked in the date dialog -->
+    <string name="statistics_chosen_dates">Chosen dates</string>
+    <string name="statistics_choose_dates">Choose dates…</string>
+    <!-- Click label of the range chip -->
+    <string name="statistics_change_range">Change range</string>
+    <string name="statistics_feeds">Feeds</string>
+    <!-- "3 of 7 days logged": %1$d days with something logged of the window's %2$d days (the quantity) -->
+    <plurals name="statistics_days_logged">
+        <item quantity="one">%1$d of %2$d day logged</item>
+        <item quantity="other">%1$d of %2$d days logged</item>
+    </plurals>
+    <!-- Chart legend when each bar averages several days -->
+    <plurals name="statistics_bar_days">
+        <item quantity="one">Each bar is %d day</item>
+        <item quantity="other">Each bar is %d days</item>
+    </plurals>
+    <string name="statistics_gaps_feeds">Days with no feeds logged are left out.</string>
+    <string name="statistics_gaps_diapers">Days with no diapers logged are left out.</string>
+    <string name="statistics_gaps_sleep">Days with no sleep logged are left out.</string>
+    <string name="statistics_chart_empty">Nothing logged on these days.</string>
+    <string name="statistics_empty">Statistics start as soon as something is logged.</string>
+    <!-- The footnote while no whole day has been logged yet (the first entry is from today or yesterday) -->
+    <string name="statistics_footnote_so_far">No whole day has been logged yet, so these averages count today so far. From the first whole day on, they count whole days up to yesterday.</string>
+    <string name="statistics_footnote">Averages count whole days up to yesterday. A day counts for feeds, diapers or sleep only if any were logged that day. The first day of logging is left out.</string>
+    <!-- TalkBack: "6.7 a day", "14 hours 1 minute a day" -->
+    <string name="statistics_spoken_per_day">%1$s a day</string>
+    <!-- TalkBack for "–" (nothing counted) -->
+    <string name="statistics_spoken_not_logged">not logged</string>
+    <!-- TalkBack, the chart's first sentence with one bar per day: "Poop per day, 26 September to 25 October." -->
+    <string name="statistics_spoken_chart_days">%1$s per day, %2$s.</string>
+    <!-- TalkBack, the same with bars of several days: "Poop per day, 29 April to 25 October, each bar 7 days." -->
+    <string name="statistics_spoken_chart_bars">%1$s per day, %2$s, each bar %3$s.</string>
+    <!-- TalkBack, the highest and lowest bar: one day ("Highest 5 on Wednesday 7 October.") or several ("Highest 3.3 from 11 May to 17 May.") -->
+    <string name="statistics_spoken_highest_on">Highest %1$s on %2$s.</string>
+    <string name="statistics_spoken_highest_from">Highest %1$s from %2$s.</string>
+    <string name="statistics_spoken_lowest_on">Lowest %1$s on %2$s.</string>
+    <string name="statistics_spoken_lowest_from">Lowest %1$s from %2$s.</string>
+    <plurals name="statistics_spoken_gaps_feeds">
+        <item quantity="one">%d day with no feeds logged is left out.</item>
+        <item quantity="other">%d days with no feeds logged are left out.</item>
+    </plurals>
+    <plurals name="statistics_spoken_gaps_diapers">
+        <item quantity="one">%d day with no diapers logged is left out.</item>
+        <item quantity="other">%d days with no diapers logged are left out.</item>
+    </plurals>
+    <plurals name="statistics_spoken_gaps_sleep">
+        <item quantity="one">%d day with no sleep logged is left out.</item>
+        <item quantity="other">%d days with no sleep logged are left out.</item>
+    </plurals>
+    <!-- "Days before 23 October are left out." %1$s is a spoken date. -->
+    <string name="statistics_spoken_before">Days before %1$s are left out.</string>
+    <!-- java.time patterns: visible dates "26 Sep", spoken dates "26 September", spoken days "Wednesday 7 October".
+         The _year forms are used when a range spans two years or is not in the current year. -->
+    <string name="statistics_pattern_date">d MMM</string>
+    <string name="statistics_pattern_date_year">d MMM yyyy</string>
+    <string name="statistics_pattern_spoken_date">d MMMM</string>
+    <string name="statistics_pattern_spoken_date_year">d MMMM yyyy</string>
+    <string name="statistics_pattern_spoken_day">EEEE d MMMM</string>
+    <string name="statistics_pattern_spoken_day_year">EEEE d MMMM yyyy</string>
+    <!-- No average (nothing counted): a dash, never "0" -->
+    <string name="statistics_no_value" translatable="false">–</string>
+    <!-- A range of visible dates: "26 Sep – 25 Oct" -->
+    <string name="join_dash" translatable="false">%1$s – %2$s</string>
+    <!-- TalkBack, a row: "Feeds. Last 7 days: 6.7 a day. Last 30 days: 7.1 a day." -->
+    <string name="statistics_spoken_row" translatable="false">%1$s. %2$s: %3$s. %4$s: %5$s.</string>
+    <!-- TalkBack, a row with another range: "Feeds. Last 7 days: 6.7 a day. Chosen dates: 7.1 a day. Last 30 days: 7.1 a day." -->
+    <string name="statistics_spoken_row_compare" translatable="false">%1$s. %2$s: %3$s. %4$s: %5$s. %6$s: %7$s.</string>
+
     <!-- Edit sheet (P4) -->
     <string name="edit_title_sleep">Edit sleep</string>
     <string name="edit_title_feed">Edit feed</string>
@@ -88,6 +163,13 @@
 
     <!-- Settings -->
     <string name="settings_section_baby">Baby</string>
+    <!-- Settings › Babies (BABIES_AND_BACKUP §2.4): the section with two or more babies -->
+    <string name="settings_section_babies">Babies</string>
+    <!-- Label of each baby's name field; its placeholder is the baby's label ("Baby 2") -->
+    <string name="settings_baby_field">Name</string>
+    <string name="settings_add_baby">Add a baby</string>
+    <string name="settings_add_baby_watch_update">Update Pooparazzi on your watch first.</string>
+    <string name="settings_babies_hint">Names stay on this phone and your watch.</string>
     <string name="settings_appearance_hint">Auto uses Night in the evening and at night, while a sleep runs, and when the phone is in dark theme.</string>
     <string name="settings_section_watch">Watch</string>
     <string name="settings_sync_now">Sync now</string>
@@ -107,6 +189,8 @@
     <!-- TalkBack names of the widget buttons -->
     <string name="widget_cd_log_feed">Log feed</string>
     <string name="widget_cd_log_diaper">Log diaper</string>
+    <!-- TalkBack names of the widget buttons with two or more babies: "Log feed for Noa" -->
+    <string name="widget_cd_for_baby">%1$s for %2$s</string>
     <!-- TalkBack names of Undo in the widget receipt -->
     <string name="widget_undo_pee">Undo pee</string>
     <string name="widget_undo_poop">Undo poop</string>
@@ -117,11 +201,14 @@
 
     <!-- Ongoing notification of a running sleep (P6, DESIGN_SPEC §3.3.7). %1$s is the baby's name. -->
     <string name="notification_channel_timers">Sleep in progress</string>
-    <string name="notification_channel_timers_description">Shows a running sleep, with Woke up</string>
+    <string name="notification_channel_timers_description">Shows a running sleep with Woke up, then lets you move the wake-up time</string>
     <string name="notification_asleep_title">%1$s is asleep</string>
-    <!-- "Since 02:05". %1$s is a clock time. -->
-    <string name="notification_since">Since %1$s</string>
-    <!-- Metric label (Android 17), followed by a clock time -->
+    <!-- After Woke up on the notification: "Noa woke up at 03:12". %1$s is the baby's name, %2$s a clock time. -->
+    <string name="notification_woke_up_title">%1$s woke up at %2$s</string>
+    <!-- The selected Earlier offset on the woke-up notification: "✓ −10m" -->
+    <string name="notification_offset_selected" translatable="false">✓ %1$s</string>
+    <!-- Metric labels (Android 17): followed by a duration ("1h 07m"), a clock time -->
+    <string name="notification_metric_asleep_for">Asleep for</string>
     <string name="notification_metric_since">Since</string>
     <!-- Settings › Notifications (DESIGN_SPEC §10.5) -->
     <string name="settings_section_notifications">Notifications</string>
@@ -131,4 +218,128 @@
     <string name="settings_notifications_summary">A running sleep shows a notification with Woke up</string>
     <string name="settings_notifications_off">Notifications are off</string>
     <string name="settings_notifications_off_summary">Turn them on to see a running sleep outside the app</string>
+
+    <!-- Account and backup (BABIES_AND_BACKUP §3) -->
+    <string name="settings_section_account">Account</string>
+    <string name="account_not_signed_in">Not signed in</string>
+    <string name="account_not_signed_in_summary">Your log is only on this phone. Sign in to back it up.</string>
+    <string name="account_status_syncing">Backing up…</string>
+    <!-- "Backed up · 14:31". %1$s is a clock time. -->
+    <string name="account_status_synced">Backed up · %1$s</string>
+    <string name="account_status_offline">Saved on phone · will back up</string>
+    <string name="account_status_error">Couldn\'t back up · Tap to retry</string>
+    <string name="account_status_deleted">Backup deleted · Back up now to start again</string>
+    <string name="account_unavailable">Backup isn\'t set up in this build. Everything is saved on this phone.</string>
+    <!-- Welcome (§3.1) and the signed-out Account screen -->
+    <string name="welcome_title">Your log stays on this phone</string>
+    <string name="welcome_body_local">Without an account, everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.</string>
+    <string name="welcome_body_later">You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do, and you can share it with your family.</string>
+    <string name="welcome_continue_without">Continue without an account</string>
+    <string name="account_google">Continue with Google</string>
+    <string name="account_or_email">or use email</string>
+    <string name="account_email">Email</string>
+    <string name="account_error_invalid_email">Enter a valid email address</string>
+    <string name="account_error_no_connection">No connection. Try again.</string>
+    <string name="account_error_timed_out">No answer yet. It may still go through in a moment.</string>
+    <string name="account_error_too_many">Too many tries. Wait a moment and try again.</string>
+    <string name="account_error_no_google">No Google account on this phone. Add one in system settings, or use email.</string>
+    <string name="account_error_recent_login">Sign in again to delete your account.</string>
+    <string name="account_error_wrong_account">That\'s another account. Choose the one you\'re signed in with.</string>
+    <string name="account_error_other">Something went wrong. Try again.</string>
+    <!-- Signed in (§3.3) -->
+    <string name="account_signed_in_as">Signed in as</string>
+    <string name="account_back_up_now">Back up now</string>
+    <string name="account_sign_out">Sign out</string>
+    <string name="account_signed_in_hint">Signing out keeps the log on this phone.</string>
+    <string name="account_delete">Delete account…</string>
+    <string name="account_delete_title">Delete account?</string>
+    <string name="account_delete_body">This deletes your account and your place in the family. If you\'re the family\'s only member, its backup is deleted too. The log on this phone stays.</string>
+    <string name="account_delete_google_prompt">You\'ll sign in with Google again to confirm.</string>
+    <string name="account_delete_backup_failed">Couldn\'t delete your backup, so your account was kept. Try again.</string>
+    <string name="account_delete_account_failed">Your backup was deleted, but your account wasn\'t. Try again.</string>
+    <string name="settings_babies_hint_family">Names are shared with your family and kept in your backup.</string>
+    <!-- Sign-in without passwords (§3.3): Google, or a link sent by email -->
+    <string name="account_email_link">Email me a sign-in link</string>
+    <string name="account_link_sent_title">Check your email</string>
+    <!-- %1$s is the address the link went to -->
+    <string name="account_link_sent">We sent a sign-in link to %1$s. Tap the link in it on this phone.</string>
+    <string name="account_send_again">Send again</string>
+    <string name="account_use_another_email">Use another email</string>
+    <!-- A sign-in link opened on a phone that did not ask for it -->
+    <string name="account_link_needs_email">To finish signing in, enter the email address the link was sent to.</string>
+    <string name="account_sign_in">Sign in</string>
+    <string name="account_error_email_quota">Too many sign-in emails today. Try again tomorrow, or use Google.</string>
+    <string name="account_error_link_invalid">That link has expired or was already used. Send a new one.</string>
+    <!-- %1$s is account_privacy_link, shown as a link -->
+    <string name="account_privacy_consent">By continuing you agree to the %1$s.</string>
+    <string name="account_privacy_link">privacy policy</string>
+    <!-- An invite link waits for the sign-in (§3.5) -->
+    <string name="account_join_waiting">Sign in to join the family.</string>
+    <string name="account_delete_link_prompt">We\'ll email you a link to confirm. Open it on this phone.</string>
+    <string name="account_delete_send_link">Email me a link</string>
+    <string name="account_delete_link_sent">Check your email. Tapping the link in it on this phone deletes your account.</string>
+    <string name="account_delete_link_ready">This link deletes your account. Tap Delete to go ahead.</string>
+    <string name="family_error_invite_refused">Couldn\'t create an invite. You may have been removed from the family, or your email address isn\'t verified yet.</string>
+
+    <!-- The consent before the first upload (BABIES_AND_BACKUP §3.6) -->
+    <string name="consent_title">Back up to Google Firebase?</string>
+    <string name="consent_intro">You\'re signed in as %1$s. Nothing has been uploaded yet. Before anything is, please agree to this:</string>
+    <string name="consent_what_title">What is uploaded</string>
+    <string name="consent_what">Your log (feeds, diapers and sleep), your babies\' names and your email address. A log like this can say something about your baby\'s health.</string>
+    <string name="consent_who_title">Who sees it</string>
+    <string name="consent_who">You and the members of your family: everyone in it sees the family\'s log, the babies\' names and the members\' email addresses.</string>
+    <string name="consent_where_title">Where</string>
+    <string name="consent_where">Google Firebase. The database is in the EU; Google processes it for us and uses it for nothing else.</string>
+    <string name="consent_withdraw_title">Changing your mind</string>
+    <string name="consent_withdraw">Sign out to upload nothing more, leave the family, or delete your account (Settings › Account) to delete what is stored.</string>
+    <!-- %1$s is account_privacy_link, shown as a link -->
+    <string name="consent_policy">Details are in the %1$s.</string>
+    <string name="consent_agree">I agree</string>
+    <string name="consent_decline">Not now, sign out</string>
+
+    <!-- Settings › Family (BABIES_AND_BACKUP §3.4) -->
+    <string name="settings_section_family">Family</string>
+    <string name="family_you">You</string>
+    <string name="family_creator">Started the family</string>
+    <!-- Your own row when you started the family: "You · Started the family" -->
+    <string name="family_you_creator">You · Started the family</string>
+    <string name="family_alone">Only you so far. Invite someone to share the log and the babies.</string>
+    <string name="family_invite">Invite someone</string>
+    <!-- The text of the share sheet; %1$s is the invite link -->
+    <string name="family_invite_text">Join my family on Pooparazzi to share our baby log: %1$s (works once, for 6 days)</string>
+    <string name="family_invite_chooser">Share the invite</string>
+    <string name="family_leave">Leave family</string>
+    <string name="family_leave_title">Leave the family?</string>
+    <string name="family_leave_body">You\'ll stop seeing its log and babies. Your phone keeps its log and starts a new family of your own.</string>
+    <string name="family_leave_confirm">Leave</string>
+    <string name="family_remove">Remove</string>
+    <!-- TalkBack: "Remove anna@example.com" -->
+    <string name="family_remove_cd">Remove %1$s</string>
+    <!-- %1$s is the member's email -->
+    <string name="family_remove_title">Remove %1$s?</string>
+    <string name="family_remove_body">They\'ll stop seeing the family\'s log from now on. What\'s already on their phone stays there.</string>
+    <string name="family_loading">Loading the family…</string>
+    <string name="family_waiting">Setting up your family…</string>
+    <string name="family_error">Couldn\'t load the family. Tap to try again.</string>
+
+    <!-- Opening an invite (§3.5) -->
+    <string name="join_screen_title">Family invite</string>
+    <string name="join_loading">Opening the invite…</string>
+    <!-- %1$s is the inviter's email -->
+    <string name="join_title">Join %1$s\'s family?</string>
+    <string name="join_title_unknown">Join this family?</string>
+    <string name="join_body">Your babies and your log on this phone are added to the family\'s and shared with its members. You\'ll see theirs too.</string>
+    <string name="join_merge">Your first baby and the family\'s first baby become one baby.</string>
+    <string name="join_accept">Join</string>
+    <string name="join_not_now">Not now</string>
+    <string name="join_joined">You\'re in the family. Your log and babies are being shared.</string>
+    <string name="join_done">Done</string>
+    <string name="join_expired">This invite has expired or was already used. Ask for a new one.</string>
+    <string name="join_invalid">This invite link isn\'t valid.</string>
+    <string name="join_already_member">You\'re already in this family.</string>
+    <string name="join_try_again">Try again</string>
+
+    <!-- Settings › About -->
+    <string name="settings_privacy">Privacy policy</string>
+    <string name="settings_privacy_summary">What is stored, where, and your rights</string>
 </resources>

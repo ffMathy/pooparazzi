@@ -46,13 +46,19 @@ internal object EditRules {
 
     /**
      * Changes a feed's type, keeping its time. A breastfeed gets back the original's side when [original] was one,
-     * otherwise no side; formula, food and no type (null) drop the side. Feeds never have an end.
+     * otherwise no side; a formula feed gets back the original's amount when [original] was formula, otherwise none.
+     * Other types drop the side and the amount. Feeds never have an end.
      */
-    fun withFeedType(draft: EditDraft, type: FeedType?, original: Entry?): EditDraft = when {
-        draft.kind != EntryKind.FEED || draft.feedType == type -> draft
-        type == FeedType.BREAST && original?.isBreastfeed == true -> draft.copy(feedType = type, end = null, side = original.breastSide)
-        else -> draft.copy(feedType = type, end = null, side = null)
+    fun withFeedType(draft: EditDraft, type: FeedType?, original: Entry?): EditDraft {
+        if (draft.kind != EntryKind.FEED || draft.feedType == type) return draft
+        val side = if (type == FeedType.BREAST && original?.isBreastfeed == true) original.breastSide else null
+        val amount = if (type == FeedType.FORMULA && original?.feedType == FeedType.FORMULA) original.amountMl else null
+        return draft.copy(feedType = type, end = null, side = side, amountMl = amount)
     }
+
+    /** Sets a formula feed's amount ([amountMl] null or not positive: none); other drafts are unchanged. */
+    fun withAmount(draft: EditDraft, amountMl: Int?): EditDraft =
+        if (draft.isFormula) draft.copy(amountMl = amountMl?.takeIf { it > 0 }) else draft
 
     /** Moves [field] by [minutes]; a running end does not move. */
     fun nudge(draft: EditDraft, field: TimeField, minutes: Int): EditDraft = when (field) {
@@ -142,13 +148,19 @@ internal object EditRules {
             poop = pick(draft.poop, base.poop, theirs.poop),
             color = pick(draft.color, base.color, theirs.color),
             texture = pick(draft.texture, base.texture, theirs.texture),
+            amountMl = pick(draft.amountMl, base.amountMl, theirs.amountMl),
         )
         return when {
             merged.kind == EntryKind.DIAPER ->
-                if (merged.poop) merged.copy(end = null, side = null) else merged.copy(end = null, side = null, color = null, texture = null)
-            merged.isInterval -> merged.copy(side = null)
-            merged.isBreastfeed -> merged.copy(end = null)
-            else -> merged.copy(end = null, side = null)
+                if (merged.poop) {
+                    merged.copy(end = null, side = null, amountMl = null)
+                } else {
+                    merged.copy(end = null, side = null, color = null, texture = null, amountMl = null)
+                }
+            merged.isInterval -> merged.copy(side = null, amountMl = null)
+            merged.isBreastfeed -> merged.copy(end = null, amountMl = null)
+            merged.isFormula -> merged.copy(end = null, side = null)
+            else -> merged.copy(end = null, side = null, amountMl = null)
         }
     }
 

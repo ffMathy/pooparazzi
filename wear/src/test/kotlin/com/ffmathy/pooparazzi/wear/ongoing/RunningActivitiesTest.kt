@@ -8,6 +8,7 @@ import androidx.core.app.NotificationCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.wear.ongoing.OngoingActivity
 import com.ffmathy.pooparazzi.core.domain.summarize
+import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
 import com.ffmathy.pooparazzi.wear.MainActivity
@@ -75,6 +76,29 @@ class RunningActivitiesTest {
     fun withoutPermissionNothingIsPostedAndNothingFails() {
         shadowOf(app).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
         RunningActivities(app).sync(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, SampleData.ZONE))
+        assertNull(shadowOf(notifications).getNotification(1001))
+    }
+
+    @Test
+    fun withSeveralBabiesTheActivityNamesTheCurrentBabyAndFollowsASwitch() {
+        val activities = RunningActivities(app)
+        activities.sync(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, SampleData.ZONE), baby = "Noa")
+        fun title() = shadowOf(notifications).getNotification(1001)?.extras?.getString(NotificationCompat.EXTRA_TITLE)
+        assertEquals("Noa · Asleep since 02:05", title())
+        assertEquals("Noa · Asleep since 02:05", OngoingActivity.recoverOngoingActivity(app, 1001)?.status?.getText(app, 0L).toString())
+        assertEquals("Noa, asleep since 02:05", OngoingActivity.recoverOngoingActivity(app, 1001)?.contentDescription)
+
+        // Switched to Ida, asleep too: the activity is hers.
+        val ida = Entry.sleep(SampleData.at(2, 30), null, id = "ida-sleep", babyId = SampleData.TWIN_ID)
+        activities.sync(summarize(listOf(ida), SampleData.NOW_0312, SampleData.ZONE), baby = "Ida")
+        assertEquals("Ida · Asleep since 02:30", title())
+
+        // Renamed on the phone: posted again with the new name.
+        activities.sync(summarize(listOf(ida), SampleData.NOW_0312, SampleData.ZONE), baby = "Ida Marie")
+        assertEquals("Ida Marie · Asleep since 02:30", title())
+
+        // Switched to an awake baby: no activity.
+        activities.sync(summarize(emptyList(), SampleData.NOW_0312, SampleData.ZONE), baby = "Noa")
         assertNull(shadowOf(notifications).getNotification(1001))
     }
 }

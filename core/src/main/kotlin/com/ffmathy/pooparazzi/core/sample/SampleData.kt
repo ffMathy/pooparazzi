@@ -1,14 +1,19 @@
 package com.ffmathy.pooparazzi.core.sample
 
 import com.ffmathy.pooparazzi.core.domain.epochMillis
+import com.ffmathy.pooparazzi.core.domain.localDate
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 import com.ffmathy.pooparazzi.core.settings.Settings
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Random
 
 /**
  * Reference scenario v2 (V1_ADDITIONS §6) for previews, screenshots and tests: baby Noa, Mon 26 Oct 2026,
@@ -35,7 +40,14 @@ object SampleData {
     val SYNCED_1431: Long = epochMillis(TODAY, 14, 31, ZONE)
     val SYNCED_0311: Long = epochMillis(TODAY, 3, 11, ZONE)
 
-    val settings: Settings = Settings(babyName = BABY_NAME, updatedAtMillis = epochMillis(YESTERDAY, 9, 0, ZONE))
+    val settings: Settings = Settings(babies = listOf(Baby(Baby.FIRST_ID, BABY_NAME)), updatedAtMillis = epochMillis(YESTERDAY, 9, 0, ZONE))
+
+    /** The second baby of the twin samples. */
+    const val TWIN_NAME = "Ida"
+    const val TWIN_ID = "sample-baby-ida"
+
+    /** Twins: Noa (the current baby, the one of [scenario]) and [TWIN_NAME]. */
+    val twinSettings: Settings = settings.copy(babies = settings.babies + Baby(TWIN_ID, TWIN_NAME))
 
     /** Epoch ms of [hour]:[minute] today (or on [day]) in [zone]. */
     fun at(hour: Int, minute: Int, day: LocalDate = TODAY, zone: ZoneId = ZONE): Long = epochMillis(day, hour, minute, zone)
@@ -48,7 +60,7 @@ object SampleData {
             Entry.breastfeed(t(1, 40), BreastSide.LEFT_THEN_RIGHT, id = "sample-breast-0140"),
             Entry.diaper(t(1, 52), pee = true, poop = false, id = "sample-pee-0152"),
             Entry.sleep(t(2, 5), t(5, 20), id = "sample-sleep-0205"),
-            Entry.feed(FeedType.FORMULA, t(5, 25), id = "sample-formula-0525"),
+            Entry.feed(FeedType.FORMULA, t(5, 25), id = "sample-formula-0525", amountMl = 90),
             Entry.diaper(t(5, 41), pee = true, poop = true, color = PoopColor.YELLOW, texture = PoopTexture.SEEDY, id = "sample-both-0541"),
             Entry.sleep(t(6, 10), t(7, 45), id = "sample-sleep-0610"),
             Entry.breastfeed(t(8, 0), BreastSide.RIGHT_THEN_LEFT, id = "sample-breast-0800"),
@@ -56,7 +68,7 @@ object SampleData {
             Entry.sleep(t(9, 30), t(10, 15), id = "sample-sleep-0930"),
             Entry.feed(FeedType.FOOD, t(10, 30), id = "sample-food-1030"),
             Entry.diaper(t(11, 5), pee = true, poop = false, id = "sample-pee-1105"),
-            Entry.feed(FeedType.FORMULA, t(12, 22), id = "sample-formula-1222"),
+            Entry.feed(FeedType.FORMULA, t(12, 22), id = "sample-formula-1222", amountMl = 120),
             Entry.sleep(t(12, 40), t(13, 27), id = "sample-sleep-1240"),
             Entry.diaper(t(13, 44), pee = true, poop = false, id = "sample-pee-1344"),
         )
@@ -76,4 +88,68 @@ object SampleData {
             .filter { it.startMillis <= cutoff }
             .map { if (it.id == "sample-sleep-0205") it.copy(endMillis = null, updatedAtMillis = it.startMillis) else it }
     }
+
+    /**
+     * Weeks of logging for Statistics: [days] full days before [YESTERDAY] (the first is [TODAY] − [days] − 1), then
+     * yesterday until the 22:40 sleep, then [scenario]. Generated from a fixed seed, so it is the same on every run:
+     * cycles of sleep, a feed and a diaper or two, with longer sleeps at night. Over the weeks the night sleeps grow
+     * and poops become rarer, so the last 7 days differ from the last 30.
+     */
+    fun history(days: Int = 33, zone: ZoneId = ZONE): List<Entry> {
+        val random = Random(HISTORY_SEED)
+        val first = TODAY.minusDays(days.toLong() + 1)
+        // Every generated cycle ends before the scenario's 22:40 sleep.
+        val cutoff = epochMillis(YESTERDAY, 22, 30, zone)
+        val entries = mutableListOf<Entry>()
+        var t = epochMillis(first, 0, 20 + random.nextInt(30), zone)
+        var cycles = 0
+        while (true) {
+            val time = Instant.ofEpochMilli(t).atZone(zone)
+            // 0 on the first day, 1 on yesterday.
+            val progress = Duration.between(first.atStartOfDay(zone), time).toMinutes() / ((days + 1) * 24.0 * 60)
+            val night = time.hour >= 19 || time.hour < 6
+            val id = "sample-history-$cycles"
+            val cycle = mutableListOf<Entry>()
+            var at = t + minutes(if (night) 120 + (progress * 70).toInt() + random.nextInt(60) else 35 + random.nextInt(70))
+            cycle += Entry.sleep(t, at, id = "$id-sleep")
+            at += minutes(3 + random.nextInt(10))
+            cycle += when (random.nextInt(10)) {
+                in 0..5 -> Entry.breastfeed(at, BreastSide.entries[random.nextInt(BreastSide.entries.size)], id = "$id-feed")
+                in 6..7 -> Entry.feed(FeedType.FORMULA, at, id = "$id-feed")
+                8 -> Entry.feed(if (night) FeedType.FORMULA else FeedType.FOOD, at, id = "$id-feed")
+                else -> Entry.feed(null, at, id = "$id-feed")
+            }
+            at += minutes(10 + random.nextInt(15))
+            val poop = random.nextDouble() < 0.42 - 0.2 * progress
+            cycle += Entry.diaper(
+                at,
+                pee = !poop || random.nextInt(3) > 0,
+                poop = poop,
+                color = if (poop) HISTORY_COLORS[random.nextInt(HISTORY_COLORS.size)] else null,
+                texture = if (poop) HISTORY_TEXTURES[random.nextInt(HISTORY_TEXTURES.size)] else null,
+                id = "$id-diaper",
+            )
+            if (!night && random.nextInt(4) == 0) {
+                at += minutes(25 + random.nextInt(30))
+                cycle += Entry.diaper(at, pee = true, poop = false, id = "$id-pee")
+            }
+            if (at > cutoff) break
+            entries += cycle
+            cycles++
+            t = at + minutes(if (night) 15 + random.nextInt(25) else 40 + random.nextInt(60))
+        }
+        return entries + scenario(zone)
+    }
+
+    /** The days [historyWithGaps] leaves empty: a forgotten Tue 13 and Wed 14 Oct. */
+    val GAP_DAYS: Set<LocalDate> = setOf(LocalDate.of(2026, 10, 13), LocalDate.of(2026, 10, 14))
+
+    /** [history] without the entries that start on [GAP_DAYS]: days when nothing was logged, for Statistics. */
+    fun historyWithGaps(zone: ZoneId = ZONE): List<Entry> = history(zone = zone).filterNot { localDate(it.startMillis, zone) in GAP_DAYS }
+
+    private fun minutes(count: Int): Long = count * 60_000L
+
+    private const val HISTORY_SEED = 2026_10_26L
+    private val HISTORY_COLORS = listOf(PoopColor.YELLOW, PoopColor.YELLOW, PoopColor.BROWN, PoopColor.GREEN)
+    private val HISTORY_TEXTURES = listOf(PoopTexture.SEEDY, PoopTexture.MUSHY, PoopTexture.MUSHY, PoopTexture.FORMED)
 }

@@ -1,15 +1,24 @@
 package com.ffmathy.pooparazzi.core.data
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-/** The app's local store. Each device keeps its own copy; sync merges them with last-writer-wins. */
+/**
+ * The app's local store. Each device keeps its own copy; sync merges them with last-writer-wins.
+ *
+ * Versions (schemas in `core/schemas`): 1, the first release; 2, several babies and the backup (an entry's
+ * [EntryEntity.babyId] and [EntryEntity.cloudPending], migrated automatically: old rows are the first baby's and not
+ * pending for the backend); 3, a formula feed's optional [EntryEntity.amountMl] (migrated automatically: old rows have
+ * none).
+ */
 @Database(
     entities = [EntryEntity::class, PurgedEntryEntity::class],
-    version = 1,
+    version = 3,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class PooparazziDatabase : RoomDatabase() {
     abstract fun entryDao(): EntryDao

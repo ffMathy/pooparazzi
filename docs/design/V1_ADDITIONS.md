@@ -1,11 +1,14 @@
 # v1 additions after the mockup review
 
+> **Several babies and the backup:** [`BABIES_AND_BACKUP.md`](BABIES_AND_BACKUP.md) adds several babies (a current baby per device) and an optional account that backs the log up; it wins where it differs from this document (one baby, "phone ↔ watch only").
+
 This document extends [`DESIGN_SPEC.md`](DESIGN_SPEC.md), which stays the source of truth for everything it covers: the Lamp, tokens, typography, icons, formatting grammar, night behaviour and accessibility. This file covers what the user asked for after approving the mockups:
 
 1. **Feed types**: Breast, Formula or Food. The type is **optional**: a feed can be logged with just its time.
 2. **A breast feed is one time, not a timer.** Like Formula and Food it records only its time (Now or −5m / −10m / −15m), plus an optional **side order**, ticked with two checkboxes, Left and Right, before it is logged. The **order of the ticks is the order recorded** (Left then Right = Left → Right). Nothing asks for a duration. (An earlier version timed breastfeeds with a start and an end; see "Compatibility" in §1.)
 3. **Diaper Pee and Poop are independent toggles** (checkboxes). When Poop is on, the parent can also pick a **colour** and a **texture**. All of these are **optional**: a diaper with nothing ticked is a plain diaper change.
 4. **The whole app is in English and Danish**, through Android string resources, with an in-app language choice.
+5. **Statistics** (§8): averages per day of feeds, pee, poop and sleep, the last 7 days next to a chosen range, with a bar chart. It opens from History.
 
 **Minimal data.** The user asked that the data required be minimal: only the times are ever required. Feed type, breast side, pee, poop, colour and texture are all optional extras.
 
@@ -30,6 +33,7 @@ data class Entry(
     val endMillis: Long? = null,    // SLEEP only; null while running
     val feedType: FeedType? = null, // FEED only; optional (null = just the time)
     val breastSide: BreastSide? = null, // FEED+BREAST only; optional side order
+    val amountMl: Int? = null,      // FEED+FORMULA only; optional amount in millilitres (Room v3)
     val pee: Boolean = false,       // DIAPER only
     val poop: Boolean = false,      // DIAPER only
     val poopColor: PoopColor? = null,     // DIAPER with poop only (optional)
@@ -45,6 +49,7 @@ data class Entry(
 - **Feed type:** optional. A FEED with `feedType == null` is an instant that records only its time; it can never carry a side.
 - **Diapers:** `pee` and `poop` are optional. A DIAPER with neither is a *plain change* (display kind `PLAIN`, label "Diaper"). `poopColor` and `poopTexture` must be null when `!poop`.
 - **Breast side:** optional. A breastfeed logged with nothing ticked has `breastSide == null` (only its time was recorded). Other feed types never carry a side.
+- **Formula amount:** optional. A formula feed logged at "No amount" has `amountMl == null`; a set amount is positive and always stored in millilitres, whatever unit it was picked in. Other feed types (and non-feeds) never carry an amount.
 - **Tick order → side:** `BreastSide.fromOrder(ticks)` maps the ticked `Breast`es, in tick order, to the stored value: `[]` → null, `[L]` → LEFT, `[R]` → RIGHT, `[L, R]` → LEFT_THEN_RIGHT, `[R, L]` → RIGHT_THEN_LEFT. `BreastSide.toggle(ticks, b)` unticks `b` when ticked, otherwise appends it (so re-ticking puts it last). `side.order` maps back for editing. The stored enum is unchanged, so storage and sync stay compatible.
 - **Mis-taps:** a sleep that ends **less than 60 s** after its start is discarded as a mis-tap. The UI then shows "Sleep cancelled", with Undo.
 - **Dedupe:** two feeds of the same type (breastfeeds included, whatever their side) less than 5 s apart are one entry ("Already logged at …"), as for every instant.
@@ -66,11 +71,11 @@ data class Entry(
   - Offset chips: Now · −5m · −10m · −15m (single-select). The title follows the selected chip.
   - Three **full-width option rows**, each 72 dp tall with radius 28, filled `feed-container`. Each row has a 32 dp icon in `feed-strong`, a label in headlineSmall `feed-on-container`, and an optional supporting line in bodyMedium:
     - **Breast**: icon `breast`, supporting line "Then the sides, if you like" ("Derefter siderne, hvis du vil").
-    - **Formula**: icon `feed` (the bottle).
+    - **Formula**: icon `feed` (the bottle), supporting line "Then the amount, if you like" ("Derefter mængden, hvis du vil").
     - **Food**: icon `food` (bowl and spoon).
   - A fourth row, **"Just the time"** ("Kun tidspunktet"): same size, but *outlined* (1 dp `outline`, no fill), icon `clock`, label in `on-surface`. It logs a feed with no type.
-  - Tapping **Formula** or **Food** logs an instant at `stamp + offset`, closes the sheet and shows the receipt sheet "Formula logged" / "Food logged" with Undo and offset chips. **Just the time** does the same with "Feed logged" ("Måltid registreret").
-  - Tapping **Breast** logs nothing yet: the same sheet moves to its **Breast step** (below). The stamp and the selected chip are kept.
+  - Tapping **Food** logs an instant at `stamp + offset`, closes the sheet and shows the receipt sheet "Food logged" with Undo and offset chips. **Just the time** does the same with "Feed logged" ("Måltid registreret").
+  - Tapping **Breast** logs nothing yet: the same sheet moves to its **Breast step** (below). Tapping **Formula** likewise moves to its **Formula step**. The stamp and the selected chip are kept.
   - The rows are full width because the Danish labels are long ("Modermælkserstatning").
 - **Breast step** (the Feed sheet after Breast):
   - Title "Breast · 14:32" ("Amning · 14:32"), following the chips, which stay: Now · −5m · −10m · −15m.
@@ -83,7 +88,13 @@ data class Entry(
   - A **summary line** under the tiles (titleMedium, live region): "Left → Right" in FEED text, or "No side" in `on-surface-variant` while nothing is ticked. TalkBack reads "Left then right".
   - **"Log feed"** ("Registrér"): the primary button bottom-right (as Save in the Diaper sheet). It is always enabled, because the side is optional. It logs a breast feed instant at `stamp + offset` with the ticked order (none ticked: just the time), closes the sheet and shows the receipt sheet "Breast logged", "14:32 · Left → Right" (just the time with no side), with offset chips that move its time.
   - "Cancel" (or a scrim tap) closes the sheet and logs nothing.
-- **Running sleep and a feed:** logging any feed (a breast feed included) while a sleep runs shows the running-sleep card variant with the "End sleep" chip (unchanged). The sleep keeps the Lamp.
+- **Formula step** (the Feed sheet after Formula):
+  - Title "Formula · 14:32" ("Modermælkserstatning · 14:32"), following the chips, which stay.
+  - Section heading "Amount · Optional" ("Mængde · Valgfri"), then the amount in titleLarge FEED text ("120 ml"), or "No amount" ("Ingen mængde") in `on-surface-variant`.
+  - A full-width **slider** (min 48 dp tall) in FEED colours: thumb and active track `feed-strong`, inactive track `feed-container`. Its start is **No amount**; each step adds **10 ml** up to **300 ml**, or **½ fl oz** up to **10 fl oz** where the region measures in fluid ounces (the US, Liberia, Myanmar: the app's region, else the device's, since the in-app languages carry none). Ounces are shown to the nearest half ("4 fl oz", "4.5 fl oz", Danish "4,5 fl oz") and stored as millilitres. TalkBack reads "Amount, 120 ml, slider".
+  - **"Log feed"** ("Registrér") bottom-right, always enabled (the amount is optional). It logs a formula feed at `stamp + offset` with the amount (at No amount: just the time) and shows the receipt sheet "Formula logged", "14:32 · 120 ml" (just the time without an amount).
+  - The amount shows in History's supporting line ("12:22 · 120 ml"; TalkBack "Formula, 12:22, 120 ml") and on the watch's Today list. The watch logs formula without an amount.
+- **Running sleep and a feed:** logging any feed (a breast feed included) while a sleep runs shows the receipt with the "End sleep" chip. The sleep keeps the Lamp.
 - **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line: "ago · 12:22 · Formula". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, formula, 2 hours 10 minutes ago, at 12:22". A feed with no type shows the generic `feed` icon and no type word ("ago · 12:22"; TalkBack "Last feed, 2 hours 10 minutes ago, at 12:22").
 - **Breast order on every last-feed line.** A breastfeed with a recorded side shows the order instead of the word "Breast", because it is what the next feed starts from:
   - Lamp sub-line "ago · 14:32 · Left → Right". When that would exceed the chord it shortens to "ago · 14:32 · L → R", then "14:32 · L → R".
@@ -185,7 +196,7 @@ The since-row never shows colour or texture.
 **Edit sheet:**
 - **Feed:**
   - Type selector: a connected button group, Breast | Formula | Food, labelled "Type · Optional". Tapping the selected type again **clears it** (a feed with just its time).
-  - Every feed shows one time block. Breast adds "Side · Optional": the **same Left / Right checkboxes** as the Feed sheet's Breast step (order badges, tick order = side) and the summary line. There is no end time and no duration.
+  - Every feed shows one time block. Breast adds "Side · Optional": the **same Left / Right checkboxes** as the Feed sheet's Breast step (order badges, tick order = side) and the summary line. Formula adds "Amount · Optional": the **same amount slider** as the Feed sheet's Formula step. Switching to another type drops the side or amount; switching back restores the original's. There is no end time and no duration.
 - **Diaper:** the toggles, colour chips and texture chips from §3.1, plus one time block. Save is enabled with both toggles off (a plain change).
 - **Save** is disabled only by a blocking issue (end before start, a time in the future, the entry deleted elsewhere). Nothing beyond the times is required.
 
@@ -234,6 +245,9 @@ The since-row never shows colour or texture.
 | Which side? | Which side? | Hvilken side? |
 | Tick the sides in the order you fed. Optional. | — | Sæt flueben i den rækkefølge, du ammede. Valgfrit. |
 | No side | No side | Ingen side |
+| Amount (formula) | Amount | Mængde |
+| No amount | No amount | Ingen mængde |
+| Then the amount, if you like | Then the amount, if you like | Derefter mængden, hvis du vil |
 | Just the time (untyped feed) | Just the time | Kun tidspunktet |
 | Feed (untyped feed, history title) | Feed | Måltid |
 | Diaper (plain change) | Diaper | Ble |
@@ -256,6 +270,9 @@ The since-row never shows colour or texture.
 | Synced with watch · 14:31 | — | Synkroniseret med ur · 14:31 |
 | Synced with phone · 14:31 | — | Synkroniseret med telefon · 14:31 |
 | feeds / pee / poop / sleep (Today grid) | — | måltider / tis / bæ / søvn |
+| Statistics (the screen, History's chart button) | Statistics | Statistik |
+| Last 7 days / Last 30 days / Last 90 days | Last 7 days / Last 30 days / Last 90 days | Seneste 7 dage / Seneste 30 dage / Seneste 90 dage |
+| Average per day (Statistics subtitle) | Average per day | Gennemsnit pr. dag |
 
 ---
 
@@ -342,16 +359,19 @@ These names are what the apps code against.
   - `today: DayCounts(feeds, pee, poop, sleepMinutes)`;
   - `dayEntries(day)` for History.
 - `fun lampState(summary): LampState`, one of `FeedIdle`, `SleepRunning`.
+- `fun dailyCounts(entries, from, to, now, zone): List<DayCounts>`: History's counts for every day of a range, in one pass.
+- Statistics (§8): `fun statsReport(entries, now, zone, range): StatsReport?` (the last 7 days, the last 30 days and the comparison window; null only when nothing is logged), `StatsReport.chart(metric): StatsChart`, `binDays(dayCount)`, and `StatsRange.clamped` / `normalised` for chosen dates.
 
 **`format/`**
 - `DurationFormatter` (units injected; resource-backed factory `DurationFormatter.from(context)`).
 - `ClockFormatter`.
 - `LabelFormatter`, which maps enums to string resources: feed type, side, poop colour and texture, and diaper kind labels.
 - Composable `rememberFormatters()`.
+- `formatTenths(tenths, locale)`: an average with one decimal and the language's separator ("6.7" / "6,7").
 
 **`ui/`** (Compose; no Material dependency)
 - `tokens`: Night, Day and Watch colour sets plus event colours, including `feed-container-lit` and `feed-track`; poop swatches.
-- `icons`: `XIcons.*` `ImageVector`s from the DESIGN_SPEC §6 path data, plus `breast`, `food`, `sideLeft`, `sideRight`, `sideLeftRight`, `sideRightLeft`, `checkbox`, `checkboxChecked`, `info`.
+- `icons`: `XIcons.*` `ImageVector`s from the DESIGN_SPEC §6 path data, plus `breast`, `food`, `sideLeft`, `sideRight`, `sideLeftRight`, `sideRightLeft`, `checkbox`, `checkboxChecked`, `info`, `chart`.
 - `type`: the `FontFamily`s with variable axes.
 - `lamp`: `Lamp(state, sizeDp, theme)`, Canvas drawing shared by phone and watch.
 
@@ -362,9 +382,82 @@ These names are what the apps code against.
 **`sample/`**
 - `SampleData.scenario(zone)` builds §6.
 - `SampleData.NOW_1432`, `NOW_0312` and `NOW_1450`, plus the 14:32 breast feed variant (`scenarioWithRecentFeed`).
+- `SampleData.history(days)`: weeks of deterministic logging that end in §6, for Statistics; `historyWithGaps()` leaves out the days in `GAP_DAYS` (Tue 13 and Wed 14 Oct), days when nothing was logged.
 
 ### `:app` and `:wear` rules
 
 - **Screen structure:** each screen is a **stateless composable** (`HomeScreen(state: HomeUiState, actions: HomeActions)`, and so on) plus a ViewModel. Screenshot tests render the stateless screens with `SampleData` and a fixed clock, in EN and DA.
 - **Strings:** app-specific strings live in the app module's `values/` + `values-da/`. Shared words come from core.
 - **Graceful degradation:** without Play Services or a paired device, everything works locally. Sync is optional.
+
+---
+
+## 8. Statistics (P8)
+
+**Placement.** Statistics is a destination over History. The `chart` icon button at the end of History's top bar opens it (TalkBack: "Statistics"); Back, in the top bar or from the system, returns to History with its day kept, and a second tap during the transition is dropped. There is no deep link, widget or Home entry point; a widget or notification link still returns to Home. History's list, its single scrollable node and its single "Back" are unchanged: History stays "one day", Statistics is "many days".
+
+**What it shows.** Averages per day of feeds · pee · poop · sleep (§4's order). The **last 7 days** are always the left column (displaySmall); the right column (titleLarge) is a **comparison range**, the **last 30 days** by default. The rows are a single-select accordion: the open row shows a bar chart of the comparison range. Poop is open on every new visit.
+
+### 8.1 Ranges
+
+Only whole days count: every window ends **yesterday**, and the **first logged day** is left out as probably partial, so the first countable day (`firstDay`) is the day after it. The numbers therefore change only at midnight or when an entry changes, never as today goes on. Until there is a whole day (the first entry is from today or yesterday), the report counts **today so far** instead, from the first logged day through today (`soFar`), so even a single entry shows; the footnote then says "No whole day has been logged yet, so these averages count today so far. …". With nothing logged at all: "Statistics start as soon as something is logged."
+
+| Range | Days | Reference (`history()` at Mon 26 Oct 2026) |
+|---|---|---|
+| Last 7 days (left column, always) | yesterday − 6 … yesterday | Mon 19 – Sun 25 Oct |
+| Last 30 days (default comparison) | yesterday − 29 … yesterday | Sat 26 Sep – Sun 25 Oct |
+| Last 90 days | yesterday − 89 … yesterday | Tue 28 Jul – Sun 25 Oct ("33 of 90 days logged") |
+| All days | `firstDay` … yesterday | Wed 23 Sep – Sun 25 Oct |
+| Chosen dates | picked in the date range dialog | e.g. 5 – 18 Oct |
+
+- **Presets are nominal.** "Last 30 days" is always 30 days, even for a new user: days before `firstDay` are drawn empty and counted in "n of N days logged". Presets are relative (they move at midnight); chosen dates are absolute.
+- **The range chip** (like the edit sheet's day chip) shows "Last 30 days", "Last 90 days", "All days" or "Chosen dates". Its menu offers the presets and "Choose dates…", which opens the M3 `DateRangePicker` in a `DatePickerDialog`: selectable days are `firstDay` … yesterday, a start alone is a one-day range, and Cancel changes nothing. Its day, weekday and year labels use dataMedium (Google Sans Flex, tabular figures) instead of the default bodyLarge, so the dialog keeps the digit rule (DESIGN_SPEC §5.7).
+- **Chosen dates are cut** to `firstDay` … yesterday on every build (entirely outside: the last 30 days). On OK, dates equal to a preset's become that preset.
+- **Saved state:** the open row and the range survive rotation (view model) and process death (`statistics_metric`, `statistics_range`, and `statistics_from` / `statistics_to` as epoch days for chosen dates). Anything unknown restores as the last 30 days with Poop open.
+
+### 8.2 Which days count
+
+| Day status | Rule |
+|---|---|
+| Before logging | before `firstDay`: not counted, not a gap, drawn empty |
+| Nothing logged | no entry of any kind starts on the day: left out of every average, drawn as a gap |
+| Counted (a logged day) | otherwise |
+
+- **Per kind,** a counted day enters an average only if an entry of that kind **starts** on it: a feed for Feeds; any diaper, plain changes included, for Pee and Poop; a sleep for Sleep. A forgotten kind is left out of that kind only; a forgotten running sleep, or the tail of last night's sleep, never enters an average.
+- **"Forgot to log" is never 0.** A real zero is a counted day with diapers logged and no poop: averaged in, and drawn as a 2 dp mark.
+- **Daily values** are History's counts for the day (`dailyCounts`): sleep is the clock minutes inside the day, including the part of a sleep that began the evening before. DST days count as one day with their real minutes.
+- **Averages** use integers and round half up: counts to tenths, `(20·S + n) / (2·n)` ("6.7" / "6,7" through `formatTenths`), sleep to whole minutes, `(2·S + n) / (2·n)` ("14h 01m" / "14t 01m"). No counted day shows "–".
+- **Coverage:** a window with days with nothing logged (or before logging) adds "3 of 7 days logged" under its dates.
+
+### 8.3 Layout (390 × 844, Night and Day alike)
+
+| Band | Content |
+|---|---|
+| Top bar | Back; "Statistics" titleLarge (a heading); under it "Average per day" labelMedium onSurfaceVariant (not in the empty state). No action at the end |
+| Period header | "Last 7 days" labelLarge with its dates ("19 Oct – 25 Oct", dataSmall onSurfaceVariant) over the left column; the range chip with its dates over the right one; coverage lines when they apply |
+| Rows | 4 grouped cards (gap 2, r 20 / r 6, surfaceContainer, padding 16 / 12 / 8): the kind's glyph 20 in its strong colour + name labelLarge + `chevronDown` 20 when closed; then the 7-day average (displaySmall) and the range's (titleLarge) on one baseline, both shrinking to 12 sp rather than clip; under another range, "Last 30 days 1.8" (dataSmall) keeps the 30-day figure on screen |
+| Open row | adds its chart; the card grows with `animateContentSize` (left out with reduced motion) |
+| Footnote | "Averages count whole days up to yesterday. …" bodySmall onSurfaceVariant |
+
+The column width is `(content width − 2 × 16 − 12) / 2`: 153 dp at 390 dp, 138 dp at 360 dp. Everything scrolls in one column (the menu and the dialog are popups). At large font sizes labels and dates wrap; the numbers and the range chip's label stay on one line and shrink.
+
+### 8.4 Chart
+
+- **Block:** the scale label (labelSmall: the top count "5", or "16h 00m" for sleep) over a decorative 1 dp outlineVariant hairline; the plot (full width × 112 dp, a `Canvas`); the first and last dates; the legend; "Days with no diapers logged are left out." (per kind) when the window has gaps. With nothing counted the block is "Nothing logged on these days."
+- **Bars:** one per day up to 62 days; longer windows use 7-day bars cut from the end (14-, 21-day … beyond 434 days), so there are never more than 62 bars and the newest bar is exactly the last 7 days. A bar's value is the average per counted day. Bars are 60 % of their slot (2–12 dp wide, at least 3 tall), r 3, in the kind's strong colour; a gap draws nothing.
+- **The last 7 days** sit on a band (surfaceContainerHighest, r 6, with a 1 dp outline so it reaches 3 : 1 even where no line crosses it) when the window ends yesterday and is longer than a week, with their average as a solid 2 dp onSurface line across the band (daily bars only). **The range's average** is a dashed 2 dp onSurfaceVariant line across the plot. Both lines sit on 4 dp halos (band and card colour) so they stay visible over the bars.
+- **Scale:** counts up to the next whole number (at least 1), sleep up to the next whole hour.
+- **Legend:** "Last 7 days" (outlined band swatch, with the line when drawn), the range's name (dashed swatch), "Each bar is 7 days" for binned bars; in a row, or stacked for three items or from 130 % font.
+- **Not by colour alone:** band + solid line versus dashed line, legend words, a zero mark versus no mark, one series per chart named by the row. Bars reach 3 : 1 on the card and on the band in both themes (weakest: Night poop 3.13 on the band).
+
+### 8.5 TalkBack
+
+- **Header:** "Last 7 days, 19 October to 25 October" (a heading), with ", 3 of 7 days logged" when it applies.
+- **Range chip:** a button, click label "Change range": "Last 30 days, 26 September to 25 October" or "Chosen dates, 5 October to 18 October".
+- **Rows** are radio buttons in a selectable group: "Poop. Last 7 days: 0.7 a day. Last 30 days: 1.8 a day."; under another range "Feeds. Last 7 days: 6.7 a day. Chosen dates: 7.1 a day. Last 30 days: 7.1 a day."; durations in words ("14 hours 1 minute a day"); "not logged" instead of "–".
+- **Chart:** one node: "Poop per day, 26 September to 25 October. Highest 5 on Wednesday 7 October. Lowest 0 on Friday 23 October.", for bars of several days "…, each bar 7 days. Highest 3.3 from 11 May to 17 May. …" (the oldest bar can be a single day, and is then said like a day: "Lowest 1.0 on Sunday 23 August."), then "2 days with no diapers logged are left out." and "Days before 23 October are left out." when they apply.
+- Spoken dates use full month names; the year is added when a range spans two years or is not in the current year.
+
+### 8.6 Known limit
+
+A partly logged day (the afternoon forgotten) cannot be told apart from a quiet day: it counts, and shows as a low bar and as the lowest value in the TalkBack summary.

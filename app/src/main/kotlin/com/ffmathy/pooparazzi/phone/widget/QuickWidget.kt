@@ -2,8 +2,6 @@ package com.ffmathy.pooparazzi.phone.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -44,15 +42,7 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 class QuickWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(QuickLayout.Sizes)
 
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val source = WidgetSource.from(context)
-        val initial = source.current()
-        val snapshots = source.snapshots()
-        provideContent {
-            val snapshot by snapshots.collectAsState(initial)
-            QuickWidgetContent(snapshot)
-        }
-    }
+    override suspend fun provideGlance(context: Context, id: GlanceId) = provideSnapshots(context) { QuickWidgetContent(it) }
 
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
         provideContent { QuickWidgetContent(WidgetSamples.idle(night = true)) }
@@ -103,16 +93,18 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
     }
     // All three show their label, or none does (icons stay on one line).
     val labels = listOf(feedLabel, diaperLabel, sleepLabel).all(::fits)
+    // With two or more babies TalkBack names the baby the buttons log for (BABIES_AND_BACKUP §2.4).
+    val baby = strings.babyLabel(snapshot)
     WidgetSurface(colors, snapshot.backgroundLaunch, GlanceModifier.padding(layout.padding)) {
         Row(GlanceModifier.fillMaxSize()) {
             val cell = GlanceModifier.defaultWeight().fillMaxHeight()
             val feed = colors.feed
-            SheetButton(HomeLaunch.Feed, feed, strings.string(R.string.widget_cd_log_feed), cell) {
+            SheetButton(HomeLaunch.Feed, feed, strings.forBaby(strings.string(R.string.widget_cd_log_feed), baby), cell) {
                 QuickFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, labels)
             }
             Spacer(GlanceModifier.width(layout.gap))
             val diaper = colors.diaper
-            SheetButton(HomeLaunch.Diaper, diaper, strings.string(R.string.widget_cd_log_diaper), cell) {
+            SheetButton(HomeLaunch.Diaper, diaper, strings.forBaby(strings.string(R.string.widget_cd_log_diaper), baby), cell) {
                 QuickFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, labels)
             }
             Spacer(GlanceModifier.width(layout.gap))
@@ -123,7 +115,10 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
                 border = if (asleep) sleep.strong else null,
                 radius = 20.dp,
                 action = actionRunCallback<ToggleSleepAction>(),
-                description = strings.string(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep),
+                description = strings.forBaby(
+                    strings.string(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep),
+                    baby,
+                ),
             ) {
                 QuickFace(if (asleep) XDrawables.wake else XDrawables.sleep, sleep.strong, sleepLabel, sleep.onContainer, labels)
             }

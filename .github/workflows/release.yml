@@ -13,11 +13,18 @@ on:
         description: Upload the bundles to Google Play (off = build them, keep them as an artifact and still create the GitHub Release)
         type: boolean
         default: true
+      bump:
+        description: Which part of the version to bump (merges to main bump by the merged pull request's release:minor / release:major label, patch otherwise)
+        type: choice
+        options: [patch, minor, major]
+        default: patch
 
 permissions:
   contents: write # create the GitHub Release and its tag
+  pull-requests: read # the merged pull request's labels pick the version bump
 
-# One release at a time, in merge order: version codes must reach Play increasing.
+# One release at a time, in merge order: version codes must reach Play increasing, and each version name bumps the
+# tag the previous run pushed.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -70,16 +77,26 @@ jobs:
       - name: Compute version
         id: version
         env:
+          GH_TOKEN: ${{ github.token }}
           RUN_NUMBER: ${{ github.run_number }}
           VERSION_CODE_OFFSET: ${{ vars.VERSION_CODE_OFFSET || '100' }}
-          VERSION_NAME: ${{ vars.VERSION_NAME }}
+          BUMP: ${{ inputs.bump }}
         run: |
           # One base per run; Gradle derives the phone's code (base * 10) and the watch's (base * 10 + 1).
           base=$((RUN_NUMBER + VERSION_CODE_OFFSET))
-          name="${VERSION_NAME:-$(sed -n 's/^pooparazziVersionName = "\(.*\)"/\1/p' gradle/libs.versions.toml)}"
+          # The name bumps the highest release tag (docs/RELEASING.md#version-names): by hand as chosen, on a merge by
+          # the merged pull request's label.
+          if [ -z "$BUMP" ]; then
+            BUMP=patch
+            labels="$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[].labels[].name' || true)"
+            if grep -qx 'release: *major' <<< "$labels"; then BUMP=major
+            elif grep -qx 'release: *minor' <<< "$labels"; then BUMP=minor; fi
+          fi
+          tags="$(git ls-remote --tags origin)"
+          name="$(python3 scripts/next_version.py --bump "$BUMP" <<< "$tags")"
           echo "base=$base" >> "$GITHUB_OUTPUT"
           echo "name=$name" >> "$GITHUB_OUTPUT"
-          echo "Version $name: phone $((base * 10)), watch $((base * 10 + 1))" >> "$GITHUB_STEP_SUMMARY"
+          echo "Version $name ($BUMP bump): phone $((base * 10)), watch $((base * 10 + 1))" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up JDK 21
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -99,6 +116,18 @@ jobs:
       # build.gradle.kts (robolectric.dependency.repo.url / .id).
       - name: Unit tests
         run: ./gradlew --console=plain :core:testDebugUnitTest :app:testDebugUnitTest :wear:testDebugUnitTest
+
+      # The phone app's Firebase configuration (docs/BACKEND.md). Without it the release builds with accounts and the
+      # backup turned off, as on pull requests.
+      - name: Write the Firebase configuration
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          elif [ ! -f app/google-services.json ]; then
+            echo "::warning::GOOGLE_SERVICES_JSON is not set: this release has no accounts or backup (see docs/BACKEND.md)"
+          fi
 
       - name: Decode the upload keystore
         if: steps.secrets.outputs.upload_key == 'true'
@@ -153,7 +182,7 @@ jobs:
           mkdir -p "$dir"
           cp app/build/outputs/apk/release/app-release.apk "$dir/pooparazzi-phone-$VERSION_NAME-$VERSION_BASE.apk"
           cp wear/build/outputs/apk/release/wear-release.apk "$dir/pooparazzi-watch-$VERSION_NAME-$VERSION_BASE.apk"
-          tag="v$VERSION_NAME-$VERSION_BASE"
+          tag="v$VERSION_NAME"
           gh release create "$tag" "$dir"/*.apk \
             --target "$GITHUB_SHA" \
             --title "Pooparazzi $VERSION_NAME ($VERSION_BASE)" \

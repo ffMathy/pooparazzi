@@ -8,10 +8,13 @@ import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.data.EndResult
+import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.phone.notify.RunningTimer
+import com.ffmathy.pooparazzi.phone.notify.SleepingBaby
 import com.ffmathy.pooparazzi.phone.notify.TimerActionReceiver
 import com.ffmathy.pooparazzi.phone.notify.TimerNotifications
 import com.ffmathy.pooparazzi.phone.notify.TimerState
@@ -24,6 +27,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,28 +48,66 @@ class TimerNotificationsTest : CoreTestBase() {
     private val manager = app.getSystemService(NotificationManager::class.java)
     private val zone = SampleData.ZONE
 
+    private val deviceZone = TimeZone.getDefault()
+
+    @After
+    fun restoreZone() = TimeZone.setDefault(deviceZone)
+
     @Before
     fun setUp() {
+        // The receiver formats in the device time zone, as the app-scope observer does.
+        TimeZone.setDefault(TimeZone.getTimeZone(SampleData.ZONE))
         Settings.System.putString(app.contentResolver, Settings.System.TIME_12_24, "24")
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
     }
 
     private fun posted(id: Int): Notification? = shadowOf(manager).getNotification(id)
 
-    private fun asleep(language: AppLanguage = AppLanguage.SYSTEM, name: String = "Noa") = TimerState(
-        sleep = RunningTimer("sleep-1", SampleData.at(2, 5)),
-        lastFeedStartMillis = SampleData.at(1, 40),
-        babyName = name,
-        language = language,
-        zone = zone,
-    )
+    private fun postedFor(babyId: String): Notification? =
+        shadowOf(manager).getNotification(TimerNotifications.tagFor(babyId), TimerNotifications.SLEEP_ID)
+
+    private fun wokeUpFor(babyId: String): Notification? =
+        shadowOf(manager).getNotification(TimerNotifications.tagFor(babyId), TimerNotifications.WOKE_UP_ID)
+
+    private fun Notification.title(): String? = extras.getString(Notification.EXTRA_TITLE)
+
+    /** Runs [block] with the device in the reference time zone (the app-scope observer formats in it). */
+    private inline fun inReferenceZone(block: () -> Unit) {
+        val deviceZone = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone(SampleData.ZONE))
+        try {
+            block()
+        } finally {
+            TimeZone.setDefault(deviceZone)
+        }
+    }
+
+    private fun asleep(
+        language: AppLanguage = AppLanguage.SYSTEM,
+        name: String = "Noa",
+        entryId: String = "sleep-1",
+        start: Long = SampleData.at(2, 5),
+    ): TimerState {
+        val baby = Baby(Baby.FIRST_ID, name)
+        return TimerState(
+            sleeping = listOf(SleepingBaby(baby, RunningTimer(entryId, start))),
+            babies = listOf(baby),
+            now = SampleData.NOW_0312,
+            language = language,
+            zone = zone,
+        )
+    }
+
+    private fun text(notification: Notification): String = notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
+
+    private fun bigText(notification: Notification): String = notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString()
 
     @Test
     fun aRunningSleepShowsASilentOngoingNotificationWithWokeUp() {
         TimerNotifications(app).render(asleep())
         val notification = posted(TimerNotifications.SLEEP_ID)!!
         assertEquals("Noa is asleep", notification.extras.getString(Notification.EXTRA_TITLE))
-        assertEquals("Since 02:05", notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        assertEquals("1h 07m · since 02:05", text(notification))
         assertTrue(notification.flags and Notification.FLAG_ONGOING_EVENT != 0)
         assertEquals(Notification.VISIBILITY_PUBLIC, notification.visibility)
         assertFalse("no ticking time", notification.extras.getBoolean(Notification.EXTRA_SHOW_WHEN))
@@ -80,12 +122,52 @@ class TimerNotificationsTest : CoreTestBase() {
         assertNull(channel.sound)
     }
 
+    /** Expanded: the last feed with its order, the last diaper and today's counts, each relative and absolute. */
+    @Test
+    fun expandedItShowsTheLastFeedTheLastDiaperAndToday() {
+        val state = TimerState.of(SampleData.scenarioAt0312(zone), SampleData.settings, SampleData.NOW_0312 + 30_000, zone)
+        assertEquals("the time is whole minutes", SampleData.NOW_0312, state.now)
+        TimerNotifications(app).render(state)
+        val lines = bigText(posted(TimerNotifications.SLEEP_ID)!!).lines()
+        assertEquals("1h 07m · since 02:05", lines.first())
+        assertTrue(lines.toString(), lines.any { it.startsWith("Fed ") && it.contains(" ago · ") })
+        assertTrue(lines.toString(), lines.last().startsWith("Today · 1 feed · "))
+    }
+
+    /** A sleep started seconds ago runs, though the shown time is whole minutes. */
+    @Test
+    fun aSleepStartedWithinTheMinuteIsRunning() {
+        val start = SampleData.NOW_1432 + 40_000
+        val sleep = com.ffmathy.pooparazzi.core.model.Entry(
+            id = "fresh",
+            kind = com.ffmathy.pooparazzi.core.model.EntryKind.SLEEP,
+            startMillis = start,
+            updatedAtMillis = start,
+        )
+        val state = TimerState.of(listOf(sleep), SampleData.settings, start + 5_000, zone)
+        assertEquals(RunningTimer("fresh", start), state.sleeping.single().sleep)
+        assertEquals(SampleData.NOW_1432, state.now)
+    }
+
+    /** The duration follows the clock: a non-waking alarm re-renders at the next minute while the sleep shows. */
+    @Test
+    fun aMinuteAlarmKeepsTheDurationCurrent() {
+        val alarms = shadowOf(app.getSystemService(android.app.AlarmManager::class.java))
+        TimerNotifications(app).render(asleep())
+        val alarm = alarms.nextScheduledAlarm!!
+        assertEquals(android.app.AlarmManager.RTC, alarm.type)
+        assertEquals(0L, alarm.triggerAtTime % 60_000L)
+
+        TimerNotifications(app).render(asleep().copy(sleeping = emptyList()))
+        assertNull("no sleep, no alarm", alarms.nextScheduledAlarm)
+    }
+
     @Test
     fun theTextFollowsTheAppLanguageAndTheMissingName() {
         TimerNotifications(app).render(asleep(language = AppLanguage.DA))
         val danish = posted(TimerNotifications.SLEEP_ID)!!
         assertEquals("Noa sover", danish.extras.getString(Notification.EXTRA_TITLE))
-        assertEquals("Siden kl. 02:05", danish.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        assertEquals("1t 07m · siden kl. 02:05", text(danish))
         assertEquals("Vågnede", danish.actions.single().title.toString())
 
         TimerNotifications(app).render(asleep(name = ""))
@@ -101,7 +183,7 @@ class TimerNotificationsTest : CoreTestBase() {
         )
         val entries = SampleData.scenarioWithRecentFeed()
         val state = TimerState.of(entries, SampleData.settings, SampleData.NOW_1450, zone)
-        assertNull("a breast feed is an instant", state.sleep)
+        assertTrue("a breast feed is an instant", state.sleeping.isEmpty())
         TimerNotifications(app).render(state)
         assertNull(posted(TimerNotifications.LEGACY_FEED_ID))
         assertNull(posted(TimerNotifications.SLEEP_ID))
@@ -117,7 +199,7 @@ class TimerNotificationsTest : CoreTestBase() {
         assertNull(posted(TimerNotifications.SLEEP_ID))
 
         // The next sleep gets its notification again, and the old dismissal is forgotten.
-        notifications.render(asleep().copy(sleep = RunningTimer("sleep-2", SampleData.at(4, 0))))
+        notifications.render(asleep(entryId = "sleep-2", start = SampleData.at(4, 0)))
         assertNotNull(posted(TimerNotifications.SLEEP_ID))
         assertTrue(SurfacePrefs(app).dismissedTimers.isEmpty())
     }
@@ -131,15 +213,56 @@ class TimerNotificationsTest : CoreTestBase() {
 
     @Test
     fun wokeUpEndsTheSleepWithoutOpeningTheApp() = coreTest(now = SampleData.NOW_0312, seed = SampleData.scenarioAt0312(SampleData.ZONE)) { rig ->
-        TimerNotifications(app).render(asleep().copy(sleep = RunningTimer("sample-sleep-0205", SampleData.at(2, 5))))
+        TimerNotifications(app).render(asleep(entryId = "sample-sleep-0205"))
         val result = TimerActionReceiver.endSleep(app, "sample-sleep-0205")
         runCurrent()
         assertTrue(result is EndResult.Ended)
         assertEquals(SampleData.NOW_0312, rig.entry("sample-sleep-0205")!!.endMillis)
         assertNull(posted(TimerNotifications.SLEEP_ID))
 
+        // It leaves "woke up at 03:12" with the Earlier offsets, as the undo card in the app.
+        val wokeUp = posted(TimerNotifications.WOKE_UP_ID)!!
+        assertEquals("Noa woke up at 03:12", wokeUp.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals("Slept 1h 07m · 02:05 – 03:12", text(wokeUp))
+        assertEquals(listOf("−5m", "−10m", "−15m"), wokeUp.actions.map { it.title.toString() })
+        assertTrue(wokeUp.actions.none { it.isAuthenticationRequired })
+
         // A second tap (or one after the watch ended it) changes nothing.
         assertNull(TimerActionReceiver.endSleep(app, "sample-sleep-0205"))
+    }
+
+    /** The offsets move the wake-up time from the tap, never cumulatively; tapping the selected one moves it back. */
+    @Test
+    fun earlierOffsetsMoveTheWakeUpTime() = coreTest(now = SampleData.NOW_0312, seed = SampleData.scenarioAt0312(SampleData.ZONE)) { rig ->
+        val id = "sample-sleep-0205"
+        TimerActionReceiver.endSleep(app, id)
+        TimerActionReceiver.moveWakeUp(app, id, SampleData.NOW_0312, minutes = -10, current = 0)
+        assertEquals(SampleData.at(3, 2), rig.entry(id)!!.endMillis)
+        val moved = posted(TimerNotifications.WOKE_UP_ID)!!
+        assertEquals("Noa woke up at 03:02", moved.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals(listOf("−5m", "✓ −10m", "−15m"), moved.actions.map { it.title.toString() })
+
+        TimerActionReceiver.moveWakeUp(app, id, SampleData.NOW_0312, minutes = -15, current = -10)
+        assertEquals("not cumulative", SampleData.at(2, 57), rig.entry(id)!!.endMillis)
+
+        TimerActionReceiver.moveWakeUp(app, id, SampleData.NOW_0312, minutes = -15, current = -15)
+        assertEquals("back to the tap", SampleData.NOW_0312, rig.entry(id)!!.endMillis)
+        assertEquals(listOf("−5m", "−10m", "−15m"), posted(TimerNotifications.WOKE_UP_ID)!!.actions.map { it.title.toString() })
+    }
+
+    /** An offset that would end the sleep before it started is left out. */
+    @Test
+    fun offsetsBeforeTheStartAreLeftOut() {
+        val state = asleep().copy(sleeping = emptyList())
+        val sleep = com.ffmathy.pooparazzi.core.model.Entry(
+            id = "short",
+            kind = com.ffmathy.pooparazzi.core.model.EntryKind.SLEEP,
+            startMillis = SampleData.at(3, 0),
+            endMillis = SampleData.NOW_0312,
+            updatedAtMillis = SampleData.NOW_0312,
+        )
+        val notification = TimerNotifications(app).buildWokeUp(state, sleep, SampleData.NOW_0312, 0)
+        assertEquals(listOf("−5m", "−10m"), notification.actions.map { it.title.toString() })
     }
 
     @Test
@@ -161,7 +284,7 @@ class TimerNotificationsTest : CoreTestBase() {
 
         val sleep = rig.repository.startSleep(SampleData.NOW_1432).getOrThrow()
         runCurrent()
-        assertEquals("Since 14:32", posted(TimerNotifications.SLEEP_ID)!!.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        assertEquals("<1m · since 14:32", text(posted(TimerNotifications.SLEEP_ID)!!))
 
         // The watch ends the sleep: the entry arrives through sync.
         rig.clock.advanceBy(20 * MINUTE)
@@ -215,5 +338,100 @@ class TimerNotificationsTest : CoreTestBase() {
         } finally {
             TimeZone.setDefault(deviceZone)
         }
+    }
+
+    /** BABIES_AND_BACKUP §2.3: twins asleep at once have one notification each, whichever baby is the current one. */
+    @Test
+    fun everyBabyWhoIsAsleepHasTheirOwnNotification() = coreTest { rig ->
+        inReferenceZone {
+            rig.settings.ensureBabies(listOf(SampleData.TWIN_ID))
+            rig.settings.renameBaby(SampleData.TWIN_ID, SampleData.TWIN_NAME)
+            SystemSurfaces.start(app, Core.graph)
+            val noa = rig.repository.startSleep(SampleData.NOW_1432).getOrThrow()
+            rig.settings.selectBaby(SampleData.TWIN_ID)
+            rig.clock.advanceBy(5 * MINUTE)
+            val ida = rig.repository.startSleep(rig.clock.now()).getOrThrow()
+            runCurrent()
+            assertEquals(SampleData.TWIN_ID, ida.babyId)
+
+            val noaNotification = postedFor(Baby.FIRST_ID)!!
+            val idaNotification = postedFor(SampleData.TWIN_ID)!!
+            assertEquals("Noa is asleep", noaNotification.title())
+            assertEquals("5m · since 14:32", text(noaNotification))
+            assertEquals("Ida is asleep", idaNotification.title())
+            assertEquals("<1m · since 14:37", text(idaNotification))
+
+            // Switching the current baby changes nothing.
+            rig.settings.selectBaby(Baby.FIRST_ID)
+            runCurrent()
+            assertEquals("Noa is asleep", postedFor(Baby.FIRST_ID)!!.title())
+            assertEquals("Ida is asleep", postedFor(SampleData.TWIN_ID)!!.title())
+
+            // Ida's "Woke up" ends her sleep (not the current baby's) and leaves Noa's notification.
+            rig.clock.advanceBy(20 * MINUTE)
+            val result = TimerActionReceiver.endSleep(app, ida.id, SampleData.TWIN_ID)
+            runCurrent()
+            assertTrue(result is EndResult.Ended)
+            assertFalse(rig.entry(ida.id)!!.isRunning)
+            assertTrue(rig.entry(noa.id)!!.isRunning)
+            assertNull(postedFor(SampleData.TWIN_ID))
+            assertEquals("Noa is asleep", postedFor(Baby.FIRST_ID)!!.title())
+            // Her woke-up notification follows, tagged as hers; Noa has none.
+            assertEquals("Ida woke up at 14:57", wokeUpFor(SampleData.TWIN_ID)!!.title())
+            assertNull(wokeUpFor(Baby.FIRST_ID))
+            // Its Earlier offset moves Ida's wake-up and keeps her notification.
+            TimerActionReceiver.moveWakeUp(app, ida.id, rig.clock.now(), minutes = -5, current = 0)
+            assertEquals("Ida woke up at 14:52", wokeUpFor(SampleData.TWIN_ID)!!.title())
+
+            // Noa wakes up in the app: her notification goes too.
+            rig.repository.endSleep(noa.id, rig.clock.now())
+            runCurrent()
+            assertNull(postedFor(Baby.FIRST_ID))
+        }
+    }
+
+    @Test
+    fun wokeUpCancelsOnlyThatBabysNotificationAtOnce() {
+        val noa = Baby(Baby.FIRST_ID, "Noa")
+        val ida = Baby(SampleData.TWIN_ID, "Ida")
+        val state = TimerState(
+            sleeping = listOf(
+                SleepingBaby(noa, RunningTimer("sleep-noa", SampleData.at(2, 5))),
+                SleepingBaby(ida, RunningTimer("sleep-ida", SampleData.at(2, 20))),
+            ),
+            babies = listOf(noa, ida),
+            now = SampleData.NOW_0312,
+            language = AppLanguage.SYSTEM,
+            zone = zone,
+        )
+        val notifications = TimerNotifications(app)
+        notifications.render(state)
+        assertNotNull(postedFor(Baby.FIRST_ID))
+        assertNotNull(postedFor(SampleData.TWIN_ID))
+        val wokeUp = postedFor(SampleData.TWIN_ID)!!.actions.single().actionIntent
+        assertEquals(SampleData.TWIN_ID, shadowOf(wokeUp).savedIntent.getStringExtra(TimerActionReceiver.EXTRA_BABY_ID))
+        assertEquals("sleep-ida", shadowOf(wokeUp).savedIntent.getStringExtra(TimerActionReceiver.EXTRA_ENTRY_ID))
+
+        notifications.cancelSleep(SampleData.TWIN_ID)
+        assertNull(postedFor(SampleData.TWIN_ID))
+        assertNotNull(postedFor(Baby.FIRST_ID))
+
+        // A dismissal is remembered per entry: Ida's sleep is not posted again, Noa's stays.
+        SurfacePrefs(app).dismissedTimers = setOf("sleep-ida")
+        notifications.render(state)
+        assertNull(postedFor(SampleData.TWIN_ID))
+        assertNotNull(postedFor(Baby.FIRST_ID))
+    }
+
+    /** An unnamed baby reads "Asleep" when it is the only one, and by its label ("Baby 2") when there are several. */
+    @Test
+    fun unnamedBabiesAreNamedByTheirLabel() {
+        val sleep = Entry.sleep(SampleData.at(2, 5), null, id = "sleep-b2", babyId = SampleData.TWIN_ID)
+        val settings = SampleData.twinSettings.withBabyName(SampleData.TWIN_ID, "")
+        val state = TimerState.of(listOf(sleep), settings, SampleData.NOW_0312, zone)
+        assertEquals(listOf(SampleData.TWIN_ID), state.sleeping.map { it.baby.id })
+        TimerNotifications(app).render(state)
+        assertEquals("Baby 2 is asleep", postedFor(SampleData.TWIN_ID)!!.title())
+        assertNull("Noa is awake", postedFor(Baby.FIRST_ID))
     }
 }

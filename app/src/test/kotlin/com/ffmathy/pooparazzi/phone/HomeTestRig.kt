@@ -8,6 +8,7 @@ import com.ffmathy.pooparazzi.core.CoreGraph
 import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
 import com.ffmathy.pooparazzi.core.data.PooparazziDatabase
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
@@ -21,6 +22,7 @@ import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
 import com.ffmathy.pooparazzi.phone.ui.home.HomeViewModel
 import kotlin.coroutines.ContinuationInterceptor
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,11 +38,24 @@ import kotlinx.coroutines.test.runCurrent
 class InMemorySettings(initial: Settings = SampleData.settings) : SettingsRepository {
     private val state = MutableStateFlow(initial)
     override val settings: Flow<Settings> = state
-    override suspend fun setBabyName(name: String): Settings = update { it.copy(babyName = Settings.sanitizeName(name)) }
+    override suspend fun setBabyName(name: String): Settings = update { it.withBabyName(it.selectedBaby.id, name) }
+    override suspend fun renameBaby(id: String, name: String): Settings = update { it.withBabyName(id, name) }
+    override suspend fun addBaby(): Baby {
+        val baby = Baby(Baby.newId())
+        val next = update { if (it.babies.size >= Settings.MAX_BABIES) it else it.withBabies(listOf(baby.id)) }
+        return next.babies.firstOrNull { it.id == baby.id } ?: next.babies.last()
+    }
+    override suspend fun selectBaby(id: String): Settings = update { it.withSelectedBaby(id) }
+    override suspend fun ensureBabies(ids: Collection<String>): Settings = update { it.withBabies(ids) }
     override suspend fun setAppearance(appearance: Appearance): Settings = update { it.copy(appearance = appearance) }
     override suspend fun setLanguage(language: AppLanguage): Settings = update { it.copy(language = language) }
     override suspend fun applyRemote(remote: Settings): Boolean {
-        state.value = remote
+        state.value = remote.normalized().copy(selectedBabyId = state.value.selectedBabyId)
+        return true
+    }
+    override suspend fun applyLegacyRemote(remote: Settings): Boolean {
+        val next = state.value.withLegacyRemote(remote.normalized()) ?: return false
+        state.value = next
         return true
     }
 
@@ -61,10 +76,13 @@ class HomeTestRig(val scope: TestScope, now: Long = SampleData.NOW_1432) {
         .allowMainThreadQueries()
         .setQueryCoroutineContext(dispatcher)
         .build()
-    val repository = RoomEntryRepository(database, clock)
+    val settings = InMemorySettings()
+
+    /** Writes and reads follow the rig's current baby, as in the app. */
+    val repository = RoomEntryRepository(database, clock, selectedBaby = settings.settings.map { it.selectedBaby.id })
 
     init {
-        Core.install(CoreGraph(clock, repository, InMemorySettings(), NoopEntrySync, CoroutineScope(SupervisorJob() + dispatcher)))
+        Core.install(CoreGraph(clock, repository, settings, NoopEntrySync, CoroutineScope(SupervisorJob() + dispatcher)))
     }
 
     val viewModel = HomeViewModel(

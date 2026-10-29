@@ -68,22 +68,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
-import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.time.rememberReducedMotion
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.ui.components.IconTarget
-import com.ffmathy.pooparazzi.phone.ui.components.SyncLine
+import com.ffmathy.pooparazzi.phone.ui.components.SyncIcons
 import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
-import com.ffmathy.pooparazzi.phone.ui.components.syncLineText
+import com.ffmathy.pooparazzi.phone.ui.components.syncIcons
 import com.ffmathy.pooparazzi.phone.ui.edit.EditSheet
 import com.ffmathy.pooparazzi.phone.ui.edit.EditViewModel
 import com.ffmathy.pooparazzi.phone.ui.edit.rememberEditEffects
 import com.ffmathy.pooparazzi.phone.ui.home.LARGE_FONT_SCALE
 import com.ffmathy.pooparazzi.phone.ui.preview.HistorySamples
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
-import java.time.ZoneId
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Layout constants (DESIGN_SPEC §3.3.3). */
@@ -94,9 +92,12 @@ internal object HistoryDefaults {
     val FabMargin = 16.dp
 }
 
-/** History wired to its view models: the day, deletes with Undo, and the edit sheet (edit a row, add a past entry). */
+/**
+ * History wired to its view models: the day, deletes with Undo, and the edit sheet (edit a row, add a past entry).
+ * [onOpenStatistics] opens Statistics (P8) over History.
+ */
 @Composable
-fun HistoryRoute(onBack: () -> Unit) {
+fun HistoryRoute(onBack: () -> Unit, onOpenStatistics: () -> Unit) {
     val viewModel: HistoryViewModel = viewModel(factory = HistoryViewModel.Factory)
     val editViewModel: EditViewModel = viewModel(factory = EditViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -104,9 +105,11 @@ fun HistoryRoute(onBack: () -> Unit) {
     rememberEditEffects(editViewModel, onDeleted = viewModel::onEntryDeleted)
     // Only while this screen is resumed: a second tap during the exit transition must not pop Home as well.
     val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
+    val statistics by rememberUpdatedState(dropUnlessResumed(block = onOpenStatistics))
     val actions = remember(viewModel, editViewModel) {
         object : HistoryActions by viewModel {
             override fun onBack() = back()
+            override fun onOpenStatistics() = statistics()
             override fun onEdit(entryId: String) = editViewModel.openEntry(entryId)
             override fun onAddEntry() = editViewModel.openNew(viewModel.addEntryDefaultTime())
         }
@@ -121,8 +124,8 @@ fun HistoryRoute(onBack: () -> Unit) {
 }
 
 /**
- * History (P3, DESIGN_SPEC §3.3.3, V1_ADDITIONS §4): the top bar with the sync line, the day switcher, the day ribbon,
- * the stats, and the day's entries newest first. Rows open the edit sheet and swipe to reveal Delete (with an Undo
+ * History (P3, DESIGN_SPEC §3.3.3, V1_ADDITIONS §4): the top bar with the status icons, the day switcher, the day
+ * ribbon, the stats, and the day's entries newest first. Rows open the edit sheet and swipe to reveal Delete (with an Undo
  * snackbar); the "Add entry" FAB adds a past entry. Laid out edge to edge from [windowInsets].
  */
 @Composable
@@ -144,7 +147,7 @@ fun HistoryScreen(
 
     Box(modifier.fillMaxSize().background(colors.background)) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(windowInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))) {
-            HistoryTopBar(state.sync, state.zone, formatters, actions)
+            HistoryTopBar(state, formatters, actions)
             LazyColumn(
                 Modifier.fillMaxWidth().weight(1f),
                 state = listState,
@@ -233,27 +236,30 @@ fun HistoryScreen(
     }
 }
 
-/** Back, "History" and the sync line (a 48 dp retry target in the error state). */
+/**
+ * Back, "History", the current baby's label with two or more babies (BABIES_AND_BACKUP §2.4), the status icons (an
+ * icon in its error state is a 48 dp retry target) and the `chart` button to Statistics.
+ */
 @Composable
-private fun HistoryTopBar(sync: SyncStatus, zone: ZoneId, formatters: Formatters, actions: HistoryActions) {
+private fun HistoryTopBar(state: HistoryUiState, formatters: Formatters, actions: HistoryActions) {
+    val icons = syncIcons(state.sync, state.cloud, state.zone, formatters, actions::onRetrySync, actions::onRetryBackup)
     XTopBar(
         title = stringResource(CoreR.string.nav_history),
         navigationIcon = XIcons.back,
         navigationLabel = stringResource(R.string.cd_back),
         onNavigate = actions::onBack,
+        actions = { IconTarget(XIcons.chart, stringResource(R.string.statistics_title), actions::onOpenStatistics) },
     ) {
-        if (sync is SyncStatus.Error) {
-            val label = syncLineText(sync, zone, formatters).orEmpty()
-            Box(
-                Modifier
-                    .heightIn(min = 48.dp)
-                    .clickable(role = Role.Button, onClick = actions::onRetrySync)
-                    .semantics { contentDescription = label },
-                contentAlignment = Alignment.CenterStart,
-            ) { SyncLine(sync, zone, formatters) }
-        } else {
-            SyncLine(sync, zone, formatters)
+        if (state.hasSeveralBabies) {
+            Text(
+                formatters.labels.baby(state.baby, state.babies),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
+        SyncIcons(icons, Modifier.padding(top = 4.dp))
     }
 }
 

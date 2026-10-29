@@ -13,8 +13,11 @@ import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
+import com.ffmathy.pooparazzi.core.settings.Settings
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.wear.SurfacesRestoreReceiver
 import com.ffmathy.pooparazzi.wear.testing.FakeSettingsRepository
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -48,13 +51,17 @@ class SurfaceUpdaterTest {
     private val clock = FixedClock(SampleData.NOW_1432)
     private val settings = FakeSettingsRepository()
     private val updates: MutableList<Summary> = Collections.synchronizedList(mutableListOf())
+    private val shownSettings: MutableList<Settings> = Collections.synchronizedList(mutableListOf())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Before
     fun setUp() {
         db = PooparazziDatabase.inMemory(ApplicationProvider.getApplicationContext())
-        repo = RoomEntryRepository(db, clock)
-        SurfaceUpdater(ApplicationProvider.getApplicationContext(), repo, settings, clock, surfaces = { updates += it }).start(scope)
+        repo = RoomEntryRepository(db, clock, selectedBaby = settings.state.map { it.selectedBaby.id })
+        SurfaceUpdater(ApplicationProvider.getApplicationContext(), repo, settings, clock, surfaces = { summary, shown ->
+            shownSettings += shown
+            updates += summary
+        }).start(scope)
     }
 
     @After
@@ -100,7 +107,7 @@ class SurfaceUpdaterTest {
     @Test
     fun aNewNameOrLanguageRefreshesTheSurfaces() {
         awaitUpdates(1)
-        settings.state.update { it.copy(babyName = "Noa", updatedAtMillis = 1) }
+        settings.state.update { it.withBabyName(it.selectedBaby.id, "Noa").copy(updatedAtMillis = 1) }
         awaitUpdates(2)
         settings.state.update { it.copy(language = AppLanguage.DA, updatedAtMillis = 2) }
         awaitUpdates(3)
@@ -112,12 +119,45 @@ class SurfaceUpdaterTest {
     }
 
     @Test
+    fun aNewBabyOrASwitchOfBabyRefreshesTheSurfaces() {
+        awaitUpdates(1)
+        // The phone adds a second baby: the tile's title and the Ongoing Activity now name the current baby.
+        settings.state.update { it.withBabies(listOf(SampleData.TWIN_ID)).copy(updatedAtMillis = 1) }
+        awaitUpdates(2)
+        assertEquals(2, shownSettings.last().babies.size)
+
+        // Both logs are empty, so the entries do not change: the switch alone must refresh the surfaces.
+        runBlocking { settings.selectBaby(SampleData.TWIN_ID) }
+        awaitUpdates(3)
+        assertEquals(SampleData.TWIN_ID, shownSettings.last().selectedBaby.id)
+
+        // Ida's running sleep is what the surfaces show now.
+        runBlocking { repo.startSleep(clock.now()).getOrThrow() }
+        awaitUpdates(4)
+        assertEquals(SampleData.TWIN_ID, updates.last().runningSleep?.babyId)
+
+        // Back to the first baby, who is awake.
+        runBlocking { settings.selectBaby(Baby.FIRST_ID) }
+        awaitUntil(5) { updates.last().runningSleep == null && shownSettings.last().selectedBaby.id == Baby.FIRST_ID }
+    }
+
+    /** Waits for at least [count] updates and then for [condition] (the switch and the new entries may come apart). */
+    private fun awaitUntil(count: Int, condition: () -> Boolean) = runBlocking {
+        withTimeout(5_000) {
+            while (updates.size < count || !condition()) {
+                shadowOf(Looper.getMainLooper()).idle()
+                delay(10)
+            }
+        }
+    }
+
+    @Test
     fun updateNowBringsTheSurfacesUpToDateBeforeReturning() {
         awaitUpdates(1)
         val sleep = runBlocking { repo.startSleep(clock.now()).getOrThrow() }
         awaitUpdates(2)
         val before = updates.size
-        val updater = SurfaceUpdater(ApplicationProvider.getApplicationContext(), repo, settings, clock, surfaces = { updates += it })
+        val updater = SurfaceUpdater(ApplicationProvider.getApplicationContext(), repo, settings, clock, surfaces = { summary, _ -> updates += summary })
         val job = scope.launch { updater.updateNow() }
         runBlocking {
             withTimeout(5_000) {

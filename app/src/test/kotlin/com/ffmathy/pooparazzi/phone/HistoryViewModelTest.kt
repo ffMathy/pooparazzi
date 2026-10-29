@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.phone
 
 import android.app.Application
 import androidx.lifecycle.SavedStateHandle
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
@@ -26,7 +27,7 @@ import org.robolectric.annotation.Config
 class HistoryViewModelTest : CoreTestBase() {
 
     private fun CoreTestRig.history(saved: SavedStateHandle = SavedStateHandle()): HistoryViewModel =
-        HistoryViewModel(repository, NoopEntrySync, clock, SampleData.ZONE, saved).also { collect(it.state) }
+        HistoryViewModel(repository, settings, NoopEntrySync, clock, SampleData.ZONE, saved).also { collect(it.state) }
 
     private fun HistoryViewModel.current(): HistoryUiState = checkNotNull(state.value) { "History has not loaded" }
 
@@ -48,6 +49,34 @@ class HistoryViewModelTest : CoreTestBase() {
         assertEquals(2, state.ribbon.formula.size)
         assertEquals(1, state.ribbon.food.size)
         assertEquals(5, state.ribbon.diapers.size)
+    }
+
+    /** The top bar's cloud icon follows the backup's status, and its retry backs up again (DESIGN_SPEC §4.5). */
+    @Test
+    fun theCloudStatusReachesTheTopBarAndRetries() = coreTest { core ->
+        val cloud = FakeCloudSync()
+        val vm = HistoryViewModel(core.repository, core.settings, NoopEntrySync, core.clock, SampleData.ZONE, cloud = cloud)
+        core.collect(vm.state)
+        assertEquals(CloudStatus.Off, vm.current().cloud)
+        cloud.state.value = CloudStatus.Error
+        runCurrent()
+        assertEquals(CloudStatus.Error, vm.current().cloud)
+        vm.onRetryBackup()
+        runCurrent()
+        assertEquals(1, cloud.syncs)
+    }
+
+    /** The settings and the baby's entries come as one: a switch never lists Noa's log under Ida's label. */
+    @Test
+    fun aSwitchNeverListsTheOtherBabysLog() = coreTest { core ->
+        core.settings.ensureBabies(listOf(SampleData.TWIN_ID))
+        val seen = core.collect(core.history().state)
+        assertTrue(seen.last()!!.entries.isNotEmpty())
+        core.settings.selectBaby(SampleData.TWIN_ID)
+        runCurrent()
+        val ida = seen.filterNotNull().filter { it.babyId == SampleData.TWIN_ID }
+        assertTrue(ida.isNotEmpty())
+        assertTrue("never Noa's entries under Ida's label", ida.all { it.entries.isEmpty() })
     }
 
     @Test

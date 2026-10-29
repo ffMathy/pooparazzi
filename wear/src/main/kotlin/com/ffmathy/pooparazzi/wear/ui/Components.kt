@@ -14,11 +14,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -29,10 +30,13 @@ import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.LineBreak
@@ -41,7 +45,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.wear.compose.foundation.CurvedModifier
 import androidx.wear.compose.foundation.CurvedTextStyle
+import androidx.wear.compose.foundation.basicCurvedText
+import androidx.wear.compose.foundation.sizeIn
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonColors
 import androidx.wear.compose.material3.ButtonDefaults
@@ -53,6 +60,10 @@ import androidx.wear.compose.material3.TimeSource
 import androidx.wear.compose.material3.TimeText
 import androidx.wear.compose.material3.TimeTextDefaults
 import androidx.wear.compose.material3.timeTextCurvedText
+import androidx.wear.compose.material3.timeTextSeparator
+import com.ffmathy.pooparazzi.core.format.LabelFormatter
+import com.ffmathy.pooparazzi.core.format.StringResolver
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
@@ -89,9 +100,13 @@ val LocalFixedTimeText = staticCompositionLocalOf<String?> { null }
  * [masked] keeps Wear's backing pill, which hides whatever list content rests under the time (lists also come to
  * rest on an item and shrink and fade items at the edge). Main drops it while its hero is at rest at the top, where
  * nothing scrolls under the time and the pill would cut a dark notch into the Lamp's glow.
+ *
+ * [baby] (two or more babies, [rememberBabyTimeText]) leads the time on one curved line, "Noa · 14:32", so every
+ * screen says which baby a tap logs for (BABIES_AND_BACKUP §2.5). A long label is cut with an ellipsis; the time
+ * itself is never cut.
  */
 @Composable
-fun XTimeText(masked: Boolean = true) {
+fun XTimeText(masked: Boolean = true, baby: BabyTimeText? = LocalBabyTimeText.current) {
     val fixed = LocalFixedTimeText.current
     val color = if (isAmbient()) WatchAmbient.content else MaterialTheme.colorScheme.onSurface
     val style = CurvedTextStyle(WatchType.timeText.copy(color = color))
@@ -108,7 +123,81 @@ fun XTimeText(masked: Boolean = true) {
     TimeText(
         backgroundColor = if (masked) TimeTextDefaults.backgroundColor() else Color.Transparent,
         timeSource = timeSource,
-    ) { time -> timeTextCurvedText(time, style) }
+        maxSweepAngle = baby?.lineMaxSweep ?: TimeTextDefaults.MaxSweepAngle,
+    ) { time ->
+        if (baby != null) {
+            basicCurvedText(baby.label, style, CurvedModifier.sizeIn(maxSweepDegrees = baby.labelMaxSweep), overflow = TextOverflow.Ellipsis)
+            timeTextSeparator(style)
+        }
+        timeTextCurvedText(time, style)
+    }
+}
+
+/**
+ * The baby's label in the time text (two or more babies) and what it takes: the most the label may sweep before it
+ * is cut, the line's own limit, and [extraTop], how much lower the line's ends reach than the time alone does. Screen
+ * titles and Main's hero move down by [extraTop], so the longer line never touches them (small watches, large fonts).
+ */
+@Immutable
+class BabyTimeText(val label: String, val labelMaxSweep: Float, val lineMaxSweep: Float, val extraTop: Dp)
+
+/** The time text's baby label for the screens below it; null with one baby (each screen then looks as before). */
+val LocalBabyTimeText = compositionLocalOf<BabyTimeText?> { null }
+
+/**
+ * Measures [label] ([babyLabelOrNull]) against the widest time this watch shows, at the time text's radius, the
+ * screen's size and the font scale. Null for a null label.
+ */
+@Composable
+fun rememberBabyTimeText(label: String?): BabyTimeText? {
+    if (label == null) return null
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val widestTime = LocalFixedTimeText.current ?: android.text.format.DateFormat.format(TimeTextDefaults.timeFormat(), WIDEST_TIME).toString()
+    return remember(label, widestTime, density, configuration) {
+        fun widthDp(text: String) = with(density) { measurer.measure(text, WatchType.timeText).size.width.toDp().value }
+        val heightDp = with(density) { measurer.measure(widestTime, WatchType.timeText).size.height.toDp().value }
+        val radius = (minOf(configuration.screenWidthDp, configuration.screenHeightDp) / 2f - TIME_TEXT_EDGE_DP - heightDp / 2f)
+            .coerceAtLeast(1f)
+        fun sweep(widthDp: Float) = Math.toDegrees((widthDp / radius).toDouble()).toFloat()
+        val timeOnly = sweep(widthDp(widestTime))
+        val timeAndSeparator = sweep(widthDp(widestTime) + widthDp(TIME_TEXT_SEPARATOR) + SEPARATOR_PADDING_DP)
+        // At least a couple of letters ("No…") beside even a very wide time (large fonts).
+        val shortest = sweep(widthDp(label.take(2) + ELLIPSIS))
+        val lineMax = maxOf(TimeTextDefaults.MaxSweepAngle, timeAndSeparator + shortest + TIME_TEXT_SWEEP_MARGIN)
+        val labelMax = lineMax - timeAndSeparator - TIME_TEXT_SWEEP_MARGIN
+        val line = timeAndSeparator + minOf(sweep(widthDp(label)), labelMax)
+        fun drop(sweep: Float) = radius * (1 - kotlin.math.cos(Math.toRadians(sweep / 2.0))).toFloat()
+        BabyTimeText(label, labelMax, lineMax, kotlin.math.ceil(drop(line) - drop(timeOnly)).coerceAtLeast(0f).dp)
+    }
+}
+
+/** A time as wide as the time text gets: two-digit hours, tabular digits. */
+private val WIDEST_TIME: java.util.Calendar = java.util.Calendar.getInstance().apply { set(2026, 0, 1, 10, 58) }
+
+/** What `timeTextSeparator` draws, and the angular padding on both of its sides. */
+private const val TIME_TEXT_SEPARATOR = "·"
+private const val SEPARATOR_PADDING_DP = 8f
+private const val ELLIPSIS = "…"
+
+/** The time text's distance from the screen edge (its content padding). */
+private const val TIME_TEXT_EDGE_DP = 4f
+
+/** Room kept free for the backing pill's own padding, so the line never reaches the time text's limit. */
+private const val TIME_TEXT_SWEEP_MARGIN = 8f
+
+/**
+ * The current baby's label ("Noa", or "Baby 2" for an unnamed one) when there are two or more [babies], for the time
+ * text and the baby button; null with one baby, so a single baby's watch looks exactly as before (BABIES_AND_BACKUP
+ * §2.2).
+ */
+@Composable
+@ReadOnlyComposable
+fun babyLabelOrNull(babies: List<Baby>, babyId: String): String? {
+    if (babies.size < 2) return null
+    val baby = babies.firstOrNull { it.id == babyId } ?: babies.first()
+    return LabelFormatter(StringResolver.of(LocalResources.current)).baby(baby, babies)
 }
 
 /** Container colours of an event button, resolved for ambient (outline in the strong colour, no fill). */
@@ -312,35 +401,29 @@ fun XCompactButton(
             style = WatchType.labelSmall.copy(fontWeight = FontWeight(600)),
             color = content,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = if (contentDescription != null) Modifier.clearAndSetSemantics { } else Modifier,
         )
     }
 }
 
 /**
- * The sync line (DESIGN_SPEC §3.5.6, §4.5): `synced` / `offline` / `pending` 14 + 4 + bodySmall onSurfaceVariant.
- * Null [text] hides it (no peer). Long Danish lines step down in size rather than wrap.
+ * The sync status (DESIGN_SPEC §3.5.6, §4.5): a 20 dp phone with its state on the screen (tick, "…", slash) in
+ * onSurfaceVariant, no visible text; TalkBack reads [text] ("Synced with phone · 14:31"). Null [text] hides it (no
+ * peer). The watch shows no error state: [SyncStatus.Error] reads, and looks, like saved on the watch.
  */
 @Composable
-fun SyncLine(status: SyncStatus, text: String?, modifier: Modifier = Modifier, maxWidth: Dp = 186.dp) {
+fun SyncIcon(status: SyncStatus, text: String?, modifier: Modifier = Modifier) {
     if (text == null) return
     val color = if (isAmbient()) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant
-    val icon = when (status) {
-        is SyncStatus.Synced -> XIcons.synced
-        SyncStatus.Pending -> XIcons.pending
-        else -> XIcons.offline
-    }
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-        XIcon(icon, contentDescription = null, tint = color, size = 14.dp)
-        Spacer(Modifier.width(4.dp))
-        AutoSizeLine(
-            text = text,
-            style = WatchType.bodySmall,
-            color = color,
-            minSize = 9,
-            modifier = Modifier.widthIn(max = maxWidth),
-        )
-    }
+    XIcon(phoneGlyph(status), contentDescription = text, tint = color, modifier = modifier, size = 20.dp)
+}
+
+/** The phone with a tick, "…" or a slash (DESIGN_SPEC §4.5). */
+fun phoneGlyph(status: SyncStatus): ImageVector = when (status) {
+    is SyncStatus.Synced -> XIcons.phoneSynced
+    SyncStatus.Pending -> XIcons.phonePending
+    SyncStatus.Offline, SyncStatus.Error, SyncStatus.Unavailable -> XIcons.phoneOffline
 }
 
 /** A small round swatch with the 1 dp outline ring (V1_ADDITIONS §3.1), for poop colour options. */
@@ -356,7 +439,9 @@ fun Swatch(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
 /** A header line for list screens (ListHeader style: titleMedium, centred). */
 @Composable
 fun ScreenTitle(text: String, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().heightIn(min = 24.dp).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+    // Clear of a time text that names the baby (its line reaches lower at its ends).
+    val extraTop = LocalBabyTimeText.current?.extraTop ?: 0.dp
+    Box(modifier.fillMaxWidth().padding(top = extraTop).heightIn(min = 24.dp).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
         Text(
             text,
             style = MaterialTheme.typography.titleMedium,

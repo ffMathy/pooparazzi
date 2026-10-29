@@ -40,6 +40,7 @@ import com.ffmathy.pooparazzi.phone.ui.edit.EditSheet
 import com.ffmathy.pooparazzi.phone.ui.edit.EditViewModel
 import com.ffmathy.pooparazzi.phone.ui.edit.rememberEditEffects
 import com.ffmathy.pooparazzi.phone.ui.preview.HomeSamples
+import com.ffmathy.pooparazzi.phone.ui.sheets.BabySwitcherUi
 import com.ffmathy.pooparazzi.phone.ui.sheets.HomeSheets
 import com.ffmathy.pooparazzi.phone.ui.theme.LocalNightLight
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
@@ -54,7 +55,7 @@ internal object HomeDefaults {
  * over Home; a delete there shows the "… deleted" receipt with Undo.
  *
  * [launch] is a deep link from a widget or notification (DESIGN_SPEC §3.1): Home opens the sheet or receipt it asks
- * for and reports it through [onLaunchHandled]. The first sleep started here asks for the notification permission, so
+ * for and reports it through [onLaunchHandled]; when such a sheet closes, [onLaunchedSheetClosed]. The first sleep started here asks for the notification permission, so
  * the running sleep can show its ongoing notification (§3.3.1, §10.5).
  */
 @Composable
@@ -63,6 +64,7 @@ fun HomeRoute(
     onOpenSettings: () -> Unit,
     launch: HomeLaunch? = null,
     onLaunchHandled: (HomeLaunch) -> Unit = {},
+    onLaunchedSheetClosed: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.factory())
     val editViewModel: EditViewModel = viewModel(factory = EditViewModel.Factory)
@@ -76,6 +78,10 @@ fun HomeRoute(
     val askForNotifications = rememberNotificationPermissionPrompt()
     LaunchedEffect(viewModel) {
         viewModel.timerStarted.collect { askForNotifications() }
+    }
+    val launchedSheetClosed by rememberUpdatedState(onLaunchedSheetClosed)
+    LaunchedEffect(viewModel) {
+        viewModel.launchedSheetClosed.collect { launchedSheetClosed() }
     }
     val handled by rememberUpdatedState(onLaunchHandled)
     LaunchedEffect(launch) {
@@ -156,7 +162,7 @@ private enum class UpperSlot { TOP, LAMP, BELOW }
  * toggle, plus the logging sheets. Laid out from [windowInsets] (edge to edge): the area above the button block
  * scrolls when it does not fit (200 % font scale), and the button block stays pinned above the navigation inset.
  *
- * Lights-down (Night and something running) dims only the chrome: the name, sync line, Settings, the History pill
+ * Lights-down (Night and something running) dims only the chrome: the name, status icons, Settings, the History pill
  * and the Today numbers (§8.2).
  */
 @Composable
@@ -197,7 +203,12 @@ fun HomeScreen(
                         maxLampSize = lampSize,
                         top = {
                             Column {
-                                HomeTopBar(state.babyName, state.sync, state.zone, lightsDown, formatters, actions)
+                                HomeTopBar(
+                                    state.babyName, state.sync, state.zone, lightsDown, formatters, actions,
+                                    babies = state.babies,
+                                    babyId = state.babyId,
+                                    cloud = state.cloud,
+                                )
                                 Spacer(Modifier.height(8.dp))
                             }
                         },
@@ -252,6 +263,7 @@ fun HomeScreen(
     }
     HomeSheets(
         sheet = state.sheet,
+        switcher = if (state.switchingBaby) BabySwitcherUi(state.babies, state.babyId) else null,
         zone = state.zone,
         formatters = formatters,
         actions = actions,

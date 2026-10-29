@@ -7,9 +7,11 @@ import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EndResult
 import com.ffmathy.pooparazzi.core.data.EntryRepository
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
+import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryJson
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
+import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.phone.launch.ReceiptKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
@@ -23,12 +25,14 @@ import kotlinx.coroutines.sync.withLock
  * [RECEIPT_MILLIS]; guards, duplicates and "Undone" leave a [NOTICE_MILLIS] line instead.
  *
  * Feed and Diaper are not here: they open the app on its Feed and Diaper sheets, which ask for the details.
- * Commands run one at a time (two quick taps are applied in order).
+ * Commands run one at a time (two quick taps are applied in order). They log for the phone's current baby
+ * ([settings]); a receipt remembers its baby, and its Undo does nothing once another baby is the current one.
  */
 class WidgetCommands(
     private val repository: EntryRepository,
     private val store: WidgetMemoStore,
     private val clock: Clock,
+    private val settings: SettingsRepository,
 ) {
     /** Start sleep / Woke up, with the 2 s double-toggle guard ("Already asleep since 02:05"). */
     suspend fun toggleSleep() = lock.withLock {
@@ -49,12 +53,12 @@ class WidgetCommands(
         if (running == null) {
             val started = attempt { repository.startSleep(now) } ?: return@withLock
             started
-                .onSuccess { receipt(ReceiptKind.SLEEP_STARTED, it.id, it.startMillis, now) }
+                .onSuccess { receipt(ReceiptKind.SLEEP_STARTED, it, it.startMillis, now) }
                 .onFailure { e -> if (e is AlreadyRunningException) notice(NoticeType.ALREADY_ASLEEP, e.running.startMillis, now) }
         } else {
             when (val result = attempt { repository.endSleep(running.id, now) } ?: return@withLock) {
-                is EndResult.Ended -> receipt(ReceiptKind.WOKE_UP, result.entry.id, result.entry.endMillis ?: now, now, previous = EntryJson.encode(result.previous))
-                is EndResult.Discarded -> receipt(ReceiptKind.SLEEP_CANCELLED, result.entry.id, now, now, previous = EntryJson.encode(result.previous))
+                is EndResult.Ended -> receipt(ReceiptKind.WOKE_UP, result.entry, result.entry.endMillis ?: now, now, previous = EntryJson.encode(result.previous))
+                is EndResult.Discarded -> receipt(ReceiptKind.SLEEP_CANCELLED, result.entry, now, now, previous = EntryJson.encode(result.previous))
                 is EndResult.NotRunning -> notice(NoticeType.ALREADY_AWAKE, result.current?.endMillis ?: now, now)
             }
         }
@@ -62,11 +66,12 @@ class WidgetCommands(
 
     /**
      * Undo of the receipt for [entryId]: a diaper or sleep start is removed, a Woke up or Sleep cancelled brings the
-     * sleep back. A stale Undo (expired, or replaced by a newer log) does nothing.
+     * sleep back. A stale Undo (expired, replaced by a newer log, or for another baby than the current one) does nothing.
      */
     suspend fun undo(entryId: String) = lock.withLock {
         val now = clock.now()
         val receipt = store.memo.value.receipt?.takeIf { it.entryId == entryId && it.expiresAtMillis > now } ?: return@withLock
+        if (receipt.babyId != settings.current().selectedBaby.id) return@withLock
         try {
             when (receipt.kind) {
                 ReceiptKind.LOGGED, ReceiptKind.SLEEP_STARTED -> repository.delete(entryId)
@@ -93,8 +98,8 @@ class WidgetCommands(
         }
     }
 
-    private fun receipt(kind: ReceiptKind, entryId: String, at: Long, now: Long, previous: String? = null) {
-        val receipt = WidgetReceipt(kind, entryId, at, now + RECEIPT_MILLIS, previousJson = previous)
+    private fun receipt(kind: ReceiptKind, entry: Entry, at: Long, now: Long, previous: String? = null) {
+        val receipt = WidgetReceipt(kind, entry.id, at, now + RECEIPT_MILLIS, previousJson = previous, babyId = entry.babyId)
         store.update { it.copy(receipt = receipt, notice = null) }
     }
 
@@ -129,7 +134,7 @@ class WidgetCommands(
         /** The commands on the app's core graph and the widgets' memo. */
         fun from(context: Context): WidgetCommands {
             val graph = Core.ensureInitialized(context)
-            return WidgetCommands(graph.repository, PrefsWidgetMemoStore.get(context), graph.clock)
+            return WidgetCommands(graph.repository, PrefsWidgetMemoStore.get(context), graph.clock, graph.settings)
         }
     }
 }

@@ -6,11 +6,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ffmathy.pooparazzi.core.Core
+import com.ffmathy.pooparazzi.core.cloud.CloudSync
+import com.ffmathy.pooparazzi.core.cloud.NoopCloudSync
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EndResult
 import com.ffmathy.pooparazzi.core.data.EntryRepository
 import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.LogResult
+import com.ffmathy.pooparazzi.core.data.observeCurrentLog
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
@@ -67,13 +70,21 @@ class HomeViewModel(
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val timings: HomeTimings = HomeTimings(),
     private val elapsedRealtime: () -> Long = { android.os.SystemClock.elapsedRealtime() },
+    private val cloud: CloudSync = NoopCloudSync,
 ) : ViewModel(), HomeActions {
 
     private val now = MutableStateFlow(clock.now())
     private val card = MutableStateFlow<CardModel?>(null)
     private val sheet = MutableStateFlow<SheetModel?>(null)
+
+    /** The Switch baby sheet is open (BABIES_AND_BACKUP §2.4). Not a [SheetModel]: it logs nothing. */
+    private val switchingBaby = MutableStateFlow(false)
     private val haptics = Channel<HomeHaptic>(Channel.BUFFERED)
     private val timerStarts = Channel<Unit>(Channel.CONFLATED)
+    private val launchedSheetCloses = Channel<Unit>(Channel.CONFLATED)
+
+    /** The open sheet came from a widget ([onLaunch]), not from Home's own buttons. */
+    private var sheetFromLaunch = false
 
     /** Haptics to play, one per parent-triggered action. */
     val effects: Flow<HomeHaptic> = haptics.receiveAsFlow()
@@ -84,17 +95,34 @@ class HomeViewModel(
      */
     val timerStarted: Flow<Unit> = timerStarts.receiveAsFlow()
 
-    /** Null until the entries and settings have loaded, so Home never flashes an empty "No feeds yet" state. */
+    /**
+     * A sheet a widget opened has closed (logged or dismissed) and its write is done: on a Samsung flip's cover screen
+     * the app then returns to the widget instead of showing Home there.
+     */
+    val launchedSheetClosed: Flow<Unit> = launchedSheetCloses.receiveAsFlow()
+
+    /**
+     * Null until the entries and settings have loaded, so Home never flashes an empty "No feeds yet" state. The settings
+     * and the baby's entries come as one ([observeCurrentLog]), so a switch of baby never shows the previous baby's log
+     * under the new baby's name.
+     */
     val state: StateFlow<HomeUiState?> = combine(
-        repository.observeEntries(),
-        settings.settings,
-        sync.status,
+        repository.observeCurrentLog(settings.settings),
+        combine(sync.status, cloud.status) { s, c -> s to c },
         now,
-        combine(card, sheet) { c, s -> c to s },
-    ) { entries, s, syncStatus, _, (c, sh) ->
+        combine(card, sheet, switchingBaby) { c, s, sw -> Triple(c, s, sw) },
+    ) { log, (syncStatus, cloudStatus), _, (c, sh, sw) ->
+        val entries = log.entries
+        val s = log.settings
         // [now] only re-runs this each minute; the time itself is read fresh, so an entry written elsewhere within the
         // current minute (the watch, a widget, the lock-screen notification) shows at once instead of at the next tick.
-        HomeStateBuilder.build(entries, s.babyName, syncStatus, clock.now(), zone, c, sh)
+        HomeStateBuilder.build(
+            entries, s.babyName, syncStatus, clock.now(), zone, c, sh,
+            babies = s.babies,
+            babyId = s.selectedBaby.id,
+            switchingBaby = sw,
+            cloud = cloudStatus,
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -128,15 +156,55 @@ class HomeViewModel(
         viewModelScope.launch { sync.retry() }
     }
 
+    override fun onRetryBackup() {
+        viewModelScope.launch { cloud.syncNow() }
+    }
+
+    // ---- Switch baby (BABIES_AND_BACKUP §2.4) --------------------------------------------------
+
+    override fun onSwitchBaby() = act {
+        if (homeBlocked()) return@act
+        if (!settings.current().hasSeveralBabies) return@act
+        switchingBaby.value = true
+    }
+
+    /**
+     * Makes [babyId] the current baby. Switching closes the notice and any sheet (a receipt's Undo belongs to the other
+     * baby), and resets the double-toggle guard, which compares taps on one baby's sleep.
+     */
+    override fun onSelectBaby(babyId: String) = act {
+        if (!switchingBaby.value) return@act
+        switchingBaby.value = false
+        val current = settings.current()
+        if (current.babies.none { it.id == babyId }) return@act
+        haptic(HomeHaptic.SEGMENT_TICK)
+        if (current.selectedBaby.id == babyId) return@act
+        attempt { settings.selectBaby(babyId) }
+            .onSuccess {
+                cardJob?.cancel()
+                messageJob?.cancel()
+                card.value = null
+                sheet.value = null
+                cooldownPending = false
+                lastToggleAt = null
+            }
+    }
+
+    override fun onSwitchBabyDismiss() = act {
+        switchingBaby.value = false
+    }
+
     // ---- Big buttons --------------------------------------------------------------------------
 
     override fun onFeed() = act {
         if (homeBlocked()) return@act
+        sheetFromLaunch = false
         sheet.value = SheetModel.Feed(clock.now())
     }
 
     override fun onDiaper() = act {
         if (homeBlocked()) return@act
+        sheetFromLaunch = false
         sheet.value = SheetModel.Diaper(stamp = clock.now())
     }
 
@@ -350,6 +418,14 @@ class HomeViewModel(
             }
             return@act
         }
+        if (type == FeedType.FORMULA) {
+            // Formula is an instant too, but first offers the optional amount: the sheet stays open.
+            if (!feedSheet.formula) {
+                sheet.value = feedSheet.copy(formula = true)
+                haptic(HomeHaptic.SEGMENT_TICK)
+            }
+            return@act
+        }
         logFeed(feedSheet, type, side = null)
     }
 
@@ -365,17 +441,30 @@ class HomeViewModel(
         logFeed(feedSheet, FeedType.BREAST, BreastSide.fromOrder(feedSheet.ticks))
     }
 
+    override fun onFormulaAmount(amountMl: Int?) = act {
+        val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
+        if (!feedSheet.formula) return@act
+        val amount = amountMl?.takeIf { it > 0 }
+        if (amount != feedSheet.amountMl) sheet.value = feedSheet.copy(amountMl = amount)
+    }
+
+    override fun onLogFormula() = act {
+        val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
+        if (!feedSheet.formula) return@act
+        logFeed(feedSheet, FeedType.FORMULA, side = null, amountMl = feedSheet.amountMl)
+    }
+
     /** Logs a feed instant of [type] at the sheet's stamp + offset, closing the sheet. */
-    private suspend fun logFeed(feedSheet: SheetModel.Feed, type: FeedType?, side: BreastSide?) {
+    private suspend fun logFeed(feedSheet: SheetModel.Feed, type: FeedType?, side: BreastSide?, amountMl: Int? = null) {
         val at = feedSheet.stamp + feedSheet.offsetMinutes * MINUTE_MILLIS
         closeSheet(committed = true)
         val duringSleep = summary().runningSleep != null
-        attempt { repository.logFeedChecked(type, at, side) }
+        attempt { repository.logFeedChecked(type, at, side, amountMl) }
             .onSuccess { result ->
                 when (result) {
                     is LogResult.Logged -> {
                         openReceipt(
-                            ReceiptSpec.FeedLogged(result.entry.id, type, result.entry.breastSide),
+                            ReceiptSpec.FeedLogged(result.entry.id, type, result.entry.breastSide, result.entry.amountMl),
                             baseTime = feedSheet.stamp,
                             offsetMinutes = feedSheet.offsetMinutes,
                             duringSleep = duringSleep,
@@ -448,6 +537,11 @@ class HomeViewModel(
             cooldownPending = false
             homeReadyAt = elapsedRealtime() + timings.homeCooldownMillis
         }
+        // Runs after the save that closed the sheet (actions run in order), so the log is written by now.
+        if (sheetFromLaunch && sheet.value == null) {
+            sheetFromLaunch = false
+            launchedSheetCloses.trySend(Unit)
+        }
     }
 
     // ---- Deep links (widgets, notifications) --------------------------------------------------
@@ -460,21 +554,37 @@ class HomeViewModel(
         when (launch) {
             // History is opened by the navigation (PooparazziNavHost); Home has nothing to show for it.
             HomeLaunch.Home, HomeLaunch.History -> Unit
-            HomeLaunch.Feed -> sheet.value = SheetModel.Feed(clock.now())
-            HomeLaunch.Diaper -> sheet.value = SheetModel.Diaper(stamp = clock.now())
+            HomeLaunch.Feed -> {
+                sheetFromLaunch = true
+                openSheet(SheetModel.Feed(clock.now()))
+            }
+            HomeLaunch.Diaper -> {
+                sheetFromLaunch = true
+                openSheet(SheetModel.Diaper(stamp = clock.now()))
+            }
             is HomeLaunch.Receipt -> showWidgetReceipt(launch)
         }
     }
 
-    /** The receipt for a log made on the widget, as if it had been made here (DESIGN_SPEC §3.3.6). */
+    /** A sheet a deep link asked for: it replaces the open one, and the Switch baby sheet closes. */
+    private fun openSheet(model: SheetModel) {
+        switchingBaby.value = false
+        sheet.value = model
+    }
+
+    /**
+     * The receipt for a log made on the widget, as if it had been made here (DESIGN_SPEC §3.3.6). A log for another
+     * baby than the current one shows nothing: its Undo would act on a log Home does not show.
+     */
     private suspend fun showWidgetReceipt(receipt: HomeLaunch.Receipt) {
         val entry = repository.get(receipt.entryId) ?: return
+        if (entry.babyId != settings.current().selectedBaby.id) return
         when (receipt.kind) {
             ReceiptKind.LOGGED -> {
                 if (entry.deleted) return
                 val spec = when (entry.kind) {
                     EntryKind.DIAPER -> ReceiptSpec.DiaperLogged(entry.id, entry.diaperKind ?: DiaperKind.PLAIN)
-                    EntryKind.FEED -> ReceiptSpec.FeedLogged(entry.id, entry.feedType, entry.breastSide)
+                    EntryKind.FEED -> ReceiptSpec.FeedLogged(entry.id, entry.feedType, entry.breastSide, entry.amountMl)
                     EntryKind.SLEEP -> ReceiptSpec.SleepStarted(entry.id)
                 }
                 val sleep = summary().runningSleep
@@ -548,7 +658,7 @@ class HomeViewModel(
     private fun showDuplicate(existing: Entry, duringSleep: Boolean) {
         val spec = when (existing.kind) {
             EntryKind.DIAPER -> ReceiptSpec.DiaperLogged(existing.id, existing.diaperKind ?: DiaperKind.PLAIN)
-            else -> ReceiptSpec.FeedLogged(existing.id, existing.feedType, existing.breastSide)
+            else -> ReceiptSpec.FeedLogged(existing.id, existing.feedType, existing.breastSide, existing.amountMl)
         }
         openReceipt(spec, baseTime = existing.startMillis, duringSleep = duringSleep, undo = Undo.Delete(existing.id), dedupe = existing)
         haptic(HomeHaptic.REJECT)
@@ -570,8 +680,11 @@ class HomeViewModel(
         }
     }
 
-    /** Feed, Diaper and the toggle ignore taps while a sheet is open and briefly after a committed one closed. */
-    private fun homeBlocked(): Boolean = sheet.value != null || elapsedRealtime() < homeReadyAt
+    /**
+     * Feed, Diaper, the toggle and the switcher ignore taps while a sheet (or the Switch baby sheet) is open and briefly
+     * after a committed one closed.
+     */
+    private fun homeBlocked(): Boolean = sheet.value != null || switchingBaby.value || elapsedRealtime() < homeReadyAt
 
     private suspend fun summary(): Summary = summarize(repository.observeEntries().first(), clock.now(), zone)
 
@@ -603,7 +716,9 @@ class HomeViewModel(
 
         /** The production view model on [Core]'s graph. */
         fun factory(timings: HomeTimings = HomeTimings()): ViewModelProvider.Factory = viewModelFactory {
-            initializer { HomeViewModel(Core.repository, Core.settings, Core.sync, Core.clock, timings = timings) }
+            initializer {
+                HomeViewModel(Core.repository, Core.settings, Core.sync, Core.clock, timings = timings, cloud = Core.cloud)
+            }
         }
     }
 }

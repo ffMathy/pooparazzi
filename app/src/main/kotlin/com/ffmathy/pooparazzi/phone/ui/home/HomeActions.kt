@@ -17,6 +17,18 @@ interface HomeActions {
     fun onOpenSettings() {}
     fun onRetrySync() {}
 
+    /** The cloud icon in "Couldn't back up": backs up again (BABIES_AND_BACKUP §3.2). */
+    fun onRetryBackup() {}
+
+    /** The name with two or more babies: opens the Switch baby sheet (BABIES_AND_BACKUP §2.4). */
+    fun onSwitchBaby() {}
+
+    /** Switch baby sheet: makes [babyId] the current baby and closes the sheet. */
+    fun onSelectBaby(babyId: String) {}
+
+    /** Switch baby sheet: Cancel, a scrim tap, back or a swipe. */
+    fun onSwitchBabyDismiss() {}
+
     /** A since-row: the edit sheet for [entryId]. */
     fun onEditEntry(entryId: String) {}
 
@@ -57,8 +69,8 @@ interface HomeActions {
     fun onSheetEdit(entryId: String) {}
 
     /**
-     * Feed sheet: Breast reveals the side checkboxes and "Log feed"; Formula / Food log an instant, null ("Just the
-     * time") logs an untyped feed.
+     * Feed sheet: Breast reveals the side checkboxes and "Log feed", Formula the amount slider and "Log feed"; Food
+     * logs an instant, null ("Just the time") logs an untyped feed.
      */
     fun onFeedType(type: FeedType?) {}
 
@@ -67,6 +79,12 @@ interface HomeActions {
 
     /** Feed sheet, Breast step, "Log feed": logs a breast feed at the sheet's time with the ticked order (or none). */
     fun onLogBreastfeed() {}
+
+    /** Feed sheet, Formula step: the slider's amount in millilitres; null is no amount (the slider at its start). */
+    fun onFormulaAmount(amountMl: Int?) {}
+
+    /** Feed sheet, Formula step, "Log feed": logs a formula feed at the sheet's time with the amount (or none). */
+    fun onLogFormula() {}
     fun onDiaperPee(checked: Boolean) {}
     fun onDiaperPoop(checked: Boolean) {}
 

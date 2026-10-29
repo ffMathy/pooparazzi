@@ -1,11 +1,12 @@
 # Releasing Pooparazzi
 
-Two GitHub Actions workflows build and ship the apps:
+Three GitHub Actions workflows build, ship and check the apps:
 
 | Workflow | When | What it does |
 |---|---|---|
 | [`ci.yml`](../.github/workflows/ci.yml) | Every pull request (and by hand) | Unit tests of `:core`, `:app` and `:wear`, and debug builds of both apps. Needs no secrets. |
 | [`release.yml`](../.github/workflows/release.yml) | Every push to `main` (a merged pull request), and by hand | Unit tests, signed release **app bundles** (AAB) and **APKs** of the phone and the watch app, a **GitHub Release** with both APKs for side-loading, and an upload of both bundles to Google Play. The bundles and R8 mapping files are also kept as a workflow artifact. |
+| [`rules.yml`](../.github/workflows/rules.yml) | Pull requests that change `firebase/` (and by hand) | The Firestore security rules' tests on the Firestore emulator ([BACKEND.md](BACKEND.md#testing-the-rules)). Needs no secrets. |
 
 The phone app and the Wear OS app are one Play listing: both use the applicationId **`com.ffmathy.pooparazzi`** (the Wearable Data Layer only pairs apps with the same applicationId and signing key). The phone bundle goes to the phone track (`internal` by default) and the watch bundle to the matching **Wear OS form-factor track** (`wear:internal`), which is where Play expects Wear OS releases.
 
@@ -16,9 +17,23 @@ Every release run uses one version **base**, `github.run_number + VERSION_CODE_O
 - phone: `versionCode = base * 10`
 - watch: `versionCode = base * 10 + 1`
 
-so the codes rise with every run and the two bundles under the one package never clash. The version name comes from `-Ppooparazzi.versionName`: the `VERSION_NAME` repository variable if set, otherwise `pooparazziVersionName` in [`gradle/libs.versions.toml`](../gradle/libs.versions.toml). Local builds without the properties use the defaults in that file (base 1: phone 10, watch 11).
+so the codes rise with every run and the two bundles under the one package never clash. Local builds without the properties use the defaults in [`gradle/libs.versions.toml`](../gradle/libs.versions.toml) (base 1: phone 10, watch 11, named `pooparazziVersionName`).
 
 Re-running a workflow run reuses its run number, so Play rejects the second upload of the same codes; push a new commit or start the workflow by hand instead. If the run numbers ever go backwards (for example after the workflow is renamed), raise `VERSION_CODE_OFFSET` above the highest base already on Play.
+
+## Version names
+
+Every release run bumps the version name and tags its GitHub Release `v<versionName>` (for example `v0.2.0`), so the tags are the record of what was released. [`scripts/next_version.py`](../scripts/next_version.py) picks the name from the highest release tag on the repository (older `v<name>-<base>` tags such as `v0.1.0-116` count too) and passes it to Gradle as `-Ppooparazzi.versionName=<name>`:
+
+| Bump | When | Example |
+|---|---|---|
+| patch | Every merge to `main`, unless its pull request has a label below | 0.2.3 → 0.2.4 |
+| minor | The merged pull request has the label `release: minor` | 0.2.3 → 0.3.0 |
+| major | The merged pull request has the label `release: major` | 0.2.3 → 1.0.0 |
+
+A run started by hand (Actions › Release › Run workflow) bumps the part chosen in its "Which part of the version to bump" input instead. Create the two labels once (Issues › Labels › New label, or `gh label create "release: minor"` and `gh label create "release: major"`).
+
+`pooparazziVersionName` in `libs.versions.toml` is a floor: when it is higher than every tag, the next release uses it exactly, without a bump. Raise it in a pull request to jump to a version by hand (say `1.0.0` for the first production release). With no release tags yet, the first release is named after it.
 
 ## Signing
 
@@ -54,7 +69,7 @@ base64 -w0 pooparazzi-upload.jks > pooparazzi-upload.jks.b64      # macOS: base6
 
 Repository › Settings › Secrets and variables › Actions.
 
-**Secrets** (the four `UPLOAD_*` secrets go together: with only some of them the run stops early with a list of the missing ones; with none of them the run falls back to the [public side-load key](#without-the-upload-key)):
+**Secrets** (the four `UPLOAD_*` secrets go together: with only some of them the run stops early with a list of the missing ones; with none of them the run falls back to the [public side-load key](#without-the-upload-key); `GOOGLE_SERVICES_JSON` is optional on its own):
 
 | Secret | Value |
 |---|---|
@@ -63,6 +78,7 @@ Repository › Settings › Secrets and variables › Actions.
 | `UPLOAD_KEYSTORE_PASSWORD` | The keystore password |
 | `UPLOAD_KEY_ALIAS` | The key alias (`upload` above) |
 | `UPLOAD_KEY_PASSWORD` | The key password (the same as the keystore password if `keytool` did not ask for a separate one) |
+| `GOOGLE_SERVICES_JSON` | Optional: the whole `google-services.json` of the Firebase backend ([BACKEND.md](BACKEND.md#6-connect-the-app)). Without it the release builds with accounts and the backup turned off, and the run warns |
 
 **Variables** (all optional):
 
@@ -72,7 +88,6 @@ Repository › Settings › Secrets and variables › Actions.
 | `PLAY_WEAR_TRACK` | `wear:<PLAY_TRACK>` | Play track for the watch bundle |
 | `PLAY_RELEASE_STATUS` | `completed` | `completed` rolls the release out; use `draft` while the app has never been published (see below) |
 | `VERSION_CODE_OFFSET` | `100` | Added to the run number to make the version base |
-| `VERSION_NAME` | `pooparazziVersionName` from `libs.versions.toml` | Version name shown to users |
 
 ### 3. Create the app in Play Console and enable Play App Signing
 
@@ -100,7 +115,7 @@ Until the app's first release has been reviewed and published, Play only accepts
 
 ## Side-loading the APKs
 
-Every run of `release.yml` creates a GitHub Release tagged `v<versionName>-<base>` (for example `v0.1.0-101`) with two files: `pooparazzi-phone-….apk` and `pooparazzi-watch-….apk`. They need no secrets: without `PLAY_SERVICE_ACCOUNT_JSON` the Play upload is skipped with a warning, and without the upload-key secrets the APKs are signed with the [public side-load key](#without-the-upload-key). Either way the GitHub Release is still made.
+Every run of `release.yml` creates a GitHub Release tagged `v<versionName>` (for example `v0.2.0`; see [Version names](#version-names)) with two files: `pooparazzi-phone-….apk` and `pooparazzi-watch-….apk`. They need no secrets: without `PLAY_SERVICE_ACCOUNT_JSON` the Play upload is skipped with a warning, and without the upload-key secrets the APKs are signed with the [public side-load key](#without-the-upload-key). Either way the GitHub Release is still made.
 
 - **Same release on both devices.** Install the phone and watch APK from the same release so they sync.
 - **Updates.** All releases are signed with the same key (your upload key, or the side-load key until you add one), so a newer release installs over an older one and keeps the data. Adding the upload-key secrets later changes the key: uninstall the side-loaded apps once (which deletes their data) before installing the first upload-key release.
@@ -127,3 +142,4 @@ Until the four `UPLOAD_*` secrets are set, `release.yml` signs the APKs (and the
 - [ ] First phone and watch bundles uploaded by hand (step 4)
 - [ ] Service account invited in Play Console with release permissions (step 5)
 - [ ] `PLAY_RELEASE_STATUS=draft` while the app is still a draft; optional `PLAY_TRACK`
+- [ ] Optional backup: Firebase project set up and `GOOGLE_SERVICES_JSON` added ([BACKEND.md](BACKEND.md)); Play Console › App content › Data safety declares the account email and names a way to request account deletion

@@ -28,8 +28,8 @@ import org.robolectric.annotation.Config
 
 /**
  * The real app opened by a widget or notification link (DESIGN_SPEC §3.1): a cold start lands on Home with the sheet
- * open, and a link that arrives while History is open returns to Home first. Also the in-context notification
- * permission request on the first timer.
+ * open, and a link that arrives while History (or Statistics over it) is open returns to Home first. Also the
+ * in-context notification permission request on the first timer.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -58,6 +58,21 @@ class DeepLinkNavigationTest {
         activity.newIntent(DeepLinks.intent(app, HomeLaunch.Feed))
         compose.waitUntilAtLeastOneExists(hasText("Then the sides, if you like"), timeoutMillis = 5_000)
         compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Add entry")).fetchSemanticsNodes().isEmpty() }
+    }
+
+    /** A widget link while Statistics is open pops Statistics and History: Home opens the Feed sheet. */
+    @Test
+    fun aWidgetLinkWhileStatisticsIsOpenReturnsToHome() {
+        val activity = Robolectric.buildActivity(MainActivity::class.java).setup()
+        compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 10_000)
+        compose.onNodeWithText("History").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
+        compose.onNodeWithContentDescription("Statistics").performClick()
+        compose.waitUntilAtLeastOneExists(hasText(STATISTICS_EMPTY), timeoutMillis = 5_000)
+
+        activity.newIntent(DeepLinks.intent(app, HomeLaunch.Feed))
+        compose.waitUntilAtLeastOneExists(hasText("Then the sides, if you like"), timeoutMillis = 5_000)
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText(STATISTICS_EMPTY)).fetchSemanticsNodes().isEmpty() }
     }
 
     /** The first Start sleep asks for the notification permission in context (DESIGN_SPEC §10.5); once only. */
@@ -96,5 +111,10 @@ class DeepLinkNavigationTest {
         compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Add entry")).fetchSemanticsNodes().isEmpty() }
         activity.newIntent(Intent(link).setClass(app, MainActivity::class.java))
         compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
+    }
+
+    private companion object {
+        /** Statistics with nothing logged (a new app). */
+        const val STATISTICS_EMPTY = "Statistics start as soon as something is logged."
     }
 }

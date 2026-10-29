@@ -41,11 +41,16 @@ class HomeFeedTest : HomeViewModelTestBase() {
         home.settle()
         home.clock.advanceBy(20_000) // the stamp was taken on the first tap
         home.viewModel.onFeedType(FeedType.FORMULA)
+        val step = home.settle().sheet as HomeSheetUi.Feed
+        assertTrue("Formula offers the optional amount first", step.formula)
+        assertNull(step.amountMl)
+        home.viewModel.onLogFormula()
         val state = home.settle()
 
         val feed = home.entries().single { it.feedType == FeedType.FORMULA && it.startMillis > SampleData.at(13, 0) }
         assertEquals(SampleData.NOW_1432 - 10 * MINUTE, feed.startMillis)
         assertNull(feed.endMillis)
+        assertNull("the amount is optional", feed.amountMl)
         val receipt = state.receipt
         assertEquals(ReceiptVariant.FeedLogged(FeedType.FORMULA), receipt.variant)
         assertTrue(receipt.undoable)
@@ -53,7 +58,35 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertEquals(listOf(-15, -10, -5, 5), receipt.chips.map { it.minutes })
         assertTrue("the sheet's offset is pre-selected", receipt.chips.single { it.selected }.minutes == -10)
         assertEquals(feed.startMillis, receipt.time)
-        assertEquals(listOf(HomeHaptic.SEGMENT_TICK, HomeHaptic.CONFIRM), home.haptics)
+        assertEquals(listOf(HomeHaptic.SEGMENT_TICK, HomeHaptic.SEGMENT_TICK, HomeHaptic.CONFIRM), home.haptics)
+    }
+
+    @Test
+    fun formulaRecordsTheAmountFromTheSlider() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFormulaAmount(120)
+        assertEquals(120, (home.settle().sheet as HomeSheetUi.Feed).amountMl)
+        home.viewModel.onFormulaAmount(null)
+        assertNull("back to no amount", (home.settle().sheet as HomeSheetUi.Feed).amountMl)
+        home.viewModel.onFormulaAmount(150)
+        home.viewModel.onLogFormula()
+        val state = home.settle()
+
+        val feed = home.entries().single { it.feedType == FeedType.FORMULA && it.startMillis >= SampleData.NOW_1432 }
+        assertEquals(150, feed.amountMl)
+        assertEquals(ReceiptVariant.FeedLogged(FeedType.FORMULA, amountMl = 150), state.receipt.variant)
+    }
+
+    @Test
+    fun theAmountIsOnlyTakenInTheFormulaStep() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFormulaAmount(120)
+        home.viewModel.onLogFormula()
+        val sheet = home.settle().sheet as HomeSheetUi.Feed
+        assertFalse(sheet.formula)
+        assertNull(sheet.amountMl)
+        assertTrue("nothing logged", home.entries().none { it.startMillis >= SampleData.NOW_1432 })
     }
 
     @Test
@@ -203,7 +236,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
     @Test
     fun theSameFeedTwiceWithinFiveSecondsIsDeduplicated() = homeTest { home ->
         home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFeedType(FeedType.FOOD)
         home.settle()
         home.closeReceipt()
         home.clock.advanceBy(2_000)
@@ -211,9 +244,9 @@ class HomeFeedTest : HomeViewModelTestBase() {
         home.settle()
         home.clock.advanceBy(1_000)
         // Same stamp window: the sheet was opened 2 s after the first log.
-        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFeedType(FeedType.FOOD)
         val state = home.settle()
-        assertEquals(1, home.entries().count { it.feedType == FeedType.FORMULA && it.startMillis >= SampleData.NOW_1432 })
+        assertEquals(1, home.entries().count { it.feedType == FeedType.FOOD && it.startMillis >= SampleData.NOW_1432 })
         assertEquals(SampleData.NOW_1432, state.receipt.dedupe!!.startMillis)
         assertEquals("the receipt is for the existing entry", SampleData.NOW_1432, state.receipt.time)
         assertEquals(HomeHaptic.REJECT, home.haptics.last())

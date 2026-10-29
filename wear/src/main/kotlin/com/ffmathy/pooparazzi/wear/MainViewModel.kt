@@ -25,6 +25,8 @@ import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 import com.ffmathy.pooparazzi.core.model.isInterval
 import com.ffmathy.pooparazzi.core.model.isSleep
+import com.ffmathy.pooparazzi.core.settings.Settings
+import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.EntrySync
 import com.ffmathy.pooparazzi.wear.state.AdjustRequest
 import com.ffmathy.pooparazzi.wear.state.AdjustUiState
@@ -47,6 +49,7 @@ import com.ffmathy.pooparazzi.wear.state.XHaptic
 import com.ffmathy.pooparazzi.wear.state.timeOf
 import com.ffmathy.pooparazzi.wear.state.withTime
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
@@ -57,8 +60,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -90,14 +95,25 @@ import java.time.ZoneId
  */
 class MainViewModel(
     private val repository: EntryRepository,
+    private val settings: SettingsRepository,
     private val sync: EntrySync,
     private val clock: Clock,
     private val zone: () -> ZoneId = ZoneId::systemDefault,
     ticks: Flow<Unit> = minuteTicks(clock),
 ) : ViewModel() {
 
-    private val entries: StateFlow<List<Entry>?> =
-        repository.observeEntries().stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    /**
+     * The babies and the current one (all the screens need of the settings) with that baby's entries, as one value:
+     * a switch never pairs the new baby with the previous one's log, not even for a frame.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val log: StateFlow<BabyLog?> = settings.settings
+        .map { Settings(babies = it.babies, selectedBabyId = it.selectedBaby.id) }
+        .distinctUntilChanged()
+        .flatMapLatest { babies -> repository.observeEntries().map { BabyLog(babies, it) } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private val entries: Flow<List<Entry>> = log.filterNotNull().map { it.entries }
 
     /** Bumped by the ambient minute tick, which the regular ticker cannot rely on while the watch sleeps. */
     private val refreshes = MutableStateFlow(0)
@@ -107,12 +123,12 @@ class MainViewModel(
     private val nowTicks: Flow<Unit> = combine(ticks, refreshes) { _, _ -> }
 
     val main: StateFlow<MainUiState> =
-        combine(entries.filterNotNull(), nowTicks, guard, sync.status) { list, _, guard, status ->
-            MainUiState.from(summarize(list, clock.now(), zone()), guard, status)
+        combine(log.filterNotNull(), nowTicks, guard, sync.status) { log, _, guard, status ->
+            MainUiState.from(summarize(log.entries, clock.now(), zone()), guard, status, log.babies.babies, log.babies.selectedBabyId)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, MainUiState.loading(clock.now(), zone()))
 
     val today: StateFlow<TodayUiState> =
-        combine(entries.filterNotNull(), nowTicks) { list, _ ->
+        combine(entries, nowTicks) { list, _ ->
             val zone = zone()
             val summary = summarize(list, clock.now(), zone)
             TodayUiState(summary.now, zone, summary.todayDate, summary.dayEntries(summary.todayDate))
@@ -137,7 +153,7 @@ class MainViewModel(
     /** What Adjust is open for; cleared once a choice is applied, so a second tap on the leaving screen does nothing. */
     private val adjustRequest = MutableStateFlow<AdjustRequest?>(null)
     val adjust: StateFlow<AdjustUiState?> =
-        combine(entries.filterNotNull(), adjustRequest, nowTicks) { list, request, _ ->
+        combine(entries, adjustRequest, nowTicks) { list, request, _ ->
             request ?: return@combine null
             val entry = list.firstOrNull { it.id == request.entryId } ?: return@combine null
             AdjustUiState.build(entry, request.fields, request.allowSetTime, clock.now(), zone())
@@ -145,7 +161,7 @@ class MainViewModel(
 
     private val setTimeField = MutableStateFlow<TimeField?>(null)
     val setTime: StateFlow<SetTimeUiState?> =
-        combine(entries.filterNotNull(), adjustRequest, setTimeField) { list, request, field ->
+        combine(entries, adjustRequest, setTimeField) { list, request, field ->
             if (request == null || field == null) return@combine null
             val entry = list.firstOrNull { it.id == request.entryId } ?: return@combine null
             val base = entry.timeOf(field) ?: return@combine null
@@ -432,6 +448,31 @@ class MainViewModel(
         send(WearEvent.CloseAdjust)
     }
 
+    // ---- Babies ------------------------------------------------------------------------------
+
+    /**
+     * The baby picker's choice: makes [id] the watch's current baby (on this watch only: never synced) and returns to
+     * Main with a confirmation (BABIES_AND_BACKUP §2.5). What was open belongs to the previous baby, so a switch drops
+     * the drafts, the Logged receipt and its Undo, and the Adjust request, and resets the 2 s double-toggle guard: the
+     * other baby's sleep toggle must work at once.
+     */
+    fun selectBaby(id: String): Job = action {
+        val before = settings.current().selectedBaby.id
+        val after = settings.selectBaby(id).selectedBaby.id
+        if (after != before) {
+            _feedDraft.value = null
+            _sideDraft.value = null
+            _diaperDraft.value = null
+            _receipt.value = null
+            setTimeField.value = null
+            adjustRequest.value = null
+            lastSleepToggleAt = NEVER
+            clearGuard()
+        }
+        haptic(XHaptic.CONFIRM)
+        send(WearEvent.BackToMain)
+    }
+
     // ---- Ticks -------------------------------------------------------------------------------
 
     /** Re-reads "now" and the time zone (the ambient minute tick, returning to the foreground, a zone change). */
@@ -511,7 +552,7 @@ class MainViewModel(
             initializer {
                 val timeSettings = (this[APPLICATION_KEY] as? WearApp)?.timeSettingsChanges?.map { }
                 val ticks = listOfNotNull(minuteTicks(Core.clock), timeSettings).merge()
-                MainViewModel(Core.repository, Core.sync, Core.clock, ticks = ticks)
+                MainViewModel(Core.repository, Core.settings, Core.sync, Core.clock, ticks = ticks)
             }
         }
     }
@@ -530,3 +571,6 @@ fun minuteTicks(clock: Clock): Flow<Unit> = flow {
 }
 
 private const val MINUTE = 60_000L
+
+/** The babies with the current one ([Settings.selectedBabyId]) and that baby's entries. */
+private class BabyLog(val babies: Settings, val entries: List<Entry>)

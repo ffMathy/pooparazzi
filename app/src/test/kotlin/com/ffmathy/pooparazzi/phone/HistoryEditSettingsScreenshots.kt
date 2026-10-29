@@ -15,6 +15,8 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
+import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.phone.ui.edit.EditActions
 import com.ffmathy.pooparazzi.phone.ui.edit.EditSheet
 import com.ffmathy.pooparazzi.phone.ui.edit.EditTags
@@ -42,7 +44,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * History, the edit sheet and Settings on the reference phone (390 × 844 dp, xxhdpi) with the reference scenario and a
- * fixed clock (V1_ADDITIONS §6), in English and Danish: `app/screenshots/<lang>/10-…16-*.png`, continuing Home's tour.
+ * fixed clock (V1_ADDITIONS §6), in English and Danish: `app/screenshots/<lang>/10-…16-*.png`, continuing Home's tour,
+ * and `22-…23-*.png` and `29-*.png` for several babies.
  * The status and navigation bars are left empty (24 dp insets, as on the reference device).
  */
 abstract class HistoryEditSettingsScreenshots(private val language: String) {
@@ -63,6 +66,9 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
     /** The breastfeed form: type, one time block and the sides group (it fits without scrolling). */
     @Test fun editBreastfeed() = sheet("13-edit-breastfeed", night = false, EditSamples.breastfeed())
 
+    /** The formula form: type, one time block and the amount slider at 120 ml. */
+    @Test fun editFormula() = sheet("13b-edit-formula", night = true, EditSamples.formula())
+
     @Test fun editDiaper() = sheet("14-edit-diaper", night = true, EditSamples.diaperPoop())
 
     @Test fun addPastEntry() = sheet("15-add-past-entry", night = false, EditSamples.addPastEntry())
@@ -71,10 +77,32 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
         SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets)
     }
 
+    /** Several babies (BABIES_AND_BACKUP §2): History's baby label, and Settings › Babies with twins and an unnamed third. */
+    @Test fun historyTwins() = screen("25-history-twins", night = true) { History(HistorySamples.twins()) }
+
+    @Test fun settingsBabies() = screen("26-settings-babies", night = false) {
+        SettingsScreen(SettingsSamples.babies(), SettingsActions.None, windowInsets = ReferenceInsets)
+    }
+
+    /** A paired watch from before several babies: "Add a baby" disabled, and why (BABIES_AND_BACKUP §2.4). */
+    @Test fun settingsBabiesWatchUpdate() = screen("32-settings-babies-watch-update", night = false) {
+        SettingsScreen(SettingsSamples.state().copy(watchNeedsUpdate = true), SettingsActions.None, windowInsets = ReferenceInsets)
+    }
+
     /** Not part of the tour (written under build/): the blocking validation line, and a past day. */
     @Test fun editValidation() = sheet("edit-validation", night = true, EditSamples.sleepEndBeforeStart(), tour = false)
 
     @Test fun historyYesterday() = screen("history-yesterday", night = false, tour = false) { History(HistorySamples.yesterday()) }
+
+    /** The status icons (DESIGN_SPEC §4.5): the watch saved on the phone, the backup running. */
+    @Test fun historySyncStates() = screen("36-history-sync-offline", night = false) {
+        History(HistorySamples.syncStates(SyncStatus.Offline, CloudStatus.Syncing))
+    }
+
+    /** Both in their error state: two 48 dp retry targets under the title (written under build/ for review). */
+    @Test fun historySyncErrors() = screen("history-sync-errors", night = true, tour = false) {
+        History(HistorySamples.syncStates(SyncStatus.Error, CloudStatus.Error))
+    }
 
     /** 200 % font scale (DESIGN_SPEC §9.3): labels wrap, nothing clips. Written under build/ for review. */
     @Test fun largeFontHistory() {

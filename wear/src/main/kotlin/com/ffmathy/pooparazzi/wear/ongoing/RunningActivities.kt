@@ -17,10 +17,12 @@ import androidx.wear.ongoing.OngoingActivity
 import androidx.wear.ongoing.Status
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.format.ClockFormatter
+import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
 import com.ffmathy.pooparazzi.wear.MainActivity
 import com.ffmathy.pooparazzi.wear.R
+import com.ffmathy.pooparazzi.wear.ui.inSentence
 import java.time.ZoneId
 
 /** One running interval shown as an Ongoing Activity: only a sleep runs (feeds are instants). */
@@ -37,20 +39,24 @@ internal const val LEGACY_NOTIFICATION_FEED = 1002
  * The watch Ongoing Activity (DESIGN_SPEC §3.8, §10.6) for a running sleep: a static white icon, the status "Asleep
  * since 02:05" as a text part (never a ticking stopwatch), and a tap that opens Main. It is removed as soon as the
  * sleep ends, wherever it ended (the app, the tile, or the phone through sync), because [sync] runs on every change of
- * the entries.
+ * the entries. It shows the watch's current baby's sleep; with two or more babies it names that baby ("Noa · Asleep
+ * since 02:05") and follows a switch to another baby (BABIES_AND_BACKUP §2.5).
  *
  * Posting needs `POST_NOTIFICATIONS` on API 33+; without it nothing is shown and logging works as usual.
  */
 class RunningActivities(private val context: Context) {
     private val manager = NotificationManagerCompat.from(context)
 
-    /** Shows, updates or removes the activity to match [summary]. */
-    fun sync(summary: Summary) {
-        show(RunningKind.SLEEP, summary.runningSleep, summary.zone)
+    /**
+     * Shows, updates or removes the activity to match [summary], the current baby's. [baby] is that baby's label when
+     * there are two or more (null with one baby: the activity reads as it always did).
+     */
+    fun sync(summary: Summary, baby: String? = null) {
+        show(RunningKind.SLEEP, summary.runningSleep, summary.zone, baby)
         manager.cancel(LEGACY_NOTIFICATION_FEED)
     }
 
-    private fun show(kind: RunningKind, running: Entry?, zone: ZoneId) {
+    private fun show(kind: RunningKind, running: Entry?, zone: ZoneId, baby: String?) {
         if (running == null) {
             manager.cancel(kind.notificationId)
             shown.remove(kind)
@@ -58,13 +64,21 @@ class RunningActivities(private val context: Context) {
         }
         val clock = ClockFormatter.from(context)
         val start = clock.format(running.startMillis, zone)
-        val key = Shown(running.id, start)
+        val key = Shown(running.id, start, running.babyId, baby)
         if (shown[kind] == key) return
         if (!canPost()) return
         ensureChannel()
 
-        val template = context.getString(kind.status)
+        // "Noa · Asleep since #start#": the baby leads, as in the app's time text. A "#" would read as a template part.
+        val statusTemplate = context.getString(kind.status)
+        val template = if (baby != null) baby.replace("#", "") + DOT_SEPARATOR + statusTemplate else statusTemplate
         val statusText = template.replace(START_TOKEN, start)
+        val locale = context.resources.configuration.locales[0]
+        val spoken = if (baby != null) {
+            context.getString(R.string.spoken_pair, baby, statusTemplate.replace(START_TOKEN, start).inSentence(locale))
+        } else {
+            statusText
+        }
         val touch = PendingIntent.getActivity(
             context,
             kind.notificationId,
@@ -92,7 +106,7 @@ class RunningActivities(private val context: Context) {
             .setTouchIntent(touch)
             .setStatus(status)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
-            .setContentDescription(statusText)
+            .setContentDescription(spoken)
             .build()
             .apply(context)
         try {
@@ -118,8 +132,11 @@ class RunningActivities(private val context: Context) {
         context.getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
     }
 
-    /** What is on screen for a kind, so an unchanged state is not re-posted. */
-    private data class Shown(val entryId: String, val start: String)
+    /**
+     * What is on screen for a kind, so an unchanged state is not re-posted. The baby is part of it: after a switch the
+     * activity is the other baby's (or gone), and a new label re-posts it.
+     */
+    private data class Shown(val entryId: String, val start: String, val babyId: String, val baby: String?)
 
     companion object {
         private const val TAG = "RunningActivities"

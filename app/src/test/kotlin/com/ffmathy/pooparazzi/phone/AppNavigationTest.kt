@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -18,7 +19,7 @@ import org.robolectric.annotation.Config
 
 /**
  * The real app: [PooparazziApp] builds the core graph (Room, DataStore, sync without Play Services), [MainActivity]
- * waits for the appearance inputs, then Home opens History and Settings and comes back.
+ * waits for the appearance inputs, then Home opens History and Settings and comes back, and History opens Statistics.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -64,6 +65,34 @@ class AppNavigationTest {
         compose.onNodeWithText("Feed").assertExists()
     }
 
+    /** History's `chart` button opens Statistics (empty: nothing is logged in a new app); Back returns to History. */
+    @Test
+    fun historyOpensStatisticsAndBackReturnsToHistory() {
+        openStatistics()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
+    }
+
+    /** A second Back tap while Statistics is still animating out must not pop History as well (back on Home). */
+    @Test
+    fun aDoubleTapOnBackFromStatisticsReturnsToHistoryOnce() {
+        openStatistics()
+        // Statistics' own Back, by node: History's Back is composed again during the exit transition.
+        val id = compose.onNodeWithContentDescription("Back").fetchSemanticsNode().id
+        val back = SemanticsMatcher("node $id") { it.id == id }
+
+        compose.mainClock.autoAdvance = false
+        compose.onNode(back).performClick()
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNode(back).performClick()
+        compose.mainClock.autoAdvance = true
+
+        compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
+        compose.waitForIdle()
+        compose.onNodeWithText("Add entry").assertExists()
+        compose.onNodeWithText("Start sleep").assertDoesNotExist()
+    }
+
     @Test
     fun historyAddsAPastEntryAndSettingsShowTheFontLicences() {
         compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
@@ -84,6 +113,16 @@ class AppNavigationTest {
         compose.onNodeWithText("Google Sans Flex").assertExists()
     }
 
+    /** Home › History › Statistics, waiting until History has gone. */
+    private fun openStatistics() {
+        compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
+        compose.onNodeWithText("History").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
+        compose.onNodeWithContentDescription("Statistics").performClick()
+        compose.waitUntilAtLeastOneExists(hasText(STATISTICS_EMPTY), timeoutMillis = 5_000)
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Add entry")).fetchSemanticsNodes().isEmpty() }
+    }
+
     @Test
     fun feedOpensTheFeedSheet() {
         compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
@@ -92,5 +131,10 @@ class AppNavigationTest {
         compose.onNodeWithText("Formula").assertExists()
         compose.onNodeWithText("Cancel").performClick()
         compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Then the sides, if you like")).fetchSemanticsNodes().isEmpty() }
+    }
+
+    private companion object {
+        /** Statistics with nothing logged (a new app). */
+        const val STATISTICS_EMPTY = "Statistics start as soon as something is logged."
     }
 }

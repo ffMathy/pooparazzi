@@ -5,7 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.util.Log
 import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.updateAll
+import androidx.glance.appwidget.GlanceAppWidget
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -41,11 +41,15 @@ object WidgetUpdater {
     suspend fun refresh(context: Context) {
         ticks.update { it + 1 }
         try {
-            val manager = GlanceAppWidgetManager(context)
-            val placed = manager.getGlanceIds(LogWidget::class.java).size + manager.getGlanceIds(QuickWidget::class.java).size
-            if (placed == 0) return
-            LogWidget().updateAll(context)
-            QuickWidget().updateAll(context)
+            // By each provider's own widget ids: Glance's updateAll only finds widgets whose receiver has already handled
+            // an update, and a host that never sent one (Samsung's cover screen) would then never be drawn.
+            val manager = AppWidgetManager.getInstance(context)
+            val glance = GlanceAppWidgetManager(context)
+            val placed = providers().flatMap { (receiver, widget) ->
+                manager.getAppWidgetIds(ComponentName(context, receiver)).map { widget to glance.getGlanceIdBy(it) }
+            }
+            if (placed.isEmpty()) return
+            placed.forEach { (widget, id) -> widget.update(context, id) }
             scheduleTimedRefreshes(context)
         } catch (e: CancellationException) {
             throw e
@@ -53,6 +57,13 @@ object WidgetUpdater {
             Log.w(TAG, "Widget refresh failed", e)
         }
     }
+
+    /** Each widget provider's receiver and the widget it draws. */
+    private fun providers(): List<Pair<Class<*>, GlanceAppWidget>> = listOf(
+        LogWidgetReceiver::class.java to LogWidget(),
+        QuickWidgetReceiver::class.java to QuickWidget(),
+        CoverWidgetReceiver::class.java to CoverWidget(),
+    )
 
     private suspend fun scheduleTimedRefreshes(context: Context) {
         val graph = Core.ensureInitialized(context)
@@ -80,8 +91,7 @@ object WidgetUpdater {
     /** Stops the timed refreshes once no widget of any kind is placed (a provider's last instance was removed). */
     fun cancelIfNoneLeft(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
-        val left = listOf(LogWidgetReceiver::class.java, QuickWidgetReceiver::class.java, CoverWidgetReceiver::class.java)
-            .sumOf { manager.getAppWidgetIds(ComponentName(context, it)).size }
+        val left = providers().sumOf { (receiver, _) -> manager.getAppWidgetIds(ComponentName(context, receiver)).size }
         if (left == 0) runCatching { WorkManager.getInstance(context).cancelAllWorkByTag(TAG_REFRESH) }
     }
 

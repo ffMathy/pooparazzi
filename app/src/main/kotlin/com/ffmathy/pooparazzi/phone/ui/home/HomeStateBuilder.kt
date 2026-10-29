@@ -1,9 +1,11 @@
 package com.ffmathy.pooparazzi.phone.ui.home
 
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.domain.LampState
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.lampState
 import com.ffmathy.pooparazzi.core.domain.summarize
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
@@ -30,6 +32,10 @@ internal object HomeStateBuilder {
         zone: ZoneId,
         card: CardModel? = null,
         sheet: SheetModel? = null,
+        babies: List<Baby> = listOf(Baby(Baby.FIRST_ID, babyName)),
+        babyId: String = babies.first().id,
+        switchingBaby: Boolean = false,
+        cloud: CloudStatus = CloudStatus.Off,
     ): HomeUiState {
         val summary = summarize(entries, now, zone)
         val lamp = lampState(summary)
@@ -38,6 +44,7 @@ internal object HomeStateBuilder {
             zone = zone,
             babyName = babyName,
             sync = sync,
+            cloud = cloud,
             lamp = lamp,
             row1 = row1(summary, lamp),
             row2 = row2(summary),
@@ -45,6 +52,9 @@ internal object HomeStateBuilder {
             runningSleep = summary.runningSleep,
             card = card?.let { cardUi(it) },
             sheet = sheet?.let { sheetUi(it, entries, summary) },
+            babies = babies,
+            babyId = babyId,
+            switchingBaby = switchingBaby && babies.size > 1,
         )
     }
 
@@ -77,7 +87,7 @@ internal object HomeStateBuilder {
         val subject = model.spec.subject
         val entry = subject?.let { (id, _) -> entries.firstOrNull { it.id == id && !it.deleted } }
         val variant = when (val spec = model.spec) {
-            is ReceiptSpec.FeedLogged -> ReceiptVariant.FeedLogged(spec.type, spec.side)
+            is ReceiptSpec.FeedLogged -> ReceiptVariant.FeedLogged(spec.type, spec.side, spec.amountMl)
             is ReceiptSpec.DiaperLogged -> ReceiptVariant.DiaperLogged(spec.kind)
             is ReceiptSpec.SleepStarted -> ReceiptVariant.SleepStarted
             is ReceiptSpec.WokeUp -> ReceiptVariant.WokeUp(entry?.clockDurationMillis(now) ?: 0L)
@@ -133,7 +143,9 @@ internal object HomeStateBuilder {
         fun chips(minutes: List<Int>, enabled: (Int) -> Boolean = { true }) =
             minutes.map { OffsetChipUi(it, selected = it == sheet.offsetMinutes, enabled = enabled(it)) }
         return when (sheet) {
-            is SheetModel.Feed -> HomeSheetUi.Feed(sheet.stamp, sheet.offsetMinutes, chips(SHEET_CHIPS), sheet.breast, sheet.ticks)
+            is SheetModel.Feed -> HomeSheetUi.Feed(
+                sheet.stamp, sheet.offsetMinutes, chips(SHEET_CHIPS), sheet.breast, sheet.ticks, sheet.formula, sheet.amountMl,
+            )
             is SheetModel.Diaper -> HomeSheetUi.Diaper(
                 stamp = sheet.stamp,
                 offsetMinutes = sheet.offsetMinutes,

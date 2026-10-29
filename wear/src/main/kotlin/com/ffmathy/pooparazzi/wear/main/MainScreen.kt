@@ -87,13 +87,15 @@ import com.ffmathy.pooparazzi.wear.theme.isAmbient
 import com.ffmathy.pooparazzi.wear.ui.AutoSizeLine
 import com.ffmathy.pooparazzi.wear.ui.DurationNumeral
 import com.ffmathy.pooparazzi.wear.ui.StatusCard
-import com.ffmathy.pooparazzi.wear.ui.SyncLine
+import com.ffmathy.pooparazzi.wear.ui.SyncIcon
 import com.ffmathy.pooparazzi.wear.ui.WatchShapes
 import com.ffmathy.pooparazzi.wear.ui.XCompactButton
 import com.ffmathy.pooparazzi.wear.ui.XListButton
 import com.ffmathy.pooparazzi.wear.ui.XTimeText
 import com.ffmathy.pooparazzi.wear.ui.agoAndClock
 import com.ffmathy.pooparazzi.wear.ui.ambientBorder
+import com.ffmathy.pooparazzi.wear.ui.babyLabelOrNull
+import com.ffmathy.pooparazzi.wear.ui.rememberBabyTimeText
 import com.ffmathy.pooparazzi.wear.ui.diaperStatusLabel
 import com.ffmathy.pooparazzi.wear.ui.durationAndSince
 import com.ffmathy.pooparazzi.wear.ui.eventButtonColors
@@ -122,12 +124,16 @@ data class MainActions(
     /** Adjust a time of an entry (status cards, "Adjust start"). */
     val onAdjust: (entry: Entry, field: TimeField) -> Unit = { _, _ -> },
     val onHistory: () -> Unit = {},
+    /** The baby button (two or more babies): opens the baby picker. */
+    val onBaby: () -> Unit = {},
 )
 
 /**
  * Main (DESIGN_SPEC §3.5.1–2, §10.2; V1_ADDITIONS §2.2): the first screen is the hero (status block + Feed | Diaper
  * when idle, the Lamp while a sleep runs) above a pinned EdgeButton that stays visible while the list
- * below scrolls. The list holds Adjust start, the buttons, status cards, History and the sync footer.
+ * below scrolls. The list holds Adjust start, the buttons, status cards, History and the sync footer. With two or
+ * more babies the time text names the current one ("Noa · 14:32") and a baby button right after the hero opens the
+ * baby picker (BABIES_AND_BACKUP §2.5).
  */
 @Composable
 fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Modifier) {
@@ -139,10 +145,12 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
     val edgeReserve = if (edgeSize == EdgeButtonSize.Small) 70.dp else 84.dp
     val cards = statusCards(state, f)
     val syncText = f.labels.syncLine(state.sync, SyncPeer.PHONE, f.clock, f.zone)
+    val babyLabel = babyLabelOrNull(state.babies, state.babyId)
+    val babyTime = rememberBabyTimeText(babyLabel)
 
     // Unscrolled, only the hero is under the time: no backing pill there (no notch in the Lamp's glow).
     val atTop by remember(listState) { derivedStateOf { !listState.canScrollBackward } }
-    ScreenScaffold(scrollState = listState, modifier = modifier, timeText = { XTimeText(masked = !atTop) }) { _ ->
+    ScreenScaffold(scrollState = listState, modifier = modifier, timeText = { XTimeText(masked = !atTop, baby = babyTime) }) { _ ->
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val screenHeight = maxHeight
             TransformingLazyColumn(
@@ -161,8 +169,21 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                     val idle = state.mode == MainMode.IDLE
                     Box(Modifier.fillMaxWidth().heightIn(min = screenHeight).padding(bottom = if (idle) edgeReserve else 0.dp)) {
                         when (state.mode) {
-                            MainMode.IDLE -> IdleHero(state, f, actions, small)
+                            MainMode.IDLE -> IdleHero(state, f, actions, small, babyTime?.extraTop ?: 0.dp)
                             MainMode.ASLEEP -> LampHero(state, f, small)
+                        }
+                    }
+                }
+                if (babyLabel != null) {
+                    item(key = "baby") {
+                        Box(Modifier.fillMaxWidth().transformedHeight(this, spec).padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
+                            XCompactButton(
+                                label = babyLabel,
+                                icon = XIcons.profile,
+                                onClick = actions.onBaby,
+                                contentDescription = stringResource(CoreR.string.cd_baby_switch, babyLabel),
+                                transformation = SurfaceTransformation(spec),
+                            )
                         }
                     }
                 }
@@ -212,7 +233,7 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                 if (syncText != null) {
                     item(key = "sync") {
                         Box(Modifier.fillMaxWidth().transformedHeight(this, spec), contentAlignment = Alignment.Center) {
-                            SyncLine(state.sync, syncText, maxWidth = 180.dp)
+                            SyncIcon(state.sync, syncText)
                         }
                     }
                 }
@@ -225,11 +246,12 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
 // ---- Hero: idle ------------------------------------------------------------------------------
 
 @Composable
-private fun IdleHero(state: MainUiState, f: Formatters, actions: MainActions, small: Boolean) {
-    // The system TimeText grows with the font scale; the status label moves down with it instead of touching it.
+private fun IdleHero(state: MainUiState, f: Formatters, actions: MainActions, small: Boolean, babyTimeDrop: Dp) {
+    // The system TimeText grows with the font scale; the status label moves down with it instead of touching it, and
+    // further down by what a baby's name in the time text adds at the line's ends.
     val timeTextGrowth = TIME_TEXT_GROWTH_PER_SCALE * (LocalDensity.current.fontScale - 1f).coerceAtLeast(0f)
     Column(
-        Modifier.fillMaxWidth().padding(top = (if (small) 20.dp else 30.dp) + timeTextGrowth),
+        Modifier.fillMaxWidth().padding(top = (if (small) 20.dp else 30.dp) + timeTextGrowth + babyTimeDrop),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Before the first read the block stays empty rather than flashing "No feeds yet".

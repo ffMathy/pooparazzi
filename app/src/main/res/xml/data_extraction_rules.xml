@@ -2,16 +2,35 @@
 <!--
     Backup and device-to-device transfer (API 31+). The log and the settings travel; the device-local flags of the
     system surfaces do not: the widget previews must be published again on the new phone, the notification
-    permission is that phone's own, and the widget memo and dismissed timers describe this phone's widgets and
-    notifications (see SurfacePrefs, WidgetMemo). Keep in step with backup_rules_legacy.xml.
+    permission is that phone's own, the widget memo and dismissed timers describe this phone's widgets and
+    notifications (see SurfacePrefs, WidgetMemo), a new phone shows the account Welcome again (WelcomePrefs), an email
+    sign-in link is completed on the phone that asked for it (EmailLinkPrefs), the family is read from the server
+    again (FamilyPrefs), and the consent to the backup is asked for again (ConsentPrefs).
+
+    The settings hold the babies' names. They go to the parent's own devices and, with an account, to the family's
+    backup, which only the family's members can read (BABIES_AND_BACKUP §1): never to Android's cloud backup, which the
+    privacy policy does not promise to them. A transfer from the old phone to the new one may carry them. The backup's
+    bookkeeping (its cursors and family) describes this phone's sync and goes nowhere: a new phone starts its own.
+    Keep in step with backup_rules_legacy.xml.
 -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="system_surfaces.xml" />
         <exclude domain="sharedpref" path="widget_memo.xml" />
+        <exclude domain="sharedpref" path="account_welcome.xml" />
+        <exclude domain="sharedpref" path="account_email_link.xml" />
+        <exclude domain="sharedpref" path="account_family.xml" />
+        <exclude domain="sharedpref" path="account_consent.xml" />
+        <exclude domain="file" path="datastore/pooparazzi_settings.preferences_pb" />
+        <exclude domain="file" path="datastore/pooparazzi_cloud.preferences_pb" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="system_surfaces.xml" />
         <exclude domain="sharedpref" path="widget_memo.xml" />
+        <exclude domain="sharedpref" path="account_welcome.xml" />
+        <exclude domain="sharedpref" path="account_email_link.xml" />
+        <exclude domain="sharedpref" path="account_family.xml" />
+        <exclude domain="sharedpref" path="account_consent.xml" />
+        <exclude domain="file" path="datastore/pooparazzi_cloud.preferences_pb" />
     </device-transfer>
 </data-extraction-rules>

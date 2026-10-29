@@ -175,7 +175,7 @@ private fun receiptContent(variant: ReceiptVariant, formatters: Formatters): Rec
         is ReceiptVariant.FeedLogged -> ReceiptContent(
             TintedIcon(XIcons.forFeedType(variant.type), events.feed.strong),
             stringResource(CoreR.string.receipt_logged, feedTypeLabel(variant.type, compact = true)),
-            variant.side?.let { stringResource(Labels.side(it)) },
+            variant.side?.let { stringResource(Labels.side(it)) } ?: variant.amountMl?.let(formatters.volume::format),
             variant.side?.let { spokenSideCapitalised(it) },
         )
         is ReceiptVariant.DiaperLogged -> ReceiptContent(

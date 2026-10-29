@@ -26,6 +26,11 @@
     <string name="side_question">Hvilken side?</string>
     <string name="side_order_hint">Sæt flueben i den rækkefølge, du ammede. Valgfrit.</string>
     <string name="side_none">Ingen side</string>
+    <string name="volume_ml">%1$s ml</string>
+    <string name="volume_fl_oz">%1$s fl oz</string>
+    <string name="feed_formula_amount_next">Derefter mængden, hvis du vil</string>
+    <string name="amount">Mængde</string>
+    <string name="amount_none">Ingen mængde</string>
 
     <!-- Diapers -->
     <string name="diaper_pee">Tis</string>
@@ -104,6 +109,11 @@
     <string name="appearance_night">Nat</string>
     <string name="appearance_day">Dag</string>
     <string name="language_system">Systemstandard</string>
+
+    <!-- Babies -->
+    <string name="baby_name_numbered">Baby %1$d</string>
+    <string name="baby_switch">Skift barn</string>
+    <string name="cd_baby_switch">%1$s. Skift barn</string>
 
     <!-- Today counts -->
     <plurals name="count_feeds">

@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.core.sync
 
 import com.ffmathy.pooparazzi.core.data.FixedClock
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryJson
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -63,6 +64,8 @@ private class FakeSink : SyncSink {
         return entries.count { applyRemoteEntry(it) }
     }
     override suspend fun applyRemoteSettings(settings: Settings): Boolean = this.settings.add(settings)
+    val legacySettings = mutableListOf<Settings>()
+    override suspend fun applyRemoteLegacySettings(settings: Settings): Boolean = legacySettings.add(settings)
     override suspend fun pushPendingEntries(): Boolean {
         pendingPushed++
         return pendingResult
@@ -93,9 +96,9 @@ class DataLayerEntrySyncTest {
         assertTrue(sync.push(feed))
         assertEquals(SyncStatus.Offline, sync.status.value)
         layer.peers = PeerState.NONE
-        assertTrue(sync.pushSettings(Settings("Noa", updatedAtMillis = 1)))
+        assertTrue(sync.pushSettings(Settings(listOf(Baby(Baby.FIRST_ID, "Noa")), updatedAtMillis = 1)))
         assertEquals(SyncStatus.Unavailable, sync.status.value)
-        assertEquals(Settings("Noa", updatedAtMillis = 1), SettingsJson.decodeOrNull(layer.items.getValue("/settings").decodeToString()))
+        assertEquals(Settings(listOf(Baby(Baby.FIRST_ID, "Noa")), updatedAtMillis = 1), SettingsJson.decodeOrNull(layer.items.getValue("/settings").decodeToString()))
     }
 
     @Test
@@ -120,7 +123,7 @@ class DataLayerEntrySyncTest {
 
     @Test
     fun pullAllMergesEntriesAndSettingsAndSkipsJunk() = runBlocking {
-        val remoteSettings = Settings("Noa", updatedAtMillis = 5)
+        val remoteSettings = Settings(listOf(Baby(Baby.FIRST_ID, "Noa")), updatedAtMillis = 5)
         layer.remoteItems += RemoteItem("/entries/f1", EntryJson.encode(feed).encodeToByteArray(), "watch")
         layer.remoteItems += RemoteItem("/entries/other-id", EntryJson.encode(feed).encodeToByteArray(), "watch")
         layer.remoteItems += RemoteItem("/entries/x", "garbage".encodeToByteArray(), "watch")
@@ -129,6 +132,14 @@ class DataLayerEntrySyncTest {
         assertEquals(listOf(feed), sink.entries)
         assertEquals(listOf(remoteSettings), sink.settings)
         assertEquals(SyncStatus.Synced(clock.now()), sync.status.value)
+    }
+
+    @Test
+    fun settingsFromADeviceFromBeforeSeveralBabiesAreMergedAsSuch() = runBlocking {
+        layer.remoteItems += RemoteItem("/settings", """{"babyName":"Noa","updatedAtMillis":5}""".encodeToByteArray(), "watch")
+        assertEquals(1, sync.pullAll())
+        assertTrue(sink.settings.isEmpty())
+        assertEquals(listOf(Settings(listOf(Baby(Baby.FIRST_ID, "Noa")), updatedAtMillis = 5)), sink.legacySettings)
     }
 
     @Test
@@ -169,7 +180,7 @@ class DataLayerEntrySyncTest {
 
     @Test
     fun retryPushesPendingWritesThroughTheSinkAndSettings() = runBlocking {
-        sink.local = Settings("Noa", updatedAtMillis = 3)
+        sink.local = Settings(listOf(Baby(Baby.FIRST_ID, "Noa")), updatedAtMillis = 3)
         layer.peers = PeerState.DISCONNECTED
         sync.retry()
         assertEquals(1, sink.pendingPushed)

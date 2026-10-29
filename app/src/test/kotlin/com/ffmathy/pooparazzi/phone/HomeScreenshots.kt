@@ -9,7 +9,9 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.model.Breast
+import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.phone.ui.home.HomeActions
 import com.ffmathy.pooparazzi.phone.ui.home.HomeScreen
 import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
@@ -74,9 +76,43 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun breastSheetTicked() = sheet("07-breast-sheet-ticked", night = true, HomeSamples.breastSheet(listOf(Breast.RIGHT, Breast.LEFT)))
 
+    @Test fun formulaSheet() = sheet("07b-formula-sheet", night = false, HomeSamples.formulaSheet())
+
     @Test fun diaperSheet() = sheet("08-diaper-sheet", night = true, HomeSamples.diaperSheet())
 
     @Test fun diaperSheetHint() = sheet("09-diaper-sheet-hint", night = true, HomeSamples.diaperSheetHint())
+
+    /** Twins (BABIES_AND_BACKUP §2.2): the current baby's name with a chevron is the switcher. */
+    @Test fun homeTwins() = home("23-home-twins", night = false, HomeSamples.twins())
+
+    /** Not part of the tour (written under build/): twins with the watch's retry ("Couldn't save") under the switcher. */
+    @Test fun homeTwinsSyncError() {
+        val error = HomeSamples.twins(sync = SyncStatus.Error)
+        compose.setContent { Themed(night = true) { HomeScreen(error, HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/$language-home-twins-sync-error.png")
+    }
+
+    /**
+     * The status icons in their error states (DESIGN_SPEC §4.5): the watch and the cloud with "!", each a 48 dp retry
+     * button over the name.
+     */
+    @Test fun homeSyncErrors() = home("35-home-sync-errors", night = true, HomeSamples.syncStates(SyncStatus.Error, CloudStatus.Error))
+
+    /** Not part of the tour: the status icons at a 200 % font scale, with both retry targets (written under build/). */
+    @Test fun largeFontSyncErrors() {
+        RuntimeEnvironment.setFontScale(2f)
+        val state = HomeSamples.syncStates(SyncStatus.Error, CloudStatus.Error)
+        compose.setContent { Themed(night = true) { HomeScreen(state, HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/font200-$language-home-sync-errors.png")
+    }
+
+    /** The Switch baby sheet, opened from the name. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test fun switchBabySheet() {
+        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.twinsSwitching(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.waitForIdle()
+        captureScreenRoboImage(path("24-switch-baby-sheet"))
+    }
 
     /**
      * Not part of the tour: checks that Home survives a 200 % font scale (DESIGN_SPEC §9.3): labels wrap, the area

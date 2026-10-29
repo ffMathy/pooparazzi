@@ -81,6 +81,25 @@ object XIcons {
     /** Info: a circled "i" (health hint). */
     val info: ImageVector by lazy { XIconSpecs.info.toImageVector() }
 
+    /** Chart: three uneven bars on a baseline (Statistics). */
+    val chart: ImageVector by lazy { XIconSpecs.chart.toImageVector() }
+
+    // ---- Sync status (DESIGN_SPEC §4.5) --------------------------------------------------------
+
+    /** The watch with its sync state on the face: tick, "…", slash, "!" (the phone's top bars). */
+    val watchSynced: ImageVector by lazy { XIconSpecs.watchSynced.toImageVector() }
+    val watchPending: ImageVector by lazy { XIconSpecs.watchPending.toImageVector() }
+    val watchOffline: ImageVector by lazy { XIconSpecs.watchOffline.toImageVector() }
+    val watchError: ImageVector by lazy { XIconSpecs.watchError.toImageVector() }
+
+    /** The phone with its sync state on the screen: tick, "…", slash (the watch's footer). */
+    val phoneSynced: ImageVector by lazy { XIconSpecs.phoneSynced.toImageVector() }
+    val phonePending: ImageVector by lazy { XIconSpecs.phonePending.toImageVector() }
+    val phoneOffline: ImageVector by lazy { XIconSpecs.phoneOffline.toImageVector() }
+
+    /** The backup failed: a cloud with "!" (with [synced], [pending] and [offline] the backup's states). */
+    val cloudError: ImageVector by lazy { XIconSpecs.cloudError.toImageVector() }
+
     // ---- Lookups ------------------------------------------------------------------------------
 
     /** Type glyph; an untyped feed (null) uses the generic `feed` bottle. */
@@ -120,7 +139,10 @@ object XIcons {
             "chevronDown" to chevronDown, "close" to close, "clock" to clock, "lamp" to lamp, "awake" to awake,
             "sleepRunning" to sleepRunning, "breast" to breast, "food" to food, "sideLeft" to sideLeft,
             "sideRight" to sideRight, "sideLeftRight" to sideLeftRight, "sideRightLeft" to sideRightLeft,
-            "checkbox" to checkbox, "checkboxChecked" to checkboxChecked, "info" to info,
+            "checkbox" to checkbox, "checkboxChecked" to checkboxChecked, "info" to info, "chart" to chart,
+            "watchSynced" to watchSynced, "watchPending" to watchPending, "watchOffline" to watchOffline,
+            "watchError" to watchError, "phoneSynced" to phoneSynced, "phonePending" to phonePending,
+            "phoneOffline" to phoneOffline, "cloudError" to cloudError,
         )
 
     private const val STROKE = 2f

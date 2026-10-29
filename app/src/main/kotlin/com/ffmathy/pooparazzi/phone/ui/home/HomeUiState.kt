@@ -1,8 +1,10 @@
 package com.ffmathy.pooparazzi.phone.ui.home
 
 import androidx.compose.runtime.Immutable
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.domain.LampState
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
@@ -18,11 +20,15 @@ import java.time.ZoneId
  * current locale's resources, so the same state renders in English and Danish.
  *
  * @property now the minute the screen describes (epoch ms).
+ * @property cloud the backup's status; [CloudStatus.Off] (nobody signed in) shows no cloud icon.
  * @property babyName empty until the parent sets one (the screen then shows the "Baby" hint).
  * @property row1 since-row 1: "Awake …" when idle, "Last fed …" while a sleep runs (each fact appears once per screen).
  * @property row2 since-row 2: the last diaper, kind first.
  * @property card a brief notice in the whisper slot ("Undone", a guard); null shows the Today grid.
  * @property sheet the open sheet (logging, receipt or Adjust start), if any.
+ * @property babies all babies, in order (BABIES_AND_BACKUP §2.1); with two or more the name is the switcher.
+ * @property babyId the current baby's id, the one [babyName] belongs to.
+ * @property switchingBaby the Switch baby sheet is open.
  */
 @Immutable
 data class HomeUiState(
@@ -30,6 +36,7 @@ data class HomeUiState(
     val zone: ZoneId,
     val babyName: String,
     val sync: SyncStatus,
+    val cloud: CloudStatus = CloudStatus.Off,
     val lamp: LampState,
     val row1: SinceRow?,
     val row2: SinceRow?,
@@ -37,7 +44,16 @@ data class HomeUiState(
     val runningSleep: Entry?,
     val card: NoticeCardUi? = null,
     val sheet: HomeSheetUi? = null,
+    val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID, babyName)),
+    val babyId: String = babies.first().id,
+    val switchingBaby: Boolean = false,
 ) {
+    /** Two or more babies: the switcher and the extra name lines appear (BABIES_AND_BACKUP §2.2). */
+    val hasSeveralBabies: Boolean get() = babies.size > 1
+
+    /** The current baby (the first when [babyId] is not one of [babies]). */
+    val baby: Baby get() = babies.firstOrNull { it.id == babyId } ?: babies.first()
+
     val sleepRunning: Boolean get() = runningSleep != null
 
     /** Something runs (only a sleep can): at night this is lights-down (DESIGN_SPEC §8.2). */
@@ -90,9 +106,10 @@ enum class GuardKind { ASLEEP, AWAKE }
 sealed interface ReceiptVariant {
     /**
      * "Breast logged" / "Formula logged" / "Food logged"; "Feed logged" for a feed with no type (null). A breast feed
-     * with a side order adds it as the sub-line ("Left → Right").
+     * with a side order adds it after the time ("14:32 · Left → Right"), a formula feed with an amount the amount
+     * ("14:32 · 120 ml").
      */
-    data class FeedLogged(val type: FeedType?, val side: BreastSide? = null) : ReceiptVariant
+    data class FeedLogged(val type: FeedType?, val side: BreastSide? = null, val amountMl: Int? = null) : ReceiptVariant
 
     /** "Pee logged" / "Poop logged" / "Pee + poop logged" / "Diaper logged". */
     data class DiaperLogged(val kind: DiaperKind) : ReceiptVariant
@@ -121,7 +138,8 @@ sealed interface HomeSheetUi {
     /**
      * Feed sheet (V1_ADDITIONS §2.1): Breast / Formula / Food / Just the time. Once Breast is tapped ([breast]), the
      * sheet shows the optional side [ticks] (Left / Right checkboxes, in the order ticked; [side] is what that order
-     * records, null for none) and "Log feed", which logs the breast feed at [time].
+     * records, null for none) and "Log feed", which logs the breast feed at [time]. Once Formula is tapped
+     * ([formula]), the sheet shows the optional amount slider ([amountMl], null for none) and "Log feed".
      */
     data class Feed(
         override val stamp: Long,
@@ -129,6 +147,8 @@ sealed interface HomeSheetUi {
         override val chips: List<OffsetChipUi>,
         val breast: Boolean = false,
         val ticks: List<Breast> = emptyList(),
+        val formula: Boolean = false,
+        val amountMl: Int? = null,
     ) : HomeSheetUi {
         val side: BreastSide? get() = BreastSide.fromOrder(ticks)
     }

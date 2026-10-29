@@ -10,6 +10,7 @@ import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import com.ffmathy.pooparazzi.phone.launch.ReceiptKind
 import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -45,6 +46,50 @@ class HomeLaunchTest : HomeViewModelTestBase() {
         home.viewModel.onLaunch(HomeLaunch.Diaper)
         val sheet = home.settle().sheet as HomeSheetUi.Diaper
         assertEquals(false, sheet.pee || sheet.poop)
+    }
+
+    @Test
+    fun aWidgetSheetReportsItsCloseOnceItsReceiptIsDone() = homeTest { home ->
+        val closes = mutableListOf<Unit>()
+        backgroundScope.launch { home.viewModel.launchedSheetClosed.collect { closes += it } }
+        home.viewModel.onLaunch(HomeLaunch.Diaper)
+        home.settle()
+        home.viewModel.onDiaperPoop(true)
+        home.viewModel.onDiaperSave()
+        home.viewModel.onSheetClosed()
+        home.settle()
+        assertTrue("the receipt is still open", closes.isEmpty())
+        // The poop is written before the app may leave (the cover screen returns to the widget).
+        assertTrue(home.entries().any { it.poop && it.startMillis == SampleData.NOW_1432 })
+
+        home.viewModel.onReceiptDone()
+        home.viewModel.onSheetClosed()
+        home.settle()
+        assertEquals(1, closes.size)
+    }
+
+    @Test
+    fun aWidgetSheetDismissedWithBackReportsItsClose() = homeTest { home ->
+        val closes = mutableListOf<Unit>()
+        backgroundScope.launch { home.viewModel.launchedSheetClosed.collect { closes += it } }
+        home.viewModel.onLaunch(HomeLaunch.Feed)
+        home.settle()
+        home.viewModel.onSheetDismiss()
+        home.viewModel.onSheetClosed()
+        home.settle()
+        assertEquals(1, closes.size)
+    }
+
+    @Test
+    fun homesOwnSheetsDoNotReportAClose() = homeTest { home ->
+        val closes = mutableListOf<Unit>()
+        backgroundScope.launch { home.viewModel.launchedSheetClosed.collect { closes += it } }
+        home.viewModel.onDiaper()
+        home.settle()
+        home.viewModel.onSheetDismiss()
+        home.viewModel.onSheetClosed()
+        home.settle()
+        assertTrue(closes.isEmpty())
     }
 
     @Test

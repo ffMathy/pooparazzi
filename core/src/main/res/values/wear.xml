@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Both apps advertise this capability, so each can tell whether the other device has the app (sync status). -->
+<!--
+  Both apps advertise these capabilities. pooparazzi_tracker: each can tell whether the other device has the app (sync
+  status). pooparazzi_babies: the app knows several babies (BABIES_AND_BACKUP §2.3); a watch with the first but not the
+  second runs an older version, and the phone lets no second baby be added until it is updated.
+-->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@array/android_wear_capabilities">
     <string-array name="android_wear_capabilities" translatable="false">
         <item>pooparazzi_tracker</item>
+        <item>pooparazzi_babies</item>
     </string-array>
 </resources>

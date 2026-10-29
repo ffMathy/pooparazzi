@@ -90,6 +90,25 @@ class EntryJsonTest {
     }
 
     @Test
+    fun theBabyRoundTripsAndOlderJsonIsTheFirstBaby() {
+        val twin = Entry.diaper(1_000L, pee = true, poop = false, id = "t", babyId = "baby-2")
+        assertTrue(EntryJson.encode(twin).contains("\"babyId\":\"baby-2\""))
+        assertEquals(twin, EntryJson.decode(EntryJson.encode(twin)))
+        for (entry in listOf(Entry.sleep(0L, babyId = "b"), Entry.breastfeed(0L, babyId = "b"), Entry.feed(null, 0L, babyId = "b"))) {
+            assertEquals("b", entry.babyId)
+            assertEquals(entry, EntryJson.decode(EntryJson.encode(entry)))
+        }
+        // JSON from before several babies has no babyId: the first baby's. A blank one is read the same way.
+        val older = EntryJson.decode("""{"id":"x","kind":"FEED","startMillis":1,"feedType":"FORMULA","updatedAtMillis":1}""")
+        assertEquals(Baby.FIRST_ID, older.babyId)
+        assertEquals(Entry.feed(FeedType.FORMULA, 1L, id = "x"), older)
+        val blank = EntryJson.decode("""{"id":"y","kind":"DIAPER","startMillis":1,"updatedAtMillis":1,"babyId":" "}""")
+        assertEquals(Baby.FIRST_ID, blank.babyId)
+        assertEquals(Baby.FIRST_ID, Entry.sleep(0L).copy(babyId = "").normalized().babyId)
+        assertEquals(twin, twin.normalized())
+    }
+
+    @Test
     fun rejectsGarbage() {
         assertNull(EntryJson.decodeOrNull("not json"))
         assertNull(EntryJson.decodeOrNull("""{"id":"x","kind":"NAP","startMillis":1,"updatedAtMillis":1}"""))
@@ -172,6 +191,20 @@ class EntryValidationTest {
             EntryViolation.SIDE_ON_NON_BREAST,
             violation(Entry.feed(FeedType.FORMULA, 0L).copy(breastSide = BreastSide.RIGHT)),
         )
+    }
+
+    @Test
+    fun formulaAmount() {
+        // The amount is optional, positive, and only on formula.
+        assertNull(violation(Entry.feed(FeedType.FORMULA, 0L)))
+        assertNull(violation(Entry.feed(FeedType.FORMULA, 0L, amountMl = 120)))
+        assertEquals(120, EntryJson.decode(EntryJson.encode(Entry.feed(FeedType.FORMULA, 0L, id = "f", amountMl = 120))).amountMl)
+        // The factory drops an amount on other feed types.
+        assertNull(Entry.feed(FeedType.FOOD, 0L, amountMl = 120).amountMl)
+        assertNull(Entry.breastfeed(0L).amountMl)
+        assertEquals(EntryViolation.AMOUNT_NOT_POSITIVE, violation(Entry.feed(FeedType.FORMULA, 0L).copy(amountMl = 0)))
+        assertEquals(EntryViolation.AMOUNT_ON_NON_FORMULA, violation(Entry.feed(null, 0L).copy(amountMl = 60)))
+        assertEquals(EntryViolation.AMOUNT_ON_NON_FORMULA, violation(Entry.sleep(0L).copy(amountMl = 60)))
     }
 
     @Test

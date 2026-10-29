@@ -42,7 +42,8 @@ object SystemSurfaces {
         val app = context.applicationContext
         val notifications = TimerNotifications(app)
         graph.scope.launch {
-            val states = combine(graph.repository.observeEntries(), graph.settings.settings) { entries, settings ->
+            // Every baby who is asleep has a notification, whichever baby is the current one (BABIES_AND_BACKUP §2.3).
+            val states = combine(graph.repository.observeAllEntries(), graph.settings.settings) { entries, settings ->
                 TimerState.of(entries, settings, graph.clock.now(), ZoneId.systemDefault())
             }.distinctUntilChanged()
             // Equal states post nothing new, but a refresh (the permission was just granted) always renders again.
@@ -50,7 +51,8 @@ object SystemSurfaces {
                 .collect { state -> guard("notifications") { notifications.render(state) } }
         }
         graph.scope.launch {
-            combine(graph.repository.observeEntries(), graph.settings.settings) { _, _ -> Unit }
+            // Every baby's entries: under Auto the widgets dim while any baby is asleep, not only the current one.
+            combine(graph.repository.observeAllEntries(), graph.settings.settings) { _, _ -> Unit }
                 .conflate()
                 .collect {
                     guard("widgets") { WidgetUpdater.refresh(app) }

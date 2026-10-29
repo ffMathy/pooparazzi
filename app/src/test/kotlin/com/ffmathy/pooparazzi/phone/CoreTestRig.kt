@@ -11,6 +11,7 @@ import com.ffmathy.pooparazzi.core.data.PooparazziDatabase
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,8 +43,10 @@ class CoreTestRig(val scope: TestScope, now: Long = SampleData.NOW_1432) {
         .allowMainThreadQueries()
         .setQueryCoroutineContext(dispatcher)
         .build()
-    val repository = RoomEntryRepository(database, clock)
     val settings = InMemorySettings()
+
+    /** Writes and reads follow the rig's current baby, as in the app. */
+    val repository = RoomEntryRepository(database, clock, selectedBaby = settings.settings.map { it.selectedBaby.id })
 
     init {
         Core.install(CoreGraph(clock, repository, settings, NoopEntrySync, CoroutineScope(SupervisorJob() + dispatcher)))

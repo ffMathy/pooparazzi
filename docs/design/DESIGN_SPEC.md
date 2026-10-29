@@ -2,6 +2,8 @@
 
 Design: "Night Light" (final) · Spec date: Mon 26 Oct 2026 · Status: **approved**; later changes are in [`V1_ADDITIONS.md`](V1_ADDITIONS.md)
 
+> **Several babies and the backup:** [`BABIES_AND_BACKUP.md`](BABIES_AND_BACKUP.md) adds several babies (a current baby per device) and an optional account that backs the log up; it wins where it differs from this document (one baby, "phone ↔ watch only").
+
 This document defines the product as designed in the approved mockups. It is written for the developers who will build:
 
 - the **Android phone app** (Jetpack Compose, Material 3 Expressive), its **Glance home-screen widgets** and its **Live Update** notification;
@@ -165,6 +167,7 @@ Home ──Diaper──────────────▶ Diaper sheet ─�
  │ ├─Adjust start (Lamp)──▶ Adjust start sheet ──Edit──▶ Edit sheet (running sleep)
  │ ├─Receipt sheet ──Edit──▶ Edit sheet (that entry) · ──Undo──▶ Home + "Undone" notice
  │ ├─History pill / Today grid ──▶ History ──row──▶ Edit sheet
+ │ │                                        ├─Statistics icon──▶ Statistics (P8) ──range chip──▶ menu / date range dialog
  │ │                                        └─"Add entry" FAB──▶ Edit sheet ("Add past entry" mode)
  │ └─Settings ──────────────▶ Settings (not designed; Appendix B)
 Widget buttons ──▶ log in place (no app launch) · Widget background ──▶ Home with the receipt for the last widget log
@@ -200,6 +203,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | P5 | Phone | Home-screen widgets 4×2, 3×1 | Feed and Diaper open the app's sheets; the sleep toggle logs in one tap |
 | P6 | Phone | Live Update (running sleep) | Status chip and an ongoing notification with "Woke up" |
 | P7 | Phone | Splash | System splash, dark at night and light by day |
+| P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day: the last 7 days next to a chosen range (default the last 30 days), with a bar chart of one kind |
 | W1 | Watch | Main, idle | Status block, Feed / Diaper, "Start sleep"; scroll list below |
 | W2 | Watch | Main, asleep | Lamp, "Woke up"; scroll list with Adjust start |
 | W3 | Watch | Diaper picker | Pee / Poop / Both; Earlier |
@@ -221,7 +225,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | Band | Height | Reference y | Content |
 |---|---|---|---|
 | Status-bar inset | 24 | 0–24 | background only |
-| Top bar | 64 | 24–88 | "Noa", sync line, History pill, Settings |
+| Top bar | 64 | 24–88 | "Noa", status icons, History pill, Settings |
 | gap | 8 | | |
 | Lamp | 264 | 96–360 | §2.4 |
 | gap | 4 | | |
@@ -238,7 +242,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 
 **Top bar**
 - "Noa" (the baby's name): titleLarge, onSurface.
-- Sync line under the name: icon 14 + 6 + syncLabel, onSurfaceVariant. Copy per sync state (§4.5). In the **error** state the line becomes a 48 dp tall button (retry), in error colour. It may overlap only non-interactive content.
+- Status icons under the name (§4.5), 4 dp below it: 20 dp glyphs 12 apart in onSurfaceVariant, no visible text — the watch (hidden without one), then the cloud while an account is signed in. TalkBack reads each icon's sentence (§4.5). An icon in its **error** state is in error colour and a 48 dp button (retry) that starts at its glyph and reaches up over the name; it may overlap only non-interactive content. When the first icon is a button the next glyph starts after it (28 dp gap), so two buttons never overlap. With two or more babies (and in History, under the title) the icons are their own row, 48 dp tall in an error state.
 - History pill: 48 target / 40 visual, r 20, fill surfaceContainerHigh, padding start 12 / end 14, `history` 18 onSurfaceVariant + 6 + "History" labelLarge onSurface. Opens History.
 - Settings: 48 × 48 icon button, `settings` 24 onSurfaceVariant, content description "Settings".
 
@@ -312,14 +316,14 @@ Receipt rules:
 |---|---|---|
 | Idle | no running sleep | FEED Lamp (Night glow / Day disc); rows Awake + last diaper; Today grid |
 | Just logged | any log or toggle | the receipt sheet (no timeout) |
-| Running, Night = **lights-down** | Night active and a sleep running | "Noa", sync line and Settings in onSurfaceVariant; History pill unfilled with onSurfaceVariant label; glow 0.45 SLEEP + orbit; Today numbers onSurfaceVariant; toggle checked. Nothing else changes |
+| Running, Night = **lights-down** | Night active and a sleep running | "Noa", status icons and Settings in onSurfaceVariant; History pill unfilled with onSurfaceVariant label; glow 0.45 SLEEP + orbit; Today numbers onSurfaceVariant; toggle checked. Nothing else changes |
 | Running, Day | Day active and a sleep running | no dimming; SLEEP disc + track + cut-out ember |
 | Diaper sheet open | Diaper | scrim + sheet (P2) |
 | Guard | repeat toggle within 2 s | card row 2 guard line, `Reject` |
 | Dedupe | Feed again within 5 s | the Feed card for the existing entry (re-shown if replaced) with the dedupe line, `Reject`; no new entry |
 | Undone | Undo | "Undone" for 2 s |
 | Under a minute | feed < 1 min ago | hero "just now", sub-line "at 14:32" |
-| Sync states | §4.5 | sync line copy and icon; error = retry button |
+| Sync states | §4.5 | status icon glyph and spoken sentence; error = retry button |
 | Dimmer offer | first sleep start while Night is active | whisper slot: "Too bright? Dim this screen while Noa sleeps" · Dim · No thanks (§8.4) |
 | Dimmer active (first time) | first activation | card "Screen dimmed for night" with Undo |
 | Long sleep | running > 12 h | whisper slot: "Asleep 12h 10m · still asleep?" with "Fix end time" and "Yes" |
@@ -362,7 +366,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 
 | Band (reference y) | Content |
 |---|---|
-| Top bar 24–88 | Back icon button (`back` 24, "Back"); "History" titleLarge. Nothing at the end |
+| Top bar 24–88 | Back icon button (`back` 24, "Back"); "History" titleLarge; at the end the `chart` icon button (24, "Statistics"), its glyph 20 from the screen edge, mirroring Back. It opens Statistics (P8, V1_ADDITIONS §8) |
 | Day switcher 96–144 | `chevronLeft` icon button ("Previous day"); "Today · Mon 26 Oct" titleMedium centred; `chevronRight` icon button ("Next day"), disabled on today (icon outlineVariant) |
 | Ribbon card 152–252 | 350 × 100, r 20, surfaceContainer. Decorative, not tappable |
 | Stats 264–312 | 4 columns: numbers titleLarge onSurface ("5", "4", "2", "7h 57m"), captions labelSmall onSurfaceVariant ("feeds", "pee", "poop", "sleep") |
@@ -418,6 +422,8 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 - **Night dimmer**: re-offer and level (default 10 %, adjustable 5–30 %).
 - Link to the system promoted-notifications setting (§10.5).
 - "Day starts at" (default 00:00; pending open question 4).
+- With the optional account (BABIES_AND_BACKUP §3): Account first, then **Family** while signed in (the members, "Invite someone", "Leave family", "Remove" for the family's creator; §3.4), and a **Privacy policy** row in About.
+- After signing in, a full-screen **consent** ("Back up to Google Firebase?": what is uploaded, who sees it, where, how to change your mind; "I agree" filled, "Not now, sign out" as text; BABIES_AND_BACKUP §3.6) comes before anything else until the account has agreed on the phone; it is laid out like the Welcome.
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
 
@@ -436,7 +442,7 @@ Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (
 
 **3×1** (reference 260 × 100, padding 12, minimum 160 wide): three equal buttons 76 tall, gap 8, r 20, content column (icon 24, label 14 sp, max 2 lines, never broken inside a word): Feed (`feed`, opens the Feed sheet); Diaper (`diaper`, DIAPER colours, opens the Diaper sheet); Sleep ("Start sleep", the toggle). When asleep, Sleep shows `wake` + "Woke up" with the checked style. Every widget offers all three: Feed, Diaper and Sleep. (It was a 2×1 with Feed and Sleep; the provider keeps its receiver so placed widgets survive.)
 
-**Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else.
+**Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else. It is drawn at that one fixed size (`SizeMode.Single`): with the per-size RemoteViews of `SizeMode.Responsive` the widget stayed on its loading layout on a Flip's cover screen. Refreshes go to every placed widget by its provider's ids, so a widget the host never asked to update is still drawn. Feed and Diaper open the app's sheet on the cover screen; when that sheet closes (logged, or dismissed with Back) the app finishes and the cover screen shows the widget again, since Home has no room there. On the main screen Home stays, with its receipt sheet.
 
 Breakpoints: §10.11.
 
@@ -445,9 +451,19 @@ Breakpoints: §10.11.
 | Element | Content |
 |---|---|
 | Status chip | small icon `sleepRunning` + "Asleep" (no ticking value) |
-| Title / text | "Noa is asleep" / "Since 02:05" |
+| Title / text | "Noa is asleep" / "1h 07m · since 02:05" (whole minutes, re-rendered each minute) |
+| Expanded | the text, then "Fed 1h 32m ago · 01:40 · L → R", "Pee 20m ago · 02:52", "Today · 1 feed · 1 pee · 0 poop · 2h 42m sleep" (lines without data are left out) |
 | Action | "Woke up" (works from the lock screen) |
-| Metrics (Android 17 `MetricStyle`) | "Since" 02:05, "Last fed" 01:40 (both fixed times) |
+| Metrics (Android 17 `MetricStyle`) | "Asleep for" 1h 07m (system TimeDifference), "Since" 02:05 (fixed time), "Last fed · L → R" 1h 32m (system TimeDifference) |
+
+**Woke-up notification.** "Woke up" on the notification ends the sleep and posts a silent, dismissable notification on the same channel, so the wake-up time can be moved without opening the app, as the receipt sheet's chips do:
+
+| Element | Content |
+|---|---|
+| Title / text | "Noa woke up at 03:12" (no name: "Woke up at 03:12") / "Slept 1h 07m · 02:05 – 03:12" |
+| Expanded | the text, then the feed, diaper and Today lines above |
+| Actions | "−5m" "−10m" "−15m" (lock screen too). Relative to the tap, never cumulative; the selected one reads "✓ −10m" and a second tap returns to the tap time. An offset that would end the sleep before its start is left out |
+| Lifetime | 30 minutes (`setTimeoutAfter`); cancelled when a sleep runs again (a new sleep, or the wake undone in the app) |
 
 Feed and diaper are never Live Updates. API details: §10.5.
 
@@ -472,7 +488,7 @@ Every app screen except Logged and Undone shows the system **TimeText** (15 sp, 
 | Status block | label row y 30–46: `feed` 16 FEED strong + 4 + "Fed at 12:22" titleSmall FEED text. Numeral row y 46–82: "2h 10m" statusNumeral onSurface (units 18 sp, 2 after each number, 6 between groups) + 4 + "ago" bodyMedium onSurfaceVariant. Under 1 minute: "just now" (GSF weight 500, 28 sp, no "ago") |
 | ButtonGroup Feed \| Diaper | y 88–148; two buttons 98 × 60, gap 6, r 26. Content column: icon 26 + 2 + labelMedium. Feed: `#3B2715`, icon `#F2B577`, "Feed" `#FFDCBB`. Diaper: `#13312C`, icon `#62B3A5`, "Diaper" `#BFE9E0` |
 | EdgeButton **Medium** (pinned) | y 155–225, fill SLEEP container `#222844`, `sleep` 24 `#7C88C4` stacked over "Start sleep" labelMedium `#D6DBF6` |
-| Scroll list (below) | status card "Awake" / "1h 05m · since 13:27" (`awake` `#7C88C4`); status card "Pee" / "48m ago · 13:44"; compact "History" button; footer "Synced with phone · 14:31" |
+| Scroll list (below) | status card "Awake" / "1h 05m · since 13:27" (`awake` `#7C88C4`); status card "Pee" / "48m ago · 13:44"; compact "History" button; footer: the `phoneSynced` icon 20 (spoken "Synced with phone · 14:31") |
 
 No Lamp and no glow when idle.
 
@@ -521,7 +537,7 @@ A choice applies, plays `SegmentTick`, and returns to the screen it came from. S
 | Bezel drain arc | radius 111, stroke 2, outline `#8A7864`, round caps. 270° **open at the bottom** (gap centred on 6 o'clock, clearing the Undo button). It starts at the lower left, runs clockwise over the top and ends at the lower right. As time passes its tip retreats from the lower right back over the top. 5 s window |
 | Check circle | Ø64 centred at (114, 66), event container fill; `check` 32 in event strong (Sleep cancelled: `wake`) |
 | Title | y 106–130, titleLarge, centred |
-| Line 2 / sync line | y 132–146: sync line `synced` 14 + 4 + bodySmall `#B8A48E` "Synced with phone · 14:32" (offline: `offline` + "Saved on watch · will sync"). When a second line is needed it takes y 132–146 in bodyMedium `#B8A48E`, and the sync line moves to y 148–162 |
+| Line 2 / sync icon | y 132–152: the `phoneSynced` icon 20 in `#B8A48E`, centred, spoken "Synced with phone · 14:32" (offline: `phoneOffline`, "Saved on watch · will sync"). When a second line is needed it takes y 132–146 in bodyMedium `#B8A48E`, and the icon moves to y 148–168 |
 | Undo | EdgeButton **Small** (56), fill `#1E1914`, `undo` 20 + 6 + "Undo" labelMedium `#E8D8C3` |
 | Taps | the whole screen except Undo dismisses (→ Main). The confirmation content sits in a non-interactive status layer above the dismiss target and is announced |
 | Inert period | Undo and dismiss ignore taps for the first 1000 ms (Undo fades 0.4 → 1 and is exposed as disabled). Exception: opened from the Tile's undo path, both are active at once |
@@ -650,7 +666,7 @@ Fields common to every entry (implied by sync, dedupe and undo):
 |---|---|
 | **id (UUID)** | cross-device dedupe; matching the phone-bridged and watch Live Updates (sleep-session UUID); the widget's "Undo" targets a UUID |
 | **times stored in UTC** | sync between devices; displayed in local time |
-| **sync status** (pending → synced) | the sync line ("Saved on phone · will sync" vs "Synced with watch · 14:31") |
+| **sync status** (pending → synced) | the status icon's mark (slash vs tick) and its spoken sentence ("Saved on phone · will sync" vs "Synced with watch · 14:31") |
 | **soft-delete marker** | deletes are soft for 7 days (sync-safe) and can be undone; no "Recently deleted" screen in v1 |
 
 ### 4.2 Diaper kind labels
@@ -694,15 +710,27 @@ Counts: Both adds 1 to pee **and** 1 to poop.
 
 ### 4.5 Sync state (device-level, shown in UI)
 
-| State | Phone (top bar) | Watch (Logged, list footer) | Icon |
-|---|---|---|---|
-| Synced | "Synced with watch · 14:31" | "Synced with phone · 14:31" | `synced` |
-| Syncing | "Syncing with watch…" | — | `pending` |
-| Saved locally | "Saved on phone · will sync" | "Saved on watch · will sync" | `offline` |
-| Error | "Couldn't save · Tap to retry" (error colour, 48 dp button) | — | `offline` |
-| Phone app missing | — | "Phone app not installed" + "Install on phone" | — |
+The state shows as a small icon, never as visible text: the **other device** with a mark on its face or screen (the phone's top bars show a watch, the watch shows a phone), and on the phone also a **cloud** for the backup while an account is signed in (BABIES_AND_BACKUP §3.2). The sentence is the icon's TalkBack description; Settings › Watch sync still shows it as text, with "Sync now".
 
-Sync is phone ↔ watch only (no cloud, no accounts; open question 1).
+| State | Phone (top bars) · spoken | Watch (Logged, list footer) · spoken | Mark |
+|---|---|---|---|
+| Synced | `watchSynced` · "Synced with watch · 14:31" | `phoneSynced` · "Synced with phone · 14:31" | tick |
+| Syncing | `watchPending` · "Syncing with watch…" | `phonePending` in the footer (Logged hides it) · "Syncing with phone…" | "…" |
+| Saved locally | `watchOffline` · "Saved on phone · will sync" | `phoneOffline` · "Saved on watch · will sync" | slash |
+| Error | `watchError` in error colour, a 48 dp retry button · "Couldn't save · Tap to retry" | as saved locally (no error on the watch) | "!" |
+| No watch / phone | no icon | no icon ("Phone app not installed" + "Install on phone" where relevant) | — |
+
+The backup's cloud (phone only, hidden when nobody is signed in or the build has no backend):
+
+| Backup | Icon · spoken |
+|---|---|
+| Backing up | `pending` · "Backing up…" |
+| Backed up | `synced` · "Backed up · 14:31" |
+| Offline | `offline` · "Saved on phone · will back up" |
+| Error | `cloudError` in error colour, a 48 dp retry button (backs up again) · "Couldn't back up · Tap to retry" |
+| Backup deleted | `cloudError` in error colour, not a button · "Backup deleted · Back up now to start again" |
+
+Phone ↔ watch sync never goes through the backend; the backup is the phone's alone (BABIES_AND_BACKUP §1).
 
 ---
 
@@ -861,7 +889,6 @@ Day has no containerLit. The checked Sleep toggle uses SLEEP container + a 2 dp 
 | dataSmall | GSF | 14 / 18 | 500 | 40 | yes | "Slept 1h 07m", widget sub-labels |
 | labelLarge | GSF | 16 / 20 | 600 | 40 | yes | chips, text buttons, Lamp label "Last fed", "History" |
 | labelMedium | GSF | 14 / 18 | 600 | 40 | yes | section labels "Today", "Fell asleep", Today captions |
-| syncLabel | GSF | 13 / 16 | 500 | 40 | yes | top-bar sync line |
 | labelSmall | GSF | 13 / 16 | 600 | 40 | yes | ribbon axis "00 06 12 18 24", stats captions |
 | bodyLarge | Atkinson | 18 / 26 | 400 | — | — | prose (reserved) |
 | bodyMedium | Atkinson | 16 / 22 | 400 | — | — | "Earlier?" |
@@ -983,7 +1010,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 | Lists / avatars | 22 inside a 40 avatar | 18 inside a 32 avatar; status cards 18 |
 | Diaper tiles | 40 | 32 |
 | Logged check / Undone | — | 32 |
-| Sync line | 14 | 14 |
+| Status icons (sync, backup) | 20 | 20 |
 | Widget | row 1: 16; buttons: 24 | — |
 | Tile | — | header 24, Row A 24, Row B 20, title glyphs 14 |
 
@@ -1023,8 +1050,17 @@ Each quoted string is one path. All are stroked unless noted.
 | `lamp` | table lamp (brand glyph, tile header) | `M8.5 3.5h7l3.5 8h-14z` `M12 11.5v6.5` `M8.5 20.5h7` |
 | `awake` | sun with 8 rays | `M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z` `M12 2.5v2` `M12 19.5v2` `M2.5 12h2` `M19.5 12h2` `M5.3 5.3l1.4 1.4` `M17.3 17.3l1.4 1.4` `M5.3 18.7l1.4-1.4` `M17.3 6.7l1.4-1.4` |
 | `sleepRunning` | ring + filled crescent = "a sleep is running" on glance surfaces (widget, tile, complication, notification small icon). Static, no ember, so it cannot go stale | ring (stroked): `M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19z` + crescent (**filled**, no stroke): `M16 13.3A4.25 4.25 0 1 1 10.7 8a3.5 3.5 0 0 0 5.3 5.3z` |
+| `chart` | a baseline and three uneven bars (History's button to Statistics, P8) | `M3.5 20.5h17` `M7 17v-5` `M12 17V6` `M17 17v-8` |
+| `watchSynced` | watch with a tick on the face (§4.5) | `M8.5 5.5h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z` `M9.5 5.5 10 3h4l.5 2.5` `M9.5 18.5l.5 2.5h4l.5-2.5` `M9.25 12.25 11 14l3.75-3.75` |
+| `watchPending` | watch with "…" | `M8.5 5.5h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z` `M9.5 5.5 10 3h4l.5 2.5` `M9.5 18.5l.5 2.5h4l.5-2.5` `M9 12h.01` `M12 12h.01` `M15 12h.01` |
+| `watchOffline` | watch with slash (body broken at the slash) | `M10 5.5h5.5a2 2 0 0 1 2 2v6` `M14 18.5H8.5a2 2 0 0 1-2-2v-6` `M9.5 5.5 10 3h4l.5 2.5` `M9.5 18.5l.5 2.5h4l.5-2.5` `M4 4l16 16` |
+| `watchError` | watch with "!" | `M8.5 5.5h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z` `M9.5 5.5 10 3h4l.5 2.5` `M9.5 18.5l.5 2.5h4l.5-2.5` `M12 9v3` `M12 15.5h.01` |
+| `phoneSynced` | `phone` with a tick on the screen | `M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5z` `M10.5 18.5h3` `M9.25 10.75 11 12.5l3.75-3.75` |
+| `phonePending` | `phone` with "…" | `M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5z` `M10.5 18.5h3` `M9 10.5h.01` `M12 10.5h.01` `M15 10.5h.01` |
+| `phoneOffline` | `phone` with slash (body broken at the slash) | `M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v9.5` `M16 21.5H8A1.5 1.5 0 0 1 6.5 20v-9.5` `M10.5 18.5h3` `M3 3l18 18` |
+| `cloudError` | cloud with "!" (the backup failed) | `M7 19h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6 10.1 4.5 4.5 0 0 0 7 19z` `M12 10v3` `M12 16h.01` |
 
-28 icons. All were render-checked legible at 18 dp and up; `sleepRunning` at 16, 24 and 56 dp on black.
+29 icons (`chart` was added with Statistics). All were render-checked legible at 18 dp and up; `sleepRunning` at 16, 24 and 56 dp on black.
 
 ### 6.3 Shape-coded avatars (lists)
 
@@ -1073,7 +1109,7 @@ One grammar everywhere the app renders text, including the tile and complication
 **Counts**: "1 feed" / "5 feeds"; "pee", "poop" and "sleep" do not change.
 
 **No ticking durations.** No seconds, no chronometer anywhere:
-- Phone Live Update chip: "Asleep" (no chronometer).
+- Phone Live Update chip: "Asleep" (no chronometer). Its text shows whole minutes ("1h 07m · since 02:05"), re-rendered once a minute, and its Android 17 metrics use the system's TimeDifference.
 - Wear Ongoing Activity / Live Update: "Asleep since 02:05".
 - Tile and complications format their own dynamic text in this grammar.
 - **The only exemption**: the pre-Wear OS 4 complication fallback `TimeDifferenceComplicationText` with `SHORT_DUAL_UNIT` (system format "1h 5m").
@@ -1259,12 +1295,14 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 - Manifest `POST_PROMOTED_NOTIFICATIONS`. Check `NotificationManager.canPostPromotedNotifications()` and fall back to a normal ongoing notification. Link to `ACTION_MANAGE_APP_PROMOTED_NOTIFICATIONS` from Settings.
 - Builder settings:
   - `setOngoing(true)`, `setRequestPromotedOngoing(true)`.
-  - Title "Noa is asleep", text "Since 02:05" (absolute; never a self-updating duration string).
+  - Title "Noa is asleep", text "1h 07m · since 02:05" (whole minutes and the absolute start; no seconds). A non-waking `AlarmManager.RTC` alarm at each minute boundary re-renders it while the notification shows, so a phone that wakes up shows the current value; it is cancelled with the notification.
+  - `BigTextStyle` (below Android 17) adds the last feed, the last diaper and Today's counts.
   - `setShortCriticalText("Asleep")` for the status chip (small icon `sleepRunning`), `setShowWhen(false)`, and **no** `setUsesChronometer`.
   - Action "Woke up" with `setAuthenticationRequired(false)`.
   - `VISIBILITY_PUBLIC`; channel `IMPORTANCE_LOW`; `setSilent(true)`; `setOnlyAlertOnce(true)`.
 - Detect dismissal with `setDeleteIntent` and do not repost.
-- Android 17 `MetricStyle`: "Since" 02:05 (FixedTime), "Last fed" 01:40 (FixedTime). No TimeDifference metric: its system format would break the grammar.
+- Android 17 `MetricStyle`: "Asleep for" (`TimeDifference.forStopwatch(start, FORMAT_ADAPTIVE)`), "Since" 02:05 (FixedTime), "Last fed · L → R" (`TimeDifference.forStopwatch(feed, FORMAT_ADAPTIVE)`). The durations are the system's, so they stay current on the lock screen without a re-render; the parent should not have to subtract times at 3am.
+- "Woke up" posts the woke-up notification (§3.3.7) with three Earlier actions (`setAuthenticationRequired(false)`); each action's broadcast carries the tap time and the offset applied when it was posted, and the receiver updates the sleep's end and re-posts.
 - Ask for `POST_NOTIFICATIONS` in context on the first Start sleep.
 
 ### 10.6 Wear running sleep, ambient, gestures
@@ -1392,7 +1430,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 ## 12. Open questions for the user
 
-1. **Two caregivers.** Do you want a shared log for two parents (each with a phone/watch)? It needs a cloud backend and accounts, and brings "who logged it", partner notifications (muted at night) and duplicate merging. The mockups assume one family account with phone + watch only.
+1. **Two caregivers.** Answered by families (BABIES_AND_BACKUP §3.4–3.5): members invited by a single-use link share the log and the babies. "Who logged it" and partner notifications are not part of it.
 2. **Feeding details.** Is one "Fed" timestamp enough, or do you want breast side (left/right), bottle amount or feed duration? Each adds a step after the tap.
 3. **Diaper on the phone Home.** Keep "Diaper → Pee / Poop / Both" (2 taps, big buttons; the widget and tile are 1 tap), or put Pee | Poop | Both directly on Home as three smaller buttons?
 4. **Day boundary.** Should "Today" start at midnight (designed) or at a time like 07:00, so a night is not split across two days?

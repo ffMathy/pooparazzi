@@ -90,7 +90,10 @@ enum class DiaperKind {
  * - a sleep is *running* while [endMillis] == null and it is not [deleted];
  * - a FEED's [feedType] is optional (null = just the time);
  * - a DIAPER's [pee] and [poop] are optional (neither = a plain change); [poopColor] and [poopTexture] are null unless [poop];
- * - [breastSide] is optional and only on a BREAST feed.
+ * - [breastSide] is optional and only on a BREAST feed;
+ * - [amountMl] is optional and only on a FORMULA feed, and positive when set.
+ *
+ * Every entry belongs to one baby, [babyId] (BABIES_AND_BACKUP §2.1); an edit never moves it to another.
  *
  * Older app versions stored a breastfeed as a timed interval (with an [endMillis], or none while it ran). Such
  * entries are read through [normalized], which turns them into instants at their start.
@@ -120,6 +123,10 @@ data class Entry(
     val updatedAtMillis: Long,
     /** Soft delete marker (rows are purged 7 days after deletion). */
     val deleted: Boolean = false,
+    /** The [Baby.id] this entry belongs to. JSON from before several babies has none and reads as the first baby. */
+    val babyId: String = Baby.FIRST_ID,
+    /** FEED + FORMULA only; optional, the amount given in millilitres (shown in fluid ounces where those are used). */
+    val amountMl: Int? = null,
 ) {
     companion object {
         /** A new random UUID for an entry id. */
@@ -131,7 +138,15 @@ data class Entry(
             endMillis: Long? = null,
             id: String = newId(),
             updatedAtMillis: Long = endMillis ?: startMillis,
-        ) = Entry(id = id, kind = EntryKind.SLEEP, startMillis = startMillis, endMillis = endMillis, updatedAtMillis = updatedAtMillis)
+            babyId: String = Baby.FIRST_ID,
+        ) = Entry(
+            id = id,
+            kind = EntryKind.SLEEP,
+            startMillis = startMillis,
+            endMillis = endMillis,
+            updatedAtMillis = updatedAtMillis,
+            babyId = babyId,
+        )
 
         /** A breastfeed at [atMillis] with the optional side order [side] (null = just the time). */
         fun breastfeed(
@@ -139,6 +154,7 @@ data class Entry(
             side: BreastSide? = null,
             id: String = newId(),
             updatedAtMillis: Long = atMillis,
+            babyId: String = Baby.FIRST_ID,
         ) = Entry(
             id = id,
             kind = EntryKind.FEED,
@@ -146,11 +162,12 @@ data class Entry(
             feedType = FeedType.BREAST,
             breastSide = side,
             updatedAtMillis = updatedAtMillis,
+            babyId = babyId,
         )
 
         /**
          * A feed at [atMillis] of [type] (null = just the time). [side] is kept only for [FeedType.BREAST]
-         * (see [breastfeed]).
+         * (see [breastfeed]), [amountMl] only for [FeedType.FORMULA].
          */
         fun feed(
             type: FeedType?,
@@ -158,6 +175,8 @@ data class Entry(
             side: BreastSide? = null,
             id: String = newId(),
             updatedAtMillis: Long = atMillis,
+            babyId: String = Baby.FIRST_ID,
+            amountMl: Int? = null,
         ): Entry = Entry(
             id = id,
             kind = EntryKind.FEED,
@@ -165,6 +184,8 @@ data class Entry(
             feedType = type,
             breastSide = side.takeIf { type == FeedType.BREAST },
             updatedAtMillis = updatedAtMillis,
+            babyId = babyId,
+            amountMl = amountMl.takeIf { type == FeedType.FORMULA },
         )
 
         /** A diaper at [atMillis]. Colour and texture are dropped unless [poop]. */
@@ -176,6 +197,7 @@ data class Entry(
             texture: PoopTexture? = null,
             id: String = newId(),
             updatedAtMillis: Long = atMillis,
+            babyId: String = Baby.FIRST_ID,
         ) = Entry(
             id = id,
             kind = EntryKind.DIAPER,
@@ -185,14 +207,20 @@ data class Entry(
             poopColor = color.takeIf { poop },
             poopTexture = texture.takeIf { poop },
             updatedAtMillis = updatedAtMillis,
+            babyId = babyId,
         )
     }
 }
 
 /**
  * This entry as the current model reads it. A breastfeed from an older app version was a timed interval: its end
- * (or its "running" state, when it never ended) is dropped, so it becomes an instant at its start. Any other
- * entry is returned unchanged. Every read path (Room rows, sync JSON) goes through this.
+ * (or its "running" state, when it never ended) is dropped, so it becomes an instant at its start. A blank
+ * [Entry.babyId] becomes the first baby's ([Baby.FIRST_ID]). Any other entry is returned unchanged. Every read path
+ * (Room rows, sync JSON, the backend) goes through this.
  */
-fun Entry.normalized(): Entry =
-    if (kind == EntryKind.FEED && endMillis != null) copy(endMillis = null) else this
+fun Entry.normalized(): Entry {
+    var entry = this
+    if (entry.kind == EntryKind.FEED && entry.endMillis != null) entry = entry.copy(endMillis = null)
+    if (entry.babyId.isBlank()) entry = entry.copy(babyId = Baby.FIRST_ID)
+    return entry
+}

@@ -54,6 +54,15 @@ object XDrawables {
     @DrawableRes val checkbox: Int = R.drawable.x_checkbox
     @DrawableRes val checkboxChecked: Int = R.drawable.x_checkbox_checked
     @DrawableRes val info: Int = R.drawable.x_info
+    @DrawableRes val chart: Int = R.drawable.x_chart
+    @DrawableRes val watchSynced: Int = R.drawable.x_watch_synced
+    @DrawableRes val watchPending: Int = R.drawable.x_watch_pending
+    @DrawableRes val watchOffline: Int = R.drawable.x_watch_offline
+    @DrawableRes val watchError: Int = R.drawable.x_watch_error
+    @DrawableRes val phoneSynced: Int = R.drawable.x_phone_synced
+    @DrawableRes val phonePending: Int = R.drawable.x_phone_pending
+    @DrawableRes val phoneOffline: Int = R.drawable.x_phone_offline
+    @DrawableRes val cloudError: Int = R.drawable.x_cloud_error
 
     /** Two-tone `both` in Night/watch colours (droplet `#8FD0C3`, mound `#358276`). Do not tint. */
     @DrawableRes val bothNight: Int = R.drawable.x_both_night
@@ -130,6 +139,15 @@ object XDrawables {
             "checkbox" to checkbox,
             "checkboxChecked" to checkboxChecked,
             "info" to info,
+            "chart" to chart,
+            "watchSynced" to watchSynced,
+            "watchPending" to watchPending,
+            "watchOffline" to watchOffline,
+            "watchError" to watchError,
+            "phoneSynced" to phoneSynced,
+            "phonePending" to phonePending,
+            "phoneOffline" to phoneOffline,
+            "cloudError" to cloudError,
         )
 
     /** Which fixed colours the two-tone `both` drawable uses. */

@@ -185,4 +185,21 @@ class TileActionsTest {
         // A layout from before the split: ignored rather than guessed.
         assertNull(TileAction.fromClickId("sleep_toggle#9"))
     }
+
+    @Test
+    fun aTileLogIsForTheWatchsCurrentBabyAndItsConfirmationSaysSo() = test {
+        val selected = kotlinx.coroutines.flow.MutableStateFlow(SampleData.TWIN_ID)
+        val twins = RoomEntryRepository(db, clock, selectedBaby = selected)
+        val twinActions = TileActions(twins, memory, SampleData.ZONE)
+        // Ida's sleep, while Noa's log stays empty.
+        assertEquals(XHaptic.TOGGLE_ON, twinActions.handle(TileAction.SLEEP_START.clickId(++token), clock.now()))
+        val sleep = twins.observeEntries().first().single()
+        assertEquals(SampleData.TWIN_ID, sleep.babyId)
+        assertTrue(stored().isEmpty())
+        clock.advanceBy(10 * 60_000L)
+        assertEquals(XHaptic.TOGGLE_OFF, twinActions.handle(TileAction.SLEEP_END.clickId(++token, sleep.id), clock.now()))
+        assertEquals(TileFeedbackKind.WOKE_UP, memory.feedback?.kind)
+        assertEquals(SampleData.TWIN_ID, memory.feedback?.babyId)
+        assertTrue(stored().isEmpty())
+    }
 }

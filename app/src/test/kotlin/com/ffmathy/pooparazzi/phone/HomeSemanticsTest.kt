@@ -11,12 +11,17 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
@@ -62,6 +67,9 @@ class HomeSemanticsTest {
         override fun onUndo() { calls += "undo" }
         override fun onReceiptDone() { calls += "done" }
         override fun onSheetEdit(entryId: String) { calls += "sheet-edit:$entryId" }
+        override fun onSwitchBaby() { calls += "switch" }
+        override fun onSelectBaby(babyId: String) { calls += "select:$babyId" }
+        override fun onRetrySync() { calls += "retry" }
     }
 
     @Before
@@ -244,5 +252,47 @@ class HomeSemanticsTest {
         compose.onNodeWithContentDescription("Right, first").assertIsOn()
         compose.onNodeWithContentDescription("Left, second").assertIsOn()
         compose.onNodeWithContentDescription("Right then left").assertExists()
+    }
+
+    /** BABIES_AND_BACKUP §2.4: with one baby the name is a plain heading, as before. */
+    @Test
+    fun withOneBabyTheNameIsNoButton() {
+        show(HomeSamples.idle())
+        compose.onNodeWithText("Noa").assertExists()
+        compose.onNodeWithContentDescription("Noa. Switch baby").assertDoesNotExist()
+    }
+
+    @Test
+    fun withTwinsTheNameSwitchesTheBaby() {
+        show(HomeSamples.twins())
+        compose.onNodeWithContentDescription("Noa. Switch baby")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assertHeightIsAtLeast(48.dp)
+            .performClick()
+        assertEquals(listOf("switch"), calls)
+    }
+
+    /** In the error state the retry target sits under the switcher, so the two never overlap. */
+    @Test
+    fun theSwitcherAndTheRetryTargetDoNotOverlap() {
+        show(HomeSamples.twins(sync = SyncStatus.Error))
+        val switcher = compose.onNodeWithContentDescription("Noa. Switch baby").fetchSemanticsNode().boundsInRoot
+        val retry = compose.onNodeWithContentDescription("Couldn't save · Tap to retry").fetchSemanticsNode().boundsInRoot
+        assertTrue("$switcher vs $retry", retry.top >= switcher.bottom)
+        assertTrue(retry.height >= switcher.height)
+        compose.onNodeWithContentDescription("Couldn't save · Tap to retry").performClick()
+        assertEquals(listOf("retry"), calls)
+    }
+
+    @Test
+    fun theSwitchBabySheetHasOneRadioRowPerBaby() {
+        show(HomeSamples.twinsSwitching())
+        compose.onNodeWithText("Switch baby").assertExists()
+        compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)).assertCountEquals(2)
+        compose.onNode(hasText("Noa") and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)).assertIsSelected()
+        compose.onNode(hasText("Ida") and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+            .assertIsNotSelected()
+            .performClick()
+        assertEquals(listOf("select:${SampleData.TWIN_ID}"), calls)
     }
 }
