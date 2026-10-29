@@ -48,7 +48,6 @@ object BigButtonDefaults {
     val CompactHeight: Dp = 80.dp
     val PillRadius: Dp = 48.dp
     val PressedRadius: Dp = 16.dp
-    val CheckedRadius: Dp = 28.dp
     val IconSize: Dp = 32.dp
 }
 
