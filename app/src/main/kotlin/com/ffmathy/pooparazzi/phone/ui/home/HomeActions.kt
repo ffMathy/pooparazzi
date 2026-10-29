@@ -56,8 +56,8 @@ interface HomeActions {
     fun onSheetOffset(minutes: Int) {}
 
     /**
-     * Feed sheet: Breast reveals the side checkboxes and "Log feed"; Formula / Food log an instant, null ("Just the
-     * time") logs an untyped feed.
+     * Feed sheet: Breast reveals the side checkboxes and "Log feed", Formula the amount slider and "Log feed"; Food
+     * logs an instant, null ("Just the time") logs an untyped feed.
      */
     fun onFeedType(type: FeedType?) {}
 
@@ -66,6 +66,12 @@ interface HomeActions {
 
     /** Feed sheet, Breast step, "Log feed": logs a breast feed at the sheet's time with the ticked order (or none). */
     fun onLogBreastfeed() {}
+
+    /** Feed sheet, Formula step: the slider's amount in millilitres; null is no amount (the slider at its start). */
+    fun onFormulaAmount(amountMl: Int?) {}
+
+    /** Feed sheet, Formula step, "Log feed": logs a formula feed at the sheet's time with the amount (or none). */
+    fun onLogFormula() {}
     fun onDiaperPee(checked: Boolean) {}
     fun onDiaperPoop(checked: Boolean) {}
 

@@ -90,16 +90,16 @@ class RoomEntryRepository(
 
     // ---- Feeds --------------------------------------------------------------------------------
 
-    override suspend fun logFeedChecked(type: FeedType?, at: Long, side: BreastSide?): LogResult {
+    override suspend fun logFeedChecked(type: FeedType?, at: Long, side: BreastSide?, amountMl: Int?): LogResult {
         val babyId = currentBaby()
-        checkNotInFuture(at) { Entry.feed(type, at, side, updatedAtMillis = 0, babyId = babyId) }
+        checkNotInFuture(at) { Entry.feed(type, at, side, updatedAtMillis = 0, babyId = babyId, amountMl = amountMl) }
         val result = database.withTransaction {
             val window = EntryRules.DEDUPE_WINDOW_MILLIS - 1
             val duplicate = feedsBetween(babyId, type, at - window, at + window).firstOrNull()
             if (duplicate != null) {
                 LogResult.Duplicate(duplicate.toEntry())
             } else {
-                val entry = Entry.feed(type, at, side, updatedAtMillis = clock.now(), babyId = babyId).requireValid()
+                val entry = Entry.feed(type, at, side, updatedAtMillis = clock.now(), babyId = babyId, amountMl = amountMl).requireValid()
                 writeLocal(entry, stored = null)
                 LogResult.Logged(entry)
             }

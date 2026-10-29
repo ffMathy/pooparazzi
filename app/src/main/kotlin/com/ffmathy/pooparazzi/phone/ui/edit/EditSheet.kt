@@ -70,6 +70,7 @@ import com.ffmathy.pooparazzi.phone.ui.preview.EditSamples
 import com.ffmathy.pooparazzi.phone.ui.home.feedbackType
 import com.ffmathy.pooparazzi.phone.ui.sheets.BreastSideCheckboxes
 import com.ffmathy.pooparazzi.phone.ui.sheets.DiaperToggleTiles
+import com.ffmathy.pooparazzi.phone.ui.sheets.FormulaAmountSlider
 import com.ffmathy.pooparazzi.phone.ui.sheets.PoopDetails
 import com.ffmathy.pooparazzi.phone.ui.sheets.SaveButton
 import com.ffmathy.pooparazzi.phone.ui.sheets.SectionHeading
@@ -238,7 +239,7 @@ private fun SleepForm(state: EditUiState, formatters: Formatters, actions: EditA
 /**
  * The optional type (Breast | Formula | Food; tapping the selected one clears it, leaving a feed with just its time)
  * and one time block: every feed is an instant. A breastfeed adds the optional side (Left / Right checkboxes in tick
- * order).
+ * order), a formula feed the optional amount (the Feed sheet's slider).
  */
 @Composable
 private fun FeedForm(state: EditUiState, formatters: Formatters, actions: EditActions) {
@@ -258,6 +259,11 @@ private fun FeedForm(state: EditUiState, formatters: Formatters, actions: EditAc
         Spacer(Modifier.height(16.dp))
         SectionLabel(stringResource(R.string.join_dot, stringResource(R.string.edit_side), stringResource(CoreR.string.optional)))
         SideCheckboxes(draft.side, actions::onSideTick)
+    }
+    if (draft.isFormula) {
+        Spacer(Modifier.height(16.dp))
+        SectionLabel(stringResource(R.string.join_dot, stringResource(CoreR.string.amount), stringResource(CoreR.string.optional)))
+        FormulaAmountSlider(draft.amountMl, formatters.volume, actions::onAmount, enabled = true, modifier = Modifier.testTag(EditTags.AMOUNT))
     }
 }
 
@@ -425,6 +431,7 @@ private fun ValidationSlot(state: EditUiState, formatters: Formatters, actions: 
 /** Test tags of the sheet's parts. */
 object EditTags {
     const val SIDES = "edit_sides"
+    const val AMOUNT = "edit_amount"
     const val VALIDATION = "edit_validation"
 }
 

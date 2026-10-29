@@ -171,6 +171,35 @@ class EditViewModelTest : CoreTestBase() {
     }
 
     @Test
+    fun theFormulaAmountIsOptionalAndKeptAcrossTypeChanges() = coreTest { core ->
+        val sheet = core.sheet()
+        sheet.vm.openEntry("sample-formula-1222")
+        assertEquals(120, state(sheet).draft.amountMl)
+        sheet.vm.onAmount(150)
+        assertEquals(150, state(sheet).draft.amountMl)
+        sheet.vm.onFeedType(FeedType.FOOD)
+        assertNull("food has no amount", state(sheet).draft.amountMl)
+        sheet.vm.onFeedType(FeedType.FORMULA)
+        assertEquals("switching back restores the original's amount", 120, state(sheet).draft.amountMl)
+        sheet.vm.onAmount(180)
+        sheet.vm.onSave()
+        runCurrent()
+        assertEquals(180, core.entry("sample-formula-1222")!!.amountMl)
+
+        sheet.vm.openEntry("sample-formula-1222")
+        sheet.vm.onAmount(null)
+        assertTrue("the amount is optional", state(sheet).canSave)
+        sheet.vm.onSave()
+        runCurrent()
+        assertNull(core.entry("sample-formula-1222")!!.amountMl)
+
+        // A breast feed takes no amount.
+        sheet.vm.openEntry("sample-breast-0800")
+        sheet.vm.onAmount(90)
+        assertNull(state(sheet).draft.amountMl)
+    }
+
+    @Test
     fun theSideFollowsTheTickOrderAndIsOptional() = coreTest { core ->
         val sheet = core.sheet()
         sheet.vm.openEntry("sample-breast-0800")

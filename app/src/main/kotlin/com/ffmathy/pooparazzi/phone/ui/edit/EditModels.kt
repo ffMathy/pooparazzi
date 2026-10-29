@@ -36,15 +36,21 @@ data class EditDraft(
     val poop: Boolean = false,
     val color: PoopColor? = null,
     val texture: PoopTexture? = null,
+    /** A formula feed's optional amount in millilitres. */
+    val amountMl: Int? = null,
 ) {
     val isBreastfeed: Boolean get() = kind == EntryKind.FEED && feedType == FeedType.BREAST
+    val isFormula: Boolean get() = kind == EntryKind.FEED && feedType == FeedType.FORMULA
     val isInterval: Boolean get() = kind == EntryKind.SLEEP
     val running: Boolean get() = isInterval && end == null
 
-    /** The entry this draft describes (instants drop any end; the side only on a breastfeed; colour and texture only with poop). */
+    /**
+     * The entry this draft describes (instants drop any end; the side only on a breastfeed, the amount only on formula;
+     * colour and texture only with poop).
+     */
     fun toEntry(updatedAtMillis: Long): Entry = when (kind) {
         EntryKind.SLEEP -> Entry.sleep(start, end, id = id, updatedAtMillis = updatedAtMillis)
-        EntryKind.FEED -> Entry.feed(feedType, start, side, id = id, updatedAtMillis = updatedAtMillis)
+        EntryKind.FEED -> Entry.feed(feedType, start, side, id = id, updatedAtMillis = updatedAtMillis, amountMl = amountMl)
         EntryKind.DIAPER -> Entry.diaper(start, pee, poop, color, texture, id = id, updatedAtMillis = updatedAtMillis)
     }
 
@@ -60,6 +66,7 @@ data class EditDraft(
             poop = entry.poop,
             color = entry.poopColor,
             texture = entry.poopTexture,
+            amountMl = entry.amountMl,
         )
     }
 }
@@ -128,7 +135,7 @@ data class EditUiState(
     val wasDurationMillis: Long?,
     val issue: EditIssue?,
 ) {
-    /** Nothing beyond the times is required (feed type, side, pee and poop are optional): only a blocking issue stops Save. */
+    /** Nothing beyond the times is required (feed type, side, amount, pee and poop are optional): only a blocking issue stops Save. */
     val canSave: Boolean get() = issue?.blocksSave != true
 }
 
@@ -151,6 +158,9 @@ interface EditActions {
 
     /** Ticks or unticks [breast] on a breastfeed; the tick order is the side recorded. */
     fun onSideTick(breast: Breast) {}
+
+    /** The amount slider of a formula feed, in millilitres; null is no amount. */
+    fun onAmount(amountMl: Int?) {}
 
     /** ±1m / ±5m. */
     fun onNudge(field: TimeField, minutes: Int) {}

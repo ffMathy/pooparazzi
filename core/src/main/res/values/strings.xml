@@ -39,6 +39,11 @@
     <string name="side_order_hint">Tick the sides in the order you fed. Optional.</string>
     <!-- Summary line when no side is ticked -->
     <string name="side_none">No side</string>
+    <string name="volume_ml">%1$s ml</string>
+    <string name="volume_fl_oz">%1$s fl oz</string>
+    <string name="feed_formula_amount_next">Then the amount, if you like</string>
+    <string name="amount">Amount</string>
+    <string name="amount_none">No amount</string>
 
     <!-- Diapers -->
     <string name="diaper_pee">Pee</string>

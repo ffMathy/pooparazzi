@@ -81,7 +81,7 @@ internal object HomeStateBuilder {
         val now = summary.now
         val subjectEntry = model.spec.subject?.let { (id, _) -> entries.firstOrNull { it.id == id && !it.deleted } }
         val variant = when (val spec = model.spec) {
-            is CardSpec.FeedLogged -> CardVariant.FeedLogged(spec.type, spec.side)
+            is CardSpec.FeedLogged -> CardVariant.FeedLogged(spec.type, spec.side, spec.amountMl)
             is CardSpec.DiaperLogged -> CardVariant.DiaperLogged(spec.kind)
             is CardSpec.SleepStarted -> CardVariant.SleepStarted
             is CardSpec.WokeUp -> CardVariant.WokeUp(subjectEntry?.clockDurationMillis(now) ?: 0L)
@@ -150,7 +150,9 @@ internal object HomeStateBuilder {
         fun chips(minutes: List<Int>, enabled: (Int) -> Boolean = { true }) =
             minutes.map { OffsetChipUi(it, selected = it == sheet.offsetMinutes, enabled = enabled(it)) }
         return when (sheet) {
-            is SheetModel.Feed -> HomeSheetUi.Feed(sheet.stamp, sheet.offsetMinutes, chips(SHEET_CHIPS), sheet.breast, sheet.ticks)
+            is SheetModel.Feed -> HomeSheetUi.Feed(
+                sheet.stamp, sheet.offsetMinutes, chips(SHEET_CHIPS), sheet.breast, sheet.ticks, sheet.formula, sheet.amountMl,
+            )
             is SheetModel.Diaper -> HomeSheetUi.Diaper(
                 stamp = sheet.stamp,
                 offsetMinutes = sheet.offsetMinutes,

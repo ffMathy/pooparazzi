@@ -49,6 +49,8 @@ internal fun HomeSheets(
                 onType = actions::onFeedType,
                 onTick = actions::onSideTick,
                 onLogBreast = actions::onLogBreastfeed,
+                onAmount = actions::onFormulaAmount,
+                onLogFormula = actions::onLogFormula,
                 onCancel = actions::onSheetDismiss,
             ),
         )

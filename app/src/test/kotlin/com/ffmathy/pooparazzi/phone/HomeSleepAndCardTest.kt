@@ -130,7 +130,7 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
     @Test
     fun offsetsAreRelativeToTheBaseAndRetappingClears() = homeTest { home ->
         home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFeedType(FeedType.FOOD)
         home.settle()
         suspend fun feedTime() = home.entries().single().startMillis
 

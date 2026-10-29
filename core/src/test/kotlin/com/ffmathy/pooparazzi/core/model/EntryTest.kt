@@ -194,6 +194,20 @@ class EntryValidationTest {
     }
 
     @Test
+    fun formulaAmount() {
+        // The amount is optional, positive, and only on formula.
+        assertNull(violation(Entry.feed(FeedType.FORMULA, 0L)))
+        assertNull(violation(Entry.feed(FeedType.FORMULA, 0L, amountMl = 120)))
+        assertEquals(120, EntryJson.decode(EntryJson.encode(Entry.feed(FeedType.FORMULA, 0L, id = "f", amountMl = 120))).amountMl)
+        // The factory drops an amount on other feed types.
+        assertNull(Entry.feed(FeedType.FOOD, 0L, amountMl = 120).amountMl)
+        assertNull(Entry.breastfeed(0L).amountMl)
+        assertEquals(EntryViolation.AMOUNT_NOT_POSITIVE, violation(Entry.feed(FeedType.FORMULA, 0L).copy(amountMl = 0)))
+        assertEquals(EntryViolation.AMOUNT_ON_NON_FORMULA, violation(Entry.feed(null, 0L).copy(amountMl = 60)))
+        assertEquals(EntryViolation.AMOUNT_ON_NON_FORMULA, violation(Entry.sleep(0L).copy(amountMl = 60)))
+    }
+
+    @Test
     fun feedFields() {
         // The type is optional: a feed with just its time is a valid instant, never with an end or a side.
         val untyped = Entry(id = "x", kind = EntryKind.FEED, startMillis = 0, updatedAtMillis = 0)

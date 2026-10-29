@@ -475,7 +475,7 @@ private fun cardContent(variant: CardVariant, formatters: Formatters): CardConte
         is CardVariant.FeedLogged -> CardContent(
             TintedIcon(XIcons.forFeedType(variant.type), events.feed.strong),
             stringResource(CoreR.string.receipt_logged, feedTypeLabel(variant.type, compact = true)),
-            variant.side?.let { stringResource(Labels.side(it)) },
+            variant.side?.let { stringResource(Labels.side(it)) } ?: variant.amountMl?.let(formatters.volume::format),
             variant.side?.let { spokenSideCapitalised(it) },
         )
         is CardVariant.DiaperLogged -> CardContent(
