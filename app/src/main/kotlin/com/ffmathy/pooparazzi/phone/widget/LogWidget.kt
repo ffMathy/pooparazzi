@@ -2,9 +2,7 @@ package com.ffmathy.pooparazzi.phone.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -49,22 +47,29 @@ import com.ffmathy.pooparazzi.core.R as CoreR
  * The toggle logs in place without opening the app. Feed and Diaper open the app's Feed and Diaper sheets, so the
  * details (feed type, breast order, pee/poop, colour, texture) are asked for exactly as in the app.
  *
- * The same widget is also offered on the cover screen of Samsung's flip phones ([CoverWidgetReceiver]).
+ * The same content is also offered on the cover screen of Samsung's flip phones ([CoverWidget]).
  */
 class LogWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(LogLayout.Sizes)
 
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val source = WidgetSource.from(context)
-        val initial = source.current()
-        val snapshots = source.snapshots()
-        provideContent {
-            val snapshot by snapshots.collectAsState(initial)
-            LogWidgetContent(snapshot)
-        }
-    }
+    override suspend fun provideGlance(context: Context, id: GlanceId) = provideSnapshots(context) { LogWidgetContent(it) }
 
     /** The generated picker preview (Glance 1.2, Android 15+): the reference scenario at 14:32. */
+    override suspend fun providePreview(context: Context, widgetCategory: Int) {
+        provideContent { LogWidgetContent(WidgetSamples.idle(night = true)) }
+    }
+}
+
+/**
+ * The 4×2 widget's content on the cover screen (Flex Window) of Samsung's flip phones, at one fixed size: the provider's
+ * 352 × 339 dp. With the per-size RemoteViews of [SizeMode.Responsive] the widget stayed on its loading layout on a
+ * Flip's cover screen, so this widget sends a single one, which every host can apply.
+ */
+class CoverWidget : GlanceAppWidget() {
+    override val sizeMode: SizeMode = SizeMode.Single
+
+    override suspend fun provideGlance(context: Context, id: GlanceId) = provideSnapshots(context) { LogWidgetContent(it) }
+
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
         provideContent { LogWidgetContent(WidgetSamples.idle(night = true)) }
     }
