@@ -44,6 +44,7 @@ data object Licences
  * The phone app: the resolved Night Light theme around the navigation graph.
  *
  * @param launch a deep link from a widget or notification that Home has not handled yet; [onLaunchHandled] reports it.
+ * @param onLaunchedSheetClosed a sheet such a link opened has closed (see `HomeViewModel.launchedSheetClosed`).
  */
 @Composable
 fun PooparazziPhoneApp(
@@ -52,11 +53,12 @@ fun PooparazziPhoneApp(
     onNightResolved: (Boolean) -> Unit,
     launch: HomeLaunch? = null,
     onLaunchHandled: (HomeLaunch) -> Unit = {},
+    onLaunchedSheetClosed: () -> Unit = {},
 ) {
     NightLightTheme(appearance = inputs.appearance, sleepRunning = inputs.sleepRunning, clock = clock) {
         val night = LocalNightLight.current.isNight
         LaunchedEffect(night) { onNightResolved(night) }
-        PooparazziNavHost(launch = launch, onLaunchHandled = onLaunchHandled)
+        PooparazziNavHost(launch = launch, onLaunchHandled = onLaunchHandled, onLaunchedSheetClosed = onLaunchedSheetClosed)
     }
 }
 
@@ -71,6 +73,7 @@ fun PooparazziNavHost(
     navController: NavHostController = rememberNavController(),
     launch: HomeLaunch? = null,
     onLaunchHandled: (HomeLaunch) -> Unit = {},
+    onLaunchedSheetClosed: () -> Unit = {},
 ) {
     fun open(route: Any) = navController.navigate(route) { launchSingleTop = true }
     val back: () -> Unit = { navController.popBackStack() }
@@ -96,6 +99,7 @@ fun PooparazziNavHost(
                 onOpenSettings = { open(Settings) },
                 launch = launch?.takeUnless { it == HomeLaunch.History },
                 onLaunchHandled = onLaunchHandled,
+                onLaunchedSheetClosed = onLaunchedSheetClosed,
             )
         }
         composable<History> { HistoryRoute(onBack = back, onOpenStatistics = { open(Statistics) }) }
