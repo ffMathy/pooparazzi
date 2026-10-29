@@ -342,4 +342,18 @@
     <!-- Settings › About -->
     <string name="settings_privacy">Privacy policy</string>
     <string name="settings_privacy_summary">What is stored, where, and your rights</string>
+
+    <!-- Home buttons' second line (V1_ADDITIONS §9): what the last 7 days say comes next. -->
+    <string name="forecast_in">in %1$s</string>
+    <string name="forecast_soon">soon</string>
+    <string name="forecast_poop_in">poop in %1$s</string>
+    <string name="forecast_poop_soon">poop soon</string>
+    <string name="forecast_spoken_wake">wakes up in about %1$s, around %2$s</string>
+    <string name="forecast_spoken_sleep">sleeps again in about %1$s, around %2$s</string>
+    <string name="forecast_spoken_feed">next feed in about %1$s, around %2$s</string>
+    <string name="forecast_spoken_poop">next poop in about %1$s, around %2$s</string>
+    <string name="forecast_spoken_wake_soon">wakes up soon</string>
+    <string name="forecast_spoken_sleep_soon">sleeps again soon</string>
+    <string name="forecast_spoken_feed_soon">next feed soon</string>
+    <string name="forecast_spoken_poop_soon">next poop soon</string>
 </resources>

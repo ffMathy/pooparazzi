@@ -260,4 +260,17 @@
     <!-- Indstillinger › Om -->
     <string name="settings_privacy">Privatlivspolitik</string>
     <string name="settings_privacy_summary">Hvad der gemmes, hvor, og dine rettigheder</string>
+
+    <string name="forecast_in">om %1$s</string>
+    <string name="forecast_soon">snart</string>
+    <string name="forecast_poop_in">bæ om %1$s</string>
+    <string name="forecast_poop_soon">bæ snart</string>
+    <string name="forecast_spoken_wake">vågner om cirka %1$s, omkring kl. %2$s</string>
+    <string name="forecast_spoken_sleep">sover igen om cirka %1$s, omkring kl. %2$s</string>
+    <string name="forecast_spoken_feed">næste måltid om cirka %1$s, omkring kl. %2$s</string>
+    <string name="forecast_spoken_poop">næste bæ om cirka %1$s, omkring kl. %2$s</string>
+    <string name="forecast_spoken_wake_soon">vågner snart</string>
+    <string name="forecast_spoken_sleep_soon">sover igen snart</string>
+    <string name="forecast_spoken_feed_soon">næste måltid snart</string>
+    <string name="forecast_spoken_poop_soon">næste bæ snart</string>
 </resources>

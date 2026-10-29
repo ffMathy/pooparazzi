@@ -28,6 +28,10 @@ import com.ffmathy.pooparazzi.core.R as CoreR
  * Feed · Diaper and the Sleep toggle (DESIGN_SPEC §3.3.1, V1_ADDITIONS §2.1). Fills, labels and positions never change
  * in lights-down. Feed always opens the Feed sheet (every feed is one time); while a sleep runs, the toggle reads
  * "Woke up". The toggle exposes no separate on/off state: the name and a state description carry it (§9.4).
+ *
+ * Each button's second line is what the last 7 days say comes next for it (V1_ADDITIONS §9): Feed the next feed,
+ * Diaper the next poop, Start sleep the next sleep and Woke up the expected wake-up. A button the week cannot predict
+ * has no second line.
  */
 @Composable
 internal fun HomeButtons(
@@ -39,6 +43,8 @@ internal fun HomeButtons(
 ) {
     val events = LocalXPalette.current.events
     val minHeight = if (compact) BigButtonDefaults.CompactHeight else BigButtonDefaults.Height
+    val feedForecast = forecastText(state.forecast.feed, ForecastKind.FEED, state.now, state.zone, formatters)
+    val poopForecast = forecastText(state.forecast.poop, ForecastKind.POOP, state.now, state.zone, formatters)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BigButton(
@@ -50,6 +56,8 @@ internal fun HomeButtons(
                 labelColor = events.feed.onContainer,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 minHeight = minHeight,
+                sublabel = feedForecast?.shown,
+                sublabelSpoken = feedForecast?.spoken,
             )
             BigButton(
                 onClick = actions::onDiaper,
@@ -60,6 +68,8 @@ internal fun HomeButtons(
                 labelColor = events.diaper.onContainer,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 minHeight = minHeight,
+                sublabel = poopForecast?.shown,
+                sublabelSpoken = poopForecast?.spoken,
             )
         }
         SleepToggle(state, formatters, actions, minHeight)
@@ -71,6 +81,8 @@ private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: Hom
     val sleep = LocalXPalette.current.events.sleep
     val zone = state.zone
     val running = state.runningSleep
+    val kind = if (running == null) ForecastKind.SLEEP else ForecastKind.WAKE
+    val forecast = forecastText(state.forecast.sleep, kind, state.now, zone, formatters)
     if (running == null) {
         val awakeSince = (state.row1 as? SinceRow.Awake)?.sinceMillis
         val description = awakeSince?.let {
@@ -87,6 +99,8 @@ private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: Hom
             modifier = Modifier.fillMaxWidth(),
             minHeight = minHeight,
             onClickLabel = startLabel,
+            sublabel = forecast?.shown,
+            sublabelSpoken = forecast?.spoken,
             semantics = { description?.let { stateDescription = it } },
         )
     } else {
@@ -108,6 +122,8 @@ private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: Hom
             modifier = Modifier.fillMaxWidth(),
             minHeight = minHeight,
             onClickLabel = stringResource(CoreR.string.action_end_sleep),
+            sublabel = forecast?.shown,
+            sublabelSpoken = forecast?.spoken,
             semantics = {
                 contentDescription = name
                 stateDescription = description

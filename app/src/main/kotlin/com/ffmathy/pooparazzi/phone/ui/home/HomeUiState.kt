@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.phone.ui.home
 import androidx.compose.runtime.Immutable
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.domain.DayCounts
+import com.ffmathy.pooparazzi.core.domain.Forecast
 import com.ffmathy.pooparazzi.core.domain.LampState
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Breast
@@ -24,6 +25,7 @@ import java.time.ZoneId
  * @property babyName empty until the parent sets one (the screen then shows the "Baby" hint).
  * @property row1 since-row 1: "Awake …" when idle, "Last fed …" while a sleep runs (each fact appears once per screen).
  * @property row2 since-row 2: the last diaper, kind first.
+ * @property forecast what the last 7 days say comes next (V1_ADDITIONS §9), shown under the buttons.
  * @property card a brief notice in the whisper slot ("Undone", a guard); null shows the Today grid.
  * @property sheet the open sheet (logging, receipt or Adjust start), if any.
  * @property babies all babies, in order (BABIES_AND_BACKUP §2.1); with two or more the name is the switcher.
@@ -42,6 +44,7 @@ data class HomeUiState(
     val row2: SinceRow?,
     val today: DayCounts,
     val runningSleep: Entry?,
+    val forecast: Forecast = Forecast.NONE,
     val card: NoticeCardUi? = null,
     val sheet: HomeSheetUi? = null,
     val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID, babyName)),

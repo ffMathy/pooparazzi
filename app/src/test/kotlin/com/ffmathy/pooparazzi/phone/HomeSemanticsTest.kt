@@ -118,6 +118,24 @@ class HomeSemanticsTest {
     }
 
     @Test
+    fun theButtonsSayWhatTheWeekExpectsNext() {
+        // V1_ADDITIONS §9: Feed and Start sleep carry the forecast; poop varies too much in the sample week to predict.
+        show(HomeSamples.idle())
+        compose.onNodeWithText("in 1h 05m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("in 55m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("next feed in about 1 hour 5 minutes, around 15:35", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("sleeps again in about 55 minutes, around 15:23", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("poop in", substring = true, useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun wokeUpSaysWhenTheBabyIsExpectedToWake() {
+        show(HomeSamples.asleep())
+        compose.onNodeWithText("in 2h 15m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("wakes up in about 2 hours 15 minutes, around 05:27", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
     fun theTodayGridIsALinkWithATextSummary() {
         show(HomeSamples.idle())
         compose.onNodeWithContentDescription("Today: 5 feeds, 4 pee, 2 poop, 7 hours 57 minutes sleep").performClick()
