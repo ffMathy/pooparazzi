@@ -54,7 +54,7 @@ base64 -w0 pooparazzi-upload.jks > pooparazzi-upload.jks.b64      # macOS: base6
 
 Repository › Settings › Secrets and variables › Actions.
 
-**Secrets** (all required by `release.yml`; the run stops early with a list of the missing ones):
+**Secrets** (the four `UPLOAD_*` secrets go together: with only some of them the run stops early with a list of the missing ones; with none of them the run falls back to the [public side-load key](#without-the-upload-key)):
 
 | Secret | Value |
 |---|---|
@@ -100,10 +100,10 @@ Until the app's first release has been reviewed and published, Play only accepts
 
 ## Side-loading the APKs
 
-Every run of `release.yml` creates a GitHub Release tagged `v<versionName>-<base>` (for example `v0.1.0-101`) with two files: `pooparazzi-phone-….apk` and `pooparazzi-watch-….apk`. They only need the four upload-key secrets: without `PLAY_SERVICE_ACCOUNT_JSON` the Play upload is skipped with a warning and the GitHub Release is still made.
+Every run of `release.yml` creates a GitHub Release tagged `v<versionName>-<base>` (for example `v0.1.0-101`) with two files: `pooparazzi-phone-….apk` and `pooparazzi-watch-….apk`. They need no secrets: without `PLAY_SERVICE_ACCOUNT_JSON` the Play upload is skipped with a warning, and without the upload-key secrets the APKs are signed with the [public side-load key](#without-the-upload-key). Either way the GitHub Release is still made.
 
 - **Same release on both devices.** Install the phone and watch APK from the same release so they sync.
-- **Updates.** All releases are signed with your upload key, so a newer release installs over an older one and keeps the data.
+- **Updates.** All releases are signed with the same key (your upload key, or the side-load key until you add one), so a newer release installs over an older one and keeps the data. Adding the upload-key secrets later changes the key: uninstall the side-loaded apps once (which deletes their data) before installing the first upload-key release.
 - **Not interchangeable with Play installs.** Play re-signs its downloads with the Play App Signing key, so a Play install can't update a side-loaded one or the other way round: uninstall first (which deletes the app's data).
 - **Phone:** open the APK on the phone and allow installs from that app, or `adb install pooparazzi-phone-….apk`.
 - **Watch:** enable Developer options (Settings › System › About › Versions, tap Build number 7 times), turn on ADB debugging and Wireless debugging, pair from a computer on the same Wi-Fi and install:
@@ -114,9 +114,13 @@ Every run of `release.yml` creates a GitHub Release tagged `v<versionName>-<base
   adb -s <ip>:<port> install pooparazzi-watch-….apk
   ```
 
+### Without the upload key
+
+Until the four `UPLOAD_*` secrets are set, `release.yml` signs the APKs (and the bundles in the workflow artifact) with [`keystores/sideload.jks`](../keystores/sideload.jks), alias `sideload`, store and key password `pooparazzi-sideload`, and skips the Play upload. The key is in the repository on purpose, so every merge produces installable releases with no setup and each one updates the last. Because it is public, anyone can sign an APK that installs over these: use it only for testing builds, and never upload a bundle signed with it to Play (it would become the registered upload key). Add the upload-key secrets before relying on the side-loaded apps.
+
 ## Checklist
 
-- [ ] Upload keystore created and backed up (step 1); with the four upload-key secrets every merge already publishes APKs to GitHub Releases
+- [ ] Upload keystore created and backed up (step 1); until then every merge publishes APKs signed with the public side-load key to GitHub Releases
 - [ ] Secrets `PLAY_SERVICE_ACCOUNT_JSON`, `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_KEYSTORE_PASSWORD`, `UPLOAD_KEY_ALIAS`, `UPLOAD_KEY_PASSWORD` added (step 2)
 - [ ] App `com.ffmathy.pooparazzi` created in Play Console, Play App Signing on (step 3)
 - [ ] Wear OS form factor enabled for the listing (step 4)
