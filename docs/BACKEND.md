@@ -95,8 +95,10 @@ The app sends the link with `ActionCodeSettings`: `url = https://<project-id>.we
 ### 3. Create the database and its rules
 
 1. Build › **Firestore Database** › Create database, in **production mode**. Choose the location **`eur3` (Europe)**: the privacy policy says the data is stored in the EU. The location cannot be changed later; if your project uses another one, change [PRIVACY.md](PRIVACY.md) and [`firebase/hosting/privacy/index.html`](../firebase/hosting/privacy/index.html).
-2. **Required:** Firestore › **TTL policies** › Create policy: collection group `invites`, timestamp field `expiresAt`. Firestore then deletes unused invites (which hold the inviter's email address) after they expire, usually within a day, as the privacy policy promises. Invites cannot be listed by the app, and the phone that made one deletes it only when its maker leaves or deletes the account there, so nothing else removes them. Should the console not offer TTL on your plan, delete expired invites by hand at least once a day (Firestore › `invites`, filter `expiresAt` < now) or change the privacy policy.
-3. Deploy the rules and the website from this repository (next section).
+2. Deploy the rules, the TTL policy and the website from this repository (next section).
+3. **Required:** check that the TTL policy is on. The Firebase console does not show TTL policies; open the [Google Cloud console](https://console.cloud.google.com/firestore/databases/-default-/ttl) for the same project (Firestore › **Time-to-live (TTL)**): it lists collection group `invites`, timestamp field `expiresAt`, as *Serving* (setting it up can take a few minutes, longer with many invites). Or run `gcloud firestore fields ttls list --project <your-project-id>`. Firestore then deletes unused invites (which hold the inviter's email address) after they expire, usually within a day, as the privacy policy promises. Invites cannot be listed by the app, and the phone that made one deletes it only when its maker leaves or deletes the account there, so nothing else removes them.
+
+   The policy comes from [`firestore.indexes.json`](../firebase/firestore.indexes.json) (`fieldOverrides`, `"ttl": true`, keeping the ascending index the retention job's `expiresAt <` query uses). Without the deploy, create it by hand on that Google Cloud page (Create policy: collection group `invites`, timestamp field `expiresAt`) or with `gcloud firestore fields ttls update expiresAt --collection-group=invites --enable-ttl --project <your-project-id>`. Failing all of that, delete expired invites by hand at least once a day (Firestore › `invites`, filter `expiresAt` < now) or change the privacy policy.
 
 ### 4. Deploy the rules and the website
 
@@ -109,7 +111,7 @@ npx firebase login
 npm run deploy -- --project <your-project-id>
 ```
 
-That deploys the Firestore rules (and indexes) and the website in [`firebase/hosting/`](../firebase/hosting). Deploy again after changing either. Or, for the rules only, open Firestore › **Rules** in the console, paste the whole of [`firebase/firestore.rules`](../firebase/firestore.rules) and click Publish.
+That deploys the Firestore rules, indexes and TTL policy, and the website in [`firebase/hosting/`](../firebase/hosting). Deploy again after changing either. Or, for the rules only, open Firestore › **Rules** in the console, paste the whole of [`firebase/firestore.rules`](../firebase/firestore.rules) and click Publish. (the TTL policy then has to be created by hand, §3).
 
 The website ([`firebase.json`](../firebase/firebase.json) › `hosting`), served at `https://<project-id>.web.app` and `https://<project-id>.firebaseapp.com`, is a few static pages with no scripts, no cookies and no external resources (`Content-Security-Policy: default-src 'none'`, `Referrer-Policy: no-referrer`, so an invite code never leaks to Google Play through the referrer). Those headers apply to the site's own paths only (`firebase.json` matches every path except those starting with `/__/`), so Firebase's reserved pages under `/__/` (the email link handler `/__/auth/links`, which runs scripts) keep their own:
 
@@ -200,7 +202,7 @@ Run it locally with `GOOGLE_APPLICATION_CREDENTIALS=key.json FIREBASE_PROJECT_ID
 - [ ] Hosting deployed, so **`https://<project-id>.web.app/privacy`** is live; the same URL in Play Console › App content › **Privacy policy** and in the store listing.
 - [ ] Play Console › App content › **Data safety**: collected and stored by the developer, encrypted in transit, deletable by the user: **email address** (account management, app functionality); **app activity / other user-generated content**: the log entries and the babies' names (app functionality), **shared with other users** of the family at the user's request (not "shared with third parties" in Play's sense, since that is a user-initiated transfer); not used for ads or analytics. Health-related? The log is feeding, diaper and sleep data about a baby: declare it as **Health info** if Play asks.
 - [ ] Data safety › Data deletion: in the app (Settings › Account › Delete account) and by email to **mathias.lorenzen@live.com** (the web address of the privacy policy explains both).
-- [ ] **Required:** TTL policy on `invites.expiresAt` (or deleting expired invites by hand daily); the privacy policy promises it.
+- [ ] **Required:** TTL policy on `invites.expiresAt` *Serving* in the Google Cloud console › Firestore › Time-to-live (it is deployed with the rules; or deleting expired invites by hand daily); the privacy policy promises it.
 - [ ] Requests to the contact address answered within one month (access: export the family's documents from the console; erasure: "Removing someone" above).
 - [ ] **Retention**: the `FIREBASE_SERVICE_ACCOUNT` secret added and a dry run of the Retention workflow checked (Retention, above); the privacy policy promises the 2-year deletion.
 - [ ] When the data handled changes, update [PRIVACY.md](PRIVACY.md) and the `/privacy` page together, with a new date, and the records in [privacy/](privacy).
