@@ -47,6 +47,7 @@ class InMemorySettings(initial: Settings = SampleData.settings) : SettingsReposi
     }
     override suspend fun selectBaby(id: String): Settings = update { it.withSelectedBaby(id) }
     override suspend fun ensureBabies(ids: Collection<String>): Settings = update { it.withBabies(ids) }
+    override suspend fun importBabies(babies: Collection<Baby>): Settings = update { it.withMergedBabies(babies) }
     override suspend fun setAppearance(appearance: Appearance): Settings = update { it.copy(appearance = appearance) }
     override suspend fun setLanguage(language: AppLanguage): Settings = update { it.copy(language = language) }
     override suspend fun applyRemote(remote: Settings): Boolean {
