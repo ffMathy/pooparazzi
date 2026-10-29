@@ -200,8 +200,15 @@ class StatisticsSemanticsTest {
     @Test
     fun theEmptyStateSaysWhenStatisticsStart() {
         show(StatisticsSamples.empty())
-        compose.onNodeWithText("Statistics start after the first full day of logging.").assertExists()
+        compose.onNodeWithText("Statistics start as soon as something is logged.").assertExists()
         compose.onNodeWithText("Average per day").assertDoesNotExist()
+    }
+
+    @Test
+    fun beforeAWholeDayTodaySoFarIsShown() {
+        show(StatisticsSamples.soFar())
+        compose.onNodeWithContentDescription("Poop. Last 7 days: 2.0 a day. Last 30 days: 2.0 a day.").assertIsSelected()
+        compose.onNodeWithText(SO_FAR_FOOTNOTE).assertExists()
     }
 
     @Test
@@ -252,5 +259,10 @@ class StatisticsSemanticsTest {
     fun thereIsOneScrollableNode() {
         show(StatisticsSamples.lastThirtyDays())
         compose.onAllNodes(hasScrollAction()).assertCountEquals(1)
+    }
+
+    private companion object {
+        const val SO_FAR_FOOTNOTE =
+            "No whole day has been logged yet, so these averages count today so far. From the first whole day on, they count whole days up to yesterday."
     }
 }

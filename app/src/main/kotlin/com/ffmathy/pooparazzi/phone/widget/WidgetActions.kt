@@ -49,11 +49,11 @@ class QuickWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 /**
- * The 4×2 widget on the cover screen (Flex Window) of Samsung's flip phones: the same [LogWidget], under a provider
- * that only Samsung's cover screen lists (`keyguard` category, `sub_screen` display), so other launchers never show it.
+ * The 4×2 widget on the cover screen (Flex Window) of Samsung's flip phones ([CoverWidget]), under a provider that
+ * only Samsung's cover screen lists (`keyguard` category, `sub_screen` display), so other launchers never show it.
  */
 class CoverWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = LogWidget()
+    override val glanceAppWidget: GlanceAppWidget = CoverWidget()
 
     override fun onDisabled(context: Context) {
         super.onDisabled(context)

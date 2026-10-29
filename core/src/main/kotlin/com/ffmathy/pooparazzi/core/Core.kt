@@ -38,7 +38,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * The object graph shared by the phone and watch apps.
  *
  * @property scope application-lifetime scope for background sync work.
- * @property cloud the backup to the account's backend: [NoopCloudSync] on the watch and in builds without one.
+ * @property cloud the backup of the log and the babies to the account's family: [NoopCloudSync] on the watch and in
+ *   builds without a backend.
  */
 class CoreGraph(
     val clock: Clock,
@@ -99,18 +100,19 @@ class CoreGraph(
             )
             val database = PooparazziDatabase.build(app)
             val sync = DataLayerEntrySync(app, clock)
-            val settings = DataStoreSettingsRepository(app.settingsDataStore, clock, sync, scope)
+            // Flagged for the backend only while an account is signed in (BABIES_AND_BACKUP §4.2).
+            val cloudBackup: () -> Boolean = cloud?.account?.let { account -> { account.value != null } } ?: { false }
+            val settings = DataStoreSettingsRepository(app.settingsDataStore, clock, sync, scope, cloudBackup)
             val repository = RoomEntryRepository(
                 database,
                 clock,
                 sync,
                 scope,
                 selectedBaby = settings.settings.map { it.selectedBaby.id },
-                // Flagged for the backend only while an account is signed in (BABIES_AND_BACKUP §4.2).
-                cloudBackup = cloud?.account?.let { account -> { account.value != null } } ?: { false },
+                cloudBackup = cloudBackup,
             )
             val backup = cloud?.let {
-                CloudBackup(repository, it.store, it.account, DataStoreCloudBookkeepingStore(app.cloudDataStore), clock, scope)
+                CloudBackup(repository, settings, it.store, it.account, DataStoreCloudBookkeepingStore(app.cloudDataStore), clock, scope)
             }
             sync.attach(CoreSyncSink(repository, settings))
             return CoreGraph(clock, repository, settings, sync, scope, database, backup ?: NoopCloudSync)

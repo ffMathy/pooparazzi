@@ -60,7 +60,7 @@ object SampleData {
             Entry.breastfeed(t(1, 40), BreastSide.LEFT_THEN_RIGHT, id = "sample-breast-0140"),
             Entry.diaper(t(1, 52), pee = true, poop = false, id = "sample-pee-0152"),
             Entry.sleep(t(2, 5), t(5, 20), id = "sample-sleep-0205"),
-            Entry.feed(FeedType.FORMULA, t(5, 25), id = "sample-formula-0525"),
+            Entry.feed(FeedType.FORMULA, t(5, 25), id = "sample-formula-0525", amountMl = 90),
             Entry.diaper(t(5, 41), pee = true, poop = true, color = PoopColor.YELLOW, texture = PoopTexture.SEEDY, id = "sample-both-0541"),
             Entry.sleep(t(6, 10), t(7, 45), id = "sample-sleep-0610"),
             Entry.breastfeed(t(8, 0), BreastSide.RIGHT_THEN_LEFT, id = "sample-breast-0800"),
@@ -68,7 +68,7 @@ object SampleData {
             Entry.sleep(t(9, 30), t(10, 15), id = "sample-sleep-0930"),
             Entry.feed(FeedType.FOOD, t(10, 30), id = "sample-food-1030"),
             Entry.diaper(t(11, 5), pee = true, poop = false, id = "sample-pee-1105"),
-            Entry.feed(FeedType.FORMULA, t(12, 22), id = "sample-formula-1222"),
+            Entry.feed(FeedType.FORMULA, t(12, 22), id = "sample-formula-1222", amountMl = 120),
             Entry.sleep(t(12, 40), t(13, 27), id = "sample-sleep-1240"),
             Entry.diaper(t(13, 44), pee = true, poop = false, id = "sample-pee-1344"),
         )

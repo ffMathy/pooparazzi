@@ -30,8 +30,7 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
-import com.ffmathy.pooparazzi.phone.ui.home.CardModel
-import com.ffmathy.pooparazzi.phone.ui.home.CardSpec
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptSpec
 import com.ffmathy.pooparazzi.phone.ui.home.HomeActions
 import com.ffmathy.pooparazzi.phone.ui.home.HomeScreen
 import com.ffmathy.pooparazzi.phone.ui.home.HomeStateBuilder
@@ -65,6 +64,9 @@ class HomeSemanticsTest {
         override fun onSideTick(breast: Breast) { calls += "tick:$breast" }
         override fun onLogBreastfeed() { calls += "log-breast" }
         override fun onFeedType(type: FeedType?) { calls += "type:$type" }
+        override fun onUndo() { calls += "undo" }
+        override fun onReceiptDone() { calls += "done" }
+        override fun onSheetEdit(entryId: String) { calls += "sheet-edit:$entryId" }
         override fun onSwitchBaby() { calls += "switch" }
         override fun onSelectBaby(babyId: String) { calls += "select:$babyId" }
         override fun onRetrySync() { calls += "retry" }
@@ -165,11 +167,17 @@ class HomeSemanticsTest {
     }
 
     @Test
-    fun offsetChipsSpeakTheirMinutes() {
+    fun theReceiptShowsTheLogWithItsTimeAndItsChipsSpeakTheirMinutes() {
         show(HomeSamples.justLogged())
+        compose.onNodeWithText("Formula logged").assertExists()
+        compose.onNodeWithText("14:32").assertExists()
         compose.onNodeWithContentDescription("5 minutes earlier").assertExists()
         compose.onNodeWithContentDescription("15 minutes earlier").assertExists()
-        compose.onNodeWithText("Undo").assertExists()
+        compose.waitUntil(2_000) { runCatching { compose.onNodeWithText("Undo").assertIsEnabled() }.isSuccess }
+        compose.onNodeWithText("Undo").performClick()
+        compose.onNodeWithText("Edit").performClick()
+        compose.onNodeWithText("Done").performClick()
+        assertEquals(listOf("undo", "sheet-edit:${HomeSamples.formula1432.id}", "done"), calls)
     }
 
     @Test
@@ -182,16 +190,16 @@ class HomeSemanticsTest {
     @Test
     fun receiptSubLinesHaveSpokenForms() {
         val feed = Entry.breastfeed(SampleData.NOW_1432, BreastSide.LEFT_THEN_RIGHT, id = "breast-feed")
-        show(card(feed, CardSpec.FeedLogged(feed.id, FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT)))
+        show(receipt(feed, ReceiptSpec.FeedLogged(feed.id, FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT)))
         compose.onNodeWithText("Breast logged").assertExists()
-        compose.onNodeWithText("Left → Right").assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Left then right")))
+        compose.onNodeWithText("14:32 · Left → Right").assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("14:32, Left then right")))
     }
 
     @Test
     fun wokeUpSubLineHasASpokenForm() {
         val sleep = Entry.sleep(SampleData.at(13, 25), SampleData.NOW_1432, id = "ended-sleep")
-        show(card(sleep, CardSpec.WokeUp(sleep.id)))
-        compose.onNodeWithText("Slept 1h 07m").assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("Slept 1 hour 7 minutes")))
+        show(receipt(sleep, ReceiptSpec.WokeUp(sleep.id)))
+        compose.onNodeWithText("14:32 · Slept 1h 07m").assert(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf("14:32, Slept 1 hour 7 minutes")))
     }
 
     @Test
@@ -227,13 +235,13 @@ class HomeSemanticsTest {
         compose.onNodeWithContentDescription("Last diaper, pee and poop, 32 minutes ago, at 14:00").assertExists()
     }
 
-    private fun card(entry: Entry?, spec: CardSpec, now: Long = SampleData.NOW_1432) = HomeStateBuilder.build(
+    private fun receipt(entry: Entry?, spec: ReceiptSpec, now: Long = SampleData.NOW_1432) = HomeStateBuilder.build(
         entries = SampleData.scenario() + listOfNotNull(entry),
         babyName = SampleData.BABY_NAME,
         sync = SyncStatus.Synced(SampleData.SYNCED_1431),
         now = now,
         zone = SampleData.ZONE,
-        card = CardModel(key = 1, spec = spec, baseTime = now),
+        sheet = SheetModel.Receipt(stamp = now, key = 1, spec = spec),
     )
 
     private fun diaperSheet(sheet: SheetModel.Diaper) = HomeStateBuilder.build(

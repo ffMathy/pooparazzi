@@ -4,6 +4,7 @@ import android.content.Context
 import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
@@ -14,6 +15,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -22,6 +24,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.wear.compose.material3.AppScaffold
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.sample.SampleData
+import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
 import com.ffmathy.pooparazzi.wear.feed.SideActions
@@ -145,6 +148,24 @@ class AccessibilityTest {
         compose.onNodeWithContentDescription("Dismiss").assertIsEnabled()
     }
 
+    /** The sync status is a phone icon with no text; TalkBack reads the sentence (DESIGN_SPEC §4.5). */
+    @Test
+    fun loggedSyncIsAPhoneIconReadAsASentence() {
+        compose.mainClock.autoAdvance = false
+        show { LoggedScreen(WearSamples.receiptDiaper(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {}) }
+        compose.onNodeWithContentDescription("Synced with phone · 14:31")
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+        compose.onNode(hasText("Synced with phone", substring = true)).assertDoesNotExist()
+    }
+
+    @Test
+    fun theMainFooterSyncIsAPhoneIcon() {
+        show { MainScreen(WearSamples.mainIdle().copy(sync = SyncStatus.Offline), MainActions()) }
+        val list = compose.onNode(hasScrollToIndexAction())
+        list.performScrollToNode(hasContentDescription("Saved on watch · will sync"))
+        compose.onNode(hasText("will sync", substring = true)).assertDoesNotExist()
+    }
+
     @Test
     fun sidesAreCheckboxesReadWithTheirPlaceInTheOrder() {
         show { SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.RIGHT, Breast.LEFT)), SideActions()) }
@@ -223,5 +244,18 @@ class DanishAccessibilityTest {
         compose.onNodeWithContentDescription("Start søvn").assert(
             SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Vågen siden kl. 13:27"),
         )
+    }
+
+    @Test
+    fun theSyncIconSpeaksDanish() {
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            XWearTheme {
+                AppScaffold {
+                    LoggedScreen(WearSamples.receiptDiaper(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
+                }
+            }
+        }
+        compose.onNodeWithContentDescription("Synkroniseret med telefon · 14:31").assertExists()
     }
 }

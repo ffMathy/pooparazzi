@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.phone.ui.preview
 
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -11,8 +12,10 @@ import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.phone.ui.home.CardModel
 import com.ffmathy.pooparazzi.phone.ui.home.CardSpec
+import com.ffmathy.pooparazzi.phone.ui.home.GuardKind
 import com.ffmathy.pooparazzi.phone.ui.home.HomeStateBuilder
 import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptSpec
 import com.ffmathy.pooparazzi.phone.ui.home.SheetModel
 import com.ffmathy.pooparazzi.phone.ui.home.Undo
 
@@ -40,7 +43,7 @@ object HomeSamples {
         build(SampleData.historyAt0312(zone), SampleData.NOW_0312, sync = SyncStatus.Synced(SampleData.SYNCED_0311))
 
     /**
-     * A first day without a paired watch (no sync line): only a sleep running since 12:48, at 14:32 (no feeds or
+     * A first day without a paired watch (no status icons): only a sleep running since 12:48, at 14:32 (no feeds or
      * diapers yet): Today 0 · 0 · 0 · 1h 44m.
      */
     fun firstSleep(): HomeUiState = build(
@@ -51,7 +54,8 @@ object HomeSamples {
 
     /**
      * 14:50, a breast feed (Left → Right) just logged for 14:32 with the −15m chip from the Feed sheet opened at 14:47:
-     * "Last fed 18m ago · 14:32 · Left → Right" and the undo card "Breast logged · Left → Right".
+     * "Last fed 18m ago · 14:32 · Left → Right" and the receipt "Breast logged · 14:32", sub "Left → Right", −15m
+     * selected.
      */
     fun breastLogged(): HomeUiState {
         val feed = SampleData.recentBreastfeed(zone)
@@ -60,51 +64,62 @@ object HomeSamples {
             SampleData.scenarioWithRecentFeed(zone),
             SampleData.NOW_1450,
             sync = SyncStatus.Synced(SampleData.at(14, 49)),
-            card = CardModel(
-                key = 1,
-                spec = CardSpec.FeedLogged(feed.id, FeedType.BREAST, feed.breastSide),
-                baseTime = stamp,
+            sheet = SheetModel.Receipt(
+                stamp = stamp,
                 offsetMinutes = -15,
+                key = 1,
+                spec = ReceiptSpec.FeedLogged(feed.id, FeedType.BREAST, feed.breastSide),
                 undo = Undo.Delete(feed.id),
             ),
         )
     }
 
     /**
-     * 14:32, Formula just logged from the Feed sheet: the undo card with Earlier chips. The log is on its way to the
-     * watch ("Syncing with watch…"), as in the approved mockup.
+     * 14:32, Formula just logged from the Feed sheet: the receipt "Formula logged · 14:32" with Undo, the offset chips
+     * (+5m disabled: it would be in the future), Edit and Done. The log is on its way to the watch ("Syncing with
+     * watch…").
      */
     fun justLogged(): HomeUiState = build(
         SampleData.scenario(zone) + formula1432,
         SampleData.NOW_1432,
         sync = SyncStatus.Pending,
-        card = CardModel(
+        sheet = SheetModel.Receipt(
+            stamp = SampleData.NOW_1432,
             key = 1,
-            spec = CardSpec.FeedLogged(formula1432.id, FeedType.FORMULA),
-            baseTime = SampleData.NOW_1432,
+            spec = ReceiptSpec.FeedLogged(formula1432.id, FeedType.FORMULA),
             undo = Undo.Delete(formula1432.id),
         ),
     )
 
-    /** 03:12, asleep since 02:05 with "Adjust start" tapped: the card with −15m · −5m · +5m and the Edit chip. */
+    /**
+     * 03:12, asleep since 02:05 with "Adjust start" tapped and −15m chosen: the sheet "Adjust start · 01:50" with
+     * −15m · −10m · −5m · +5m, Edit and Save.
+     */
     fun adjustingStart(): HomeUiState = build(
         SampleData.scenarioAt0312(zone),
         SampleData.NOW_0312,
         sync = SyncStatus.Synced(SampleData.SYNCED_0311),
-        card = CardModel(key = 1, spec = CardSpec.AdjustStart(SLEEP_0205), baseTime = SampleData.at(2, 5)),
+        sheet = SheetModel.Adjust(stamp = SampleData.at(2, 5), offsetMinutes = -15, entryId = SLEEP_0205),
     )
 
-    /** 03:12, asleep since 02:05, a wet diaper just logged: the card offers "End sleep" · −5m · −10m. */
+    /** 14:32, a toggle drawn before the sleep started elsewhere: the notice "Asleep" + "Already asleep since 14:30". */
+    fun guardNotice(): HomeUiState = build(
+        SampleData.scenario(zone) + Entry.sleep(SampleData.at(14, 30), null, id = "sample-sleep-1430"),
+        SampleData.NOW_1432,
+        card = CardModel(key = 1, spec = CardSpec.Guard(GuardKind.ASLEEP, SampleData.at(14, 30))),
+    )
+
+    /** 03:12, asleep since 02:05, a wet diaper just logged: the receipt also offers "End sleep". */
     fun loggedDuringSleep(): HomeUiState {
         val pee = Entry.diaper(SampleData.NOW_0312, pee = true, poop = false, id = "sample-pee-0312")
         return build(
             SampleData.scenarioAt0312(zone) + pee,
             SampleData.NOW_0312,
             sync = SyncStatus.Synced(SampleData.SYNCED_0311),
-            card = CardModel(
+            sheet = SheetModel.Receipt(
+                stamp = SampleData.NOW_0312,
                 key = 1,
-                spec = CardSpec.DiaperLogged(pee.id, DiaperKind.PEE),
-                baseTime = SampleData.NOW_0312,
+                spec = ReceiptSpec.DiaperLogged(pee.id, DiaperKind.PEE),
                 duringSleep = true,
                 undo = Undo.Delete(pee.id),
             ),
@@ -119,6 +134,13 @@ object HomeSamples {
         SampleData.scenario(zone),
         SampleData.NOW_1432,
         sheet = SheetModel.Feed(SampleData.NOW_1432, breast = true, ticks = ticks),
+    )
+
+    /** The Feed sheet opened at 14:32 after tapping Formula: the amount slider at [amountMl] (null: no amount). */
+    fun formulaSheet(amountMl: Int? = 120): HomeUiState = build(
+        SampleData.scenario(zone),
+        SampleData.NOW_1432,
+        sheet = SheetModel.Feed(SampleData.NOW_1432, formula = true, amountMl = amountMl),
     )
 
     /** The Diaper sheet with Pee and Poop on, Yellow and Seedy selected. */
@@ -141,9 +163,16 @@ object HomeSamples {
         sheet = SheetModel.Diaper(stamp = SampleData.NOW_1432, poop = true, color = PoopColor.PALE),
     )
 
-    /** Twins (Noa and Ida), Noa current, at 14:32: the name is the switcher (BABIES_AND_BACKUP §2.4). */
-    fun twins(sync: SyncStatus = synced1431): HomeUiState =
-        build(SampleData.scenario(zone), SampleData.NOW_1432, sync = sync, settings = SampleData.twinSettings)
+    /**
+     * Twins (Noa and Ida), Noa current, at 14:32: the name is the switcher (BABIES_AND_BACKUP §2.4). Signed in and backed
+     * up at 14:31, so the watch and the cloud icon both show under the name.
+     */
+    fun twins(sync: SyncStatus = synced1431, cloud: CloudStatus = CloudStatus.Synced(SampleData.SYNCED_1431)): HomeUiState =
+        build(SampleData.scenario(zone), SampleData.NOW_1432, sync = sync, settings = SampleData.twinSettings, cloud = cloud)
+
+    /** [idle] with the watch sync and the backup in the given states (the status icons, DESIGN_SPEC §4.5). */
+    fun syncStates(sync: SyncStatus, cloud: CloudStatus): HomeUiState =
+        build(SampleData.scenario(zone), SampleData.NOW_1432, sync = sync, cloud = cloud)
 
     /** [twins] with the Switch baby sheet open. */
     fun twinsSwitching(): HomeUiState =
@@ -157,6 +186,7 @@ object HomeSamples {
         sheet: SheetModel? = null,
         settings: Settings = SampleData.settings,
         switchingBaby: Boolean = false,
+        cloud: CloudStatus = CloudStatus.Off,
     ): HomeUiState = HomeStateBuilder.build(
         entries = entries,
         babyName = settings.babyName,
@@ -168,5 +198,6 @@ object HomeSamples {
         babies = settings.babies,
         babyId = settings.selectedBaby.id,
         switchingBaby = switchingBaby,
+        cloud = cloud,
     )
 }

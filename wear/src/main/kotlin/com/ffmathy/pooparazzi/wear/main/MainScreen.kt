@@ -87,7 +87,7 @@ import com.ffmathy.pooparazzi.wear.theme.isAmbient
 import com.ffmathy.pooparazzi.wear.ui.AutoSizeLine
 import com.ffmathy.pooparazzi.wear.ui.DurationNumeral
 import com.ffmathy.pooparazzi.wear.ui.StatusCard
-import com.ffmathy.pooparazzi.wear.ui.SyncLine
+import com.ffmathy.pooparazzi.wear.ui.SyncIcon
 import com.ffmathy.pooparazzi.wear.ui.WatchShapes
 import com.ffmathy.pooparazzi.wear.ui.XCompactButton
 import com.ffmathy.pooparazzi.wear.ui.XListButton
@@ -233,7 +233,7 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                 if (syncText != null) {
                     item(key = "sync") {
                         Box(Modifier.fillMaxWidth().transformedHeight(this, spec), contentAlignment = Alignment.Center) {
-                            SyncLine(state.sync, syncText, maxWidth = 180.dp)
+                            SyncIcon(state.sync, syncText)
                         }
                     }
                 }

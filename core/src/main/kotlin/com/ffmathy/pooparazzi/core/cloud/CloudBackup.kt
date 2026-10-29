@@ -20,34 +20,41 @@ import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * The backup of the log to the signed-in account's [store] (BABIES_AND_BACKUP §4.3–4.4).
+ * The backup of the log and the babies to the signed-in account's family in [store] (BABIES_AND_BACKUP §4, FAMILIES).
  *
- * A sync runs whenever an account is signed in, one at a time, and always pulls before it pushes:
+ * A sync runs whenever an account with a known family ([CloudAccount.familyId]) is signed in, one at a time, and
+ * always pulls before it pushes:
  *
- * 1. The first sync for an account on this device (or for another account than the last, or after signing out) flags
- *    every row for upload ("everything logged so far is backed up") and pulls from the start, so rows the backend
- *    already holds unchanged are cleared again and only differences are uploaded.
- * 2. **Pull**: pages of changes after the stored cursor, merged into the database (last-writer-wins and the per-baby
- *    conflict rules, forwarded to the watch). The cursor is stored after each page, so an interrupted pull resumes
+ * 1. The first sync for a family on this device (or for another family than the last, after joining or leaving one,
+ *    or after signing out) flags every row and every baby for upload ("everything logged so far is backed up") and
+ *    pulls from the start, so what the family already holds unchanged is cleared again and only differences are
+ *    uploaded. Joining a family so merges this phone's log and babies into it.
+ * 2. **Pull**: the babies, then the entries; pages of changes after their stored cursors, merged here (babies
+ *    last-writer-wins per baby into the settings, which reach the watch; entries last-writer-wins with the per-baby
+ *    conflict rules, forwarded to the watch). Each cursor is stored after each page, so an interrupted pull resumes
  *    where it stopped. Pulling first means a newer version another phone backed up is merged before this phone sends
  *    its own: an upload is a plain overwrite, and would otherwise put an older version over it.
- * 3. **Push**: the current version of the pending rows, in batches; each row is cleared unless written again meanwhile.
+ * 3. **Push**: the current version of the pending babies, then of the pending rows, in batches; each is cleared
+ *    unless written again meanwhile.
  *
- * Syncs run when an account signs in, on [requestSync] (the app in the foreground, at most once a minute) and
- * [syncNow], and [pushDelayMillis] after a write leaves rows pending. Nothing keeps a listener open on the backend: a
- * pull with nothing new costs one read.
+ * Syncs run when an account signs in or its family changes, on [requestSync] (the app in the foreground, at most once a
+ * minute) and [syncNow], and [pushDelayMillis] after a write leaves rows or babies pending. Nothing keeps a listener
+ * open on the backend: a pull with nothing new costs two reads (babies and entries).
  *
- * Rows are flagged for the backend only while an account is signed in (the repository asks [account]); signing out
- * clears every flag, so soft deletes are purged as without a backup, and the next sign-in flags everything again (1.).
+ * Rows and babies are flagged for the backend only while an account is signed in (the repositories ask [account]);
+ * signing out clears every flag, so soft deletes are purged as without a backup, and the next sign-in flags everything
+ * again (1.). Signed in while the family is not known yet, the flags stay and nothing is sent.
  *
  * Nothing here throws: failures become [status] ([CloudError.OFFLINE] → [CloudStatus.Offline] and so on) and the rows
  * stay pending for the next sync.
  *
+ * @param babies the babies' side on this phone (the settings).
  * @param scope where the background syncs run (the app's lifetime).
  * @param monotonicMillis a clock that never goes back, for the pull throttle.
  */
 class CloudBackup(
     private val repository: RoomEntryRepository,
+    private val babies: CloudBabies,
     private val store: CloudStore,
     private val account: StateFlow<CloudAccount?>,
     private val bookkeeping: CloudBookkeepingStore,
@@ -70,6 +77,9 @@ class CloudBackup(
     /** When the last pull started ([monotonicMillis]); guarded by [pullLock]. */
     private var lastPullAt: Long? = null
 
+    /** The family syncs go to: the signed-in account's, or null (signed out, or the family not known yet). */
+    private val familyId: String? get() = account.value?.familyId
+
     override fun start() {
         if (!started.compareAndSet(false, true)) return
         scope.launch { followAccount() }
@@ -89,14 +99,15 @@ class CloudBackup(
     override suspend fun deleteBackup(): Boolean = scope.async {
         try {
             mutex.withLock {
-                val uid = account.value?.uid ?: return@withLock false
-                // Forgotten first: should the deletion stop halfway, a later sync for this account backs up everything.
-                bookkeeping.update { it.forget(uid) }
-                store.deleteAll(uid)
+                val signedIn = account.value ?: return@withLock false
+                val family = signedIn.familyId ?: return@withLock false
+                // Forgotten first: should the deletion stop halfway, a later sync for this family backs up everything.
+                bookkeeping.update { it.forget(family) }
+                store.deleteAll(signedIn.uid, family)
                 // Kept on disk: should the account deletion fail and the app restart, nothing goes up again by itself.
-                bookkeeping.update { it.copy(deletedUid = uid) }
+                bookkeeping.update { it.copy(deletedFamilyId = family) }
                 // Nothing is backed up for this account any more: the status must not keep saying it is.
-                if (account.value?.uid == uid) state.value = CloudStatus.Deleted
+                if (familyId == family) state.value = CloudStatus.Deleted
                 true
             }
         } catch (e: CancellationException) {
@@ -107,35 +118,46 @@ class CloudBackup(
         }
     }.await()
 
-    /** Shows where the account stands and starts a full sync whenever one signs in. */
+    /** Shows where the account stands and starts a full sync whenever one signs in or its family changes. */
     private suspend fun followAccount() {
-        account.map { it?.uid }.distinctUntilChanged().collect { uid ->
-            if (uid == null) {
-                state.value = CloudStatus.Off
-            } else {
-                lastSyncOf(uid)?.let { state.value = CloudStatus.Synced(it) }
-                claimPull()
+        account.map { it?.let { signedIn -> signedIn.uid to signedIn.familyId } }.distinctUntilChanged().collect { target ->
+            val family = target?.second
+            when {
+                target == null -> state.value = CloudStatus.Off
+                // Signed in, the family on its way: nothing to sync yet, and nothing to show but that it is coming.
+                family == null -> state.value = CloudStatus.Syncing
+                else -> {
+                    state.value = lastSyncOf(family)?.let { CloudStatus.Synced(it) } ?: CloudStatus.Syncing
+                    claimPull()
+                }
             }
             // The bookkeeping first, under the sync lock, so the sync after it sees the account as it now is.
             scope.launch {
-                mutex.withLock { accountChanged(uid) }
-                if (uid != null) sync()
+                mutex.withLock { accountChanged(target != null, family) }
+                if (family != null) sync()
             }
         }
     }
 
     /**
-     * Another account, or nobody, is signed in now: a deleted backup of an account no longer signed in is no reason to
-     * hold anything back any more. Signed out, nothing is pending for any backend: the flags are cleared (so deleted rows
-     * can be purged), and the next sign-in counts as the first and flags everything again. Call with [mutex] held.
+     * Another account or family, or nobody, is signed in now: a deleted backup of a family no longer signed in is no
+     * reason to hold anything back any more (while the family is not known yet, it is kept). Signed out, nothing is
+     * pending for any backend: the flags are cleared (so deleted rows can be purged), and the next sign-in counts as the
+     * first and flags everything again. Call with [mutex] held.
      */
-    private suspend fun accountChanged(uid: String?) {
+    private suspend fun accountChanged(signedIn: Boolean, family: String?) {
         try {
             bookkeeping.update { values ->
-                val kept = values.deletedUid?.takeIf { it == uid }
-                if (uid == null) values.copy(deletedUid = kept, fullUploadUid = null) else values.copy(deletedUid = kept)
+                when {
+                    !signedIn -> values.copy(deletedFamilyId = null, fullUploadFamilyId = null)
+                    family == null -> values
+                    else -> values.copy(deletedFamilyId = values.deletedFamilyId?.takeIf { it == family })
+                }
             }
-            if (uid == null && account.value == null) repository.clearCloudPending()
+            if (!signedIn && account.value == null) {
+                repository.clearCloudPending()
+                babies.clearBabiesCloudPending()
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -144,22 +166,23 @@ class CloudBackup(
     }
 
     /**
-     * Syncs [pushDelayMillis] after the last write that left rows pending, while an account is signed in. Every write
-     * to a pending row counts, also one that leaves their number as it was (ending a sleep that is still waiting to go
-     * up, or a row written again while its upload was on its way). It pulls first like every sync (one read when
+     * Syncs [pushDelayMillis] after the last write that left rows or babies pending, while the family is known. Every
+     * write to a pending row counts, also one that leaves their number as it was (ending a sleep that is still waiting
+     * to go up, or a row written again while its upload was on its way). It pulls first like every sync (cheap when
      * nothing is new), so the upload never puts this phone's older version over a newer one in the backup.
      */
     @OptIn(FlowPreview::class)
     private suspend fun followPending() {
-        combine(repository.observeCloudPending(), account) { pending, signedIn ->
-            if (pending.count > 0 && signedIn != null) pending to signedIn.uid else null
+        combine(repository.observeCloudPending(), babies.observeCloudPendingBabies(), account) { rows, pendingBabies, signedIn ->
+            val family = signedIn?.familyId
+            if ((rows.count > 0 || pendingBabies.isNotEmpty()) && family != null) Triple(rows, pendingBabies, family) else null
         }
             .debounce(pushDelayMillis)
             .collect { due -> if (due != null) sync() }
     }
 
-    private suspend fun lastSyncOf(uid: String): Long? = try {
-        bookkeeping.get().lastSyncFor(uid)
+    private suspend fun lastSyncOf(family: String): Long? = try {
+        bookkeeping.get().lastSyncFor(family)
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
@@ -175,7 +198,7 @@ class CloudBackup(
         due
     }
 
-    /** One sync; [backUpAgain] ("Back up now") also backs up an account whose backup was deleted. */
+    /** One sync; [backUpAgain] ("Back up now") also backs up a family whose backup was deleted. */
     private suspend fun sync(backUpAgain: Boolean = false) {
         try {
             mutex.withLock { syncLocked(backUpAgain) }
@@ -186,15 +209,17 @@ class CloudBackup(
         }
     }
 
-    /** One sync for the current account. Call with [mutex] held. */
+    /** One sync for the current family. Call with [mutex] held. */
     private suspend fun syncLocked(backUpAgain: Boolean) {
-        val uid = account.value?.uid
-        if (uid == null) {
+        val signedIn = account.value
+        if (signedIn == null) {
             state.value = CloudStatus.Off
             return
         }
+        // The family is on its way: its arrival starts a sync.
+        val family = signedIn.familyId ?: return
         val outcome = try {
-            syncAccount(uid, backUpAgain)
+            syncFamily(family, backUpAgain)
         } catch (e: CancellationException) {
             throw e
         } catch (e: CloudException) {
@@ -204,70 +229,115 @@ class CloudBackup(
             Log.w(TAG, "Backup sync failed", e)
             CloudStatus.Error
         }
-        // A sync that outlived its account (signed out meanwhile) says nothing about the new one.
-        if (account.value?.uid == uid) state.value = outcome
+        // A sync that outlived its family (signed out, or another family meanwhile) says nothing about the new one.
+        if (familyId == family) state.value = outcome
     }
 
-    /** Pulls and pushes for [uid], unless its backup was deleted; returns the status to show. */
-    private suspend fun syncAccount(uid: String, backUpAgain: Boolean): CloudStatus {
-        if (bookkeeping.get().isDeleted(uid)) {
+    /** Pulls and pushes for [family], unless its backup was deleted; returns the status to show. */
+    private suspend fun syncFamily(family: String, backUpAgain: Boolean): CloudStatus {
+        if (bookkeeping.get().isDeleted(family)) {
             // Its backup was deleted: nothing goes up for it again by itself, and the status says so.
             if (!backUpAgain) return CloudStatus.Deleted
-            bookkeeping.update { it.copy(deletedUid = null) }
+            bookkeeping.update { it.copy(deletedFamilyId = null) }
         }
         state.value = CloudStatus.Syncing
-        val firstForAccount = bookkeeping.get().fullUploadUid != uid
-        if (firstForAccount) {
-            // Flagged before anything is sent, so an interrupted first sync leaves the rows pending.
+        val firstForFamily = bookkeeping.get().fullUploadFamilyId != family
+        if (firstForFamily) {
+            // Flagged before anything is sent, so an interrupted first sync leaves the rows and babies pending.
             repository.markAllForCloud()
-            // Pulled from the start: a cursor this device kept for the account from an earlier time would skip the
+            babies.markAllBabiesForCloud()
+            // Pulled from the start: cursors this device kept for the family from an earlier time would skip the
             // unchanged documents, so nothing would be cleared and the whole log would go up again.
-            bookkeeping.update { it.copy(fullUploadUid = uid, cursorUid = uid, cursor = null) }
+            bookkeeping.update {
+                it.copy(fullUploadFamilyId = family, cursorFamilyId = family, cursor = null, babiesCursor = null)
+            }
         }
-        pull(uid)
-        push(uid)
+        pullBabies(family)
+        pull(family)
+        // The babies first: another phone then knows a new baby's name by the time its entries arrive.
+        pushBabies(family)
+        push(family)
         val now = clock.now()
-        bookkeeping.update { it.copy(lastSyncUid = uid, lastSyncAtMillis = now) }
+        bookkeeping.update { it.copy(lastSyncFamilyId = family, lastSyncAtMillis = now) }
         return CloudStatus.Synced(now)
     }
 
-    /** Merges every change after the stored cursor, a page at a time. */
-    private suspend fun pull(uid: String) {
+    /** Merges every change to the family's babies after the stored cursor, a page at a time. */
+    private suspend fun pullBabies(family: String) {
         synchronized(pullLock) { lastPullAt = monotonicMillis() }
-        var cursor = bookkeeping.get().cursorFor(uid)
+        pages(
+            family,
+            start = bookkeeping.get().babiesCursorFor(family),
+            fetch = { cursor -> store.babiesAfter(family, cursor, CloudStore.PAGE_SIZE) },
+            apply = { babies.applyCloudBabies(it) },
+            save = { at -> bookkeeping.update { it.withBabiesCursor(family, at) } },
+        )
+    }
+
+    /** Merges every change to the family's log after the stored cursor, a page at a time. */
+    private suspend fun pull(family: String) {
+        pages(
+            family,
+            start = bookkeeping.get().cursorFor(family),
+            fetch = { cursor -> store.changesAfter(family, cursor, CloudStore.PAGE_SIZE) },
+            apply = { repository.applyCloudEntries(it) },
+            save = { at -> bookkeeping.update { it.withCursor(family, at) } },
+        )
+    }
+
+    /** Reads pages after [start] until the last, applying each and then storing its cursor. */
+    private suspend fun <T> pages(
+        family: String,
+        start: CloudCursor?,
+        fetch: suspend (CloudCursor?) -> CloudPage<T>,
+        apply: suspend (List<T>) -> Unit,
+        save: suspend (CloudCursor) -> Unit,
+    ) {
+        var cursor = start
         repeat(MAX_PAGES) {
-            checkAccount(uid)
-            val page = store.changesAfter(uid, cursor, CloudStore.PAGE_SIZE)
-            if (page.entries.isNotEmpty()) repository.applyCloudEntries(page.entries)
+            checkFamily(family)
+            val page = fetch(cursor)
+            if (page.items.isNotEmpty()) apply(page.items)
             val last = page.last
             if (last == null || last == cursor) return
             cursor = last
-            bookkeeping.update { it.copy(cursorUid = uid, cursor = last) }
+            save(last)
             if (page.documents < CloudStore.PAGE_SIZE) return
         }
     }
 
     /** Uploads the pending rows in batches until none are left. */
-    private suspend fun push(uid: String) {
+    private suspend fun push(family: String) {
         repeat(MAX_PUSH_BATCHES) {
-            checkAccount(uid)
+            checkFamily(family)
             val batch = repository.cloudPending(CloudStore.UPLOAD_BATCH)
             if (batch.isEmpty()) return
-            store.upload(uid, batch)
+            store.upload(family, batch)
             // Nothing cleared: every row was written again meanwhile. Stop rather than chase them: the next sync goes on.
             if (repository.markCloudSynced(batch) == 0) return
         }
     }
 
-    /** Stops a sync whose account signed out or changed meanwhile: nothing more is read or sent for it. */
-    private fun checkAccount(uid: String) {
-        if (account.value?.uid != uid) throw CloudException(CloudError.SIGNED_OUT)
+    /** Uploads the pending babies (a handful: one batch, in practice). */
+    private suspend fun pushBabies(family: String) {
+        repeat(MAX_PUSH_BATCHES) {
+            checkFamily(family)
+            val batch = babies.cloudPendingBabies().take(CloudStore.UPLOAD_BATCH)
+            if (batch.isEmpty()) return
+            store.uploadBabies(family, batch)
+            if (babies.markBabiesCloudSynced(batch) == 0) return
+        }
+    }
+
+    /** Stops a sync whose family changed meanwhile (or signed out): nothing more is read or sent for it. */
+    private fun checkFamily(family: String) {
+        if (familyId != family) throw CloudException(CloudError.SIGNED_OUT)
     }
 
     companion object {
         private const val TAG = "CloudBackup"
 
-        /** How long after the last write that left rows pending the push runs. */
+        /** How long after the last write that left rows or babies pending the push runs. */
         const val PUSH_DELAY_MILLIS = 2_000L
 
         /** [requestSync] pulls at most this often. */

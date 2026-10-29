@@ -137,9 +137,6 @@ object PhoneType {
     val labelMedium = TextStyle(
         fontFamily = XFonts.PhoneText, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight(600), fontFeatureSettings = TNUM,
     )
-    val syncLabel = TextStyle(
-        fontFamily = XFonts.PhoneText, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight(500), fontFeatureSettings = TNUM,
-    )
     val labelSmall = TextStyle(
         fontFamily = XFonts.PhoneText, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight(600), fontFeatureSettings = TNUM,
     )

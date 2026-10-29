@@ -39,12 +39,17 @@ class StatisticsStateBuilderTest {
     }
 
     @Test
-    fun beforeTheFirstFullDayThereIsNoReport() {
-        listOf(SampleData.scenario(), emptyList<Entry>()).forEach { entries ->
-            val state = StatisticsStateBuilder.build(entries, SampleData.NOW_1432, SampleData.ZONE, StatsMetric.POOP, StatsRange.Last30Days)
-            assertNull(state.report)
-            assertNull(state.chart)
-            assertTrue(state.isEmpty)
-        }
+    fun onlyAnEmptyLogHasNoReport() {
+        val empty = StatisticsStateBuilder.build(emptyList<Entry>(), SampleData.NOW_1432, SampleData.ZONE, StatsMetric.POOP, StatsRange.Last30Days)
+        assertNull(empty.report)
+        assertNull(empty.chart)
+        assertTrue(empty.isEmpty)
+    }
+
+    @Test
+    fun beforeAWholeDayTodaySoFarCounts() {
+        val soFar = StatisticsStateBuilder.build(SampleData.scenario(), SampleData.NOW_1432, SampleData.ZONE, StatsMetric.POOP, StatsRange.Last30Days)
+        assertTrue(checkNotNull(soFar.report).soFar)
+        assertEquals(StatsMetric.POOP, soFar.chart?.metric)
     }
 }

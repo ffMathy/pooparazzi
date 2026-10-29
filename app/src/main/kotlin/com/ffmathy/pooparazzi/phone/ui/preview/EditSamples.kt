@@ -26,6 +26,12 @@ object EditSamples {
         return edit(feed, EditDraft.of(feed))
     }
 
+    /** The 12:22 formula feed of 120 ml: type, one time block and the amount slider. */
+    fun formula(): EditUiState {
+        val feed = entry("sample-formula-1222")
+        return edit(feed, EditDraft.of(feed))
+    }
+
     /** The 08:20 diaper: Poop with Brown and Mushy selected. */
     fun diaperPoop(): EditUiState {
         val diaper = entry("sample-poop-0820")

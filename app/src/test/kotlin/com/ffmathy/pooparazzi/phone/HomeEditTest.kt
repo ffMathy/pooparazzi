@@ -3,12 +3,12 @@ package com.ffmathy.pooparazzi.phone
 import android.app.Application
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.sample.SampleData
-import com.ffmathy.pooparazzi.phone.ui.home.CardAction
-import com.ffmathy.pooparazzi.phone.ui.home.CardRow
-import com.ffmathy.pooparazzi.phone.ui.home.CardVariant
+import com.ffmathy.pooparazzi.phone.ui.home.NoticeVariant
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
 import com.ffmathy.pooparazzi.phone.ui.home.SinceRow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,20 +29,21 @@ class HomeEditTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun aDeleteInTheEditSheetShowsTheDeletedCardAndUndoRestores() = homeTest { home ->
+    fun aDeleteInTheEditSheetShowsTheDeletedReceiptAndUndoRestores() = homeTest { home ->
         home.seed(SampleData.scenario(SampleData.ZONE))
         val previous = home.repository.delete("sample-sleep-1240")!!
         home.viewModel.onEntryDeleted(previous)
-        val card = home.settle().card!!
+        val receipt = home.settle().receipt
 
-        assertEquals(CardVariant.Deleted(previous), card.variant)
-        assertEquals(CardAction.UNDO, card.action)
-        assertEquals(CardRow.None, card.row)
+        assertEquals(ReceiptVariant.Deleted(previous), receipt.variant)
+        assertTrue(receipt.undoable)
+        assertTrue("nothing to move", receipt.chips.isEmpty())
+        assertNull("nothing to edit", receipt.editEntryId)
         assertEquals("the since-row falls back to the sleep before", "sample-sleep-0930", home.settle().row1!!.entryId)
 
         home.viewModel.onUndo()
         val undone = home.settle()
-        assertEquals(CardVariant.Undone, undone.card!!.variant)
+        assertEquals(NoticeVariant.Undone, undone.card!!.variant)
         assertFalse(home.repository.get("sample-sleep-1240")!!.deleted)
         assertEquals("sample-sleep-1240", undone.row1!!.entryId)
     }

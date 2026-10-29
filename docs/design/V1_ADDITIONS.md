@@ -33,6 +33,7 @@ data class Entry(
     val endMillis: Long? = null,    // SLEEP only; null while running
     val feedType: FeedType? = null, // FEED only; optional (null = just the time)
     val breastSide: BreastSide? = null, // FEED+BREAST only; optional side order
+    val amountMl: Int? = null,      // FEED+FORMULA only; optional amount in millilitres (Room v3)
     val pee: Boolean = false,       // DIAPER only
     val poop: Boolean = false,      // DIAPER only
     val poopColor: PoopColor? = null,     // DIAPER with poop only (optional)
@@ -48,6 +49,7 @@ data class Entry(
 - **Feed type:** optional. A FEED with `feedType == null` is an instant that records only its time; it can never carry a side.
 - **Diapers:** `pee` and `poop` are optional. A DIAPER with neither is a *plain change* (display kind `PLAIN`, label "Diaper"). `poopColor` and `poopTexture` must be null when `!poop`.
 - **Breast side:** optional. A breastfeed logged with nothing ticked has `breastSide == null` (only its time was recorded). Other feed types never carry a side.
+- **Formula amount:** optional. A formula feed logged at "No amount" has `amountMl == null`; a set amount is positive and always stored in millilitres, whatever unit it was picked in. Other feed types (and non-feeds) never carry an amount.
 - **Tick order → side:** `BreastSide.fromOrder(ticks)` maps the ticked `Breast`es, in tick order, to the stored value: `[]` → null, `[L]` → LEFT, `[R]` → RIGHT, `[L, R]` → LEFT_THEN_RIGHT, `[R, L]` → RIGHT_THEN_LEFT. `BreastSide.toggle(ticks, b)` unticks `b` when ticked, otherwise appends it (so re-ticking puts it last). `side.order` maps back for editing. The stored enum is unchanged, so storage and sync stay compatible.
 - **Mis-taps:** a sleep that ends **less than 60 s** after its start is discarded as a mis-tap. The UI then shows "Sleep cancelled", with Undo.
 - **Dedupe:** two feeds of the same type (breastfeeds included, whatever their side) less than 5 s apart are one entry ("Already logged at …"), as for every instant.
@@ -69,11 +71,11 @@ data class Entry(
   - Offset chips: Now · −5m · −10m · −15m (single-select). The title follows the selected chip.
   - Three **full-width option rows**, each 72 dp tall with radius 28, filled `feed-container`. Each row has a 32 dp icon in `feed-strong`, a label in headlineSmall `feed-on-container`, and an optional supporting line in bodyMedium:
     - **Breast**: icon `breast`, supporting line "Then the sides, if you like" ("Derefter siderne, hvis du vil").
-    - **Formula**: icon `feed` (the bottle).
+    - **Formula**: icon `feed` (the bottle), supporting line "Then the amount, if you like" ("Derefter mængden, hvis du vil").
     - **Food**: icon `food` (bowl and spoon).
   - A fourth row, **"Just the time"** ("Kun tidspunktet"): same size, but *outlined* (1 dp `outline`, no fill), icon `clock`, label in `on-surface`. It logs a feed with no type.
-  - Tapping **Formula** or **Food** logs an instant at `stamp + offset`, closes the sheet and shows the undo card "Formula logged" / "Food logged", with Earlier chips. **Just the time** does the same with "Feed logged" ("Måltid registreret").
-  - Tapping **Breast** logs nothing yet: the same sheet moves to its **Breast step** (below). The stamp and the selected chip are kept.
+  - Tapping **Food** logs an instant at `stamp + offset`, closes the sheet and shows the receipt sheet "Food logged" with Undo and offset chips. **Just the time** does the same with "Feed logged" ("Måltid registreret").
+  - Tapping **Breast** logs nothing yet: the same sheet moves to its **Breast step** (below). Tapping **Formula** likewise moves to its **Formula step**. The stamp and the selected chip are kept.
   - The rows are full width because the Danish labels are long ("Modermælkserstatning").
 - **Breast step** (the Feed sheet after Breast):
   - Title "Breast · 14:32" ("Amning · 14:32"), following the chips, which stay: Now · −5m · −10m · −15m.
@@ -84,9 +86,15 @@ data class Entry(
     - **Order:** the first box ticked is 1, the second 2. Unticking removes a side from the order; ticking it again appends it.
     - **Semantics:** `Role.Checkbox`; TalkBack reads "Left, first, checkbox, checked".
   - A **summary line** under the tiles (titleMedium, live region): "Left → Right" in FEED text, or "No side" in `on-surface-variant` while nothing is ticked. TalkBack reads "Left then right".
-  - **"Log feed"** ("Registrér"): the primary button bottom-right (as Save in the Diaper sheet). It is always enabled, because the side is optional. It logs a breast feed instant at `stamp + offset` with the ticked order (none ticked: just the time), closes the sheet and shows the undo card "Breast logged", sub "Left → Right" (no sub with no side), with Earlier chips that move its time.
+  - **"Log feed"** ("Registrér"): the primary button bottom-right (as Save in the Diaper sheet). It is always enabled, because the side is optional. It logs a breast feed instant at `stamp + offset` with the ticked order (none ticked: just the time), closes the sheet and shows the receipt sheet "Breast logged", "14:32 · Left → Right" (just the time with no side), with offset chips that move its time.
   - "Cancel" (or a scrim tap) closes the sheet and logs nothing.
-- **Running sleep and a feed:** logging any feed (a breast feed included) while a sleep runs shows the running-sleep card variant with the "End sleep" chip (unchanged). The sleep keeps the Lamp.
+- **Formula step** (the Feed sheet after Formula):
+  - Title "Formula · 14:32" ("Modermælkserstatning · 14:32"), following the chips, which stay.
+  - Section heading "Amount · Optional" ("Mængde · Valgfri"), then the amount in titleLarge FEED text ("120 ml"), or "No amount" ("Ingen mængde") in `on-surface-variant`.
+  - A full-width **slider** (min 48 dp tall) in FEED colours: thumb and active track `feed-strong`, inactive track `feed-container`. Its start is **No amount**; each step adds **10 ml** up to **300 ml**, or **½ fl oz** up to **10 fl oz** where the region measures in fluid ounces (the US, Liberia, Myanmar: the app's region, else the device's, since the in-app languages carry none). Ounces are shown to the nearest half ("4 fl oz", "4.5 fl oz", Danish "4,5 fl oz") and stored as millilitres. TalkBack reads "Amount, 120 ml, slider".
+  - **"Log feed"** ("Registrér") bottom-right, always enabled (the amount is optional). It logs a formula feed at `stamp + offset` with the amount (at No amount: just the time) and shows the receipt sheet "Formula logged", "14:32 · 120 ml" (just the time without an amount).
+  - The amount shows in History's supporting line ("12:22 · 120 ml"; TalkBack "Formula, 12:22, 120 ml") and on the watch's Today list. The watch logs formula without an amount.
+- **Running sleep and a feed:** logging any feed (a breast feed included) while a sleep runs shows the receipt with the "End sleep" chip. The sleep keeps the Lamp.
 - **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line: "ago · 12:22 · Formula". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, formula, 2 hours 10 minutes ago, at 12:22". A feed with no type shows the generic `feed` icon and no type word ("ago · 12:22"; TalkBack "Last feed, 2 hours 10 minutes ago, at 12:22").
 - **Breast order on every last-feed line.** A breastfeed with a recorded side shows the order instead of the word "Breast", because it is what the next feed starts from:
   - Lamp sub-line "ago · 14:32 · Left → Right". When that would exceed the chord it shortens to "ago · 14:32 · L → R", then "14:32 · L → R".
@@ -136,7 +144,7 @@ The sheet scrolls. It opens with `skipPartiallyExpanded`.
    - **Colour** (labelMedium heading): six chips in a wrapping row. Each is 48 dp tall with a 20 dp swatch dot and a label: Yellow, Green, Brown, Black, Red, Pale. They are single-select and **optional**: tapping the selected chip clears it.
    - **Texture**: five chips: Watery, Seedy, Mushy, Formed, Hard. Also single-select and optional.
    - **Health hint:** when Pale, Red or Black is selected, a bodySmall line in `on-surface-variant` with an `info` icon appears: "Pale, red or black poop can be a reason to call your doctor or health visitor." The app never diagnoses.
-5. **Save:** a primary button at the bottom right of the sheet, in the thumb zone, labelled "Save". It is **always enabled**: Pee, Poop, colour and texture are all optional. Saving logs the entry at `stamp + offset`, closes the sheet and shows the undo card ("Pee logged" / "Poop logged" / "Pee + poop logged", or "Diaper logged" for a plain change).
+5. **Save:** a primary button at the bottom right of the sheet, in the thumb zone, labelled "Save". It is **always enabled**: Pee, Poop, colour and texture are all optional. Saving logs the entry at `stamp + offset`, closes the sheet and shows the receipt sheet ("Pee logged" / "Poop logged" / "Pee + poop logged", or "Diaper logged" for a plain change).
 
 **Swatch colours.** These are content colours, not theme colours, so they look the same in Night and Day. Every chip has a text label, so colour is never the only cue. Each swatch gets a 1 dp `outline` ring so Black and Pale stay visible on any surface.
 
@@ -188,7 +196,7 @@ The since-row never shows colour or texture.
 **Edit sheet:**
 - **Feed:**
   - Type selector: a connected button group, Breast | Formula | Food, labelled "Type · Optional". Tapping the selected type again **clears it** (a feed with just its time).
-  - Every feed shows one time block. Breast adds "Side · Optional": the **same Left / Right checkboxes** as the Feed sheet's Breast step (order badges, tick order = side) and the summary line. There is no end time and no duration.
+  - Every feed shows one time block. Breast adds "Side · Optional": the **same Left / Right checkboxes** as the Feed sheet's Breast step (order badges, tick order = side) and the summary line. Formula adds "Amount · Optional": the **same amount slider** as the Feed sheet's Formula step. Switching to another type drops the side or amount; switching back restores the original's. There is no end time and no duration.
 - **Diaper:** the toggles, colour chips and texture chips from §3.1, plus one time block. Save is enabled with both toggles off (a plain change).
 - **Save** is disabled only by a blocking issue (end before start, a time in the future, the entry deleted elsewhere). Nothing beyond the times is required.
 
@@ -237,6 +245,9 @@ The since-row never shows colour or texture.
 | Which side? | Which side? | Hvilken side? |
 | Tick the sides in the order you fed. Optional. | — | Sæt flueben i den rækkefølge, du ammede. Valgfrit. |
 | No side | No side | Ingen side |
+| Amount (formula) | Amount | Mængde |
+| No amount | No amount | Ingen mængde |
+| Then the amount, if you like | Then the amount, if you like | Derefter mængden, hvis du vil |
 | Just the time (untyped feed) | Just the time | Kun tidspunktet |
 | Feed (untyped feed, history title) | Feed | Måltid |
 | Diaper (plain change) | Diaper | Ble |
@@ -349,7 +360,7 @@ These names are what the apps code against.
   - `dayEntries(day)` for History.
 - `fun lampState(summary): LampState`, one of `FeedIdle`, `SleepRunning`.
 - `fun dailyCounts(entries, from, to, now, zone): List<DayCounts>`: History's counts for every day of a range, in one pass.
-- Statistics (§8): `fun statsReport(entries, now, zone, range): StatsReport?` (the last 7 days, the last 30 days and the comparison window; null before the first full day of logging), `StatsReport.chart(metric): StatsChart`, `binDays(dayCount)`, and `StatsRange.clamped` / `normalised` for chosen dates.
+- Statistics (§8): `fun statsReport(entries, now, zone, range): StatsReport?` (the last 7 days, the last 30 days and the comparison window; null only when nothing is logged), `StatsReport.chart(metric): StatsChart`, `binDays(dayCount)`, and `StatsRange.clamped` / `normalised` for chosen dates.
 
 **`format/`**
 - `DurationFormatter` (units injected; resource-backed factory `DurationFormatter.from(context)`).
@@ -389,7 +400,7 @@ These names are what the apps code against.
 
 ### 8.1 Ranges
 
-Only whole days count: every window ends **yesterday**, and the **first logged day** is left out as probably partial, so the first countable day (`firstDay`) is the day after it. The numbers therefore change only at midnight or when an entry changes, never as today goes on. Before `firstDay` reaches yesterday there is nothing to show: "Statistics start after the first full day of logging."
+Only whole days count: every window ends **yesterday**, and the **first logged day** is left out as probably partial, so the first countable day (`firstDay`) is the day after it. The numbers therefore change only at midnight or when an entry changes, never as today goes on. Until there is a whole day (the first entry is from today or yesterday), the report counts **today so far** instead, from the first logged day through today (`soFar`), so even a single entry shows; the footnote then says "No whole day has been logged yet, so these averages count today so far. …". With nothing logged at all: "Statistics start as soon as something is logged."
 
 | Range | Days | Reference (`history()` at Mon 26 Oct 2026) |
 |---|---|---|

@@ -55,13 +55,15 @@ internal fun historyTitle(entry: Entry, now: Long, formatters: Formatters): Stri
         formatters.labels.historyTitle(entry, formatters.duration, now)
     }
 
-/** "12:40 – 13:27", "Sun 22:40 – 01:35", "since 14:32", "12:22", "05:41 · Yellow · Seedy". */
+/** "12:40 – 13:27", "Sun 22:40 – 01:35", "since 14:32", "12:22", "12:22 · 120 ml", "05:41 · Yellow · Seedy". */
 internal fun historySupporting(entry: Entry, day: LocalDate, zone: ZoneId, now: Long, formatters: Formatters): String =
-    formatters.labels.historySupporting(entry, day, zone, now, formatters.clock, formatters.duration, formatters.relative)
+    formatters.labels.historySupporting(
+        entry, day, zone, now, formatters.clock, formatters.duration, formatters.relative, volume = formatters.volume,
+    )
 
 /**
  * The row's TalkBack name: "Sleep, 47 minutes, 12:40 to 13:27", "Breast, left then right, 12:00",
- * "Sleep, running, since 14:32", "Formula, 12:22", "Pee and poop, 05:41, Yellow, Seedy".
+ * "Sleep, running, since 14:32", "Formula, 12:22, 120 ml", "Pee and poop, 05:41, Yellow, Seedy".
  */
 @Composable
 @ReadOnlyComposable
@@ -84,6 +86,7 @@ internal fun historySpoken(entry: Entry, day: LocalDate, zone: ZoneId, now: Long
         else -> {
             if (entry.isBreastfeed) entry.breastSide?.let { parts += spokenSide(it) }
             parts += clock.format(entry.startMillis, zone)
+            entry.amountMl?.let { parts += formatters.volume.format(it) }
             if (entry.poop) {
                 entry.poopColor?.let { parts += stringResource(Labels.poopColor(it)) }
                 entry.poopTexture?.let { parts += stringResource(Labels.poopTexture(it)) }

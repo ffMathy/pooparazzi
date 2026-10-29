@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.phone
 import android.app.Application
 import com.ffmathy.pooparazzi.core.cloud.CloudCursor
 import com.ffmathy.pooparazzi.core.cloud.CloudError
+import com.ffmathy.pooparazzi.core.cloud.CloudException
 import com.ffmathy.pooparazzi.core.model.EntryJson
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.account.AccountError
@@ -11,15 +12,16 @@ import com.ffmathy.pooparazzi.phone.account.FirestoreCloudStore
 import com.ffmathy.pooparazzi.phone.account.FirestoreCloudStore.Stamp
 import com.ffmathy.pooparazzi.phone.account.FirestoreCloudStore.StoredDocument
 import com.ffmathy.pooparazzi.phone.account.attemptWithin
+import com.ffmathy.pooparazzi.phone.account.shouldDropPassword
 import com.ffmathy.pooparazzi.phone.account.toAccountError
+import com.ffmathy.pooparazzi.phone.account.toSendLinkError
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.FirebaseTooManyRequestsException
+import com.google.firebase.auth.FirebaseAuthActionCodeException
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
@@ -46,7 +48,7 @@ class FirebaseMappingTest {
     @Test
     fun aPageDecodesItsEntriesAndEndsAtItsLastDocument() {
         val page = FirestoreCloudStore.pageOf(listOf(doc(0, 10), doc(1, 11), doc(2, 12)))
-        assertEquals(entries, page.entries)
+        assertEquals(entries, page.items)
         assertEquals(CloudCursor(12, 7, entries[2].id), page.last)
         assertEquals(3, page.documents)
     }
@@ -55,7 +57,7 @@ class FirebaseMappingTest {
     fun badDocumentsAreSkippedButMoveTheCursorOn() {
         val otherId = StoredDocument("someone-else", EntryJson.encode(entries[1]), Stamp(11, 7))
         val page = FirestoreCloudStore.pageOf(listOf(doc(0, 10, json = "{not json"), otherId, doc(2, 12, json = null)))
-        assertEquals(emptyList<Any>(), page.entries)
+        assertEquals(emptyList<Any>(), page.items)
         assertEquals(CloudCursor(12, 7, entries[2].id), page.last)
         assertEquals(3, page.documents)
     }
@@ -63,7 +65,7 @@ class FirebaseMappingTest {
     @Test
     fun aPendingWriteIsSkippedAndTheCursorStopsBeforeIt() {
         val page = FirestoreCloudStore.pageOf(listOf(doc(0, 10), doc(1, null), doc(2, 12)))
-        assertEquals(listOf(entries[0], entries[2]), page.entries)
+        assertEquals(listOf(entries[0], entries[2]), page.items)
         assertEquals(CloudCursor(10, 7, entries[0].id), page.last)
         assertEquals(3, page.documents)
 
@@ -89,18 +91,41 @@ class FirebaseMappingTest {
     fun accountErrorsInWords() {
         assertEquals(AccountError.NO_CONNECTION, FirebaseNetworkException("x").toAccountError())
         assertEquals(AccountError.TOO_MANY_ATTEMPTS, FirebaseTooManyRequestsException("x").toAccountError())
-        assertEquals(AccountError.WEAK_PASSWORD, FirebaseAuthWeakPasswordException("ERROR_WEAK_PASSWORD", "x", "short").toAccountError())
-        assertEquals(AccountError.EMAIL_IN_USE, FirebaseAuthUserCollisionException("ERROR_EMAIL_ALREADY_IN_USE", "x").toAccountError())
         assertEquals(AccountError.INVALID_EMAIL, FirebaseAuthInvalidCredentialsException("ERROR_INVALID_EMAIL", "x").toAccountError())
-        assertEquals(AccountError.WRONG_CREDENTIALS, FirebaseAuthInvalidCredentialsException("ERROR_INVALID_CREDENTIAL", "x").toAccountError())
-        assertEquals(AccountError.WRONG_CREDENTIALS, FirebaseAuthInvalidUserException("ERROR_USER_NOT_FOUND", "x").toAccountError())
-        assertEquals(AccountError.WRONG_CREDENTIALS, FirebaseAuthException("ERROR_INVALID_LOGIN_CREDENTIALS", "x").toAccountError())
+        assertEquals(AccountError.LINK_INVALID, FirebaseAuthActionCodeException("ERROR_EXPIRED_ACTION_CODE", "x").toAccountError())
+        assertEquals(AccountError.LINK_INVALID, FirebaseAuthInvalidCredentialsException("ERROR_INVALID_ACTION_CODE", "x").toAccountError())
         assertEquals(
             AccountError.RECENT_LOGIN_REQUIRED,
             FirebaseAuthRecentLoginRequiredException("ERROR_REQUIRES_RECENT_LOGIN", "x").toAccountError(),
         )
         assertEquals(AccountError.WRONG_ACCOUNT, FirebaseAuthInvalidUserException("ERROR_USER_MISMATCH", "x").toAccountError())
         assertEquals(AccountError.OTHER, IllegalStateException("x").toAccountError())
+        assertEquals(AccountError.NO_CONNECTION, CloudException(CloudError.OFFLINE).toAccountError())
+        assertEquals(AccountError.OTHER, CloudException(CloudError.OTHER).toAccountError())
+    }
+
+    @Test
+    fun theDailySignInEmailQuotaIsSaidAsSuch() {
+        // The free plan's few sign-in emails a day, used up: QUOTA_EXCEEDED, or "too many requests".
+        assertEquals(AccountError.EMAIL_QUOTA, FirebaseAuthException("ERROR_QUOTA_EXCEEDED", "x").toSendLinkError())
+        assertEquals(AccountError.EMAIL_QUOTA, FirebaseTooManyRequestsException("x").toSendLinkError())
+        assertEquals(AccountError.EMAIL_QUOTA, FirebaseAuthException("ERROR_INTERNAL_ERROR", "QUOTA_EXCEEDED : Exceeded daily quota").toSendLinkError())
+        assertEquals(AccountError.EMAIL_QUOTA, FirebaseAuthException("ERROR_TOO_MANY_REQUESTS", "x").toSendLinkError())
+        // Everything else as for any call.
+        assertEquals(AccountError.NO_CONNECTION, FirebaseNetworkException("x").toSendLinkError())
+        assertEquals(AccountError.INVALID_EMAIL, FirebaseAuthInvalidCredentialsException("ERROR_INVALID_EMAIL", "x").toSendLinkError())
+        // Elsewhere, too many requests is a wait-a-moment.
+        assertEquals(AccountError.TOO_MANY_ATTEMPTS, FirebaseTooManyRequestsException("x").toAccountError())
+    }
+
+    @Test
+    fun aFamilyPageOfBabiesDecodes() {
+        val baby = com.ffmathy.pooparazzi.core.model.Baby("default", "Noa", 5)
+        val page = FirestoreCloudStore.babyPageOf(
+            listOf(StoredDocument("default", com.ffmathy.pooparazzi.core.model.BabyJson.encode(baby), Stamp(3, 1))),
+        )
+        assertEquals(listOf(baby), page.items)
+        assertEquals(CloudCursor(3, 1, "default"), page.last)
     }
 
     @Test
@@ -115,5 +140,16 @@ class FirebaseMappingTest {
             attemptWithin(30_000, onTimeout = {}) { throw FirebaseNetworkException("offline") },
         )
         assertEquals(1, refreshed)
+    }
+
+    @Test
+    fun anEmailLinkTakesAPasswordOffAnAccountThatExistedBefore() {
+        // An account someone created for the address with a password, before its owner signed in with a link.
+        assertEquals(true, shouldDropPassword(isNewUser = false, providers = listOf("password")))
+        assertEquals(true, shouldDropPassword(isNewUser = false, providers = listOf("google.com", "password")))
+        assertEquals("unknown counts as existing", true, shouldDropPassword(isNewUser = null, providers = listOf("password")))
+        // Created by this very link: no password anyone could know.
+        assertEquals(false, shouldDropPassword(isNewUser = true, providers = listOf("password")))
+        assertEquals(false, shouldDropPassword(isNewUser = false, providers = listOf("google.com")))
     }
 }

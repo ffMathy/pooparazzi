@@ -3,11 +3,9 @@ package com.ffmathy.pooparazzi.phone.ui.home
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -23,12 +21,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
@@ -36,9 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -52,27 +45,16 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.format.Formatters
-import com.ffmathy.pooparazzi.core.format.Labels
-import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
-import com.ffmathy.pooparazzi.core.ui.time.rememberReducedMotion
 import com.ffmathy.pooparazzi.core.ui.tokens.LocalXPalette
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
-import com.ffmathy.pooparazzi.phone.ui.history.deletedLabel
-import com.ffmathy.pooparazzi.phone.ui.history.spokenSideCapitalised
-import com.ffmathy.pooparazzi.phone.ui.components.ChipDefaults
-import com.ffmathy.pooparazzi.phone.ui.components.OffsetChipRow
-import com.ffmathy.pooparazzi.phone.ui.components.XChip
 import java.time.ZoneId
-import kotlinx.coroutines.delay
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Card geometry (DESIGN_SPEC §3.3.1, §5.8). */
@@ -83,12 +65,12 @@ internal object WhisperDefaults {
 }
 
 /**
- * The fixed whisper slot: the Today grid, or the undo card in its place. The card fades in over 150 ms with no slide
- * (DESIGN_SPEC §5.10) and is a polite live region.
+ * The fixed whisper slot: the Today grid, or a 2 s notice card in its place ("Undone", a guard). The card fades in over
+ * 150 ms with no slide (DESIGN_SPEC §5.10) and is a polite live region. Receipts with Undo are a sheet (ReceiptSheet).
  */
 @Composable
 internal fun WhisperSlot(
-    card: UndoCardUi?,
+    card: NoticeCardUi?,
     today: DayCounts,
     lightsDown: Boolean,
     zone: ZoneId,
@@ -97,7 +79,7 @@ internal fun WhisperSlot(
     modifier: Modifier = Modifier,
 ) {
     // Keeps the last card on screen while it fades out.
-    val lastCard = remember { mutableStateOf<UndoCardUi?>(null) }
+    val lastCard = remember { mutableStateOf<NoticeCardUi?>(null) }
     if (card != null) SideEffect { lastCard.value = card }
     val shown = card ?: lastCard.value
     // When the area above the buttons has to scroll (short screen, large font), a new card scrolls fully into view.
@@ -111,7 +93,7 @@ internal fun WhisperSlot(
     ) {
         if (card == null) TodayGrid(today, lightsDown, formatters, actions::onOpenHistory)
         AnimatedVisibility(visible = card != null, enter = EnterTransition.None, exit = fadeOut(tween(150))) {
-            shown?.let { UndoCard(it, zone, formatters, actions) }
+            shown?.let { NoticeCard(it, zone, formatters) }
         }
     }
 }
@@ -160,16 +142,35 @@ private fun TodayGrid(today: DayCounts, lightsDown: Boolean, formatters: Formatt
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             numbers.zip(captions).chunked(columns).forEach { row ->
                 // One size per line across the row, so the numbers (and the captions) share a baseline even when one
-                // of them ("7h 57m", "måltider") has to shrink to fit its column.
+                // of them ("7h 57m", "måltider") has to shrink to fit its column. The numbers and the captions are
+                // each one baseline-aligned line, so a cell whose line box comes out taller on a device cannot sit lower.
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
                     val cellWidth = (maxWidth - 8.dp * (columns - 1)) / columns
                     val numberStyle = fitAll(row.map { it.first }, MaterialTheme.typography.titleMedium, cellWidth, minSp = 12f)
                     val captionStyle = fitAll(row.map { it.second }, MaterialTheme.typography.labelMedium, cellWidth, minSp = 9f)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { (number, caption) ->
-                            Column(Modifier.weight(1f)) {
-                                Text(number, style = numberStyle, color = numberColor, maxLines = 1, softWrap = false)
-                                Text(caption, style = captionStyle, color = colors.onSurfaceVariant, maxLines = 1, softWrap = false)
+                    Column {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (number, _) ->
+                                Text(
+                                    number,
+                                    style = numberStyle,
+                                    color = numberColor,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier.weight(1f).alignByBaseline(),
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (_, caption) ->
+                                Text(
+                                    caption,
+                                    style = captionStyle,
+                                    color = colors.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier.weight(1f).alignByBaseline(),
+                                )
                             }
                         }
                     }
@@ -203,16 +204,20 @@ private fun fitAll(texts: List<String>, style: TextStyle, width: androidx.compos
 /** From this font scale the Today grid is 2 × 2. */
 private const val TODAY_TWO_COLUMN_SCALE = 1.5f
 
-/**
- * The undo card: row 1 icon · title (time-free) · Undo/Done; row 2 one of the variants; the drain line shows the
- * remaining window (anchored at the start, hidden for "Undone").
- */
+/** The notice card: icon · title, then the guard line ("Already asleep since 14:32") for a guard. */
 @Composable
-private fun UndoCard(card: UndoCardUi, zone: ZoneId, formatters: Formatters, actions: HomeActions) {
+private fun NoticeCard(card: NoticeCardUi, zone: ZoneId, formatters: Formatters) {
     val colors = MaterialTheme.colorScheme
+    val events = LocalXPalette.current.events
     val appear = remember(card.key) { Animatable(0f) }
     LaunchedEffect(card.key) { appear.animateTo(1f, tween(150)) }
-    val content = cardContent(card.variant, formatters)
+    val (icon, title) = when (val variant = card.variant) {
+        is NoticeVariant.Guard -> when (variant.kind) {
+            GuardKind.ASLEEP -> TintedIcon(XIcons.sleep, events.sleep.strong) to stringResource(CoreR.string.status_asleep)
+            GuardKind.AWAKE -> TintedIcon(XIcons.awake, events.sleep.strong) to stringResource(CoreR.string.status_awake)
+        }
+        NoticeVariant.Undone -> TintedIcon(XIcons.undo, colors.onSurfaceVariant) to stringResource(CoreR.string.receipt_undone)
+    }
     Column(
         Modifier
             .fillMaxWidth()
@@ -221,295 +226,21 @@ private fun UndoCard(card: UndoCardUi, zone: ZoneId, formatters: Formatters, act
             .clip(WhisperDefaults.CardShape)
             .background(colors.surfaceContainerHighest)
             .semantics { liveRegion = LiveRegionMode.Polite }
-            .padding(top = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
     ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .padding(start = 16.dp, end = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            XIcon(content.icon.icon, contentDescription = null, tint = content.icon.tint, size = 20.dp)
+        Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+            XIcon(icon.icon, contentDescription = null, tint = icon.tint, size = 20.dp)
             Spacer(Modifier.width(8.dp))
-            Column(Modifier.weight(1f)) {
-                // Long Danish titles ("Modermælks­erstatning registreret") wrap at the soft hyphen, then shrink. If even
-                // 14 sp does not fit (narrow screen, larger font), the title takes one more line rather than clip.
-                val titleStyle = MaterialTheme.typography.titleMedium.copy(
-                    color = colors.onSurface,
-                    lineHeight = if (content.sub != null) 22.sp else 24.sp,
-                    hyphens = Hyphens.Auto,
-                )
-                val baseLines = if (content.sub != null) 1 else 2
-                val measurer = rememberTextMeasurer()
-                BoxWithConstraints {
-                    val fits = remember(content.title, titleStyle, constraints.maxWidth, baseLines) {
-                        !measurer.measure(
-                            content.title,
-                            titleStyle.copy(fontSize = 14.sp),
-                            maxLines = baseLines,
-                            constraints = Constraints(maxWidth = constraints.maxWidth),
-                        ).hasVisualOverflow
-                    }
-                    BasicText(
-                        content.title,
-                        style = titleStyle,
-                        maxLines = if (fits) baseLines else baseLines + 1,
-                        autoSize = TextAutoSize.StepBased(minFontSize = 14.sp, maxFontSize = 18.sp, stepSize = 0.5.sp),
-                    )
-                }
-                content.sub?.let { sub ->
-                    // TalkBack reads the spoken form ("Left then right, 18 minutes"), not "→" and "18m" (§9.5).
-                    val spoken = content.subSpoken ?: sub
-                    Text(
-                        sub,
-                        style = PhoneType.dataSmall,
-                        color = colors.onSurfaceVariant,
-                        maxLines = 1,
-                        modifier = Modifier.semantics { contentDescription = spoken },
-                    )
-                }
-            }
-            when (card.action) {
-                CardAction.UNDO -> CardTextButton(XIcons.undo, stringResource(CoreR.string.action_undo), actions::onUndo)
-                CardAction.DONE -> CardTextButton(XIcons.check, stringResource(CoreR.string.action_done), actions::onCardDone)
-                CardAction.NONE -> Unit
-            }
+            Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
         }
-        Spacer(Modifier.height(2.dp))
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .padding(start = 16.dp, end = 8.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            CardRowContent(card.row, zone, formatters, actions)
-        }
-        Spacer(Modifier.height(6.dp))
-        if (card.variant != CardVariant.Undone) {
-            DrainLine(card)
-        } else {
-            Spacer(Modifier.height(2.dp))
-        }
-        Spacer(Modifier.height(6.dp))
-    }
-}
-
-/** 2 dp, solid outline, 16 dp insets, anchored at the start; width = the remaining fraction of the window. */
-@Composable
-private fun DrainLine(card: UndoCardUi) {
-    val colors = MaterialTheme.colorScheme
-    val reducedMotion = rememberReducedMotion()
-    val remaining = remember(card.key, card.windowKey) { Animatable(1f) }
-    LaunchedEffect(card.key, card.windowKey, reducedMotion) {
-        remaining.snapTo(1f)
-        if (reducedMotion) {
-            // No drain transition: step once a second.
-            val steps = (card.timeoutMillis / 1_000L).coerceAtLeast(1L)
-            for (step in 1..steps) {
-                delay(1_000L)
-                remaining.snapTo(1f - step.toFloat() / steps)
-            }
-        } else {
-            remaining.animateTo(0f, tween(card.timeoutMillis.toInt(), easing = LinearEasing))
-        }
-    }
-    BoxWithConstraints(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .height(2.dp),
-    ) {
-        Box(
-            Modifier
-                .width(maxWidth * remaining.value)
-                .height(2.dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(colors.outline),
-        )
-    }
-}
-
-@Composable
-private fun CardTextButton(icon: ImageVector, label: String, onClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    Row(
-        Modifier
-            .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        XIcon(icon, contentDescription = null, tint = colors.primary, size = 18.dp)
-        Text(label, style = MaterialTheme.typography.labelLarge, color = colors.primary, maxLines = 1)
-    }
-}
-
-@Composable
-private fun CardRowContent(row: CardRow, zone: ZoneId, formatters: Formatters, actions: HomeActions) {
-    val colors = MaterialTheme.colorScheme
-    val events = LocalXPalette.current.events
-    when (row) {
-        CardRow.None -> Unit
-        is CardRow.Earlier -> {
-            val onOffset: (Int) -> Unit = actions::onCardOffset
-            LeadAndChips(
-                lead = {
-                    Text(
-                        stringResource(CoreR.string.action_earlier_question),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = colors.onSurfaceVariant,
-                        maxLines = 2,
-                    )
-                },
-                chips = { OffsetChipRow(row.chips, formatters, onOffset) },
+        (card.variant as? NoticeVariant.Guard)?.let { guard ->
+            val format = if (guard.kind == GuardKind.ASLEEP) CoreR.string.guard_already_asleep else CoreR.string.guard_already_awake
+            Text(
+                stringResource(format, formatters.clock.format(guard.sinceMillis, zone)),
+                style = PhoneType.dataMedium,
+                color = events.sleep.text,
             )
         }
-        is CardRow.RunningSleep -> LeadAndChips(
-            lead = {
-                XChip(
-                    selected = false,
-                    onClick = actions::onCardEndSleep,
-                    label = stringResource(CoreR.string.action_end_sleep),
-                    enabled = row.endSleepEnabled,
-                    role = Role.Button,
-                    leading = { XIcon(XIcons.wake, contentDescription = null, tint = colors.onSurface, size = 18.dp) },
-                )
-            },
-            chips = { OffsetChipRow(row.chips, formatters, actions::onCardOffset) },
-        )
-        is CardRow.Adjust -> OffsetChipRow(
-            row.chips,
-            formatters,
-            actions::onCardOffset,
-            trailing = { EditChip(onClick = { actions.onEditEntry(row.editEntryId) }) },
-        )
-        is CardRow.Guard -> {
-            val (icon, tint, textColor, format) = when (row.kind) {
-                GuardKind.ASLEEP -> GuardStyle(XIcons.sleep, events.sleep.strong, events.sleep.text, CoreR.string.guard_already_asleep)
-                GuardKind.AWAKE -> GuardStyle(XIcons.awake, events.sleep.strong, events.sleep.text, CoreR.string.guard_already_awake)
-            }
-            MessageRow(icon, tint, stringResource(format, formatters.clock.format(row.sinceMillis, zone)), textColor)
-        }
-        is CardRow.Dedupe -> {
-            val icon = entryIcon(row.entry, events)
-            MessageRow(
-                icon.icon,
-                icon.tint,
-                stringResource(CoreR.string.guard_already_logged, formatters.clock.format(row.entry.startMillis, zone)),
-                colors.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-/**
- * A lead ("Earlier?", "End sleep") before a row of equal offset chips. Side by side while the chips keep a usable width;
- * at large font scales or on narrow screens the lead goes above them, so nothing shrinks to unreadable.
- */
-@Composable
-private fun LeadAndChips(lead: @Composable () -> Unit, chips: @Composable () -> Unit) {
-    val stacked = LocalDensity.current.fontScale >= LARGE_FONT_SCALE
-    if (stacked) {
-        Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            lead()
-            chips()
-        }
-    } else {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            lead()
-            Box(Modifier.weight(1f)) { chips() }
-        }
-    }
-}
-
-private data class GuardStyle(val icon: ImageVector, val tint: Color, val text: Color, val format: Int)
-
-@Composable
-private fun MessageRow(icon: ImageVector, tint: Color, text: String, textColor: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        XIcon(icon, contentDescription = null, tint = tint, size = 18.dp)
-        Text(text, style = PhoneType.dataMedium, color = textColor)
-    }
-}
-
-/** Icon-only Edit chip: 48 × 40 visual, `edit` 18, outline border, "Edit start time". */
-@Composable
-private fun EditChip(onClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    val description = stringResource(R.string.cd_edit_start_time)
-    Box(
-        Modifier
-            .height(ChipDefaults.TargetHeight)
-            .width(48.dp)
-            .clip(ChipDefaults.PillShape)
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            Modifier
-                .height(ChipDefaults.PillHeight)
-                .width(48.dp)
-                .border(1.dp, colors.outline, ChipDefaults.PillShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            XIcon(XIcons.edit, contentDescription = null, tint = colors.onSurface, size = 18.dp)
-        }
-    }
-}
-
-/** Row 1 of a card: icon, title and optional sub-line, with the sub-line's spoken form. */
-private class CardContent(val icon: TintedIcon, val title: String, val sub: String?, val subSpoken: String? = null)
-
-@Composable
-private fun cardContent(variant: CardVariant, formatters: Formatters): CardContent {
-    val events = LocalXPalette.current.events
-    val colors = MaterialTheme.colorScheme
-    val duration = formatters.duration
-    val wake = TintedIcon(XIcons.wake, events.sleep.strong)
-    return when (variant) {
-        is CardVariant.FeedLogged -> CardContent(
-            TintedIcon(XIcons.forFeedType(variant.type), events.feed.strong),
-            stringResource(CoreR.string.receipt_logged, feedTypeLabel(variant.type, compact = true)),
-            variant.side?.let { stringResource(Labels.side(it)) },
-            variant.side?.let { spokenSideCapitalised(it) },
-        )
-        is CardVariant.DiaperLogged -> CardContent(
-            diaperIcon(variant.kind, events),
-            stringResource(CoreR.string.receipt_logged, diaperLabel(variant.kind)),
-            null,
-        )
-        CardVariant.SleepStarted -> CardContent(TintedIcon(XIcons.sleep, events.sleep.strong), stringResource(CoreR.string.receipt_sleep_started), null)
-        is CardVariant.WokeUp -> CardContent(
-            wake,
-            stringResource(CoreR.string.action_woke_up),
-            stringResource(CoreR.string.receipt_slept, duration.format(variant.sleptMillis)),
-            stringResource(CoreR.string.receipt_slept, duration.spoken(variant.sleptMillis)),
-        )
-        CardVariant.SleepCancelled -> CardContent(
-            wake,
-            stringResource(CoreR.string.receipt_sleep_cancelled),
-            stringResource(CoreR.string.receipt_slept, duration.format(0L)),
-            stringResource(CoreR.string.receipt_slept, duration.spoken(0L)),
-        )
-        CardVariant.AdjustStart -> CardContent(
-            TintedIcon(XIcons.sleep, events.sleep.strong),
-            stringResource(CoreR.string.action_adjust_start),
-            null,
-        )
-        is CardVariant.Notice -> when (variant.guard) {
-            GuardKind.ASLEEP -> CardContent(TintedIcon(XIcons.sleep, events.sleep.strong), stringResource(CoreR.string.status_asleep), null)
-            GuardKind.AWAKE -> CardContent(TintedIcon(XIcons.awake, events.sleep.strong), stringResource(CoreR.string.status_awake), null)
-        }
-        is CardVariant.Deleted -> CardContent(
-            entryIcon(variant.entry, events),
-            stringResource(CoreR.string.receipt_deleted, deletedLabel(variant.entry)),
-            null,
-        )
-        CardVariant.Undone -> CardContent(TintedIcon(XIcons.undo, colors.onSurfaceVariant), stringResource(CoreR.string.receipt_undone), null)
     }
 }

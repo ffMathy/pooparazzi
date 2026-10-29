@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The App Links of the optional backup (docs/BACKEND.md › App Links), merged into the app's manifest only in builds
+    with app/google-services.json (app/build.gradle.kts), whose project_id fills ${firebaseProjectId}. The Firebase
+    Hosting site serves /.well-known/assetlinks.json, so Android verifies them (autoVerify) and opens the app directly.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name="com.ffmathy.pooparazzi.phone.MainActivity">
+            <!-- Invite links: https://<project-id>.web.app/join/<code> (BABIES_AND_BACKUP §3.5). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="${firebaseProjectId}.web.app" />
+                <data android:host="${firebaseProjectId}.firebaseapp.com" />
+                <data android:pathPrefix="/join/" />
+            </intent-filter>
+            <!--
+                Email sign-in links (§3.3): Firebase Hosting's own link handler, and the sign-in page the link continues
+                to.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="${firebaseProjectId}.web.app" />
+                <data android:host="${firebaseProjectId}.firebaseapp.com" />
+                <data android:pathPrefix="/__/auth/links" />
+                <data android:path="/signin" />
+                <data android:pathPrefix="/signin/" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

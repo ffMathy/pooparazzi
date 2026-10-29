@@ -134,7 +134,7 @@ class AppNavigationTest {
     }
 
     private companion object {
-        /** Statistics before the first full day of logging (a new app). */
-        const val STATISTICS_EMPTY = "Statistics start after the first full day of logging."
+        /** Statistics with nothing logged (a new app). */
+        const val STATISTICS_EMPTY = "Statistics start as soon as something is logged."
     }
 }

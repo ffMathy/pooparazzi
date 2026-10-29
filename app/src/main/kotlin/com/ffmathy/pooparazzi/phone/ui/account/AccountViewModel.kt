@@ -12,10 +12,16 @@ import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.cloud.CloudSync
 import com.ffmathy.pooparazzi.phone.account.AccountError
+import com.ffmathy.pooparazzi.phone.account.AccountInput
 import com.ffmathy.pooparazzi.phone.account.AccountResult
 import com.ffmathy.pooparazzi.phone.account.AccountUser
 import com.ffmathy.pooparazzi.phone.account.Accounts
 import com.ffmathy.pooparazzi.phone.account.AppAccounts
+import com.ffmathy.pooparazzi.phone.account.Families
+import com.ffmathy.pooparazzi.phone.account.LinkPurpose
+import com.ffmathy.pooparazzi.phone.account.NoFamilies
+import com.ffmathy.pooparazzi.phone.account.PrivacyPolicy
+import com.ffmathy.pooparazzi.phone.launch.AppLinkInbox
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,20 +30,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.ZoneId
-
-/** The email form's two modes (BABIES_AND_BACKUP §3.3). */
-enum class EmailMode { SIGN_IN, CREATE }
-
-/** A line the signed-out form shows after an action that worked. */
-enum class AccountNotice {
-    /** "If {email} has an account, a link to choose a new password is on its way." */
-    RESET_SENT,
-}
 
 /** What went wrong while deleting the account, in the order the steps run. */
 sealed interface DeleteProblem {
@@ -54,9 +52,15 @@ sealed interface DeleteProblem {
 /** The "Delete account?" confirmation that "Delete account…" opens. */
 @Immutable
 data class DeleteState(
-    /** Google accounts sign in again with Google; the confirmation then asks for nothing more. */
+    /** Google accounts sign in again with Google; email accounts with a fresh email link. */
     val google: Boolean,
-    val password: String = "",
+    /** The email link is on its way: its link completes the deletion. */
+    val linkSent: Boolean = false,
+    /**
+     * A deletion link opened the app while the confirmation was not open: it waits here, and "Delete" uses it. A link
+     * never deletes the account without the confirmation on screen.
+     */
+    val link: String? = null,
     val busy: Boolean = false,
     val problem: DeleteProblem? = null,
 )
@@ -64,8 +68,12 @@ data class DeleteState(
 /**
  * The Account screen and the Welcome screen (BABIES_AND_BACKUP §3.1, §3.3) as data.
  *
- * @property user the signed-in account; null shows the signed-out form.
+ * @property user the signed-in account; null shows the sign-in choices.
  * @property busy an account action is running: the buttons wait.
+ * @property linkSentTo a sign-in link was emailed to this address: "Check your email".
+ * @property linkNeedsEmail a sign-in link opened the app on a phone that did not ask for it: the address is asked for.
+ * @property joining an invite link waits for the sign-in: "Sign in to join the family."
+ * @property privacyUrl where "privacy policy" links to.
  * @property backingUp "Back up now" is running.
  */
 @Immutable
@@ -75,13 +83,13 @@ data class AccountUiState(
     val user: AccountUser?,
     val cloud: CloudStatus,
     val zone: ZoneId,
-    val mode: EmailMode = EmailMode.SIGN_IN,
     val email: String = "",
-    val password: String = "",
     val busy: Boolean = false,
     val error: AccountError? = null,
-    val notice: AccountNotice? = null,
-    val noticeEmail: String = "",
+    val linkSentTo: String? = null,
+    val linkNeedsEmail: Boolean = false,
+    val joining: Boolean = false,
+    val privacyUrl: String = PrivacyPolicy.REPOSITORY_URL,
     val backingUp: Boolean = false,
     val delete: DeleteState? = null,
 )
@@ -93,19 +101,26 @@ interface AccountActions {
 
     /** "Continue with Google". */
     fun onGoogle() {}
-    fun onMode(mode: EmailMode) {}
     fun onEmail(email: String) {}
-    fun onPassword(password: String) {}
 
-    /** The main button: "Sign in" or "Create account". */
-    fun onSubmit() {}
-    fun onForgotPassword() {}
+    /** "Email me a sign-in link" (and "Send again"). */
+    fun onSendLink() {}
+
+    /** "Use another email": back to the address field. */
+    fun onUseAnotherEmail() {}
+
+    /** "Sign in" with the typed address, for a link opened on a phone that did not ask for it. */
+    fun onFinishSignIn() {}
+
+    /** The "privacy policy" link under the sign-in buttons. */
+    fun onOpenPrivacy() {}
     fun onBackUpNow() {}
     fun onSignOut() {}
 
     /** "Delete account…": opens the confirmation. */
     fun onDeleteStart() {}
-    fun onDeletePassword(password: String) {}
+
+    /** "Delete" (Google: signs in again first) or "Email me a link" (email accounts). */
     fun onDeleteConfirm() {}
     fun onDeleteDismiss() {}
 
@@ -117,13 +132,12 @@ interface AccountActions {
 
 /** The form's own state, beside the account and the backup status. */
 private data class Form(
-    val mode: EmailMode = EmailMode.SIGN_IN,
     val email: String = "",
-    val password: String = "",
     val busy: Boolean = false,
     val error: AccountError? = null,
-    val notice: AccountNotice? = null,
-    val noticeEmail: String = "",
+    val linkSentTo: String? = null,
+    /** A sign-in link that waits for the address it was sent to. */
+    val pendingLink: String? = null,
     val backingUp: Boolean = false,
     val delete: DeleteState? = null,
 )
@@ -131,9 +145,14 @@ private data class Form(
 /**
  * The account's actions. Errors are shown in words; a closed Google picker ([AccountResult.Cancelled]) says nothing.
  *
- * Deleting the account signs in again (password or Google), deletes the backup, then the account; the log on this
- * phone stays. Should the backup not be deleted, the account is kept. Should the account not be
- * deleted after its backup was, the confirmation says exactly that.
+ * Signing in is Google or an email link: "Email me a sign-in link" sends it and remembers the address; the link opens
+ * the app ([AppLinkInbox.emailLink], taken here) and completes the sign-in, asking for the address only when this phone
+ * did not ask for the link.
+ *
+ * Deleting the account signs in again (Google, or a fresh email link whose link then completes the deletion), holds the
+ * account's family ([Families.holdForDeletion]), deletes the backup, then the users document and the account; the log
+ * on this phone stays. Should the backup not be deleted, the account is kept. Should the account not be deleted after
+ * its backup was, the confirmation says exactly that.
  *
  * The Google actions take the activity the system's account picker opens over; the screen passes it in.
  *
@@ -144,24 +163,27 @@ class AccountViewModel(
     private val cloud: CloudSync,
     private val workScope: CoroutineScope,
     private val zone: ZoneId = ZoneId.systemDefault(),
+    private val families: Families = NoFamilies,
+    private val inbox: AppLinkInbox = AppLinkInbox(),
 ) : ViewModel() {
 
     private val form = MutableStateFlow(Form())
+    private val privacyUrl = PrivacyPolicy.url(accounts.hostingDomain)
 
-    val state: StateFlow<AccountUiState> = combine(accounts.user, cloud.status, form) { user, status, f ->
+    val state: StateFlow<AccountUiState> = combine(accounts.user, cloud.status, form, inbox.invite) { user, status, f, invite ->
         AccountUiState(
             available = accounts.available,
             googleAvailable = accounts.googleAvailable,
             user = user,
             cloud = status,
             zone = zone,
-            mode = f.mode,
             email = f.email,
-            password = f.password,
             busy = f.busy,
             error = f.error,
-            notice = f.notice,
-            noticeEmail = f.noticeEmail,
+            linkSentTo = f.linkSentTo.takeIf { user == null },
+            linkNeedsEmail = f.pendingLink != null && user == null,
+            joining = invite != null && user == null,
+            privacyUrl = privacyUrl,
             backingUp = f.backingUp,
             delete = f.delete?.takeIf { user != null },
         )
@@ -172,9 +194,17 @@ class AccountViewModel(
         // account, and the old error goes with the form it belonged to.
         viewModelScope.launch {
             accounts.user.map { it?.uid }.distinctUntilChanged().drop(1).collect { uid ->
-                if (uid != null) form.update { it.copy(error = null, password = "") }
+                if (uid != null) form.update { it.copy(error = null, linkSentTo = null, pendingLink = null) }
             }
         }
+    }
+
+    /**
+     * Takes the email links that open the app, while the screen shows (the Welcome's view model outlives its screen,
+     * and must not take the links meant for the Account screen after it).
+     */
+    suspend fun receiveLinks() {
+        inbox.emailLink.filterNotNull().collect { inbox.takeEmailLink()?.let(::onLink) }
     }
 
     private fun initial() = AccountUiState(
@@ -183,31 +213,61 @@ class AccountViewModel(
         user = accounts.user.value,
         cloud = cloud.status.value,
         zone = zone,
+        privacyUrl = privacyUrl,
     )
 
     fun onGoogle(activity: Activity) = run { accounts.signInWithGoogle(activity) }
 
-    fun onMode(mode: EmailMode) = form.update { it.copy(mode = mode, error = null, notice = null) }
-
     fun onEmail(email: String) = form.update { it.copy(email = email, error = null) }
 
-    fun onPassword(password: String) = form.update { it.copy(password = password, error = null) }
-
-    fun onSubmit() {
+    /** "Email me a sign-in link" to the typed address, or "Send again" to the address it went to. */
+    fun onSendLink() {
         val f = form.value
-        run {
-            when (f.mode) {
-                EmailMode.SIGN_IN -> accounts.signIn(f.email, f.password)
-                EmailMode.CREATE -> accounts.createAccount(f.email, f.password)
-            }
-        }
+        val email = (f.linkSentTo ?: f.email).trim()
+        run(onSuccess = { it.copy(linkSentTo = email, pendingLink = null) }) { accounts.sendSignInLink(email) }
     }
 
-    fun onForgotPassword() {
-        val email = form.value.email
-        run(onSuccess = { it.copy(notice = AccountNotice.RESET_SENT, noticeEmail = email.trim()) }) {
-            accounts.sendPasswordReset(email)
+    fun onUseAnotherEmail() = form.update { it.copy(linkSentTo = null, error = null) }
+
+    /** Completes the sign-in of a link opened without the remembered address, with the typed one. */
+    fun onFinishSignIn() {
+        val f = form.value
+        val link = f.pendingLink ?: return
+        AccountInput.emailError(f.email)?.let { error -> return form.update { it.copy(error = error) } }
+        run(onSuccess = { it.copy(pendingLink = null) }) { accounts.signInWithLink(f.email.trim(), link) }
+    }
+
+    /**
+     * An email link opened the app. Signed out, it signs in (with the address this phone sent it to, or asks for it).
+     * Signed in, it is the link "Delete account?" asked for, and completes the deletion; any other link is ignored.
+     */
+    private fun onLink(link: String) {
+        val user = accounts.user.value
+        val sent = accounts.sentLink
+        if (user != null) {
+            if (sent?.purpose == LinkPurpose.DELETE_ACCOUNT && accounts.isSignInLink(link)) {
+                val open = form.value.delete
+                if (open != null && !open.google) {
+                    // The confirmation is open and asked for this link: it completes the deletion.
+                    form.update { it.copy(delete = open.copy(linkSent = true)) }
+                    startDeletion { accounts.reauthenticateWithLink(link) }
+                } else {
+                    // Asked for earlier (the app was closed meanwhile, say): ask again before deleting anything.
+                    form.update { it.copy(delete = DeleteState(google = false, link = link)) }
+                }
+            }
+            return
         }
+        if (!accounts.isSignInLink(link)) {
+            form.update { it.copy(error = AccountError.LINK_INVALID) }
+            return
+        }
+        if (sent == null) {
+            form.update { it.copy(pendingLink = link, linkSentTo = null, error = null) }
+            return
+        }
+        form.update { it.copy(email = sent.email) }
+        run(onSuccess = { it.copy(linkSentTo = null) }) { accounts.signInWithLink(sent.email, link) }
     }
 
     fun onBackUpNow() {
@@ -215,6 +275,8 @@ class AccountViewModel(
         form.update { it.copy(backingUp = true) }
         workScope.launch {
             try {
+                // A backup deleted with a failed account deletion: the parent asks to back up again, in a family.
+                if (cloud.status.value == CloudStatus.Deleted) families.holdForDeletion(false)
                 cloud.syncNow()
             } finally {
                 form.update { it.copy(backingUp = false) }
@@ -234,19 +296,51 @@ class AccountViewModel(
         form.update { it.copy(delete = DeleteState(google = user.google)) }
     }
 
-    fun onDeletePassword(password: String) =
-        form.update { f -> f.copy(delete = f.delete?.copy(password = password, problem = null)) }
+    /** Cancels the deletion: also its email link, which must not delete the account when it opens the app later. */
+    fun onDeleteDismiss() {
+        if (form.value.delete?.busy == true) return
+        form.update { it.copy(delete = null) }
+        if (accounts.sentLink?.purpose == LinkPurpose.DELETE_ACCOUNT) accounts.forgetSentLink()
+    }
 
-    fun onDeleteDismiss() = form.update { f -> if (f.delete?.busy == true) f else f.copy(delete = null) }
-
-    /** Confirms the deletion: signs in again ([activity] for Google), deletes the backup, then the account. */
+    /**
+     * Confirms the deletion. A Google account signs in again ([activity]) and the deletion goes on; an email account
+     * gets a link, which completes it when it opens the app.
+     */
     fun onDeleteConfirm(activity: Activity?) {
         val dialog = form.value.delete ?: return
         if (dialog.busy) return
+        val link = dialog.link
+        if (link != null) {
+            startDeletion { accounts.reauthenticateWithLink(link) }
+            return
+        }
+        if (dialog.google) {
+            startDeletion {
+                if (activity != null) accounts.reauthenticateWithGoogle(activity) else AccountResult.Failed(AccountError.OTHER)
+            }
+            return
+        }
+        setDelete { it.copy(busy = true, problem = null) }
+        viewModelScope.launch {
+            val sent = accounts.sendReauthenticationLink()
+            setDelete {
+                when (sent) {
+                    AccountResult.Success -> it.copy(busy = false, linkSent = true)
+                    AccountResult.Cancelled -> it.copy(busy = false)
+                    is AccountResult.Failed -> it.copy(busy = false, problem = DeleteProblem.SignIn(sent.error))
+                }
+            }
+        }
+    }
+
+    /** Signs in again with [reauthenticate], then deletes the backup and the account. */
+    private fun startDeletion(reauthenticate: suspend () -> AccountResult) {
+        if (form.value.delete?.busy == true) return
         setDelete { it.copy(busy = true, problem = null) }
         workScope.launch {
             val outcome = try {
-                delete(dialog, activity)
+                delete(reauthenticate)
             } catch (e: CancellationException) {
                 setDelete { it.copy(busy = false) }
                 throw e
@@ -254,7 +348,7 @@ class AccountViewModel(
             when (outcome) {
                 DeleteOutcome.Done -> form.value = Form()
                 DeleteOutcome.Cancelled -> setDelete { it.copy(busy = false) }
-                is DeleteOutcome.Failed -> setDelete { it.copy(busy = false, problem = outcome.problem, password = "") }
+                is DeleteOutcome.Failed -> setDelete { it.copy(busy = false, problem = outcome.problem, linkSent = false, link = null) }
             }
         }
     }
@@ -268,18 +362,18 @@ class AccountViewModel(
     }
 
     /** The deletion's steps, each only after the one before worked. */
-    private suspend fun delete(dialog: DeleteState, activity: Activity?): DeleteOutcome {
-        val signedIn = when {
-            dialog.google && activity != null -> accounts.reauthenticateWithGoogle(activity)
-            dialog.google -> AccountResult.Failed(AccountError.OTHER)
-            else -> accounts.reauthenticate(dialog.password)
-        }
-        when (signedIn) {
+    private suspend fun delete(reauthenticate: suspend () -> AccountResult): DeleteOutcome {
+        when (val signedIn = reauthenticate()) {
             AccountResult.Success -> Unit
             AccountResult.Cancelled -> return DeleteOutcome.Cancelled
             is AccountResult.Failed -> return DeleteOutcome.Failed(DeleteProblem.SignIn(signedIn.error))
         }
-        if (!cloud.deleteBackup()) return DeleteOutcome.Failed(DeleteProblem.Backup)
+        // No new family may be made for the account while (and after) its backup goes.
+        families.holdForDeletion(true)
+        if (!cloud.deleteBackup()) {
+            families.holdForDeletion(false)
+            return DeleteOutcome.Failed(DeleteProblem.Backup)
+        }
         return when (val deleted = accounts.deleteAccount()) {
             AccountResult.Success -> DeleteOutcome.Done
             AccountResult.Cancelled -> DeleteOutcome.Failed(DeleteProblem.Account(AccountError.OTHER))
@@ -292,11 +386,11 @@ class AccountViewModel(
 
     /** Runs a sign-in style action: busy while it runs, its error in words after, nothing at all when cancelled. */
     private fun run(
-        onSuccess: (Form) -> Form = { it.copy(password = "") },
+        onSuccess: (Form) -> Form = { it },
         action: suspend () -> AccountResult,
     ) {
         if (form.value.busy) return
-        form.update { it.copy(busy = true, error = null, notice = null) }
+        form.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             val result = try {
                 action()
@@ -315,7 +409,12 @@ class AccountViewModel(
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer { AccountViewModel(AppAccounts.accounts, Core.cloud, Core.graph.scope) }
+            initializer {
+                AccountViewModel(
+                    AppAccounts.accounts, Core.cloud, Core.graph.scope,
+                    families = AppAccounts.families, inbox = AppLinkInbox.shared,
+                )
+            }
         }
     }
 }

@@ -8,7 +8,7 @@ import com.ffmathy.pooparazzi.phone.MainActivity
 
 /**
  * What a system surface (widget, notification) asks Home to show when it opens the app (DESIGN_SPEC §3.1):
- * a logging sheet, or the undo card for the last widget log.
+ * a logging sheet, or the receipt for the last widget log.
  */
 sealed interface HomeLaunch {
     /** Home with nothing extra (the widget background, a notification body). */
@@ -26,14 +26,14 @@ sealed interface HomeLaunch {
      */
     data object History : HomeLaunch
 
-    /** The undo card for a log made on the widget ([entryId]), so it can be undone or backdated in the app. */
+    /** The receipt for a log made on the widget ([entryId]), so it can be undone or backdated in the app. */
     data class Receipt(val kind: ReceiptKind, val entryId: String) : HomeLaunch
 
-    /** True for the launches that open a logging sheet (which replaces an open edit sheet). */
-    val opensSheet: Boolean get() = this == Feed || this == Diaper
+    /** True for the launches that open a logging sheet or a receipt (which replaces an open edit sheet). */
+    val opensSheet: Boolean get() = this == Feed || this == Diaper || this is Receipt
 }
 
-/** Which widget log a [HomeLaunch.Receipt] card describes. */
+/** Which widget log a [HomeLaunch.Receipt] describes. */
 enum class ReceiptKind(val path: String) {
     LOGGED("logged"),
     SLEEP_STARTED("sleep-started"),

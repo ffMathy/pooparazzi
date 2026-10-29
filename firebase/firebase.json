@@ -3,9 +3,45 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "hosting": {
+    "public": "hosting",
+    "ignore": ["**/.DS_Store"],
+    "cleanUrls": true,
+    "rewrites": [
+      { "source": "/join/**", "destination": "/join/index.html" },
+      { "source": "/signin/**", "destination": "/signin/index.html" }
+    ],
+    "headers": [
+      {
+        "regex": "^/([^_].*|_[^_].*|_)?$",
+        "headers": [
+          { "key": "Content-Security-Policy", "value": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" },
+          { "key": "Referrer-Policy", "value": "no-referrer" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" }
+        ]
+      },
+      {
+        "source": "/.well-known/assetlinks.json",
+        "headers": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Cache-Control", "value": "public, max-age=300" }
+        ]
+      },
+      {
+        "source": "/{join,signin}{,/**}",
+        "headers": [
+          { "key": "X-Robots-Tag", "value": "noindex" },
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      }
+    ]
+  },
   "emulators": {
     "firestore": {
       "port": 8080
+    },
+    "hosting": {
+      "port": 5000
     },
     "singleProjectMode": true,
     "ui": {

@@ -68,8 +68,14 @@ object StatisticsSamples {
         StatsRange.Custom(LocalDate.of(2026, 4, 29), LocalDate.of(2026, 10, 25)),
     )
 
-    /** Only today logged (the scenario starts Sun 22:40, so its first full day would be today): the empty state. */
-    fun empty(): StatisticsUiState = build(SampleData.scenario(zone), SampleData.NOW_1432, StatsMetric.POOP, StatsRange.Last30Days)
+    /**
+     * No whole day logged yet (the scenario starts Sun 22:40): Sun and today so far count, 2 of 7 and 2 of 30 days
+     * logged, 5.0 feeds · 4.0 pee · 2.0 poop · 4h 39m sleep, and the "today so far" footnote.
+     */
+    fun soFar(): StatisticsUiState = build(SampleData.scenario(zone), SampleData.NOW_1432, StatsMetric.POOP, StatsRange.Last30Days)
+
+    /** Nothing logged: the empty state. */
+    fun empty(): StatisticsUiState = build(emptyList(), SampleData.NOW_1432, StatsMetric.POOP, StatsRange.Last30Days)
 
     private fun build(entries: List<Entry>, now: Long, metric: StatsMetric, range: StatsRange): StatisticsUiState =
         StatisticsStateBuilder.build(entries, now, zone, metric, range)

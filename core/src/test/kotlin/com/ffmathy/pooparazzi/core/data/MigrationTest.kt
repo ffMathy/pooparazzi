@@ -21,7 +21,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The database of a release from before several babies opens in this one with every row intact. */
+/** The databases of earlier releases (before several babies, before formula amounts) open in this one with every row intact. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class MigrationTest {
@@ -76,6 +76,38 @@ class MigrationTest {
                 assertEquals(0, repo.observeCloudPendingCount().first())
                 assertEquals(listOf(Baby.FIRST_ID), repo.observeBabyIds().first())
                 assertEquals(FeedType.BREAST, repo.get("feed")!!.feedType)
+            }
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun version2RowsHaveNoFormulaAmount() {
+        helper.createDatabase(NAME, 2).apply {
+            execSQL(
+                "INSERT INTO entries (id, kind, startMillis, endMillis, feedType, breastSide, pee, poop, poopColor, " +
+                    "poopTexture, updatedAtMillis, deleted, pendingSync, createdLocally, babyId, cloudPending) VALUES " +
+                    "('formula', 'FEED', 1000, NULL, 'FORMULA', NULL, 0, 0, NULL, NULL, 1000, 0, 0, 1, 'default', 0)",
+            )
+            close()
+        }
+
+        // Validates the migrated schema against 3.json (the new nullable amountMl column).
+        helper.runMigrationsAndValidate(NAME, 3, true).apply {
+            query("SELECT id, amountMl FROM entries").use { rows ->
+                assertTrue(rows.moveToNext())
+                assertEquals("formula", rows.getString(0))
+                assertTrue(rows.isNull(1))
+            }
+            close()
+        }
+
+        val db = Room.databaseBuilder(context, PooparazziDatabase::class.java, NAME).allowMainThreadQueries().build()
+        try {
+            val repo = RoomEntryRepository(db, FixedClock(SampleData.NOW_1432))
+            runBlocking {
+                assertEquals(Entry.feed(FeedType.FORMULA, 1000, id = "formula", updatedAtMillis = 1000), repo.get("formula"))
             }
         } finally {
             db.close()

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.phone.ui.home.HomeActions
@@ -52,14 +53,21 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun homeAsleepNight() = home("03-home-asleep-night", night = true, HomeSamples.asleep())
 
-    @Test fun homeBreastLogged() = home("04-home-breast-logged", night = false, HomeSamples.breastLogged())
+    /** "Adjust start" on the running Lamp: the Adjust start sheet, with no timeout. */
+    @Test fun adjustStartSheet() = sheet("03-home-adjust-start", night = true, HomeSamples.adjustingStart())
 
-    @Test fun homeUndoCard() {
-        // Freeze the clock just after the card's 150 ms fade-in so the drain line is still almost full.
+    /** The receipt after a breast feed backdated with −15m in the Feed sheet. */
+    @Test fun homeBreastLogged() = sheet("04-home-breast-logged", night = false, HomeSamples.breastLogged())
+
+    /** The receipt after every log: what was logged and when, Undo, the offsets, Edit and Done; no timeout. */
+    @Test fun homeReceipt() = sheet("05-home-receipt", night = true, HomeSamples.justLogged())
+
+    /** The whisper slot's 2 s notice for a toggle drawn before the sleep started elsewhere. */
+    @Test fun homeGuardNotice() {
         compose.mainClock.autoAdvance = false
-        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.justLogged(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.guardNotice(), HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.mainClock.advanceTimeBy(300)
-        compose.onRoot().captureRoboImage(path("05-home-undo-card"))
+        compose.onRoot().captureRoboImage(path("05-home-guard-notice"))
     }
 
     @Test fun feedSheet() = sheet("06-feed-sheet", night = true, HomeSamples.feedSheet())
@@ -68,6 +76,8 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun breastSheetTicked() = sheet("07-breast-sheet-ticked", night = true, HomeSamples.breastSheet(listOf(Breast.RIGHT, Breast.LEFT)))
 
+    @Test fun formulaSheet() = sheet("07b-formula-sheet", night = false, HomeSamples.formulaSheet())
+
     @Test fun diaperSheet() = sheet("08-diaper-sheet", night = true, HomeSamples.diaperSheet())
 
     @Test fun diaperSheetHint() = sheet("09-diaper-sheet-hint", night = true, HomeSamples.diaperSheetHint())
@@ -75,11 +85,25 @@ abstract class HomeScreenshots(private val language: String) {
     /** Twins (BABIES_AND_BACKUP §2.2): the current baby's name with a chevron is the switcher. */
     @Test fun homeTwins() = home("23-home-twins", night = false, HomeSamples.twins())
 
-    /** Not part of the tour (written under build/): twins with "Couldn't save · Tap to retry" under the switcher. */
+    /** Not part of the tour (written under build/): twins with the watch's retry ("Couldn't save") under the switcher. */
     @Test fun homeTwinsSyncError() {
         val error = HomeSamples.twins(sync = SyncStatus.Error)
         compose.setContent { Themed(night = true) { HomeScreen(error, HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/$language-home-twins-sync-error.png")
+    }
+
+    /**
+     * The status icons in their error states (DESIGN_SPEC §4.5): the watch and the cloud with "!", each a 48 dp retry
+     * button over the name.
+     */
+    @Test fun homeSyncErrors() = home("35-home-sync-errors", night = true, HomeSamples.syncStates(SyncStatus.Error, CloudStatus.Error))
+
+    /** Not part of the tour: the status icons at a 200 % font scale, with both retry targets (written under build/). */
+    @Test fun largeFontSyncErrors() {
+        RuntimeEnvironment.setFontScale(2f)
+        val state = HomeSamples.syncStates(SyncStatus.Error, CloudStatus.Error)
+        compose.setContent { Themed(night = true) { HomeScreen(state, HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/font200-$language-home-sync-errors.png")
     }
 
     /** The Switch baby sheet, opened from the name. */
@@ -96,16 +120,16 @@ abstract class HomeScreenshots(private val language: String) {
      */
     @Test fun largeFont() {
         RuntimeEnvironment.setFontScale(2f)
-        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.breastLogged(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.idle(), HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/font200-$language-home.png")
     }
 
-    @Test fun largeFontCard() {
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test fun largeFontReceipt() {
         RuntimeEnvironment.setFontScale(2f)
-        compose.mainClock.autoAdvance = false
-        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.justLogged(), HomeActions.None, windowInsets = ReferenceInsets) } }
-        compose.mainClock.advanceTimeBy(300)
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/font200-$language-card.png")
+        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.loggedDuringSleep(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.waitForIdle()
+        captureScreenRoboImage("build/outputs/roborazzi/font200-$language-receipt.png")
     }
 
     @OptIn(ExperimentalRoborazziApi::class)

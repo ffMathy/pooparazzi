@@ -20,6 +20,12 @@ enum class EntryViolation {
     /** A breast side on a FORMULA, FOOD or untyped feed. */
     SIDE_ON_NON_BREAST,
 
+    /** An amount on a non-FORMULA entry. */
+    AMOUNT_ON_NON_FORMULA,
+
+    /** A formula amount of zero or less. */
+    AMOUNT_NOT_POSITIVE,
+
     /** A non-DIAPER has diaper flags, colour or texture. */
     DIAPER_FIELDS_ON_NON_DIAPER,
 
@@ -60,6 +66,11 @@ fun validate(entry: Entry): EntryViolation? {
         EntryKind.SLEEP, EntryKind.DIAPER -> {
             if (entry.feedType != null || entry.breastSide != null) return EntryViolation.FEED_FIELDS_ON_NON_FEED
         }
+    }
+
+    entry.amountMl?.let { amount ->
+        if (entry.kind != EntryKind.FEED || entry.feedType != FeedType.FORMULA) return EntryViolation.AMOUNT_ON_NON_FORMULA
+        if (amount <= 0) return EntryViolation.AMOUNT_NOT_POSITIVE
     }
 
     if (entry.kind == EntryKind.DIAPER) {
