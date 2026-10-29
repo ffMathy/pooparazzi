@@ -29,8 +29,16 @@ internal data class CardModel(
 
 /** What the card is about. Entry ids point at the entry that the offsets move. */
 internal sealed interface CardSpec {
-    /** [type] null: a feed logged with just its time ("Feed logged"). [side]: a breast feed's ticked order, if any. */
-    data class FeedLogged(val entryId: String, val type: FeedType?, val side: BreastSide? = null) : CardSpec
+    /**
+     * [type] null: a feed logged with just its time ("Feed logged"). [side]: a breast feed's ticked order, if any;
+     * [amountMl]: a formula feed's amount, if any.
+     */
+    data class FeedLogged(
+        val entryId: String,
+        val type: FeedType?,
+        val side: BreastSide? = null,
+        val amountMl: Int? = null,
+    ) : CardSpec
     data class DiaperLogged(val entryId: String, val kind: DiaperKind) : CardSpec
     data class SleepStarted(val entryId: String) : CardSpec
     data class WokeUp(val entryId: String) : CardSpec
@@ -84,13 +92,16 @@ internal sealed interface SheetModel {
 
     /**
      * The Feed sheet. [breast] is true once Breast was tapped: the sheet then shows the side checkboxes and "Log feed";
-     * [ticks] are the breasts ticked so far, in tick order (V1_ADDITIONS §2.1).
+     * [ticks] are the breasts ticked so far, in tick order (V1_ADDITIONS §2.1). [formula] is true once Formula was
+     * tapped: the sheet then shows the amount slider and "Log feed"; [amountMl] is the amount picked (null: none).
      */
     data class Feed(
         override val stamp: Long,
         override val offsetMinutes: Int = 0,
         val breast: Boolean = false,
         val ticks: List<Breast> = emptyList(),
+        val formula: Boolean = false,
+        val amountMl: Int? = null,
     ) : SheetModel
 
     data class Diaper(

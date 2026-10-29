@@ -69,6 +69,8 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun breastSheetTicked() = sheet("07-breast-sheet-ticked", night = true, HomeSamples.breastSheet(listOf(Breast.RIGHT, Breast.LEFT)))
 
+    @Test fun formulaSheet() = sheet("07b-formula-sheet", night = false, HomeSamples.formulaSheet())
+
     @Test fun diaperSheet() = sheet("08-diaper-sheet", night = true, HomeSamples.diaperSheet())
 
     @Test fun diaperSheetHint() = sheet("09-diaper-sheet-hint", night = true, HomeSamples.diaperSheetHint())

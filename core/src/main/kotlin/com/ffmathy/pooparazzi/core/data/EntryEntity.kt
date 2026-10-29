@@ -53,6 +53,8 @@ data class EntryEntity(
      */
     @ColumnInfo(defaultValue = "0")
     val cloudPending: Boolean = false,
+    /** A formula feed's optional amount in millilitres ([Entry.amountMl]). */
+    val amountMl: Int? = null,
 ) {
     /** The entry this row holds, [normalized] (a timed breastfeed stored by an older version reads as an instant). */
     fun toEntry(): Entry = Entry(
@@ -69,6 +71,7 @@ data class EntryEntity(
         updatedAtMillis = updatedAtMillis,
         deleted = deleted,
         babyId = babyId,
+        amountMl = amountMl,
     ).normalized()
 
     companion object {
@@ -94,6 +97,7 @@ data class EntryEntity(
             createdLocally = createdLocally,
             babyId = entry.babyId,
             cloudPending = cloudPending,
+            amountMl = entry.amountMl,
         )
     }
 }

@@ -153,7 +153,7 @@ private fun TodayRow(
     val ambient = isAmbient()
     val title = rowTitle(entry, state.now, f)
     val supporting = f.labels.historySupporting(
-        entry, state.day, f.zone, state.now, f.clock, f.duration, f.relative, spacedRange = false,
+        entry, state.day, f.zone, state.now, f.clock, f.duration, f.relative, spacedRange = false, volume = f.volume,
     )
     val spoken = spokenText().thenAction(rowSpoken(entry, state, f, supporting), stringResource(R.string.action_adjust))
     Button(

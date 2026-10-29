@@ -90,7 +90,8 @@ enum class DiaperKind {
  * - a sleep is *running* while [endMillis] == null and it is not [deleted];
  * - a FEED's [feedType] is optional (null = just the time);
  * - a DIAPER's [pee] and [poop] are optional (neither = a plain change); [poopColor] and [poopTexture] are null unless [poop];
- * - [breastSide] is optional and only on a BREAST feed.
+ * - [breastSide] is optional and only on a BREAST feed;
+ * - [amountMl] is optional and only on a FORMULA feed, and positive when set.
  *
  * Every entry belongs to one baby, [babyId] (BABIES_AND_BACKUP §2.1); an edit never moves it to another.
  *
@@ -124,6 +125,8 @@ data class Entry(
     val deleted: Boolean = false,
     /** The [Baby.id] this entry belongs to. JSON from before several babies has none and reads as the first baby. */
     val babyId: String = Baby.FIRST_ID,
+    /** FEED + FORMULA only; optional, the amount given in millilitres (shown in fluid ounces where those are used). */
+    val amountMl: Int? = null,
 ) {
     companion object {
         /** A new random UUID for an entry id. */
@@ -164,7 +167,7 @@ data class Entry(
 
         /**
          * A feed at [atMillis] of [type] (null = just the time). [side] is kept only for [FeedType.BREAST]
-         * (see [breastfeed]).
+         * (see [breastfeed]), [amountMl] only for [FeedType.FORMULA].
          */
         fun feed(
             type: FeedType?,
@@ -173,6 +176,7 @@ data class Entry(
             id: String = newId(),
             updatedAtMillis: Long = atMillis,
             babyId: String = Baby.FIRST_ID,
+            amountMl: Int? = null,
         ): Entry = Entry(
             id = id,
             kind = EntryKind.FEED,
@@ -181,6 +185,7 @@ data class Entry(
             breastSide = side.takeIf { type == FeedType.BREAST },
             updatedAtMillis = updatedAtMillis,
             babyId = babyId,
+            amountMl = amountMl.takeIf { type == FeedType.FORMULA },
         )
 
         /** A diaper at [atMillis]. Colour and texture are dropped unless [poop]. */

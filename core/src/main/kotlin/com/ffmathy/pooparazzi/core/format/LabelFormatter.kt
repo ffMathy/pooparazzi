@@ -198,7 +198,8 @@ class LabelFormatter(private val strings: StringResolver) {
 
     /**
      * History row supporting line: sleeps "12:40 – 13:27" (a day prefix when they start on another day), a running
-     * sleep "since 14:32", feeds (breastfeeds included) "12:22", diapers [diaperDetail].
+     * sleep "since 14:32", feeds (breastfeeds included) "12:22", a formula feed with an amount "12:22 · 120 ml" (when
+     * [volume] is given), diapers [diaperDetail].
      */
     fun historySupporting(
         entry: Entry,
@@ -209,11 +210,13 @@ class LabelFormatter(private val strings: StringResolver) {
         duration: DurationFormatter,
         relative: RelativeFormatter,
         spacedRange: Boolean = true,
+        volume: VolumeFormatter? = null,
     ): String = when {
         entry.isRunning -> relative.since(entry.startMillis, zone)
         entry.kind == EntryKind.SLEEP -> clock.rangeOnDay(entry.startMillis, entry.endMillis ?: now, day, zone, spacedRange)
         entry.kind == EntryKind.DIAPER -> diaperDetail(entry, clock, zone)
-        else -> clock.format(entry.startMillis, zone)
+        else -> clock.format(entry.startMillis, zone) +
+            (entry.amountMl?.let { amount -> volume?.let { DOT_SEPARATOR + it.format(amount) } } ?: "")
     }
 
     /**

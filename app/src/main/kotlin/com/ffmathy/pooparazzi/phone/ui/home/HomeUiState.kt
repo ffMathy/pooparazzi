@@ -110,9 +110,9 @@ enum class CardAction { UNDO, DONE, NONE }
 sealed interface CardVariant {
     /**
      * "Breast logged" / "Formula logged" / "Food logged"; "Feed logged" for a feed with no type (null). A breast feed
-     * with a side order adds it as the sub-line ("Left → Right").
+     * with a side order adds it as the sub-line ("Left → Right"), a formula feed with an amount the amount ("120 ml").
      */
-    data class FeedLogged(val type: FeedType?, val side: BreastSide? = null) : CardVariant
+    data class FeedLogged(val type: FeedType?, val side: BreastSide? = null, val amountMl: Int? = null) : CardVariant
 
     /** "Pee logged" / "Poop logged" / "Pee + poop logged" / "Diaper logged". */
     data class DiaperLogged(val kind: DiaperKind) : CardVariant
@@ -174,7 +174,8 @@ sealed interface HomeSheetUi {
     /**
      * Feed sheet (V1_ADDITIONS §2.1): Breast / Formula / Food / Just the time. Once Breast is tapped ([breast]), the
      * sheet shows the optional side [ticks] (Left / Right checkboxes, in the order ticked; [side] is what that order
-     * records, null for none) and "Log feed", which logs the breast feed at [time].
+     * records, null for none) and "Log feed", which logs the breast feed at [time]. Once Formula is tapped
+     * ([formula]), the sheet shows the optional amount slider ([amountMl], null for none) and "Log feed".
      */
     data class Feed(
         override val stamp: Long,
@@ -182,6 +183,8 @@ sealed interface HomeSheetUi {
         override val chips: List<OffsetChipUi>,
         val breast: Boolean = false,
         val ticks: List<Breast> = emptyList(),
+        val formula: Boolean = false,
+        val amountMl: Int? = null,
     ) : HomeSheetUi {
         val side: BreastSide? get() = BreastSide.fromOrder(ticks)
     }
