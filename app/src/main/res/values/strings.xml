@@ -268,4 +268,18 @@
     <string name="account_delete_google_prompt">You\'ll sign in with Google again to confirm.</string>
     <string name="account_delete_backup_failed">Couldn\'t delete your backup, so your account was kept. Try again.</string>
     <string name="account_delete_account_failed">Your backup was deleted, but your account wasn\'t. Try again.</string>
+
+    <!-- Home buttons' second line (V1_ADDITIONS §9): what the last 7 days say comes next. -->
+    <string name="forecast_in">in %1$s</string>
+    <string name="forecast_soon">soon</string>
+    <string name="forecast_poop_in">poop in %1$s</string>
+    <string name="forecast_poop_soon">poop soon</string>
+    <string name="forecast_spoken_wake">wakes up in about %1$s, around %2$s</string>
+    <string name="forecast_spoken_sleep">sleeps again in about %1$s, around %2$s</string>
+    <string name="forecast_spoken_feed">next feed in about %1$s, around %2$s</string>
+    <string name="forecast_spoken_poop">next poop in about %1$s, around %2$s</string>
+    <string name="forecast_spoken_wake_soon">wakes up soon</string>
+    <string name="forecast_spoken_sleep_soon">sleeps again soon</string>
+    <string name="forecast_spoken_feed_soon">next feed soon</string>
+    <string name="forecast_spoken_poop_soon">next poop soon</string>
 </resources>

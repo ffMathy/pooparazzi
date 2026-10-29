@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone.ui.home
 
 import com.ffmathy.pooparazzi.core.domain.LampState
+import com.ffmathy.pooparazzi.core.domain.forecast
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.lampState
 import com.ffmathy.pooparazzi.core.domain.summarize
@@ -50,6 +51,7 @@ internal object HomeStateBuilder {
             row2 = row2(summary),
             today = summary.today,
             runningSleep = summary.runningSleep,
+            forecast = forecast(summary),
             card = card?.let { cardUi(it, entries, summary, timings) },
             sheet = sheet?.let { sheetUi(it) },
             babies = babies,

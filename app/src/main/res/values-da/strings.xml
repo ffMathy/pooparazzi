@@ -197,4 +197,17 @@
     <string name="account_delete_google_prompt">Du logger ind med Google igen for at bekræfte.</string>
     <string name="account_delete_backup_failed">Kunne ikke slette din backup, så din konto er bevaret. Prøv igen.</string>
     <string name="account_delete_account_failed">Din backup blev slettet, men din konto blev ikke. Prøv igen.</string>
+
+    <string name="forecast_in">om %1$s</string>
+    <string name="forecast_soon">snart</string>
+    <string name="forecast_poop_in">bæ om %1$s</string>
+    <string name="forecast_poop_soon">bæ snart</string>
+    <string name="forecast_spoken_wake">vågner om cirka %1$s, omkring kl. %2$s</string>
+    <string name="forecast_spoken_sleep">sover igen om cirka %1$s, omkring kl. %2$s</string>
+    <string name="forecast_spoken_feed">næste måltid om cirka %1$s, omkring kl. %2$s</string>
+    <string name="forecast_spoken_poop">næste bæ om cirka %1$s, omkring kl. %2$s</string>
+    <string name="forecast_spoken_wake_soon">vågner snart</string>
+    <string name="forecast_spoken_sleep_soon">sover igen snart</string>
+    <string name="forecast_spoken_feed_soon">næste måltid snart</string>
+    <string name="forecast_spoken_poop_soon">næste bæ snart</string>
 </resources>

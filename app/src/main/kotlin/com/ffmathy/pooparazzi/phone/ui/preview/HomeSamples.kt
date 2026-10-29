@@ -28,12 +28,16 @@ object HomeSamples {
     /** The Formula logged at 14:32 in [justLogged]. */
     val formula1432: Entry = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432, id = "sample-formula-1432")
 
-    /** 14:32, idle: "Last fed 2h 10m ago · 12:22 · Formula", Awake 1h 05m, Pee 48m ago, Today 5 · 4 · 2 · 7h 57m. */
-    fun idle(): HomeUiState = build(SampleData.scenario(zone), SampleData.NOW_1432)
+    /**
+     * 14:32, idle: "Last fed 2h 10m ago · 12:22 · Formula", Awake 1h 05m, Pee 48m ago, Today 5 · 4 · 2 · 7h 57m. The
+     * weeks of [SampleData.history] before it give the buttons their forecast: sleep in 55m, feed in 1h 05m (poop varies too
+     * much to predict).
+     */
+    fun idle(): HomeUiState = build(SampleData.history(zone = zone), SampleData.NOW_1432)
 
-    /** 03:12, asleep 1h 07m since 02:05; last fed 1h 32m ago · 01:40 · L → R. */
+    /** 03:12, asleep 1h 07m since 02:05; last fed 1h 32m ago · 01:40 · L → R; expected to wake in 2h 15m. */
     fun asleep(): HomeUiState =
-        build(SampleData.scenarioAt0312(zone), SampleData.NOW_0312, sync = SyncStatus.Synced(SampleData.SYNCED_0311))
+        build(SampleData.historyAt0312(zone), SampleData.NOW_0312, sync = SyncStatus.Synced(SampleData.SYNCED_0311))
 
     /**
      * A first day without a paired watch (no sync line): only a sleep running since 12:48, at 14:32 (no feeds or

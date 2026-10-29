@@ -82,9 +82,14 @@ object SampleData {
     fun scenarioWithRecentFeed(zone: ZoneId = ZONE): List<Entry> = scenario(zone) + recentBreastfeed(zone)
 
     /** The log as it stood at 03:12: entries up to then, with the 02:05 sleep still running (show at [NOW_0312]). */
-    fun scenarioAt0312(zone: ZoneId = ZONE): List<Entry> {
+    fun scenarioAt0312(zone: ZoneId = ZONE): List<Entry> = at0312(scenario(zone), zone)
+
+    /** [history] as it stood at 03:12, like [scenarioAt0312]: a week and more to forecast from. */
+    fun historyAt0312(zone: ZoneId = ZONE): List<Entry> = at0312(history(zone = zone), zone)
+
+    private fun at0312(entries: List<Entry>, zone: ZoneId): List<Entry> {
         val cutoff = epochMillis(TODAY, 3, 12, zone)
-        return scenario(zone)
+        return entries
             .filter { it.startMillis <= cutoff }
             .map { if (it.id == "sample-sleep-0205") it.copy(endMillis = null, updatedAtMillis = it.startMillis) else it }
     }
