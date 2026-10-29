@@ -11,7 +11,7 @@ The backend setup (Firebase project, rules, cost) is in [../BACKEND.md](../BACKE
 
 - **Names never leave the parent's own devices.** A baby's name is stored on the phone and synced to the paired watch over the Wearable Data Layer, as before. It is never uploaded to the backend, and the settings file that holds it is excluded from Android's cloud backup. Entries carry an opaque baby id (a UUID; the first baby's id is `default`).
 - **No account is needed.** The parent can use the app for ever without one. They are told, once and then in Settings, that the log then lives only on this phone (and the watch) and is lost with the phone, and that they can create an account at any time, which backs up everything logged so far.
-- **Cheap by construction.** The backend is Firebase Authentication (email and password) and Cloud Firestore on the free Spark plan, which has no billing account and so cannot charge. The app reads only what changed since its last sync and never keeps a listener open over the whole log (§4.4).
+- **Cheap by construction.** The backend is Firebase Authentication (Google sign-in, or email and password) and Cloud Firestore on the free Spark plan, which has no billing account and so cannot charge. The app reads only what changed since its last sync and never keeps a listener open over the whole log (§4.4).
 - **The phone is the hub.** Only the phone talks to the backend. The watch keeps syncing with the phone over the Data Layer; entries logged on the watch reach the backend through the phone, and entries restored from the backend reach the watch through the phone.
 
 ## 2. Babies
@@ -74,7 +74,7 @@ The first time the phone app opens with accounts available and nobody signed in 
 > **Your log stays on this phone**
 > Without an account, everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.
 > You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do.
-> [Create account] · [Sign in] · [Continue without an account]
+> [Continue with Google] · [Create account] · [Sign in with email] · [Continue without an account]
 
 The choice is remembered on this phone only (excluded from backups). Builds without a Firebase configuration never show it.
 
@@ -93,9 +93,9 @@ The first Settings section. One row that opens the **Account** screen, whose sum
 
 ### 3.3 Account screen
 
-- **Signed out:** the explanation of §3.1, a Sign in / Create account choice, email and password fields, the main button, "Forgot password?" (sign in; sends a reset link to the typed address), and errors in words ("Wrong email or password", "That email already has an account", "Use at least 6 characters", "No connection. Try again.").
+- **Signed out:** the explanation of §3.1, "Continue with Google" first (one tap, no password), then "or use email": a Sign in / Create account choice, email and password fields, the main button, "Forgot password?" (sign in; sends a reset link to the typed address), and errors in words ("Wrong email or password", "That email already has an account", "Use at least 6 characters", "No connection. Try again.").
 - **Create account** creates the account and signs in; the backup starts at once. There is no invitation and no email confirmation step.
-- **Signed in:** the address, the backup status line, "Back up now", "Sign out", and "Delete account…" (a dialog that asks for the password, then deletes the backup and the account; the log on this phone stays). Account deletion inside the app is a Google Play requirement.
+- **Signed in:** the address, the backup status line, "Back up now", "Sign out", and "Delete account…" (a dialog that asks to sign in again — the password, or Google — then deletes the backup and the account; the log on this phone stays). Account deletion inside the app is a Google Play requirement.
 - Signing out keeps the log on the phone. Signing in to an account merges the phone's log with the account's backup (nothing is lost on either side) and uploads the phone's entries.
 
 ## 4. Sync with the backend
