@@ -80,7 +80,8 @@ class HomeDiaperTest : HomeViewModelTestBase() {
         assertEquals(PoopTexture.SEEDY, diaper.poopTexture)
         assertEquals(SampleData.NOW_1432 - 15 * MINUTE, diaper.startMillis)
         assertEquals(CardVariant.DiaperLogged(DiaperKind.BOTH), state.card!!.variant)
-        assertTrue((state.card!!.row as CardRow.Earlier).chips.single { it.selected }.minutes == -15)
+        assertEquals(CardRow.AdjustTime, state.card!!.row)
+        assertEquals("the sheet's offset is pre-selected", -15, home.openAdjust().chips.single { it.selected }.minutes)
     }
 
     @Test

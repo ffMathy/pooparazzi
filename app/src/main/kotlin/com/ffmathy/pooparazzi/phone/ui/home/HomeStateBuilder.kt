@@ -8,6 +8,7 @@ import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
 import com.ffmathy.pooparazzi.core.model.diaperKind
+import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import java.time.ZoneId
 
@@ -16,10 +17,8 @@ import java.time.ZoneId
  * and previews build their states through the same rules as the app.
  */
 internal object HomeStateBuilder {
-    /** Card chips (DESIGN_SPEC §3.3.1). */
-    val EARLIER_CHIPS = listOf(-5, -10, -15)
-    val RUNNING_SLEEP_CHIPS = listOf(-5, -10)
-    val ADJUST_CHIPS = listOf(-15, -5, 5)
+    /** Adjust time sheet chips (DESIGN_SPEC §3.3.1): −15m · −10m · −5m · +5m. */
+    val ADJUST_CHIPS = listOf(-15, -10, -5, 5)
 
     /** Sheet chips: Now · −5m · −10m · −15m. */
     val SHEET_CHIPS = listOf(0, -5, -10, -15)
@@ -47,7 +46,7 @@ internal object HomeStateBuilder {
             today = summary.today,
             runningSleep = summary.runningSleep,
             card = card?.let { cardUi(it, entries, summary, timings) },
-            sheet = sheet?.let { sheetUi(it) },
+            sheet = sheet?.let { sheetUi(it, entries, now) },
         )
     }
 
@@ -76,21 +75,16 @@ internal object HomeStateBuilder {
             is CardSpec.SleepStarted -> CardVariant.SleepStarted
             is CardSpec.WokeUp -> CardVariant.WokeUp(subjectEntry?.clockDurationMillis(now) ?: 0L)
             is CardSpec.SleepCancelled -> CardVariant.SleepCancelled
-            is CardSpec.AdjustStart -> CardVariant.AdjustStart
             is CardSpec.Notice -> CardVariant.Notice(spec.guard)
             is CardSpec.Deleted -> CardVariant.Deleted(spec.previous)
             is CardSpec.Undone -> CardVariant.Undone
         }
-        val action = when {
-            model.spec is CardSpec.AdjustStart -> CardAction.DONE
-            model.undo != null -> CardAction.UNDO
-            else -> CardAction.NONE
-        }
+        val action = if (model.undo != null) CardAction.UNDO else CardAction.NONE
         val runningSleep = summary.runningSleep
         val row = when (val message = model.message) {
             is CardMessage.Guard -> CardRow.Guard(message.kind, message.sinceMillis)
             is CardMessage.Dedupe -> CardRow.Dedupe(message.entry)
-            null -> chipRow(model, subjectEntry, runningSleep, now)
+            null -> adjustRow(model, subjectEntry, runningSleep, now)
         }
         return UndoCardUi(
             key = model.key,
@@ -99,33 +93,28 @@ internal object HomeStateBuilder {
             variant = variant,
             action = action,
             row = row,
+            paused = model.paused,
         )
     }
 
-    private fun chipRow(model: CardModel, entry: Entry?, runningSleep: Entry?, now: Long): CardRow {
-        val subject = model.spec.subject ?: return CardRow.None
-        if (entry == null) return CardRow.None
-        fun chips(minutes: List<Int>) = minutes.map { m ->
-            val selected = model.offsetMinutes == m
-            OffsetChipUi(m, selected, enabled = selected || offsetAllowed(entry, subject.second, model.baseTime, m, now))
-        }
-        return when {
-            model.spec is CardSpec.AdjustStart -> CardRow.Adjust(chips(ADJUST_CHIPS), entry.id)
-            showsRunningSleepRow(model, runningSleep) -> CardRow.RunningSleep(
+    private fun adjustRow(model: CardModel, entry: Entry?, runningSleep: Entry?, now: Long): CardRow {
+        if (model.spec.subject == null || entry == null) return CardRow.None
+        return if (showsRunningSleepRow(model, runningSleep)) {
+            CardRow.RunningSleep(
                 endSleepEnabled = runningSleep != null && entry.startMillis >= runningSleep.startMillis && entry.startMillis <= now,
-                chips = chips(RUNNING_SLEEP_CHIPS),
             )
-            else -> CardRow.Earlier(chips(EARLIER_CHIPS))
+        } else {
+            CardRow.AdjustTime
         }
     }
 
-    /** The running-sleep row replaces "Earlier?" for a feed or diaper logged during a sleep that still runs. */
+    /** The running-sleep row adds "End sleep" for a feed or diaper logged during a sleep that still runs. */
     fun showsRunningSleepRow(model: CardModel, runningSleep: Entry?): Boolean =
         model.duringSleep && runningSleep != null && model.spec.canEndSleep
 
     /**
      * Whether moving [field] of [entry] to `base + minutes` is allowed: never into the future, never an end before
-     * its start or a start after its end (DESIGN_SPEC §3.3.1 card rules).
+     * its start or a start after its end (DESIGN_SPEC §3.3.1 Adjust time rules).
      */
     fun offsetAllowed(entry: Entry, field: MoveField, base: Long, minutes: Int, now: Long): Boolean {
         val target = base + minutes * MINUTE_MILLIS
@@ -136,7 +125,7 @@ internal object HomeStateBuilder {
         }
     }
 
-    private fun sheetUi(sheet: SheetModel): HomeSheetUi {
+    private fun sheetUi(sheet: SheetModel, entries: List<Entry>, now: Long): HomeSheetUi {
         fun chips(minutes: List<Int>, enabled: (Int) -> Boolean = { true }) =
             minutes.map { OffsetChipUi(it, selected = it == sheet.offsetMinutes, enabled = enabled(it)) }
         return when (sheet) {
@@ -150,6 +139,18 @@ internal object HomeStateBuilder {
                 color = sheet.color,
                 texture = sheet.texture,
             )
+            is SheetModel.Adjust -> {
+                val entry = entries.firstOrNull { it.id == sheet.entryId && !it.deleted }
+                HomeSheetUi.Adjust(
+                    stamp = sheet.stamp,
+                    offsetMinutes = sheet.offsetMinutes,
+                    chips = chips(ADJUST_CHIPS) { m ->
+                        m == sheet.offsetMinutes || (entry != null && offsetAllowed(entry, sheet.field, sheet.stamp, m, now))
+                    },
+                    entryId = sheet.entryId,
+                    sleepStart = entry?.isSleep == true && sheet.field == MoveField.START,
+                )
+            }
         }
     }
 }

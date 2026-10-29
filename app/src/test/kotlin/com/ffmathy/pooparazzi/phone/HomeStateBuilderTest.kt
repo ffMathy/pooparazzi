@@ -65,9 +65,27 @@ class HomeStateBuilderTest {
     }
 
     @Test
-    fun justLoggedHasTheEarlierRow() {
+    fun justLoggedOffersAdjustTime() {
         val card = HomeSamples.justLogged().card!!
-        assertEquals(listOf(-5, -10, -15), (card.row as CardRow.Earlier).chips.map { it.minutes })
+        assertEquals(CardRow.AdjustTime, card.row)
+        assertFalse(card.paused)
+    }
+
+    @Test
+    fun theAdjustSheetOverAPausedCardCannotGoIntoTheFuture() {
+        val state = HomeSamples.adjustingFeed()
+        assertTrue(state.card!!.paused)
+        val sheet = state.sheet as HomeSheetUi.Adjust
+        assertFalse(sheet.sleepStart)
+        assertEquals(listOf(true, true, true, false), sheet.chips.map { it.enabled })
+    }
+
+    @Test
+    fun adjustingStartShowsTheChosenStart() {
+        val sheet = HomeSamples.adjustingStart().sheet as HomeSheetUi.Adjust
+        assertTrue(sheet.sleepStart)
+        assertEquals(SampleData.at(1, 50), sheet.time)
+        assertEquals(-15, sheet.chips.single { it.selected }.minutes)
     }
 
     @Test

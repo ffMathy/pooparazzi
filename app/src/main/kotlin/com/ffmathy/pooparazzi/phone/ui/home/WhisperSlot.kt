@@ -7,7 +7,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -15,6 +14,8 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -68,8 +69,6 @@ import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.ui.history.deletedLabel
 import com.ffmathy.pooparazzi.phone.ui.history.spokenSideCapitalised
-import com.ffmathy.pooparazzi.phone.ui.components.ChipDefaults
-import com.ffmathy.pooparazzi.phone.ui.components.OffsetChipRow
 import com.ffmathy.pooparazzi.phone.ui.components.XChip
 import java.time.ZoneId
 import kotlinx.coroutines.delay
@@ -204,8 +203,8 @@ private fun fitAll(texts: List<String>, style: TextStyle, width: androidx.compos
 private const val TODAY_TWO_COLUMN_SCALE = 1.5f
 
 /**
- * The undo card: row 1 icon · title (time-free) · Undo/Done; row 2 one of the variants; the drain line shows the
- * remaining window (anchored at the start, hidden for "Undone").
+ * The undo card: row 1 icon · title (time-free) · Undo; row 2 one of the variants; the drain line shows the remaining
+ * window (anchored at the start, hidden for "Undone", full while the Adjust time sheet is open).
  */
 @Composable
 private fun UndoCard(card: UndoCardUi, zone: ZoneId, formatters: Formatters, actions: HomeActions) {
@@ -272,7 +271,6 @@ private fun UndoCard(card: UndoCardUi, zone: ZoneId, formatters: Formatters, act
             }
             when (card.action) {
                 CardAction.UNDO -> CardTextButton(XIcons.undo, stringResource(CoreR.string.action_undo), actions::onUndo)
-                CardAction.DONE -> CardTextButton(XIcons.check, stringResource(CoreR.string.action_done), actions::onCardDone)
                 CardAction.NONE -> Unit
             }
         }
@@ -296,15 +294,20 @@ private fun UndoCard(card: UndoCardUi, zone: ZoneId, formatters: Formatters, act
     }
 }
 
-/** 2 dp, solid outline, 16 dp insets, anchored at the start; width = the remaining fraction of the window. */
+/**
+ * 2 dp, solid outline, 16 dp insets, anchored at the start; width = the remaining fraction of the window. Full and
+ * still while the card is paused.
+ */
 @Composable
 private fun DrainLine(card: UndoCardUi) {
     val colors = MaterialTheme.colorScheme
     val reducedMotion = rememberReducedMotion()
     val remaining = remember(card.key, card.windowKey) { Animatable(1f) }
-    LaunchedEffect(card.key, card.windowKey, reducedMotion) {
+    LaunchedEffect(card.key, card.windowKey, card.paused, reducedMotion) {
         remaining.snapTo(1f)
-        if (reducedMotion) {
+        if (card.paused) {
+            return@LaunchedEffect
+        } else if (reducedMotion) {
             // No drain transition: step once a second.
             val steps = (card.timeoutMillis / 1_000L).coerceAtLeast(1L)
             for (step in 1..steps) {
@@ -348,45 +351,25 @@ private fun CardTextButton(icon: ImageVector, label: String, onClick: () -> Unit
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CardRowContent(row: CardRow, zone: ZoneId, formatters: Formatters, actions: HomeActions) {
     val colors = MaterialTheme.colorScheme
     val events = LocalXPalette.current.events
     when (row) {
         CardRow.None -> Unit
-        is CardRow.Earlier -> {
-            val onOffset: (Int) -> Unit = actions::onCardOffset
-            LeadAndChips(
-                lead = {
-                    Text(
-                        stringResource(CoreR.string.action_earlier_question),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = colors.onSurfaceVariant,
-                        maxLines = 2,
-                    )
-                },
-                chips = { OffsetChipRow(row.chips, formatters, onOffset) },
+        CardRow.AdjustTime -> AdjustTimeChip(actions::onCardAdjust)
+        is CardRow.RunningSleep -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            XChip(
+                selected = false,
+                onClick = actions::onCardEndSleep,
+                label = stringResource(CoreR.string.action_end_sleep),
+                enabled = row.endSleepEnabled,
+                role = Role.Button,
+                leading = { XIcon(XIcons.wake, contentDescription = null, tint = colors.onSurface, size = 18.dp) },
             )
+            AdjustTimeChip(actions::onCardAdjust)
         }
-        is CardRow.RunningSleep -> LeadAndChips(
-            lead = {
-                XChip(
-                    selected = false,
-                    onClick = actions::onCardEndSleep,
-                    label = stringResource(CoreR.string.action_end_sleep),
-                    enabled = row.endSleepEnabled,
-                    role = Role.Button,
-                    leading = { XIcon(XIcons.wake, contentDescription = null, tint = colors.onSurface, size = 18.dp) },
-                )
-            },
-            chips = { OffsetChipRow(row.chips, formatters, actions::onCardOffset) },
-        )
-        is CardRow.Adjust -> OffsetChipRow(
-            row.chips,
-            formatters,
-            actions::onCardOffset,
-            trailing = { EditChip(onClick = { actions.onEditEntry(row.editEntryId) }) },
-        )
         is CardRow.Guard -> {
             val (icon, tint, textColor, format) = when (row.kind) {
                 GuardKind.ASLEEP -> GuardStyle(XIcons.sleep, events.sleep.strong, events.sleep.text, CoreR.string.guard_already_asleep)
@@ -406,26 +389,6 @@ private fun CardRowContent(row: CardRow, zone: ZoneId, formatters: Formatters, a
     }
 }
 
-/**
- * A lead ("Earlier?", "End sleep") before a row of equal offset chips. Side by side while the chips keep a usable width;
- * at large font scales or on narrow screens the lead goes above them, so nothing shrinks to unreadable.
- */
-@Composable
-private fun LeadAndChips(lead: @Composable () -> Unit, chips: @Composable () -> Unit) {
-    val stacked = LocalDensity.current.fontScale >= LARGE_FONT_SCALE
-    if (stacked) {
-        Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            lead()
-            chips()
-        }
-    } else {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            lead()
-            Box(Modifier.weight(1f)) { chips() }
-        }
-    }
-}
-
 private data class GuardStyle(val icon: ImageVector, val tint: Color, val text: Color, val format: Int)
 
 @Composable
@@ -436,30 +399,16 @@ private fun MessageRow(icon: ImageVector, tint: Color, text: String, textColor: 
     }
 }
 
-/** Icon-only Edit chip: 48 × 40 visual, `edit` 18, outline border, "Edit start time". */
+/** "Adjust time": `clock` 18 + label, hugging its content; opens the Adjust time sheet (no timeout there). */
 @Composable
-private fun EditChip(onClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    val description = stringResource(R.string.cd_edit_start_time)
-    Box(
-        Modifier
-            .height(ChipDefaults.TargetHeight)
-            .width(48.dp)
-            .clip(ChipDefaults.PillShape)
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            Modifier
-                .height(ChipDefaults.PillHeight)
-                .width(48.dp)
-                .border(1.dp, colors.outline, ChipDefaults.PillShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            XIcon(XIcons.edit, contentDescription = null, tint = colors.onSurface, size = 18.dp)
-        }
-    }
+private fun AdjustTimeChip(onClick: () -> Unit) {
+    XChip(
+        selected = false,
+        onClick = onClick,
+        label = stringResource(CoreR.string.action_adjust_time),
+        role = Role.Button,
+        leading = { XIcon(XIcons.clock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, size = 18.dp) },
+    )
 }
 
 /** Row 1 of a card: icon, title and optional sub-line, with the sub-line's spoken form. */
@@ -495,11 +444,6 @@ private fun cardContent(variant: CardVariant, formatters: Formatters): CardConte
             stringResource(CoreR.string.receipt_sleep_cancelled),
             stringResource(CoreR.string.receipt_slept, duration.format(0L)),
             stringResource(CoreR.string.receipt_slept, duration.spoken(0L)),
-        )
-        CardVariant.AdjustStart -> CardContent(
-            TintedIcon(XIcons.sleep, events.sleep.strong),
-            stringResource(CoreR.string.action_adjust_start),
-            null,
         )
         is CardVariant.Notice -> when (variant.guard) {
             GuardKind.ASLEEP -> CardContent(TintedIcon(XIcons.sleep, events.sleep.strong), stringResource(CoreR.string.status_asleep), null)

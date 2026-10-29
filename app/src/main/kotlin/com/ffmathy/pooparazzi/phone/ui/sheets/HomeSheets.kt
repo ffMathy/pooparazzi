@@ -8,7 +8,7 @@ import com.ffmathy.pooparazzi.phone.ui.home.HomeActions
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import java.time.ZoneId
 
-/** Home's logging sheets: at most one is open; each animates closed before Home's cooldown starts. */
+/** Home's logging sheets and the Adjust time sheet: at most one is open; each animates closed before Home's cooldown starts. */
 @Composable
 internal fun HomeSheets(sheet: HomeSheetUi?, zone: ZoneId, formatters: Formatters, actions: HomeActions, windowInsets: WindowInsets) {
     XModalSheet(
@@ -48,5 +48,21 @@ internal fun HomeSheets(sheet: HomeSheetUi?, zone: ZoneId, formatters: Formatter
         windowInsets = windowInsets,
     ) { diaper ->
         DiaperSheetContent(diaper, zone, formatters, diaperCallbacks)
+    }
+    val adjustCallbacks = remember(actions) {
+        AdjustSheetCallbacks(
+            onOffset = actions::onSheetOffset,
+            onEdit = actions::onAdjustEdit,
+            onSave = actions::onAdjustSave,
+            onCancel = actions::onSheetDismiss,
+        )
+    }
+    XModalSheet(
+        value = sheet as? HomeSheetUi.Adjust,
+        onDismissRequest = actions::onSheetDismiss,
+        onClosed = actions::onSheetClosed,
+        windowInsets = windowInsets,
+    ) { adjust ->
+        AdjustSheetContent(adjust, zone, formatters, adjustCallbacks)
     }
 }

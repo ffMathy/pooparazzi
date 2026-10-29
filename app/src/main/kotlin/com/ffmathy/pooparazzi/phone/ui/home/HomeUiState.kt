@@ -73,8 +73,10 @@ data class OffsetChipUi(val minutes: Int, val selected: Boolean, val enabled: Bo
  * The undo card (DESIGN_SPEC §3.3.1). Titles are time-free; the effective time shows once, in the Lamp or a since-row.
  *
  * @property key identity of the card: a new log gets a new key (and fades in).
- * @property windowKey changes whenever the 10 s window restarts (chip taps, dedupe), restarting the drain line.
+ * @property windowKey changes whenever the 10 s window restarts (the Adjust time sheet closing, dedupe), restarting the
+ *   drain line.
  * @property timeoutMillis the window length the drain line shows.
+ * @property paused the Adjust time sheet is open: the window waits, and the drain line stays full.
  */
 @Immutable
 data class UndoCardUi(
@@ -84,10 +86,11 @@ data class UndoCardUi(
     val variant: CardVariant,
     val action: CardAction,
     val row: CardRow,
+    val paused: Boolean = false,
 )
 
-/** The end-of-row button: "Undo", "Done" (Adjust start) or nothing ("Undone", notices). */
-enum class CardAction { UNDO, DONE, NONE }
+/** The end-of-row button: "Undo" or nothing ("Undone", notices). */
+enum class CardAction { UNDO, NONE }
 
 /** What the card says in row 1. */
 @Immutable
@@ -110,9 +113,6 @@ sealed interface CardVariant {
     /** "Sleep cancelled" + "Slept <1m". */
     data object SleepCancelled : CardVariant
 
-    /** "Adjust start" of the running sleep (the button reads "Done"). */
-    data object AdjustStart : CardVariant
-
     /** A guard with no card to attach to: shows the current state ("Asleep", "Awake"). */
     data class Notice(val guard: GuardKind) : CardVariant
 
@@ -131,14 +131,11 @@ enum class GuardKind { ASLEEP, AWAKE }
 sealed interface CardRow {
     data object None : CardRow
 
-    /** "Earlier?" + "−5m" "−10m" "−15m". */
-    data class Earlier(val chips: List<OffsetChipUi>) : CardRow
+    /** "Adjust time": opens the Adjust time sheet for the card's entry, where the offsets and Edit live. */
+    data object AdjustTime : CardRow
 
-    /** A feed or diaper logged while a sleep runs: "End sleep" + "−5m" "−10m". */
-    data class RunningSleep(val endSleepEnabled: Boolean, val chips: List<OffsetChipUi>) : CardRow
-
-    /** "−15m" "−5m" "+5m" + the Edit chip for [editEntryId]. */
-    data class Adjust(val chips: List<OffsetChipUi>, val editEntryId: String) : CardRow
+    /** A feed or diaper logged while a sleep runs: "End sleep" + "Adjust time". */
+    data class RunningSleep(val endSleepEnabled: Boolean) : CardRow
 
     /** "Already asleep since 14:32" / "Already awake since 14:40" (2 s). */
     data class Guard(val kind: GuardKind, val sinceMillis: Long) : CardRow
@@ -182,6 +179,19 @@ sealed interface HomeSheetUi {
         val poop: Boolean,
         val color: PoopColor?,
         val texture: PoopTexture?,
+    ) : HomeSheetUi
+
+    /**
+     * Adjust time sheet (DESIGN_SPEC §3.3.1): moves an entry's time by an offset from [stamp] (its time when the sheet
+     * opened), with no timeout. "Save" writes [time]; "Edit" opens the edit sheet for [entryId]. [sleepStart]: the
+     * start of a sleep (the title reads "Adjust start").
+     */
+    data class Adjust(
+        override val stamp: Long,
+        override val offsetMinutes: Int,
+        override val chips: List<OffsetChipUi>,
+        val entryId: String,
+        val sleepStart: Boolean,
     ) : HomeSheetUi
 }
 

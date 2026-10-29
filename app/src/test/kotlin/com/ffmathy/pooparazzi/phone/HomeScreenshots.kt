@@ -51,6 +51,9 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun homeAsleepNight() = home("03-home-asleep-night", night = true, HomeSamples.asleep())
 
+    /** "Adjust start" on the running Lamp: the Adjust time sheet, with no timeout. */
+    @Test fun adjustStartSheet() = sheet("03-home-adjust-start", night = true, HomeSamples.adjustingStart())
+
     @Test fun homeBreastLogged() = home("04-home-breast-logged", night = false, HomeSamples.breastLogged())
 
     @Test fun homeUndoCard() {
@@ -60,6 +63,9 @@ abstract class HomeScreenshots(private val language: String) {
         compose.mainClock.advanceTimeBy(300)
         compose.onRoot().captureRoboImage(path("05-home-undo-card"))
     }
+
+    /** "Adjust time" on the undo card: the sheet over the paused card. */
+    @Test fun adjustTimeSheet() = sheet("05-home-adjust-time", night = false, HomeSamples.adjustingFeed())
 
     @Test fun feedSheet() = sheet("06-feed-sheet", night = true, HomeSamples.feedSheet())
 

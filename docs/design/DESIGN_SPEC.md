@@ -54,7 +54,7 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 | Feed and Diaper open the app's own sheets/screens (offset, type, side order, pee/poop, colour, texture); sleep toggles in one tap | Phone widgets (4×2, 3×1, Samsung cover screen), watch Tile |
 | Status at a glance: time since last feed, awake/asleep duration, last diaper | Phone Home, watch Main, Tile, complications, widget, Live Update |
 | Undo after every log | Phone undo card, watch Logged screen, widget receipt, Tile title |
-| Backdating at log time and later editing | Diaper picker offsets, undo-card offsets, Adjust start, phone edit sheet, watch Adjust screen |
+| Backdating at log time and later editing | Diaper picker offsets, phone Adjust time sheet (from the undo card or Adjust start), phone edit sheet, watch Adjust screen |
 | History: day ribbon, counts, list | Phone History, watch Today list |
 | Phone-to-watch sync status | Phone top bar, watch Logged and Main list footer |
 | Automatic Night appearance (dark, low-blue, "lights-down" while asleep) | Phone, widget; the watch is always dark |
@@ -162,7 +162,7 @@ Under one minute: the phone hero shows "just now" (heroWord) with the sub-line "
 ```
 Home ──Diaper──────────────▶ Diaper sheet ──Pee/Poop/Both──▶ Home + undo card
  │ ├─since-row 1 / 2──────▶ Edit sheet (latest entry of that row)
- │ ├─Adjust start (Lamp)──▶ Adjust card in the whisper slot ──Edit chip──▶ Edit sheet (running sleep)
+ │ ├─Adjust start (Lamp) / undo card "Adjust time"──▶ Adjust time sheet ──Edit──▶ Edit sheet (that entry)
  │ ├─History pill / Today grid ──▶ History ──row──▶ Edit sheet
  │ │                                        └─"Add entry" FAB──▶ Edit sheet ("Add past entry" mode)
  │ └─Settings ──────────────▶ Settings (not designed; Appendix B)
@@ -262,16 +262,16 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
   - Two-line title (Woke up, Sleep cancelled): title titleMedium 18/22 + sub dataSmall onSurfaceVariant.
 - Row 2 (44, chip targets 48): one of the variants below.
 - Drain line: 2 dp, solid outline, inset 16 from each side (318 at full), 6 dp above the card bottom, anchored at the start. Width = remaining fraction. Hidden in the "Undone" state.
-- **Titles are time-free.** The effective time of the logged event shows once, in the Lamp or the since-row directly above, and updates on every chip tap. The only cards that restate a time are the guard and dedupe lines.
+- **Titles are time-free.** The effective time of the logged event shows once, in the Lamp or the since-row directly above, and updates when the Adjust time sheet saves. The only cards that restate a time are the guard and dedupe lines.
+- The card holds no time controls of its own: "Adjust time" opens the **Adjust time sheet** (below), which has no timeout. While it is open the card's window waits (the drain line stays full); when it closes, the window restarts at 10 s so Undo stays in reach.
 
 | Variant | Icon | Title | Row 2 |
 |---|---|---|---|
-| Feed | `feed` | "Feed logged" | Earlier |
-| Pee / Poop / Both | `pee` / `poop` / `both` | "Pee logged" / "Poop logged" / "Pee + poop logged" | Earlier |
-| Sleep start | `sleep` | "Sleep started" | Earlier (moves the start) |
-| Woke up | `wake` | "Woke up" + sub "Slept 1h 07m" | Earlier (moves the end) |
+| Feed | `feed` | "Feed logged" | Adjust time |
+| Pee / Poop / Both | `pee` / `poop` / `both` | "Pee logged" / "Poop logged" / "Pee + poop logged" | Adjust time |
+| Sleep start | `sleep` | "Sleep started" | Adjust time (moves the start) |
+| Woke up | `wake` | "Woke up" + sub "Slept 1h 07m" | Adjust time (moves the end) |
 | Sleep cancelled (stopped < 60 s after start) | `wake` | "Sleep cancelled" + sub "Slept <1m" | none |
-| Adjust start (from the Lamp chip) | `sleep` | "Adjust start"; the Undo button reads **"Done"** with a `check` icon | Adjust |
 | Feed or diaper logged while a sleep runs | as Feed / Pee… | as Feed / Pee… | Running-sleep log |
 | Undone (2 s) | `undo` onSurfaceVariant | "Undone" | nothing (no drain line) |
 
@@ -279,18 +279,21 @@ Row 2 variants:
 
 | Row 2 | Content |
 |---|---|
-| Earlier | "Earlier?" bodyMedium (Atkinson) onSurfaceVariant, then offset chips "−5m" "−10m" "−15m" |
-| Running-sleep log | chip `wake` 18 + "End sleep" (hugs its content), then "−5m" "−10m"; no "Earlier?" label |
-| Adjust | "−15m" "−5m" "+5m", then an icon-only Edit chip (48 × 40 visual, `edit` 18, outline border, description "Edit start time") that opens the edit sheet for the running sleep. "+5m" is disabled while start + 5 min > now |
+| Adjust time | chip `clock` 18 onSurfaceVariant + "Adjust time" (hugs its content): opens the Adjust time sheet for the card's entry |
+| Running-sleep log | chip `wake` 18 + "End sleep", then the "Adjust time" chip (both hug their content; they wrap at large font scales) |
 | Guard (2 s) | `sleep` 18 SLEEP strong + "Already asleep since 14:32" dataMedium SLEEP text. After Woke up: `awake` + "Already awake since 14:40" |
 | Dedupe (2 s) | `feed` 18 FEED strong + "Already logged at 14:32" dataMedium onSurfaceVariant; the drain restarts |
 
 Card rules:
-- Offsets are relative to the card's base time and never cumulative. Re-tapping the selected chip returns it to 0. Each tap applies at once (event time, sleep start or sleep end), plays `SegmentTick` and restarts the 10 s window.
-- A chip is disabled if it would put a sleep end before its start, or a start or end in the future.
 - "End sleep" ends the running sleep at the logged event's time. The card then switches to the Woke up variant for that sleep.
 - Undo: feed/diaper → remove the entry. Sleep start → no running sleep. Woke up → the sleep is running again (its entry removed). Sleep cancelled → the sleep is running again. Then "Undone" shows for 2 s. Haptic `Reject`.
 - A new log while a card is showing replaces the card. The previous log stays committed.
+
+**Adjust time sheet** (opened by the card's "Adjust time" chip, or by "Adjust start" on the running Lamp). A modal sheet like the logging sheets (§3.3.2): header "Adjust time · 14:27" (or "Adjust start · 01:50" for a sleep's start) + Cancel, the title showing the time Save writes; offset chips "−15m" "−10m" "−5m" "+5m" (one row, equal widths, the 500 ms picker cooldown); then an outlined "Edit" button (56 tall, r 28, `edit` 20 + 8 + labelLarge) at the start and Save at the end. **No timeout**: it stays open until Save, Edit or Cancel.
+- Offsets are relative to the entry's time when the sheet opened (for a card, the card's base time, with the card's current offset pre-selected) and never cumulative. Re-tapping the selected chip returns it to 0. Each tap plays `SegmentTick`; nothing is written until Save.
+- A chip is disabled if it would put a sleep end before its start, or a start or end in the future ("+5m" while the time + 5 min > now).
+- Save moves the event time, sleep start or sleep end (`Confirm`). A running sleep keeps running. Cancel, a scrim tap, back or a swipe move nothing.
+- Edit saves the chosen offset, closes the sheet and opens the edit sheet for that entry.
 
 **Chip** (used in cards and sheets): a 48 dp tall button holding a 40 dp pill, r 20, labelLarge onSurface, 1 dp outline border, transparent fill.
 - Offset chips (Now, −5m, −10m, −15m, +5m) are a **fixed 76 dp wide** (content centred, padding 0 4), so selecting one never moves its neighbours. Other chips hug or fill their content, padding 0 12.
@@ -304,7 +307,7 @@ Card rules:
 - Unchecked: r 48, SLEEP container, `sleep` 32 SLEEP strong + 12 + "Start sleep" headlineSmall SLEEP onContainer.
 - Checked: r 28, SLEEP containerLit, 2 dp SLEEP strong border, `wake` 32 + "Woke up". Day has no containerLit: it uses SLEEP container + the border.
 
-**Adjust-start chip** (inside the running Lamp, under the sub-line, ≈147 wide): 48 target / 40 pill, r 20, padding start 12 / end 16, `clock` 18 onSurfaceVariant + 8 + "Adjust start" labelLarge onSurface, 1 dp outline border. Fill: Night surfaceContainerHigh, Day background. Opens the Adjust card. The timer keeps running.
+**Adjust-start chip** (inside the running Lamp, under the sub-line, ≈147 wide): 48 target / 40 pill, r 20, padding start 12 / end 16, `clock` 18 onSurfaceVariant + 8 + "Adjust start" labelLarge onSurface, 1 dp outline border. Fill: Night surfaceContainerHigh, Day background. Opens the Adjust time sheet for the running sleep's start. The timer keeps running.
 
 **Home states**
 
@@ -385,7 +388,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 
 #### 3.3.4 P4 Edit sheet
 
-Only the **Edit sleep** form is drawn. It opens from History rows, since-row 1 and the Adjust card's Edit chip.
+Only the **Edit sleep** form is drawn. It opens from History rows, since-row 1 and the Adjust time sheet's Edit button.
 
 | Part (top → bottom) | Spec |
 |---|---|
@@ -951,8 +954,8 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 
 | Constant | Value |
 |---|---|
-| Phone undo window | 10 s (`calculateRecommendedTimeoutMillis(…, containsControls = true)`); restarted by each chip tap |
-| Adjust card idle timeout | 10 s, restarted by each chip tap |
+| Phone undo window | 10 s (`calculateRecommendedTimeoutMillis(…, containsControls = true)`); paused while the Adjust time sheet is open, restarted when it closes |
+| Adjust time sheet | no timeout |
 | Watch Logged window | 5 s (`getRecommendedTimeoutMillis`) |
 | Tile feedback | 10 s timeline entry |
 | Widget receipt | until the next log or 10 s |
@@ -1373,7 +1376,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 | The orbit ring means only "a sleep is running" | One meaning per visual. Idle Lamps have no ring; the watch Undo countdown is a separate neutral bezel arc |
 | Chrome is neutral; colour = event | Save, FAB, selected chips, Undo and the now-line never share an event hue (e.g. amber means FEED only) |
 | Time-since lives in the since-rows, not on buttons | The rows double as the one-tap correction path. The Lamp already holds the top fact. Button labels never change length (stable at 200 % and identical day/night) |
-| Undo-card titles are time-free | The effective time shows once (Lamp or since-row) and follows every chip tap. Exception: the watch Logged title keeps the time, since nothing else on that screen shows it |
+| Undo-card titles are time-free | The effective time shows once (Lamp or since-row) and follows every Adjust time save. Exception: the watch Logged title keeps the time, since nothing else on that screen shows it |
 | Diaper stamps the time on the first tap | The picker title shows the stamp; backdate with chips (phone) or Earlier (watch) |
 | Lights-down keeps fills and positions | Muscle memory at 3 am; only the chrome and the glow dim |
 | Lamp digits are never a tap target; "Adjust start" is a separate chip / list item | Prevents accidental edits of a running sleep |

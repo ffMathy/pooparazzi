@@ -12,6 +12,7 @@ import com.ffmathy.pooparazzi.phone.ui.home.CardModel
 import com.ffmathy.pooparazzi.phone.ui.home.CardSpec
 import com.ffmathy.pooparazzi.phone.ui.home.HomeStateBuilder
 import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
+import com.ffmathy.pooparazzi.phone.ui.home.MoveField
 import com.ffmathy.pooparazzi.phone.ui.home.SheetModel
 import com.ffmathy.pooparazzi.phone.ui.home.Undo
 
@@ -66,30 +67,50 @@ object HomeSamples {
     }
 
     /**
-     * 14:32, Formula just logged from the Feed sheet: the undo card with Earlier chips. The log is on its way to the
+     * 14:32, Formula just logged from the Feed sheet: the undo card with Undo and "Adjust time". The log is on its way to the
      * watch ("Syncing with watch…"), as in the approved mockup.
      */
     fun justLogged(): HomeUiState = build(
         SampleData.scenario(zone) + formula1432,
         SampleData.NOW_1432,
         sync = SyncStatus.Pending,
-        card = CardModel(
-            key = 1,
-            spec = CardSpec.FeedLogged(formula1432.id, FeedType.FORMULA),
-            baseTime = SampleData.NOW_1432,
-            undo = Undo.Delete(formula1432.id),
-        ),
+        card = justLoggedCard(),
     )
 
-    /** 03:12, asleep since 02:05 with "Adjust start" tapped: the card with −15m · −5m · +5m and the Edit chip. */
+    private fun justLoggedCard() = CardModel(
+        key = 1,
+        spec = CardSpec.FeedLogged(formula1432.id, FeedType.FORMULA),
+        baseTime = SampleData.NOW_1432,
+        undo = Undo.Delete(formula1432.id),
+    )
+
+    /**
+     * 03:12, asleep since 02:05 with "Adjust start" tapped and −15m chosen: the Adjust time sheet "Adjust start · 01:50"
+     * with −15m · −10m · −5m · +5m, Edit and Save.
+     */
     fun adjustingStart(): HomeUiState = build(
         SampleData.scenarioAt0312(zone),
         SampleData.NOW_0312,
         sync = SyncStatus.Synced(SampleData.SYNCED_0311),
-        card = CardModel(key = 1, spec = CardSpec.AdjustStart(SLEEP_0205), baseTime = SampleData.at(2, 5)),
+        sheet = SheetModel.Adjust(stamp = SampleData.at(2, 5), offsetMinutes = -15, entryId = SLEEP_0205, field = MoveField.START),
     )
 
-    /** 03:12, asleep since 02:05, a wet diaper just logged: the card offers "End sleep" · −5m · −10m. */
+    /**
+     * 14:32, Formula just logged and "Adjust time" tapped on its card: the sheet "Adjust time · 14:32" (+5m disabled,
+     * it would be in the future) over the paused card.
+     */
+    fun adjustingFeed(): HomeUiState {
+        val card = justLoggedCard()
+        return build(
+            SampleData.scenario(zone) + formula1432,
+            SampleData.NOW_1432,
+            sync = SyncStatus.Pending,
+            card = card.copy(paused = true),
+            sheet = SheetModel.Adjust(stamp = card.baseTime, entryId = formula1432.id, field = MoveField.START, cardKey = card.key),
+        )
+    }
+
+    /** 03:12, asleep since 02:05, a wet diaper just logged: the card offers "End sleep" and "Adjust time". */
     fun loggedDuringSleep(): HomeUiState {
         val pee = Entry.diaper(SampleData.NOW_0312, pee = true, poop = false, id = "sample-pee-0312")
         return build(

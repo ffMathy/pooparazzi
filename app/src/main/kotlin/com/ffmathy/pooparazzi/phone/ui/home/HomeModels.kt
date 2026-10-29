@@ -15,6 +15,7 @@ import com.ffmathy.pooparazzi.core.model.PoopTexture
  * @property baseTime what the offsets are relative to (never cumulative, DESIGN_SPEC §3.3.1).
  * @property offsetMinutes the selected offset (0 = none).
  * @property duringSleep the log happened while a sleep ran: row 2 offers "End sleep" while it still runs.
+ * @property paused the Adjust time sheet is open over the card: its window waits until the sheet closes.
  */
 internal data class CardModel(
     val key: Long,
@@ -25,6 +26,7 @@ internal data class CardModel(
     val undo: Undo? = null,
     val message: CardMessage? = null,
     val windowKey: Int = 0,
+    val paused: Boolean = false,
 )
 
 /** What the card is about. Entry ids point at the entry that the offsets move. */
@@ -35,8 +37,6 @@ internal sealed interface CardSpec {
     data class SleepStarted(val entryId: String) : CardSpec
     data class WokeUp(val entryId: String) : CardSpec
     data object SleepCancelled : CardSpec
-    /** "Adjust start" of the running sleep [entryId]. */
-    data class AdjustStart(val entryId: String) : CardSpec
     data class Notice(val guard: GuardKind) : CardSpec
 
     /** "Sleep deleted" after a delete in the edit sheet; Undo writes [previous] back. */
@@ -53,7 +53,6 @@ internal val CardSpec.subject: Pair<String, MoveField>?
         is CardSpec.FeedLogged -> entryId to MoveField.START
         is CardSpec.DiaperLogged -> entryId to MoveField.START
         is CardSpec.SleepStarted -> entryId to MoveField.START
-        is CardSpec.AdjustStart -> entryId to MoveField.START
         is CardSpec.WokeUp -> entryId to MoveField.END
         CardSpec.SleepCancelled, is CardSpec.Notice, is CardSpec.Deleted, CardSpec.Undone -> null
     }
@@ -101,11 +100,24 @@ internal sealed interface SheetModel {
         val color: PoopColor? = null,
         val texture: PoopTexture? = null,
     ) : SheetModel
+
+    /**
+     * The Adjust time sheet: moves [field] of [entryId] to [stamp] (its time when the sheet opened, or the card's
+     * base time) + offset, on Save. [cardKey] is the undo card it was opened from (paused while it is open), or null
+     * for "Adjust start" on the Lamp.
+     */
+    data class Adjust(
+        override val stamp: Long,
+        override val offsetMinutes: Int = 0,
+        val entryId: String,
+        val field: MoveField,
+        val cardKey: Long? = null,
+    ) : SheetModel
 }
 
 /** Timing constants (DESIGN_SPEC §5.12). */
 data class HomeTimings(
-    /** Undo window; restarted by each chip tap. The app passes the accessibility-recommended value. */
+    /** Undo window; restarted when the Adjust time sheet closes. The app passes the accessibility-recommended value. */
     val undoWindowMillis: Long = 10_000L,
     val undoneMillis: Long = 2_000L,
     /** Guard and dedupe lines. */

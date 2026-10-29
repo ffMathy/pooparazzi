@@ -139,11 +139,20 @@ class HomeSemanticsTest {
     }
 
     @Test
-    fun offsetChipsSpeakTheirMinutes() {
+    fun theCardOffersUndoAndAdjustTime() {
         show(HomeSamples.justLogged())
+        compose.onNodeWithText("Undo").assertExists()
+        compose.onNodeWithText("Adjust time").assertExists()
+    }
+
+    @Test
+    fun theAdjustSheetChipsSpeakTheirMinutes() {
+        show(HomeSamples.adjustingFeed())
+        compose.onNodeWithText("Adjust time · 14:32").assertExists()
         compose.onNodeWithContentDescription("5 minutes earlier").assertExists()
         compose.onNodeWithContentDescription("15 minutes earlier").assertExists()
-        compose.onNodeWithText("Undo").assertExists()
+        compose.onNodeWithText("Edit").assertExists()
+        compose.onNodeWithText("Save").assertExists()
     }
 
     @Test

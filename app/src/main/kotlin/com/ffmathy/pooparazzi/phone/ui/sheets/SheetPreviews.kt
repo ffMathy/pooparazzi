@@ -63,3 +63,15 @@ private fun DiaperSheetHintPreview() = SheetPreview(night = true) {
         DiaperSheetCallbacks({}, {}, {}, {}, {}, {}, {}),
     )
 }
+
+@Preview(name = "Adjust time sheet · Adjust start", widthDp = 390)
+@Composable
+private fun AdjustSheetPreview() = SheetPreview(night = true) {
+    val formatters = rememberFormatters(SampleData.ZONE)
+    AdjustSheetContent(
+        HomeSamples.adjustingStart().sheet as HomeSheetUi.Adjust,
+        SampleData.ZONE,
+        formatters,
+        AdjustSheetCallbacks({}, {}, {}, {}),
+    )
+}

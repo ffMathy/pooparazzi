@@ -51,10 +51,11 @@ class HomeFeedTest : HomeViewModelTestBase() {
         val card = state.card!!
         assertEquals(CardVariant.FeedLogged(FeedType.FORMULA), card.variant)
         assertEquals(CardAction.UNDO, card.action)
-        val row = card.row as CardRow.Earlier
-        assertEquals(listOf(-5, -10, -15), row.chips.map { it.minutes })
-        assertTrue("the sheet's offset is pre-selected", row.chips.single { it.selected }.minutes == -10)
+        assertEquals(CardRow.AdjustTime, card.row)
         assertEquals(listOf(HomeHaptic.SEGMENT_TICK, HomeHaptic.CONFIRM), home.haptics)
+        val adjust = home.openAdjust()
+        assertEquals(listOf(-15, -10, -5, 5), adjust.chips.map { it.minutes })
+        assertTrue("the sheet's offset is pre-selected", adjust.chips.single { it.selected }.minutes == -10)
     }
 
     @Test
@@ -105,7 +106,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertEquals(BreastSide.LEFT_THEN_RIGHT, feed.breastSide)
         assertNull(state.sheet)
         assertEquals(CardVariant.FeedLogged(FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT), state.card!!.variant)
-        assertTrue((state.card!!.row as CardRow.Earlier).chips.single { it.selected }.minutes == -15)
+        assertEquals(CardRow.AdjustTime, state.card!!.row)
         val lamp = state.lamp as LampState.FeedIdle
         assertEquals(feed.id, lamp.lastFeed!!.id)
         assertEquals(1, state.today.feeds)
@@ -222,7 +223,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertEquals(HomeHaptic.REJECT, home.haptics.last())
 
         home.scope.testScheduler.advanceTimeBy(2_100)
-        assertTrue("the dedupe line lasts 2 s", home.settle().card!!.row is CardRow.Earlier)
+        assertEquals("the dedupe line lasts 2 s", CardRow.AdjustTime, home.settle().card!!.row)
     }
 
     @Test
@@ -232,9 +233,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
         home.viewModel.onFeedType(FeedType.BREAST)
         home.viewModel.onLogBreastfeed()
         var state = home.settle()
-        val row = state.card!!.row as CardRow.RunningSleep
-        assertTrue(row.endSleepEnabled)
-        assertEquals(listOf(-5, -10), row.chips.map { it.minutes })
+        assertEquals(CardRow.RunningSleep(endSleepEnabled = true), state.card!!.row)
         // The sleep keeps the Lamp: a breast feed is an instant.
         assertTrue(state.lamp is LampState.SleepRunning)
 

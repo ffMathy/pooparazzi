@@ -51,7 +51,7 @@ internal object HomeDefaults {
 }
 
 /**
- * Home wired to its view model and to navigation. Since-rows and the Adjust card's Edit chip open the edit sheet over
+ * Home wired to its view model and to navigation. Since-rows and the Adjust time sheet's Edit open the edit sheet over
  * Home; a delete there shows the "… deleted" card with Undo.
  *
  * [launch] is a deep link from a widget or notification (DESIGN_SPEC §3.1): Home opens the sheet or undo card it asks
@@ -105,6 +105,7 @@ fun HomeRoute(
             override fun onOpenHistory() = history()
             override fun onOpenSettings() = settings()
             override fun onEditEntry(entryId: String) = editViewModel.openEntry(entryId)
+            override fun onAdjustEdit(entryId: String) = viewModel.onAdjustEdit(entryId) { editViewModel.openEntry(entryId) }
         }
     }
     val loaded = state

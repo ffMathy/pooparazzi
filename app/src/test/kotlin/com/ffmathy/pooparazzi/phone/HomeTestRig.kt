@@ -17,6 +17,7 @@ import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
 import com.ffmathy.pooparazzi.phone.ui.home.HomeHaptic
 import com.ffmathy.pooparazzi.phone.ui.home.HomeTimings
+import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
 import com.ffmathy.pooparazzi.phone.ui.home.HomeViewModel
 import kotlin.coroutines.ContinuationInterceptor
@@ -96,6 +97,17 @@ class HomeTestRig(val scope: TestScope, now: Long = SampleData.NOW_1432) {
 
     /** Taps Feed. */
     fun tapFeed() = viewModel.onFeed()
+
+    /**
+     * Lets a committed sheet finish closing (and Home's cooldown pass), then taps "Adjust time" on the card and returns
+     * the Adjust time sheet.
+     */
+    fun openAdjust(): HomeSheetUi.Adjust {
+        viewModel.onSheetClosed()
+        scope.testScheduler.advanceTimeBy(700)
+        viewModel.onCardAdjust()
+        return settle().sheet as HomeSheetUi.Adjust
+    }
 
     suspend fun entries(): List<Entry> = repository.observeEntries().first()
 

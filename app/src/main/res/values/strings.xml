@@ -10,7 +10,6 @@
     <!-- Content descriptions (DESIGN_SPEC §9.4) -->
     <string name="cd_back">Back</string>
     <string name="cd_close">Close</string>
-    <string name="cd_edit_start_time">Edit start time</string>
     <!-- Name of the checked sleep toggle: the visible label plus what a tap does -->
     <string name="cd_woke_up_end_sleep">Woke up, end sleep</string>
 

@@ -51,8 +51,8 @@ import java.time.ZoneId
 enum class HomeHaptic { CONFIRM, TOGGLE_ON, TOGGLE_OFF, REJECT, SEGMENT_TICK }
 
 /**
- * Home's state machine (DESIGN_SPEC §3.3.1, §4.4; V1_ADDITIONS §2.1, §3.1): logging, the sheets, the undo card with
- * its offsets and variants, the 2 s double-toggle guard, the 60 s discard, dedupe and the input cooldowns.
+ * Home's state machine (DESIGN_SPEC §3.3.1, §4.4; V1_ADDITIONS §2.1, §3.1): logging, the sheets, the undo card and
+ * its variants, the Adjust time sheet, the 2 s double-toggle guard, the 60 s discard, dedupe and the input cooldowns.
  *
  * Writes go through [repository] (which enforces the entry invariants); everything shown is derived from its
  * entries by [HomeStateBuilder]. Actions run one at a time, in tap order.
@@ -201,33 +201,28 @@ class HomeViewModel(
     // ---- Lamp ---------------------------------------------------------------------------------
 
     override fun onAdjustStart() = act {
-        val summary = summary()
-        val target = summary.runningSleep ?: return@act
-        showCard(CardSpec.AdjustStart(target.id), baseTime = target.startMillis)
+        if (homeBlocked()) return@act
+        val target = summary().runningSleep ?: return@act
+        sheet.value = SheetModel.Adjust(stamp = target.startMillis, entryId = target.id, field = MoveField.START)
     }
 
     // ---- Undo card ----------------------------------------------------------------------------
 
-    override fun onCardOffset(minutes: Int) = act {
+    override fun onCardAdjust() = act {
+        if (homeBlocked()) return@act
         val model = card.value ?: return@act
         val (id, field) = model.spec.subject ?: return@act
-        val entry = repository.get(id)?.takeUnless { it.deleted } ?: return@act
-        val next = if (model.offsetMinutes == minutes) 0 else minutes
-        if (!HomeStateBuilder.offsetAllowed(entry, field, model.baseTime, next, clock.now())) {
-            haptic(HomeHaptic.REJECT)
-            return@act
-        }
-        val target = model.baseTime + next * MINUTE_MILLIS
-        val moved = when (field) {
-            MoveField.START -> entry.copy(startMillis = target)
-            MoveField.END -> entry.copy(endMillis = target)
-        }
-        attempt { repository.update(moved) }
-            .onSuccess {
-                restartWindow(model.key) { it.copy(offsetMinutes = next, message = null) }
-                haptic(HomeHaptic.SEGMENT_TICK)
-            }
-            .onFailure { haptic(HomeHaptic.REJECT) }
+        repository.get(id)?.takeUnless { it.deleted } ?: return@act
+        // The card waits while the sheet is open: adjusting has no timeout (DESIGN_SPEC §3.3.1).
+        cardJob?.cancel()
+        card.value = model.copy(paused = true)
+        sheet.value = SheetModel.Adjust(
+            stamp = model.baseTime,
+            offsetMinutes = model.offsetMinutes,
+            entryId = id,
+            field = field,
+            cardKey = model.key,
+        )
     }
 
     override fun onCardEndSleep() = act {
@@ -265,10 +260,6 @@ class HomeViewModel(
             }
     }
 
-    override fun onCardDone() = act {
-        clearCard()
-    }
-
     /** A delete in the edit sheet over Home: the "… deleted" card, whose Undo writes [previous] back. */
     fun onEntryDeleted(previous: Entry) = act {
         showCard(CardSpec.Deleted(previous), baseTime = clock.now(), undo = Undo.Restore(previous))
@@ -278,13 +269,70 @@ class HomeViewModel(
 
     override fun onSheetOffset(minutes: Int) = act {
         val current = sheet.value ?: return@act
+        if (current is SheetModel.Adjust) {
+            adjustOffset(current, minutes)
+            return@act
+        }
         if (current.offsetMinutes == minutes) return@act
         val next = when (current) {
             is SheetModel.Feed -> current.copy(offsetMinutes = minutes)
             is SheetModel.Diaper -> current.copy(offsetMinutes = minutes)
+            is SheetModel.Adjust -> current
         }
         sheet.value = next
         haptic(HomeHaptic.SEGMENT_TICK)
+    }
+
+    /** Offsets are relative to the sheet's stamp, never cumulative; re-tapping the selected chip returns it to 0. */
+    private suspend fun adjustOffset(adjust: SheetModel.Adjust, minutes: Int) {
+        val entry = repository.get(adjust.entryId)?.takeUnless { it.deleted } ?: return
+        val next = if (adjust.offsetMinutes == minutes) 0 else minutes
+        if (!HomeStateBuilder.offsetAllowed(entry, adjust.field, adjust.stamp, next, clock.now())) {
+            haptic(HomeHaptic.REJECT)
+            return
+        }
+        sheet.value = adjust.copy(offsetMinutes = next)
+        haptic(HomeHaptic.SEGMENT_TICK)
+    }
+
+    override fun onAdjustSave() = act {
+        val adjust = sheet.value as? SheetModel.Adjust ?: return@act
+        if (finishAdjust(adjust, save = true, committed = true)) haptic(HomeHaptic.CONFIRM)
+    }
+
+    override fun onAdjustEdit(entryId: String) = onAdjustEdit(entryId) {}
+
+    /** "Edit" in the Adjust time sheet; [openEditor] runs once the chosen offset is saved, so the editor shows it. */
+    fun onAdjustEdit(entryId: String, openEditor: () -> Unit) = act {
+        val adjust = sheet.value as? SheetModel.Adjust ?: return@act
+        if (adjust.entryId != entryId) return@act
+        finishAdjust(adjust, save = true, committed = false)
+        openEditor()
+    }
+
+    /**
+     * Closes the Adjust time sheet, first moving the entry to the sheet's time if [save]; the card it was opened from
+     * gets a fresh window. Returns whether the entry now has the sheet's time.
+     */
+    private suspend fun finishAdjust(adjust: SheetModel.Adjust, save: Boolean, committed: Boolean): Boolean {
+        closeSheet(committed)
+        var saved = false
+        if (save) {
+            val entry = repository.get(adjust.entryId)?.takeUnless { it.deleted }
+            if (entry != null && HomeStateBuilder.offsetAllowed(entry, adjust.field, adjust.stamp, adjust.offsetMinutes, clock.now())) {
+                val target = adjust.stamp + adjust.offsetMinutes * MINUTE_MILLIS
+                val moved = when (adjust.field) {
+                    MoveField.START -> entry.copy(startMillis = target)
+                    MoveField.END -> entry.copy(endMillis = target)
+                }
+                saved = moved == entry || attempt { repository.update(moved) }.isSuccess
+            }
+            if (!saved) haptic(HomeHaptic.REJECT)
+        }
+        adjust.cardKey?.let { key ->
+            restartWindow(key) { it.copy(paused = false, offsetMinutes = if (saved) adjust.offsetMinutes else it.offsetMinutes) }
+        }
+        return saved
     }
 
     override fun onFeedType(type: FeedType?) = act {
@@ -386,7 +434,12 @@ class HomeViewModel(
     }
 
     override fun onSheetDismiss() = act {
-        sheet.value = null
+        val adjust = sheet.value as? SheetModel.Adjust
+        if (adjust != null) {
+            finishAdjust(adjust, save = false, committed = false)
+        } else {
+            sheet.value = null
+        }
         cooldownPending = false
     }
 
@@ -404,6 +457,8 @@ class HomeViewModel(
      * card for a widget log. Stale requests (the log already undone) show nothing.
      */
     fun onLaunch(launch: HomeLaunch) = act {
+        // A deep link replaces an open Adjust time sheet as if it had been cancelled.
+        (sheet.value as? SheetModel.Adjust)?.let { finishAdjust(it, save = false, committed = false) }
         when (launch) {
             // History is opened by the navigation (PooparazziNavHost); Home has nothing to show for it.
             HomeLaunch.Home, HomeLaunch.History -> Unit
@@ -472,13 +527,7 @@ class HomeViewModel(
         if (message != null) scheduleMessageEnd(model.key, message)
     }
 
-    private fun clearCard() {
-        cardJob?.cancel()
-        messageJob?.cancel()
-        card.value = null
-    }
-
-    /** Restarts the 10 s window of card [key] (chip taps, dedupe) after applying [transform]. */
+    /** Restarts the 10 s window of card [key] (the Adjust time sheet closing, dedupe) after applying [transform]. */
     private fun restartWindow(key: Long, transform: (CardModel) -> CardModel) {
         val current = card.value?.takeIf { it.key == key } ?: return
         val next = transform(current).copy(windowKey = current.windowKey + 1)

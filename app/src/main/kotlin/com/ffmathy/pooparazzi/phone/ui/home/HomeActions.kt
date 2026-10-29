@@ -17,7 +17,7 @@ interface HomeActions {
     fun onOpenSettings() {}
     fun onRetrySync() {}
 
-    /** A since-row or the Adjust card's Edit chip: the edit sheet for [entryId]. */
+    /** A since-row: the edit sheet for [entryId]. */
     fun onEditEntry(entryId: String) {}
 
     // Big buttons
@@ -32,16 +32,24 @@ interface HomeActions {
     fun onSleepToggle(shownRunning: Boolean) {}
 
     // Lamp
+    /** "Adjust start": the Adjust time sheet for the running sleep's start. */
     fun onAdjustStart() {}
 
     // Undo card
-    fun onCardOffset(minutes: Int) {}
+    /** "Adjust time": the Adjust time sheet for the card's entry; the card's window waits while it is open. */
+    fun onCardAdjust() {}
     fun onCardEndSleep() {}
     fun onUndo() {}
-    fun onCardDone() {}
 
     // Sheets
+    /** Selects an offset chip. In the Adjust time sheet, re-tapping the selected chip returns it to 0. */
     fun onSheetOffset(minutes: Int) {}
+
+    /** Adjust time sheet, "Save": moves the entry to the sheet's time and closes the sheet. */
+    fun onAdjustSave() {}
+
+    /** Adjust time sheet, "Edit": saves the chosen offset, closes the sheet and opens the edit sheet for [entryId]. */
+    fun onAdjustEdit(entryId: String) {}
 
     /**
      * Feed sheet: Breast reveals the side checkboxes and "Log feed"; Formula / Food log an instant, null ("Just the
