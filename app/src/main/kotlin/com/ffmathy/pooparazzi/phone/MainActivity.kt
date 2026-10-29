@@ -17,7 +17,10 @@ import androidx.lifecycle.lifecycleScope
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.phone.app.AppLocales
 import com.ffmathy.pooparazzi.phone.app.AppViewModel
+import com.ffmathy.pooparazzi.phone.account.AppAccounts
+import com.ffmathy.pooparazzi.phone.launch.AppLinks
 import com.ffmathy.pooparazzi.phone.launch.DeepLinks
+import com.ffmathy.pooparazzi.phone.navigation.AccountLinks
 import com.ffmathy.pooparazzi.phone.navigation.PooparazziPhoneApp
 import com.ffmathy.pooparazzi.phone.system.SystemSurfaces
 import kotlinx.coroutines.launch
@@ -25,7 +28,8 @@ import kotlinx.coroutines.launch
 /**
  * The single activity. An [AppCompatActivity] so the in-app language works on API < 33 (V1_ADDITIONS §5).
  * Draws edge to edge; the system bar icons follow the app's own Night/Day, not the system theme. Deep links from the
- * widgets and notifications (`pooparazzi://home/…`) open Home with a sheet or an undo card.
+ * widgets and notifications (`pooparazzi://home/…`) open Home with a sheet or an undo card; the website's App Links
+ * (BABIES_AND_BACKUP §3.3, §3.5) open the join confirmation or complete an email sign-in.
  */
 class MainActivity : AppCompatActivity() {
     private val appViewModel: AppViewModel by viewModels { AppViewModel.Factory }
@@ -42,6 +46,10 @@ class MainActivity : AppCompatActivity() {
             val inputs by appViewModel.appearance.collectAsStateWithLifecycle()
             val launch by appViewModel.launch.collectAsStateWithLifecycle()
             val welcome by appViewModel.welcome.collectAsStateWithLifecycle()
+            val invite by appViewModel.invite.collectAsStateWithLifecycle()
+            val emailLink by appViewModel.emailLink.collectAsStateWithLifecycle()
+            val signedIn by appViewModel.signedIn.collectAsStateWithLifecycle()
+            val consentNeeded by appViewModel.consentNeeded.collectAsStateWithLifecycle()
             inputs?.let {
                 PooparazziPhoneApp(
                     inputs = it,
@@ -51,7 +59,14 @@ class MainActivity : AppCompatActivity() {
                     onLaunchHandled = appViewModel::consume,
                     welcome = welcome,
                     onWelcomeDone = appViewModel::finishWelcome,
+                    consentNeeded = consentNeeded,
                     onLaunchedSheetClosed = ::onLaunchedSheetClosed,
+                    links = AccountLinks(
+                        invite = invite,
+                        emailLinkWaiting = emailLink != null,
+                        signedIn = signedIn,
+                        onInviteHandled = appViewModel::inviteHandled,
+                    ),
                 )
             }
         }
@@ -75,14 +90,23 @@ class MainActivity : AppCompatActivity() {
         handle(intent)
     }
 
+    /** The app's own links (widgets, notifications, the watch), and the website's App Links (invites, sign-in). */
     private fun handle(intent: Intent?) {
-        DeepLinks.parse(intent?.data)?.let(appViewModel::request)
+        val data = intent?.data
+        val launch = DeepLinks.parse(data)
+        if (launch != null) {
+            appViewModel.request(launch)
+        } else {
+            AppLinks.parse(data, AppAccounts.accounts.hostingDomain)?.let(appViewModel::openLink)
+        }
     }
 
     override fun onResume() {
         super.onResume()
         // Notifications may have been turned on in system settings while the app was away.
         SystemSurfaces.onAppResumed(this)
+        // The family may have changed on another phone (a member removed by the family's creator, BABIES_AND_BACKUP §3.4).
+        AppAccounts.onAppResumed()
         // The backup pulls what changed elsewhere (another phone on the account) at most once a minute (§4.4).
         Core.graph.cloud.requestSync()
         // The language the app runs in is the platform's per-app choice (the parent may change it in system settings

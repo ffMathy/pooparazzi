@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BabyJson
 import com.ffmathy.pooparazzi.core.sync.FakeEntrySync
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,10 +34,13 @@ class SettingsRepositoryTest {
     private lateinit var store: DataStore<Preferences>
     private lateinit var repo: DataStoreSettingsRepository
 
+    /** Whether an account is signed in, for the babies' backup flags. */
+    private var signedIn = false
+
     @Before
     fun setUp() {
         store = PreferenceDataStoreFactory.create(scope = scope) { folder.newFile("settings.preferences_pb").also { it.delete() } }
-        repo = DataStoreSettingsRepository(store, clock, sync)
+        repo = DataStoreSettingsRepository(store, clock, sync, cloudBackup = { signedIn })
     }
 
     private fun named(name: String) = listOf(Baby(Baby.FIRST_ID, name))
@@ -63,7 +67,9 @@ class SettingsRepositoryTest {
         val dark = repo.setAppearance(Appearance.NIGHT)
         val danish = repo.setLanguage(AppLanguage.DA)
         assertTrue(dark.updatedAtMillis > named.updatedAtMillis)
-        assertEquals(Settings(named("Noa"), Appearance.NIGHT, AppLanguage.DA, danish.updatedAtMillis), repo.settings.first())
+        val stampedNoa = listOf(Baby(Baby.FIRST_ID, "Noa", named.updatedAtMillis))
+        assertEquals("the rename stamps the baby", stampedNoa, named.babies)
+        assertEquals(Settings(stampedNoa, Appearance.NIGHT, AppLanguage.DA, danish.updatedAtMillis), repo.settings.first())
         assertEquals(listOf(named, dark, danish), sync.pushedSettings)
     }
 
@@ -100,7 +106,7 @@ class SettingsRepositoryTest {
     fun jsonCarriesTheBabiesInOrderButNeverTheCurrentBaby() {
         val twins = Settings(listOf(Baby(Baby.FIRST_ID, "Noa"), Baby("b2", "Ida")), updatedAtMillis = 7, selectedBabyId = "b2")
         val json = SettingsJson.encode(twins)
-        assertTrue(json, json.contains("""[{"id":"default","name":"Noa"},{"id":"b2","name":"Ida"}]"""))
+        assertTrue(json, json.contains("""[{"id":"default","name":"Noa","updatedAtMillis":0},{"id":"b2","name":"Ida","updatedAtMillis":0}]"""))
         assertFalse(json, json.contains("selected"))
         assertEquals(twins.copy(selectedBabyId = Baby.FIRST_ID), SettingsJson.decodeOrNull(json))
     }
@@ -147,14 +153,17 @@ class SettingsRepositoryTest {
             """{"babyName":"Noah","appearance":"NIGHT","language":"DA","updatedAtMillis":${local.updatedAtMillis + 5}}""",
         )!!
         assertTrue(repo.applyLegacyRemote(newer.settings))
+        // The name is stamped with the remote settings' stamp, so it goes on to the family like a rename here.
+        val noah = Baby(Baby.FIRST_ID, "Noah", local.updatedAtMillis + 5)
+        val idaNamed = local.babies[1]
         assertEquals(
-            Settings(listOf(Baby(Baby.FIRST_ID, "Noah"), Baby(ida.id, "Ida")), Appearance.NIGHT, AppLanguage.DA, local.updatedAtMillis + 5),
+            Settings(listOf(noah, idaNamed), Appearance.NIGHT, AppLanguage.DA, local.updatedAtMillis + 5),
             repo.current(),
         )
         // A newer one with an empty name never erases a name.
         val blank = SettingsJson.decodeRemoteOrNull("""{"babyName":"","appearance":"DAY","updatedAtMillis":${local.updatedAtMillis + 6}}""")!!
         assertTrue(repo.applyLegacyRemote(blank.settings))
-        assertEquals(listOf(Baby(Baby.FIRST_ID, "Noah"), Baby(ida.id, "Ida")), repo.current().babies)
+        assertEquals(listOf(noah, idaNamed), repo.current().babies)
         assertEquals(Appearance.DAY, repo.current().appearance)
         assertTrue(sync.pushedSettings.isEmpty())
 
@@ -202,6 +211,7 @@ class SettingsRepositoryTest {
         assertEquals("", second.name)
         val afterAdd = repo.current()
         assertEquals(listOf(Baby(Baby.FIRST_ID), second), afterAdd.babies)
+        assertEquals("a new baby is stamped", afterAdd.updatedAtMillis, second.updatedAtMillis)
         assertTrue(afterAdd.hasSeveralBabies)
         assertEquals("adding does not switch", Baby.FIRST_ID, afterAdd.selectedBabyId)
         assertEquals(clock.now(), afterAdd.updatedAtMillis)
@@ -210,6 +220,7 @@ class SettingsRepositoryTest {
         // Renaming any baby is a synced change; the current baby's name is babyName.
         val renamed = repo.renameBaby(second.id, "  Ida ")
         assertEquals("Ida", renamed.babies[1].name)
+        assertEquals(renamed.updatedAtMillis, renamed.babies[1].updatedAtMillis)
         assertTrue(renamed.updatedAtMillis > afterAdd.updatedAtMillis)
         assertEquals(renamed, sync.pushedSettings.last())
         assertEquals("", renamed.babyName)
@@ -228,7 +239,7 @@ class SettingsRepositoryTest {
 
         // setBabyName renames the current baby.
         val named = repo.setBabyName("Alma")
-        assertEquals(listOf(Baby(Baby.FIRST_ID), Baby(second.id, "Alma")), named.babies)
+        assertEquals(listOf(Baby(Baby.FIRST_ID), Baby(second.id, "Alma", named.updatedAtMillis)), named.babies)
         assertEquals(second.id, named.selectedBabyId)
         assertEquals(named, sync.pushedSettings.last())
     }
@@ -298,5 +309,158 @@ class SettingsRepositoryTest {
         assertEquals(AppLanguage.SYSTEM, AppLanguage.fromTag("fr"))
         assertEquals(AppLanguage.SYSTEM, AppLanguage.fromTag(null))
         assertNull(AppLanguage.SYSTEM.tag)
+    }
+
+    // ---- The family's backup ------------------------------------------------------------------------
+
+    @Test
+    fun babiesAreFlaggedForTheBackupOnlyWhileSignedIn() = runBlocking {
+        repo.setBabyName("Noa")
+        repo.addBaby()
+        assertTrue("signed out, nothing is flagged", repo.cloudPendingBabies().isEmpty())
+
+        signedIn = true
+        val named = repo.setBabyName("Noah")
+        val ida = repo.addBaby()
+        assertEquals(listOf(named.babies[0], ida), repo.cloudPendingBabies())
+        // The appearance, the language and the current baby are no babies' change.
+        repo.markBabiesCloudSynced(repo.cloudPendingBabies())
+        repo.setAppearance(Appearance.NIGHT)
+        repo.setLanguage(AppLanguage.DA)
+        repo.selectBaby(ida.id)
+        assertTrue(repo.cloudPendingBabies().isEmpty())
+
+        // Adopted babies carry nothing the family lacks: never flagged, and unstamped.
+        val adopted = repo.ensureBabies(listOf("from-entries"))
+        assertEquals(Baby("from-entries"), adopted.babies.last())
+        assertTrue(repo.cloudPendingBabies().isEmpty())
+
+        // Every baby (the first sync for a family), and none (signed out).
+        repo.markAllBabiesForCloud()
+        assertEquals(repo.current().babies, repo.cloudPendingBabies())
+        repo.clearBabiesCloudPending()
+        assertTrue(repo.cloudPendingBabies().isEmpty())
+    }
+
+    @Test
+    fun aBabyRenamedWhileItsUploadIsOnItsWayStaysFlagged() = runBlocking {
+        signedIn = true
+        val ida = repo.addBaby()
+        val seen = mutableListOf<List<Baby>>()
+        val uploading = repo.cloudPendingBabies()
+        assertEquals(listOf(ida), uploading)
+        seen += repo.observeCloudPendingBabies().first()
+
+        val renamed = repo.renameBaby(ida.id, "Ida").babies.last()
+        seen += repo.observeCloudPendingBabies().first()
+        assertEquals("a write to a flagged baby is a change too", listOf(listOf(ida), listOf(renamed)), seen)
+        assertEquals("the upload of the old version clears nothing", 0, repo.markBabiesCloudSynced(uploading))
+        assertEquals(listOf(renamed), repo.cloudPendingBabies())
+        assertEquals(1, repo.markBabiesCloudSynced(listOf(renamed)))
+        assertTrue(repo.cloudPendingBabies().isEmpty())
+    }
+
+    @Test
+    fun babiesFromTheBackupMergeOneByOneAndReachTheWatch() = runBlocking {
+        signedIn = true
+        val local = repo.setBabyName("Noa")
+        val ida = repo.addBaby()
+        repo.markBabiesCloudSynced(repo.cloudPendingBabies())
+        val before = repo.current()
+        sync.pushedSettings.clear()
+
+        val stamp = before.updatedAtMillis
+        val incoming = listOf(
+            // Older than the stored first baby: the stored one wins and goes up.
+            Baby(Baby.FIRST_ID, "Old", local.updatedAtMillis - 1),
+            // Newer than the stored second baby: taken.
+            Baby(ida.id, "  Ida ", stamp + 10),
+            // Unknown: appended.
+            Baby("alma", "Alma", stamp + 20),
+        )
+        assertEquals(2, repo.applyCloudBabies(incoming))
+        val merged = repo.current()
+        assertEquals(
+            listOf(before.babies[0], Baby(ida.id, "Ida", stamp + 10), Baby("alma", "Alma", stamp + 20)),
+            merged.babies,
+        )
+        assertEquals(listOf(before.babies[0]), repo.cloudPendingBabies())
+        assertTrue("a stamped settings change", merged.updatedAtMillis > before.updatedAtMillis)
+        assertEquals("mirrored to the watch", listOf(merged), sync.pushedSettings)
+        assertEquals(merged.babies, SettingsJson.decodeOrNull(SettingsJson.encode(sync.pushedSettings.last()))!!.babies)
+
+        // The same babies again change nothing: no write, no push. The backup holding the stored first baby clears it.
+        assertEquals(0, repo.applyCloudBabies(merged.babies))
+        assertEquals(merged, repo.current())
+        assertEquals(1, sync.pushedSettings.size)
+        assertTrue(repo.cloudPendingBabies().isEmpty())
+
+        // Signed out, a stored version that wins is not flagged.
+        signedIn = false
+        repo.applyCloudBabies(listOf(Baby(Baby.FIRST_ID, "Older", 1)))
+        assertTrue(repo.cloudPendingBabies().isEmpty())
+    }
+
+    @Test
+    fun equalStampsSettleOnTheSameNameEverywhere() {
+        val a = Baby(Baby.FIRST_ID, "Noa", 5)
+        val b = Baby(Baby.FIRST_ID, "Ida", 5)
+        assertTrue(a.winsOver(b))
+        assertFalse(b.winsOver(a))
+        assertFalse(a.winsOver(a))
+        assertTrue("a name beats no name", Baby(Baby.FIRST_ID, "Noa").winsOver(Baby(Baby.FIRST_ID)))
+        assertTrue(Baby(Baby.FIRST_ID, "", 6).winsOver(a))
+        assertEquals(listOf(a), Settings(listOf(b)).withMergedBabies(listOf(a)).babies)
+        assertEquals(listOf(a), Settings(listOf(a)).withMergedBabies(listOf(b)).babies)
+    }
+
+    @Test
+    fun aRenameWinsEvenWhenThisPhonesClockIsBehindTheBabysStamp() = runBlocking {
+        // Another member's phone, its clock ahead, named the baby; this phone renames it a moment later.
+        repo.applyCloudBabies(listOf(Baby(Baby.FIRST_ID, "Noa", clock.now() + 60_000)))
+        val renamed = repo.setBabyName("Noah").babies.single()
+        assertEquals(clock.now() + 60_001, renamed.updatedAtMillis)
+        assertTrue(renamed.winsOver(Baby(Baby.FIRST_ID, "Noa", clock.now() + 60_000)))
+    }
+
+    @Test
+    fun settingsFromTheWatchThatChangeABabyFlagIt() = runBlocking {
+        // A reinstalled phone: the watch still has the names.
+        signedIn = true
+        val fromWatch = Settings(listOf(Baby(Baby.FIRST_ID, "Noa", 7), Baby("b2", "Ida", 8)), updatedAtMillis = 9)
+        assertTrue(repo.applyRemote(fromWatch))
+        assertEquals(fromWatch.babies, repo.cloudPendingBabies())
+        repo.markBabiesCloudSynced(fromWatch.babies)
+
+        // The same babies with a newer appearance flag nothing.
+        assertTrue(repo.applyRemote(fromWatch.copy(appearance = Appearance.DAY, updatedAtMillis = 10)))
+        assertTrue(repo.cloudPendingBabies().isEmpty())
+    }
+
+    @Test
+    fun babiesFromBeforeFamiliesAreUnstampedAndTheFlagsNeverReachTheWatch() = runBlocking {
+        store.edit { it[stringPreferencesKey("babies")] = """[{"id":"default","name":"Noa"},{"id":"b2"}]""" }
+        assertEquals(listOf(Baby(Baby.FIRST_ID, "Noa", 0), Baby("b2", "", 0)), repo.current().babies)
+        assertEquals(
+            listOf(Baby(Baby.FIRST_ID, "Noa", 0)),
+            SettingsJson.decodeOrNull("""{"babies":[{"id":"default","name":"Noa"}]}""")!!.babies,
+        )
+
+        signedIn = true
+        repo.markAllBabiesForCloud()
+        val json = SettingsJson.encode(repo.current())
+        assertFalse(json, json.contains("pending", ignoreCase = true))
+        assertEquals(2, repo.cloudPendingBabies().size)
+    }
+
+    @Test
+    fun babyJson() {
+        val baby = Baby("b2", "Ida", 42)
+        assertEquals("""{"id":"b2","name":"Ida","updatedAtMillis":42}""", BabyJson.encode(baby))
+        assertEquals(baby, BabyJson.decodeOrNull(BabyJson.encode(baby)))
+        assertEquals(Baby("b2"), BabyJson.decodeOrNull("""{"id":"b2","future":true}"""))
+        assertNull(BabyJson.decodeOrNull("""{"id":" "}"""))
+        assertNull(BabyJson.decodeOrNull("""{"name":"x"}"""))
+        assertNull(BabyJson.decodeOrNull("nope"))
     }
 }

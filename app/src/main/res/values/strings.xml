@@ -170,7 +170,7 @@
     <string name="settings_baby_field">Name</string>
     <string name="settings_add_baby">Add a baby</string>
     <string name="settings_add_baby_watch_update">Update Pooparazzi on your watch first.</string>
-    <string name="settings_babies_hint">Names stay on this phone and your watch. They\'re never uploaded.</string>
+    <string name="settings_babies_hint">Names stay on this phone and your watch.</string>
     <string name="settings_appearance_hint">Auto uses Night in the evening and at night, while a sleep runs, and when the phone is in dark theme.</string>
     <string name="settings_section_watch">Watch</string>
     <string name="settings_sync_now">Sync now</string>
@@ -234,23 +234,12 @@
     <!-- Welcome (§3.1) and the signed-out Account screen -->
     <string name="welcome_title">Your log stays on this phone</string>
     <string name="welcome_body_local">Without an account, everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.</string>
-    <string name="welcome_body_later">You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do.</string>
+    <string name="welcome_body_later">You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do, and you can share it with your family.</string>
     <string name="welcome_continue_without">Continue without an account</string>
     <string name="account_google">Continue with Google</string>
     <string name="account_or_email">or use email</string>
-    <string name="account_mode_sign_in">Sign in</string>
-    <string name="account_mode_create">Create account</string>
     <string name="account_email">Email</string>
-    <string name="account_password">Password</string>
-    <string name="account_password_hint">At least 6 characters</string>
-    <string name="account_forgot_password">Forgot password?</string>
-    <!-- %1$s is the typed email address -->
-    <string name="account_reset_sent">If %1$s has an account, a link to choose a new password is on its way.</string>
     <string name="account_error_invalid_email">Enter a valid email address</string>
-    <string name="account_error_missing_password">Enter your password</string>
-    <string name="account_error_wrong_credentials">Wrong email or password</string>
-    <string name="account_error_email_in_use">That email already has an account</string>
-    <string name="account_error_weak_password">Use at least 6 characters</string>
     <string name="account_error_no_connection">No connection. Try again.</string>
     <string name="account_error_timed_out">No answer yet. It may still go through in a moment.</string>
     <string name="account_error_too_many">Too many tries. Wait a moment and try again.</string>
@@ -265,9 +254,93 @@
     <string name="account_signed_in_hint">Signing out keeps the log on this phone.</string>
     <string name="account_delete">Delete account…</string>
     <string name="account_delete_title">Delete account?</string>
-    <string name="account_delete_body">This deletes your backup and your account. The log on this phone stays.</string>
-    <string name="account_delete_password_prompt">Enter your password to confirm.</string>
+    <string name="account_delete_body">This deletes your account and your place in the family. If you\'re the family\'s only member, its backup is deleted too. The log on this phone stays.</string>
     <string name="account_delete_google_prompt">You\'ll sign in with Google again to confirm.</string>
     <string name="account_delete_backup_failed">Couldn\'t delete your backup, so your account was kept. Try again.</string>
     <string name="account_delete_account_failed">Your backup was deleted, but your account wasn\'t. Try again.</string>
+    <string name="settings_babies_hint_family">Names are shared with your family and kept in your backup.</string>
+    <!-- Sign-in without passwords (§3.3): Google, or a link sent by email -->
+    <string name="account_email_link">Email me a sign-in link</string>
+    <string name="account_link_sent_title">Check your email</string>
+    <!-- %1$s is the address the link went to -->
+    <string name="account_link_sent">We sent a sign-in link to %1$s. Tap the link in it on this phone.</string>
+    <string name="account_send_again">Send again</string>
+    <string name="account_use_another_email">Use another email</string>
+    <!-- A sign-in link opened on a phone that did not ask for it -->
+    <string name="account_link_needs_email">To finish signing in, enter the email address the link was sent to.</string>
+    <string name="account_sign_in">Sign in</string>
+    <string name="account_error_email_quota">Too many sign-in emails today. Try again tomorrow, or use Google.</string>
+    <string name="account_error_link_invalid">That link has expired or was already used. Send a new one.</string>
+    <!-- %1$s is account_privacy_link, shown as a link -->
+    <string name="account_privacy_consent">By continuing you agree to the %1$s.</string>
+    <string name="account_privacy_link">privacy policy</string>
+    <!-- An invite link waits for the sign-in (§3.5) -->
+    <string name="account_join_waiting">Sign in to join the family.</string>
+    <string name="account_delete_link_prompt">We\'ll email you a link to confirm. Open it on this phone.</string>
+    <string name="account_delete_send_link">Email me a link</string>
+    <string name="account_delete_link_sent">Check your email. Tapping the link in it on this phone deletes your account.</string>
+    <string name="account_delete_link_ready">This link deletes your account. Tap Delete to go ahead.</string>
+    <string name="family_error_invite_refused">Couldn\'t create an invite. You may have been removed from the family, or your email address isn\'t verified yet.</string>
+
+    <!-- The consent before the first upload (BABIES_AND_BACKUP §3.6) -->
+    <string name="consent_title">Back up to Google Firebase?</string>
+    <string name="consent_intro">You\'re signed in as %1$s. Nothing has been uploaded yet. Before anything is, please agree to this:</string>
+    <string name="consent_what_title">What is uploaded</string>
+    <string name="consent_what">Your log (feeds, diapers and sleep), your babies\' names and your email address. A log like this can say something about your baby\'s health.</string>
+    <string name="consent_who_title">Who sees it</string>
+    <string name="consent_who">You and the members of your family: everyone in it sees the family\'s log, the babies\' names and the members\' email addresses.</string>
+    <string name="consent_where_title">Where</string>
+    <string name="consent_where">Google Firebase. The database is in the EU; Google processes it for us and uses it for nothing else.</string>
+    <string name="consent_withdraw_title">Changing your mind</string>
+    <string name="consent_withdraw">Sign out to upload nothing more, leave the family, or delete your account (Settings › Account) to delete what is stored.</string>
+    <!-- %1$s is account_privacy_link, shown as a link -->
+    <string name="consent_policy">Details are in the %1$s.</string>
+    <string name="consent_agree">I agree</string>
+    <string name="consent_decline">Not now, sign out</string>
+
+    <!-- Settings › Family (BABIES_AND_BACKUP §3.4) -->
+    <string name="settings_section_family">Family</string>
+    <string name="family_you">You</string>
+    <string name="family_creator">Started the family</string>
+    <!-- Your own row when you started the family: "You · Started the family" -->
+    <string name="family_you_creator">You · Started the family</string>
+    <string name="family_alone">Only you so far. Invite someone to share the log and the babies.</string>
+    <string name="family_invite">Invite someone</string>
+    <!-- The text of the share sheet; %1$s is the invite link -->
+    <string name="family_invite_text">Join my family on Pooparazzi to share our baby log: %1$s (works once, for 6 days)</string>
+    <string name="family_invite_chooser">Share the invite</string>
+    <string name="family_leave">Leave family</string>
+    <string name="family_leave_title">Leave the family?</string>
+    <string name="family_leave_body">You\'ll stop seeing its log and babies. Your phone keeps its log and starts a new family of your own.</string>
+    <string name="family_leave_confirm">Leave</string>
+    <string name="family_remove">Remove</string>
+    <!-- TalkBack: "Remove anna@example.com" -->
+    <string name="family_remove_cd">Remove %1$s</string>
+    <!-- %1$s is the member's email -->
+    <string name="family_remove_title">Remove %1$s?</string>
+    <string name="family_remove_body">They\'ll stop seeing the family\'s log from now on. What\'s already on their phone stays there.</string>
+    <string name="family_loading">Loading the family…</string>
+    <string name="family_waiting">Setting up your family…</string>
+    <string name="family_error">Couldn\'t load the family. Tap to try again.</string>
+
+    <!-- Opening an invite (§3.5) -->
+    <string name="join_screen_title">Family invite</string>
+    <string name="join_loading">Opening the invite…</string>
+    <!-- %1$s is the inviter's email -->
+    <string name="join_title">Join %1$s\'s family?</string>
+    <string name="join_title_unknown">Join this family?</string>
+    <string name="join_body">Your babies and your log on this phone are added to the family\'s and shared with its members. You\'ll see theirs too.</string>
+    <string name="join_merge">Your first baby and the family\'s first baby become one baby.</string>
+    <string name="join_accept">Join</string>
+    <string name="join_not_now">Not now</string>
+    <string name="join_joined">You\'re in the family. Your log and babies are being shared.</string>
+    <string name="join_done">Done</string>
+    <string name="join_expired">This invite has expired or was already used. Ask for a new one.</string>
+    <string name="join_invalid">This invite link isn\'t valid.</string>
+    <string name="join_already_member">You\'re already in this family.</string>
+    <string name="join_try_again">Try again</string>
+
+    <!-- Settings › About -->
+    <string name="settings_privacy">Privacy policy</string>
+    <string name="settings_privacy_summary">What is stored, where, and your rights</string>
 </resources>

@@ -253,6 +253,19 @@ class SettingsAccountTest : CoreTestBase() {
         runCurrent()
         assertEquals(1, cloud.syncs)
     }
+
+    @Test
+    fun aboutLinksThePrivacyPolicy() = coreTest { core ->
+        assertEquals(
+            "https://demo-pooparazzi.web.app/privacy",
+            settings(core, FakeAccounts(), FakeCloudSync()).state.value!!.privacyUrl,
+        )
+        assertEquals(
+            "without a Firebase configuration, the policy in the repository",
+            "https://github.com/ffMathy/pooparazzi/blob/main/docs/PRIVACY.md",
+            settings(core, FakeAccounts(available = false, hostingDomain = null), FakeCloudSync()).state.value!!.privacyUrl,
+        )
+    }
 }
 
 /** Settings whose renames take a second each, to race the name writes. */

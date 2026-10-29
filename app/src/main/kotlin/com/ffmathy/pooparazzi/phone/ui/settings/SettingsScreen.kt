@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -77,6 +78,11 @@ import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
 import com.ffmathy.pooparazzi.phone.ui.components.syncLineText
 import com.ffmathy.pooparazzi.phone.ui.components.watchGlyph
 import com.ffmathy.pooparazzi.phone.ui.edit.OutlinePill
+import com.ffmathy.pooparazzi.phone.ui.family.FamilyActions
+import com.ffmathy.pooparazzi.phone.ui.family.FamilySection
+import com.ffmathy.pooparazzi.phone.ui.family.FamilyUiState
+import com.ffmathy.pooparazzi.phone.ui.family.FamilyViewModel
+import com.ffmathy.pooparazzi.phone.ui.family.inviteShareIntent
 import com.ffmathy.pooparazzi.phone.ui.history.HistoryRowDefaults
 import com.ffmathy.pooparazzi.phone.ui.preview.SettingsSamples
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
@@ -87,6 +93,9 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount: () -> Unit = {}) {
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val familyViewModel: FamilyViewModel = viewModel(factory = FamilyViewModel.Factory)
+    val family by familyViewModel.state.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
     // Only while this screen is resumed: a second tap during a transition must not pop Home or stack Licences twice.
     val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
     val licences by rememberUpdatedState(dropUnlessResumed(block = onOpenLicences))
@@ -99,17 +108,26 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
         onPauseOrDispose {}
     }
     val link by rememberUpdatedState(notifications)
-    val actions = remember(viewModel, context) {
+    val actions = remember(viewModel, context, uriHandler) {
         object : SettingsActions by viewModel {
             override fun onBack() = back()
             override fun onOpenLicences() = licences()
             override fun onOpenAccount() = account()
             override fun onOpenNotificationSettings() = context.openNotificationSettings(link)
+            override fun onOpenPrivacy() {
+                viewModel.state.value?.let { runCatching { uriHandler.openUri(it.privacyUrl) } }
+            }
+        }
+    }
+    // "Invite someone": the share sheet with the invite's link and text.
+    LaunchedEffect(familyViewModel, context) {
+        familyViewModel.shares.collect { invite ->
+            runCatching { context.startActivity(inviteShareIntent(context, invite)) }
         }
     }
     val loaded = state
     if (loaded != null) {
-        SettingsScreen(loaded, actions, notifications = notifications)
+        SettingsScreen(loaded, actions, notifications = notifications, family = family, familyActions = familyViewModel)
     } else {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
     }
@@ -131,6 +149,8 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     notifications: NotificationLink = NotificationLink.LIVE_UPDATES,
     windowInsets: WindowInsets = WindowInsets.safeDrawing,
+    family: FamilyUiState = FamilyUiState(),
+    familyActions: FamilyActions = FamilyActions.None,
 ) {
     val colors = MaterialTheme.colorScheme
     val bottomInset = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
@@ -156,6 +176,9 @@ fun SettingsScreen(
                 .padding(bottom = 24.dp + bottomInset),
         ) {
             Section(stringResource(R.string.settings_section_account)) { AccountRow(state, actions) }
+            if (state.account is AccountSummary.SignedIn && family.signedIn) {
+                Section(stringResource(R.string.settings_section_family)) { FamilySection(family, familyActions) }
+            }
             val babiesTitle = if (state.babies.size > 1) R.string.settings_section_babies else R.string.settings_section_baby
             Section(stringResource(babiesTitle)) { BabiesGroup(state, actions) }
             Section(stringResource(CoreR.string.settings_appearance)) {
@@ -177,7 +200,9 @@ fun SettingsScreen(
             Section(stringResource(R.string.settings_section_notifications)) {
                 NotificationsRow(notifications, actions::onOpenNotificationSettings)
             }
-            Section(stringResource(R.string.settings_section_about)) { AboutGroup(state.versionName, actions::onOpenLicences) }
+            Section(stringResource(R.string.settings_section_about)) {
+                AboutGroup(state.versionName, actions::onOpenPrivacy, actions::onOpenLicences)
+            }
         }
     }
 }
@@ -247,8 +272,10 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
             )
         }
     }
+    // Signed in, the names go to the family's backup too (BABIES_AND_BACKUP §1).
+    val hint = if (state.account is AccountSummary.SignedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint
     Text(
-        stringResource(R.string.settings_babies_hint),
+        stringResource(hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
@@ -414,9 +441,12 @@ private fun LinkRow(
     }
 }
 
-/** "Pooparazzi · Version 0.1.0" and "Font licences" (opens the OFL texts). */
+/**
+ * "Pooparazzi · Version 0.1.0", "Privacy policy" (opens it in the browser, BABIES_AND_BACKUP §3.2) and "Font licences"
+ * (opens the OFL texts).
+ */
 @Composable
-private fun AboutGroup(versionName: String, onOpenLicences: () -> Unit) {
+private fun AboutGroup(versionName: String, onOpenPrivacy: () -> Unit, onOpenLicences: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
         GroupRow(first = true, last = false) {
@@ -431,6 +461,9 @@ private fun AboutGroup(versionName: String, onOpenLicences: () -> Unit) {
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
                 Text(stringResource(R.string.settings_version, versionName), style = PhoneType.dataMedium, color = colors.onSurfaceVariant)
             }
+        }
+        GroupRow(first = false, last = false) {
+            LinkRow(stringResource(R.string.settings_privacy), stringResource(R.string.settings_privacy_summary), onOpenPrivacy)
         }
         GroupRow(first = false, last = true) {
             LinkRow(stringResource(R.string.settings_font_licences), stringResource(R.string.settings_font_licences_summary), onOpenLicences)
