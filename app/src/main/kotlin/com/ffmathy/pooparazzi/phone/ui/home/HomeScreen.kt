@@ -219,6 +219,7 @@ fun HomeScreen(
                                 size = size,
                                 formatters = formatters,
                                 onAdjustStart = actions::onAdjustStart,
+                                onEditEntry = actions::onEditEntry,
                             )
                         },
                         below = {

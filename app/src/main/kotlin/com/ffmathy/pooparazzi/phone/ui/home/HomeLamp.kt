@@ -26,6 +26,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -85,7 +87,9 @@ internal object HomeLampDefaults {
 /**
  * The Lamp with its text (DESIGN_SPEC §2.3–2.4, V1_ADDITIONS §2.1): FEED glow/disc when idle with the last feed's
  * type icon and "Last fed"; a running sleep with its orbit, "since …" and "Adjust start".
- * The digits are never a tap target; the text is one TalkBack stop with a spoken form, never a live region.
+ * The text is one TalkBack stop with a spoken form, never a live region. Like a since-row it is the one-tap correction
+ * path: idle it opens the edit sheet of the last feed (a chevron after the label says so), and while a sleep runs it
+ * opens the Adjust start sheet, as the chip does. Neither writes anything until Save.
  */
 @Composable
 internal fun HomeLamp(
@@ -94,6 +98,7 @@ internal fun HomeLamp(
     size: Dp,
     formatters: Formatters,
     onAdjustStart: () -> Unit,
+    onEditEntry: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val night = LocalNightLight.current.isNight
@@ -104,18 +109,40 @@ internal fun HomeLamp(
             size = size,
             reducedMotion = rememberReducedMotion(),
         )
-        LampText(lamp, zone, size, formatters, onAdjustStart)
+        LampText(lamp, zone, size, formatters, onAdjustStart, onEditEntry)
     }
 }
 
 @Composable
-private fun LampText(lamp: LampState, zone: ZoneId, size: Dp, formatters: Formatters, onAdjustStart: () -> Unit) {
+private fun LampText(
+    lamp: LampState,
+    zone: ZoneId,
+    size: Dp,
+    formatters: Formatters,
+    onAdjustStart: () -> Unit,
+    onEditEntry: (String) -> Unit,
+) {
     val events = LocalXPalette.current.events
     val colors = MaterialTheme.colorScheme
     val text = lampTexts(lamp, zone, size, formatters)
+    val open: (() -> Unit)? = when (lamp) {
+        is LampState.FeedIdle -> lamp.lastFeed?.let { feed -> { onEditEntry(feed.id) } }
+        is LampState.SleepRunning -> onAdjustStart
+    }
+    val openLabel = stringResource(if (lamp is LampState.SleepRunning) CoreR.string.action_adjust_start else CoreR.string.action_edit)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Column(
-            Modifier.clearAndSetSemantics { contentDescription = text.spoken },
+            Modifier
+                .clip(RoundedCornerShape(24.dp))
+                .then(if (open != null) Modifier.clickable(onClickLabel = openLabel, role = Role.Button, onClick = open) else Modifier)
+                .clearAndSetSemantics {
+                    contentDescription = text.spoken
+                    if (open != null) {
+                        role = Role.Button
+                        onClick(label = openLabel) { open(); true }
+                    }
+                }
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
@@ -131,6 +158,7 @@ private fun LampText(lamp: LampState, zone: ZoneId, size: Dp, formatters: Format
                     color = if (sleep) events.sleep.text else events.feed.text,
                     maxLines = 1,
                 )
+                if (open != null && !sleep) XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
             }
             Spacer(Modifier.height(8.dp))
             // An 80 dp hero band (DESIGN_SPEC §2.4); it may grow only at large font scales.

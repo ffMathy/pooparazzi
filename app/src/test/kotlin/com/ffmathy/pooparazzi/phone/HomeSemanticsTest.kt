@@ -70,6 +70,7 @@ class HomeSemanticsTest {
         override fun onSwitchBaby() { calls += "switch" }
         override fun onSelectBaby(babyId: String) { calls += "select:$babyId" }
         override fun onRetrySync() { calls += "retry" }
+        override fun onAdjustStart() { calls += "adjust" }
     }
 
     @Before
@@ -91,6 +92,24 @@ class HomeSemanticsTest {
             .performClick()
         compose.onNodeWithContentDescription("Last diaper, pee, 1 hour 20 minutes ago, at 01:52").assertExists()
         assertEquals(listOf("edit:sample-breast-0140"), calls)
+    }
+
+    @Test
+    fun theLampOpensTheLastFeedOrAdjustStart() {
+        show(HomeSamples.breastLogged())
+        compose.onNodeWithContentDescription("Last feed, breast, left then right, 18 minutes ago, at 14:32")
+            .assert(SemanticsMatcher("click label Edit") { it.config[SemanticsActions.OnClick].label == "Edit" })
+            .performClick()
+        assertTrue(calls.single().startsWith("edit:"))
+    }
+
+    @Test
+    fun theRunningLampOpensAdjustStart() {
+        show(HomeSamples.asleep())
+        compose.onNodeWithContentDescription("Asleep, 1 hour 7 minutes, since 02:05")
+            .assert(SemanticsMatcher("click label Adjust start") { it.config[SemanticsActions.OnClick].label == "Adjust start" })
+            .performClick()
+        assertEquals(listOf("adjust"), calls)
     }
 
     @Test
