@@ -47,6 +47,15 @@ PHONE = {
     "17-widget-4x2.png": "widget-4x2",
     "18-widget-3x1.png": "widget-3x1",
     "19-widget-cover.png": "widget-cover",
+    "20-home-twins.png": "home-twins",
+    "21-switch-baby-sheet.png": "switch-baby",
+    "22-history-twins.png": "history-twins",
+    "23-settings-babies.png": "settings-babies",
+    "24-welcome.png": "welcome",
+    "25-account-signed-out.png": "account",
+    "26-account-signed-in.png": "account-signed-in",
+    "27-widget-twins.png": "widget-twins",
+    "28-notification-twins.png": "notification-twins",
 }
 
 # Recorded file (wear/screenshots/<lang>/) -> README file (docs/screenshots/<lang>/watch-<name>.png).
@@ -64,6 +73,9 @@ WATCH = {
     "12-tile.png": "tile",
     "12b-tile-asleep.png": "tile-asleep",
     "13-complications.png": "complications",
+    "22-main-twins.png": "main-twins",
+    "23-baby-picker.png": "baby-picker",
+    "12j-tile-second-baby.png": "tile-second-baby",
 }
 
 

@@ -72,24 +72,22 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun diaperSheetHint() = sheet("09-diaper-sheet-hint", night = true, HomeSamples.diaperSheetHint())
 
-    /** Not part of the tour (written under build/): twins, the name as the switcher, and the Switch baby sheet. */
-    @Test fun homeTwins() {
-        compose.setContent { Themed(night = false) { HomeScreen(HomeSamples.twins(), HomeActions.None, windowInsets = ReferenceInsets) } }
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/$language-home-twins.png")
-    }
+    /** Twins (BABIES_AND_BACKUP §2.2): the current baby's name with a chevron is the switcher. */
+    @Test fun homeTwins() = home("20-home-twins", night = false, HomeSamples.twins())
 
-    /** Twins with "Couldn't save · Tap to retry": the retry row sits under the switcher. */
+    /** Not part of the tour (written under build/): twins with "Couldn't save · Tap to retry" under the switcher. */
     @Test fun homeTwinsSyncError() {
         val error = HomeSamples.twins(sync = SyncStatus.Error)
         compose.setContent { Themed(night = true) { HomeScreen(error, HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/$language-home-twins-sync-error.png")
     }
 
+    /** The Switch baby sheet, opened from the name. */
     @OptIn(ExperimentalRoborazziApi::class)
     @Test fun switchBabySheet() {
         compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.twinsSwitching(), HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.waitForIdle()
-        captureScreenRoboImage("build/outputs/roborazzi/$language-switch-baby-sheet.png")
+        captureScreenRoboImage(path("21-switch-baby-sheet"))
     }
 
     /**

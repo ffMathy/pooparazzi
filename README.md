@@ -46,11 +46,25 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Add past entry | Settings | Widget 4×2 | Widget 3×1 |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-add-past-entry.png" width="200" alt="Add a past entry"> | <img src="docs/screenshots/en/phone-settings.png" width="200" alt="Settings"> | <img src="docs/screenshots/en/phone-widget-4x2.png" width="200" alt="4x2 log widget in its states"> | <img src="docs/screenshots/en/phone-widget-3x1.png" width="200" alt="3x1 quick widget in its sizes"> |
+| <img src="docs/screenshots/en/phone-add-past-entry.png" width="200" alt="Add a past entry"> | <img src="docs/screenshots/en/phone-settings.png" width="200" alt="Settings: Account, Baby with Add a baby, Appearance and Language"> | <img src="docs/screenshots/en/phone-widget-4x2.png" width="200" alt="4x2 log widget in its states"> | <img src="docs/screenshots/en/phone-widget-3x1.png" width="200" alt="3x1 quick widget in its sizes"> |
 
 | Cover screen (Samsung flip) |
 |:---:|
 | <img src="docs/screenshots/en/phone-widget-cover.png" width="200" alt="The 4x2 widget on a Samsung flip's cover screen, idle and asleep"> |
+
+#### Several babies and backup
+
+| Welcome (first run) | Account, signed out | Account, signed in | Settings, babies |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/phone-welcome.png" width="200" alt="First-run Welcome: the log stays on this phone, Continue with Google, the email form and Continue without an account"> | <img src="docs/screenshots/en/phone-account.png" width="200" alt="Account, signed out: Continue with Google, then or use email with Sign in and Create account"> | <img src="docs/screenshots/en/phone-account-signed-in.png" width="200" alt="Account, signed in: the address, Backed up 14:31, Back up now, Sign out and Delete account"> | <img src="docs/screenshots/en/phone-settings-babies.png" width="200" alt="Settings, Babies: name fields for Noa, Ida and an unnamed third, Add a baby and the names hint"> |
+
+| Home, two babies | Switch baby | History, two babies | Widgets, two babies |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/phone-home-twins.png" width="200" alt="Home with two babies: Noa with a chevron is the switcher"> | <img src="docs/screenshots/en/phone-switch-baby.png" width="200" alt="Switch baby sheet with Noa selected and Ida"> | <img src="docs/screenshots/en/phone-history-twins.png" width="200" alt="History labelled Noa under the title"> | <img src="docs/screenshots/en/phone-widget-twins.png" width="200" alt="4x2 widgets with Noa at the start of the status row, and the 3x1"> |
+
+| Sleep notifications |
+|:---:|
+| <img src="docs/screenshots/en/phone-notification-twins.png" width="200" alt="One sleep notification per baby: Noa is asleep and Ida is asleep, each with Woke up"> |
 
 ### Watch
 
@@ -66,6 +80,10 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/watch-undone.png" width="140" alt="Watch undone"> | <img src="docs/screenshots/en/watch-today.png" width="140" alt="Watch today list"> | <img src="docs/screenshots/en/watch-tile.png" width="140" alt="Watch tile"> | <img src="docs/screenshots/en/watch-tile-asleep.png" width="140" alt="Watch tile while asleep"> | <img src="docs/screenshots/en/watch-complications.png" width="140" alt="Watch complications preview"> |
 
+| Main, two babies | Baby picker | Tile, second baby |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/watch-main-twins.png" width="170" alt="Watch main with two babies: Noa in the time text"> | <img src="docs/screenshots/en/watch-baby-picker.png" width="170" alt="Watch Switch baby picker with Noa selected and Ida"> | <img src="docs/screenshots/en/watch-tile-second-baby.png" width="170" alt="Watch tile for the second, unnamed baby: Baby 2"> |
+
 ### På dansk (Danish)
 
 | Hjem, nat | Hjem, dag | Amning | Ble | Historik | Indstillinger |
@@ -75,6 +93,10 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 | Ur: hoved | Måltid | Hvilken side? | Ble | Registreret | Flise |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/da/watch-main-idle.png" width="130" alt="Ur, hovedskærm"> | <img src="docs/screenshots/da/watch-feed-type.png" width="130" alt="Måltid"> | <img src="docs/screenshots/da/watch-side.png" width="130" alt="Hvilken side?"> | <img src="docs/screenshots/da/watch-diaper.png" width="130" alt="Ble"> | <img src="docs/screenshots/da/watch-logged.png" width="130" alt="Registreret med Fortryd"> | <img src="docs/screenshots/da/watch-tile.png" width="130" alt="Flise"> |
+
+| Velkommen | Konto | Hjem, to børn | Skift barn | Ur: to børn | Ur: skift barn |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/da/phone-welcome.png" width="150" alt="Velkommen: Din log bliver på denne telefon"> | <img src="docs/screenshots/da/phone-account.png" width="150" alt="Konto: Fortsæt med Google eller brug e-mail"> | <img src="docs/screenshots/da/phone-home-twins.png" width="150" alt="Hjem med to børn: Noa med pil vælger barn"> | <img src="docs/screenshots/da/phone-switch-baby.png" width="150" alt="Skift barn: Noa og Ida"> | <img src="docs/screenshots/da/watch-main-twins.png" width="130" alt="Ur, hovedskærm med Noa i tiden"> | <img src="docs/screenshots/da/watch-baby-picker.png" width="130" alt="Ur: Skift barn"> |
 
 Every image above also exists in the other language: swap `en` and `da` in the path ([`docs/screenshots/`](docs/screenshots)).
 
