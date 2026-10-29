@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.core.cloud
 import android.util.Log
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
+import com.ffmathy.pooparazzi.core.model.forCloud
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -22,7 +23,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * The backup of the log to the signed-in account's [store] (BABIES_AND_BACKUP §4.3–4.4).
  *
- * A sync runs whenever an account is signed in, one at a time, and always pulls before it pushes:
+ * A sync runs whenever an account is signed in and has agreed to the backup ([CloudAccount.consented]), one at a time,
+ * and always pulls before it pushes. Signed in without the consent, nothing is read or sent ([CloudStatus.Paused]):
  *
  * 1. The first sync for an account on this device (or for another account than the last, or after signing out) flags
  *    every row for upload ("everything logged so far is backed up") and pulls from the start, so rows the backend
@@ -31,14 +33,17 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    conflict rules, forwarded to the watch). The cursor is stored after each page, so an interrupted pull resumes
  *    where it stopped. Pulling first means a newer version another phone backed up is merged before this phone sends
  *    its own: an upload is a plain overwrite, and would otherwise put an older version over it.
- * 3. **Push**: the current version of the pending rows, in batches; each row is cleared unless written again meanwhile.
+ * 3. **Consent**: before the first push under a consent version, the consent is recorded in the backend
+ *    ([CloudStore.recordConsent]); should that fail, nothing is sent.
+ * 4. **Push**: the current version of the pending rows, in batches; each row is cleared unless written again meanwhile.
+ *    A deleted row goes up as a tombstone without its time and details ([forCloud]).
  *
  * Syncs run when an account signs in, on [requestSync] (the app in the foreground, at most once a minute) and
  * [syncNow], and [pushDelayMillis] after a write leaves rows pending. Nothing keeps a listener open on the backend: a
  * pull with nothing new costs one read.
  *
- * Rows are flagged for the backend only while an account is signed in (the repository asks [account]); signing out
- * clears every flag, so soft deletes are purged as without a backup, and the next sign-in flags everything again (1.).
+ * Rows are flagged for the backend only while an agreed account is signed in (the repository asks [account]); signing
+ * out (or an account that has not agreed) clears every flag, so soft deletes are purged as without a backup, and the next sign-in flags everything again (1.).
  *
  * Nothing here throws: failures become [status] ([CloudError.OFFLINE] → [CloudStatus.Offline] and so on) and the rows
  * stay pending for the next sync.
@@ -89,6 +94,7 @@ class CloudBackup(
     override suspend fun deleteBackup(): Boolean = scope.async {
         try {
             mutex.withLock {
+                // Also for an account that has not agreed to the backup: what it backed up before must go all the same.
                 val uid = account.value?.uid ?: return@withLock false
                 // Forgotten first: should the deletion stop halfway, a later sync for this account backs up everything.
                 bookkeeping.update { it.forget(uid) }
@@ -109,9 +115,13 @@ class CloudBackup(
 
     /** Shows where the account stands and starts a full sync whenever one signs in. */
     private suspend fun followAccount() {
-        account.map { it?.uid }.distinctUntilChanged().collect { uid ->
-            if (uid == null) {
+        account.map { it?.uid to (it?.consented == true) }.distinctUntilChanged().collect { (signedIn, consented) ->
+            // The account the backup works for: none while signed out, or signed in without the consent.
+            val uid = signedIn.takeIf { consented }
+            if (signedIn == null) {
                 state.value = CloudStatus.Off
+            } else if (uid == null) {
+                state.value = CloudStatus.Paused
             } else {
                 lastSyncOf(uid)?.let { state.value = CloudStatus.Synced(it) }
                 claimPull()
@@ -135,7 +145,7 @@ class CloudBackup(
                 val kept = values.deletedUid?.takeIf { it == uid }
                 if (uid == null) values.copy(deletedUid = kept, fullUploadUid = null) else values.copy(deletedUid = kept)
             }
-            if (uid == null && account.value == null) repository.clearCloudPending()
+            if (uid == null && activeUid() == null) repository.clearCloudPending()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -152,7 +162,7 @@ class CloudBackup(
     @OptIn(FlowPreview::class)
     private suspend fun followPending() {
         combine(repository.observeCloudPending(), account) { pending, signedIn ->
-            if (pending.count > 0 && signedIn != null) pending to signedIn.uid else null
+            if (pending.count > 0 && signedIn?.consented == true) pending to signedIn.uid else null
         }
             .debounce(pushDelayMillis)
             .collect { due -> if (due != null) sync() }
@@ -188,9 +198,10 @@ class CloudBackup(
 
     /** One sync for the current account. Call with [mutex] held. */
     private suspend fun syncLocked(backUpAgain: Boolean) {
-        val uid = account.value?.uid
+        val signedIn = account.value
+        val uid = activeUid()
         if (uid == null) {
-            state.value = CloudStatus.Off
+            state.value = if (signedIn == null) CloudStatus.Off else CloudStatus.Paused
             return
         }
         val outcome = try {
@@ -199,14 +210,19 @@ class CloudBackup(
             throw e
         } catch (e: CloudException) {
             Log.w(TAG, "Backup sync failed: ${e.error}", e)
+            // A refused write may mean the consent record is gone (another phone deleted the backup): written again next time.
+            if (e.error == CloudError.OTHER) forgetConsent(uid)
             e.error.toStatus()
         } catch (e: Exception) {
             Log.w(TAG, "Backup sync failed", e)
             CloudStatus.Error
         }
         // A sync that outlived its account (signed out meanwhile) says nothing about the new one.
-        if (account.value?.uid == uid) state.value = outcome
+        if (activeUid() == uid) state.value = outcome
     }
+
+    /** The account the backup works for: signed in and agreed to the backup ([CloudAccount.consented]), or null. */
+    private fun activeUid(): String? = account.value?.takeIf { it.consented }?.uid
 
     /** Pulls and pushes for [uid], unless its backup was deleted; returns the status to show. */
     private suspend fun syncAccount(uid: String, backUpAgain: Boolean): CloudStatus {
@@ -225,10 +241,28 @@ class CloudBackup(
             bookkeeping.update { it.copy(fullUploadUid = uid, cursorUid = uid, cursor = null) }
         }
         pull(uid)
+        recordConsent(uid)
         push(uid)
         val now = clock.now()
         bookkeeping.update { it.copy(lastSyncUid = uid, lastSyncAtMillis = now) }
         return CloudStatus.Synced(now)
+    }
+
+    private suspend fun forgetConsent(uid: String) = try {
+        bookkeeping.update { if (it.consentUid == uid) it.copy(consentUid = null, consentVersion = null) else it }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "Could not update the backup's bookkeeping", e)
+    }
+
+    /** Records the account's consent in the backend once per version, before anything is sent under it. */
+    private suspend fun recordConsent(uid: String) {
+        val version = account.value?.takeIf { it.uid == uid }?.consentVersion ?: throw CloudException(CloudError.SIGNED_OUT)
+        if (bookkeeping.get().consentFor(uid) == version) return
+        checkAccount(uid)
+        store.recordConsent(uid, version)
+        bookkeeping.update { it.copy(consentUid = uid, consentVersion = version) }
     }
 
     /** Merges every change after the stored cursor, a page at a time. */
@@ -253,15 +287,15 @@ class CloudBackup(
             checkAccount(uid)
             val batch = repository.cloudPending(CloudStore.UPLOAD_BATCH)
             if (batch.isEmpty()) return
-            store.upload(uid, batch)
+            store.upload(uid, batch.map { it.forCloud() })
             // Nothing cleared: every row was written again meanwhile. Stop rather than chase them: the next sync goes on.
             if (repository.markCloudSynced(batch) == 0) return
         }
     }
 
-    /** Stops a sync whose account signed out or changed meanwhile: nothing more is read or sent for it. */
+    /** Stops a sync whose account signed out, changed or lost its consent meanwhile: nothing more is read or sent for it. */
     private fun checkAccount(uid: String) {
-        if (account.value?.uid != uid) throw CloudException(CloudError.SIGNED_OUT)
+        if (activeUid() != uid) throw CloudException(CloudError.SIGNED_OUT)
     }
 
     companion object {

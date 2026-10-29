@@ -67,6 +67,7 @@ data class DeleteState(
  * @property user the signed-in account; null shows the signed-out form.
  * @property busy an account action is running: the buttons wait.
  * @property backingUp "Back up now" is running.
+ * @property agreed the consent to the backup is ticked (§3.4): signing in waits for it.
  */
 @Immutable
 data class AccountUiState(
@@ -84,6 +85,7 @@ data class AccountUiState(
     val noticeEmail: String = "",
     val backingUp: Boolean = false,
     val delete: DeleteState? = null,
+    val agreed: Boolean = false,
 )
 
 /** Everything the parent can do on the Account and Welcome screens. Defaults do nothing (previews). */
@@ -96,6 +98,15 @@ interface AccountActions {
     fun onMode(mode: EmailMode) {}
     fun onEmail(email: String) {}
     fun onPassword(password: String) {}
+
+    /** The consent checkbox above the sign-in choices. */
+    fun onAgreed(agreed: Boolean) {}
+
+    /** "Privacy policy". */
+    fun onOpenPrivacyPolicy() {}
+
+    /** Signed in without the consent: "Agree and back up". */
+    fun onAgreeSignedIn() {}
 
     /** The main button: "Sign in" or "Create account". */
     fun onSubmit() {}
@@ -126,10 +137,14 @@ private data class Form(
     val noticeEmail: String = "",
     val backingUp: Boolean = false,
     val delete: DeleteState? = null,
+    val agreed: Boolean = false,
 )
 
 /**
  * The account's actions. Errors are shown in words; a closed Google picker ([AccountResult.Cancelled]) says nothing.
+ *
+ * Signing in, with Google or email, waits for the consent to the backup to be ticked (§3.4: the log is health
+ * information about a child, so the backup asks for explicit consent): without it the form says so and sends nothing.
  *
  * Deleting the account signs in again (password or Google), deletes the backup, then the account; the log on this
  * phone stays. Should the backup not be deleted, the account is kept. Should the account not be
@@ -164,6 +179,7 @@ class AccountViewModel(
             noticeEmail = f.noticeEmail,
             backingUp = f.backingUp,
             delete = f.delete?.takeIf { user != null },
+            agreed = f.agreed,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial())
 
@@ -185,7 +201,25 @@ class AccountViewModel(
         zone = zone,
     )
 
-    fun onGoogle(activity: Activity) = run { accounts.signInWithGoogle(activity) }
+    fun onGoogle(activity: Activity) {
+        if (!requireAgreed()) return
+        run { accounts.signInWithGoogle(activity) }
+    }
+
+    fun onAgreed(agreed: Boolean) = form.update {
+        it.copy(agreed = agreed, error = it.error.takeUnless { e -> e == AccountError.CONSENT_REQUIRED })
+    }
+
+    fun onAgreeSignedIn() {
+        if (accounts.agreeToBackup() is AccountResult.Failed) form.update { it.copy(error = AccountError.OTHER) }
+    }
+
+    /** False, with the form saying why, while the consent is not ticked. */
+    private fun requireAgreed(): Boolean {
+        if (form.value.agreed) return true
+        form.update { it.copy(error = AccountError.CONSENT_REQUIRED, notice = null) }
+        return false
+    }
 
     fun onMode(mode: EmailMode) = form.update { it.copy(mode = mode, error = null, notice = null) }
 
@@ -195,6 +229,7 @@ class AccountViewModel(
 
     fun onSubmit() {
         val f = form.value
+        if (!requireAgreed()) return
         run {
             when (f.mode) {
                 EmailMode.SIGN_IN -> accounts.signIn(f.email, f.password)

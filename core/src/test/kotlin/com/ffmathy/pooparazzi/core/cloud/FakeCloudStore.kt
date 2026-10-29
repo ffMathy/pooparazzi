@@ -23,6 +23,9 @@ class FakeCloudStore : CloudStore {
     /** While set, uploads (only) fail with this error, as a refused write does. */
     var uploadFailure: CloudError? = null
 
+    /** While set, recording the consent (only) fails with this error. */
+    var consentFailure: CloudError? = null
+
     /** While set, this many more [changesAfter] calls succeed, and the ones after fail with [CloudError.OFFLINE]. */
     var pullsBeforeFailure: Int? = null
 
@@ -39,6 +42,11 @@ class FakeCloudStore : CloudStore {
     var pulls = 0
         private set
     var documentsRead = 0
+        private set
+
+    /** The consent version recorded per account ([recordConsent]), and how many times it was written. */
+    val consents = mutableMapOf<String, Int>()
+    var consentWrites = 0
         private set
 
     /** Total entries written by accepted uploads. */
@@ -79,9 +87,17 @@ class FakeCloudStore : CloudStore {
         return CloudPage(page.mapNotNull { EntryJson.decodeOrNull(it.value.json) }, last, page.size)
     }
 
+    override suspend fun recordConsent(uid: String, version: Int) {
+        fail()
+        consentFailure?.let { throw CloudException(it) }
+        consents[uid] = version
+        consentWrites++
+    }
+
     override suspend fun deleteAll(uid: String) {
         fail()
         accounts.remove(uid)
+        consents.remove(uid)
     }
 
     private suspend fun fail() {

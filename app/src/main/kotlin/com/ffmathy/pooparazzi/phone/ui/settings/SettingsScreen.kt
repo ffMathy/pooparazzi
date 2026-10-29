@@ -1,5 +1,11 @@
 package com.ffmathy.pooparazzi.phone.ui.settings
 
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,6 +75,7 @@ import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.notify.NotificationLink
+import com.ffmathy.pooparazzi.phone.privacy.openPrivacyPolicy
 import com.ffmathy.pooparazzi.phone.ui.account.backupStatusText
 import com.ffmathy.pooparazzi.phone.notify.openNotificationSettings
 import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
@@ -80,6 +88,9 @@ import com.ffmathy.pooparazzi.phone.ui.edit.OutlinePill
 import com.ffmathy.pooparazzi.phone.ui.history.HistoryRowDefaults
 import com.ffmathy.pooparazzi.phone.ui.preview.SettingsSamples
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import java.time.LocalDate
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Settings wired to its view model and navigation. */
@@ -99,12 +110,19 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
         onPauseOrDispose {}
     }
     val link by rememberUpdatedState(notifications)
+    val scope = rememberCoroutineScope()
+    // "Download my data": the system's file picker chooses where; the file is written there, and a toast says so.
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(LogExportFile.MIME_TYPE)) { uri ->
+        if (uri != null) scope.launch { context.exportLog(viewModel, uri) }
+    }
     val actions = remember(viewModel, context) {
         object : SettingsActions by viewModel {
             override fun onBack() = back()
             override fun onOpenLicences() = licences()
             override fun onOpenAccount() = account()
             override fun onOpenNotificationSettings() = context.openNotificationSettings(link)
+            override fun onOpenPrivacyPolicy() = context.openPrivacyPolicy()
+            override fun onExport() = exporter.launch(LogExportFile.name(LocalDate.now()))
         }
     }
     val loaded = state
@@ -119,7 +137,8 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
  * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the account and backup
  * (BABIES_AND_BACKUP §3.2), the babies, Appearance
  * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry, Notifications (the link
- * to the system's Live Update setting, §10.5) and About (version, font licences). Section headings are labelMedium;
+ * to the system's Live Update setting, §10.5), Privacy (the policy, "Download my data") and About (version, font
+ * licences). Section headings are labelMedium;
  * grouped rows use the History list's r 20 / r 6 corners.
  *
  * @param notifications what the Notifications row offers; the route reads it from the system.
@@ -177,6 +196,7 @@ fun SettingsScreen(
             Section(stringResource(R.string.settings_section_notifications)) {
                 NotificationsRow(notifications, actions::onOpenNotificationSettings)
             }
+            Section(stringResource(R.string.settings_section_privacy)) { PrivacyGroup(actions) }
             Section(stringResource(R.string.settings_section_about)) { AboutGroup(state.versionName, actions::onOpenLicences) }
         }
     }
@@ -326,7 +346,11 @@ private fun AccountRow(state: SettingsUiState, actions: SettingsActions) {
                         actions.onOpenAccount()
                     },
                     // "Backup deleted": nothing is backed up, but only "Back up now" on the Account screen starts again.
-                    summaryColor = if (failed || account.status == CloudStatus.Deleted) colors.error else colors.onSurfaceVariant,
+                    summaryColor = if (failed || account.status == CloudStatus.Deleted || account.status == CloudStatus.Paused) {
+                        colors.error
+                    } else {
+                        colors.onSurfaceVariant
+                    },
                     // "Backed up · 14:31" has digits: Google Sans Flex with tabular figures (the digit rule).
                     summaryStyle = PhoneType.dataSmall,
                 )
@@ -412,6 +436,44 @@ private fun LinkRow(
         Spacer(Modifier.width(12.dp))
         XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
     }
+}
+
+/**
+ * Settings › Privacy (docs/PRIVACY.md): "Privacy policy" (opens it in the browser) and "Download my data" (the whole log
+ * and the babies' names as a JSON file, wherever the parent saves it).
+ */
+@Composable
+private fun PrivacyGroup(actions: SettingsActions) {
+    Column(verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
+        GroupRow(first = true, last = false) {
+            LinkRow(stringResource(R.string.settings_privacy_policy), stringResource(R.string.settings_privacy_policy_summary), actions::onOpenPrivacyPolicy)
+        }
+        GroupRow(first = false, last = true) {
+            LinkRow(stringResource(R.string.settings_export), stringResource(R.string.settings_export_summary), actions::onExport)
+        }
+    }
+}
+
+/** Writes "Download my data" to [uri] and says how it went. */
+private suspend fun Context.exportLog(viewModel: SettingsViewModel, uri: Uri) {
+    val message = try {
+        val count = checkNotNull(contentResolver.openOutputStream(uri)) { "No stream for $uri" }.use { viewModel.export(it) }
+        resources.getQuantityString(R.plurals.settings_export_done, count, count)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w("Settings", "Could not save the export", e)
+        getString(R.string.settings_export_failed)
+    }
+    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+}
+
+/** The export's file type and suggested name. */
+internal object LogExportFile {
+    const val MIME_TYPE = "application/json"
+
+    /** "pooparazzi-log-2026-10-29.json". */
+    fun name(date: LocalDate): String = "pooparazzi-log-$date.json"
 }
 
 /** "Pooparazzi · Version 0.1.0" and "Font licences" (opens the OFL texts). */

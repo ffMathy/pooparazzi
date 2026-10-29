@@ -1,15 +1,17 @@
 {
   "name": "pooparazzi-firebase",
   "private": true,
-  "description": "Firestore security rules of the Pooparazzi backup and their tests (docs/BACKEND.md).",
+  "description": "Firestore security rules of the Pooparazzi backup, the retention job and their tests (docs/BACKEND.md).",
   "type": "module",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project demo-pooparazzi \"node --test test/*.test.js\"",
-    "deploy": "firebase deploy --only firestore"
+    "test": "firebase emulators:exec --only firestore,auth --project demo-pooparazzi \"node --test --test-concurrency=1 test/*.test.js\"",
+    "deploy": "firebase deploy --only firestore",
+    "retention": "node retention/run.js"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "6.0.0",
     "firebase": "13.0.0",
+    "firebase-admin": "14.5.0",
     "firebase-tools": "15.33.0"
   }
 }

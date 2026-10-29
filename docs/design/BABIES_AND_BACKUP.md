@@ -75,6 +75,8 @@ The first time the phone app opens with accounts available and nobody signed in 
 > **Your log stays on this phone**
 > Without an account, everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.
 > You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do.
+> [ ] I agree that my baby's log (feeds, sleep and diapers, which count as health information) is stored in my backup on Google's servers (Firebase), so I can restore it. I can withdraw at any time by deleting the account.
+> Privacy policy
 > [Continue with Google]
 > — or use email — [Sign in | Create account] · Email · Password · [Sign in] · Forgot password?
 > [Continue without an account]
@@ -93,26 +95,39 @@ The first Settings section. One row that opens the **Account** screen, whose sum
 | Offline | email · "Saved on phone · will back up" |
 | Error | email · "Couldn't back up · Tap to retry" (a tap also backs up again) |
 | Backup deleted, account not (§3.3) | email · "Backup deleted · Back up now to start again" (a tap opens the Account screen only) |
+| Signed in without the consent (§3.4) | email · "Backup paused · Agree to back up" (error colour; a tap opens the Account screen) |
 | No Firebase configuration in this build | (not tappable) "Backup isn't set up in this build. Everything is saved on this phone." |
 
-While signed in, Home's and History's top bars also show the backup as a small **cloud icon** next to the watch icon, with no text (DESIGN_SPEC §4.5): a tick when backed up, an arrow while backing up, a slash offline, "!" in error colour for an error (a 48 dp button that backs up again) and for a deleted backup (not a button). TalkBack reads the row's status line ("Backed up · 14:31"). Signed out, or in a build without Firebase, there is no cloud icon.
+While signed in, Home's and History's top bars also show the backup as a small **cloud icon** next to the watch icon, with no text (DESIGN_SPEC §4.5): a tick when backed up, an arrow while backing up, a slash offline, "!" in error colour for an error (a 48 dp button that backs up again) and for a deleted or paused backup (not a button). TalkBack reads the row's status line ("Backed up · 14:31"). Signed out, or in a build without Firebase, there is no cloud icon.
 
 ### 3.3 Account screen
 
-- **Signed out:** the explanation of §3.1, "Continue with Google" first (one tap, no password), then "or use email": a Sign in / Create account choice, email and password fields, the main button, "Forgot password?" (sign in; sends a reset link to the typed address), and errors in words ("Wrong email or password", "That email already has an account", "Use at least 6 characters", "No connection. Try again."). A call without an answer within 30 s says "No answer yet. It may still go through in a moment.": Firebase keeps trying, and should the sign-in go through after all, the screen follows the account (signed in, the error gone).
+- **Signed out:** the explanation of §3.1, the consent checkbox and "Privacy policy" (§3.4), "Continue with Google" first (one tap, no password), then "or use email": a Sign in / Create account choice, email and password fields, the main button, "Forgot password?" (sign in; sends a reset link to the typed address), and errors in words ("Wrong email or password", "That email already has an account", "Use at least 6 characters", "No connection. Try again."). A call without an answer within 30 s says "No answer yet. It may still go through in a moment.": Firebase keeps trying, and should the sign-in go through after all, the screen follows the account (signed in, the error gone).
 - **Create account** creates the account and signs in; the backup starts at once. There is no invitation and no email confirmation step.
 - **Signed in:** the address, the backup status line, "Back up now", "Sign out", and "Delete account…". That opens a "Delete account?" confirmation in place on the screen (not a separate dialog window, so the password field behaves like the rest of the screen; Back cancels it): it says what is deleted and that the log on this phone stays, then asks to sign in again — the password, or for a Google account just "Delete", which opens Google's account picker. It then deletes the backup and the account. If the backup cannot be deleted, the account is kept and it says so (the next sync completes the backup again); if the backup was deleted but the account was not, it says exactly that, and trying again finishes the job. Until then nothing is uploaded for the account, also after the app restarts (the phone remembers it), and the status line says "Backup deleted · Back up now to start again"; "Back up now", or signing out or in to another account, ends that. Closing Google's picker is not an error and says nothing. Account deletion inside the app is a Google Play requirement.
-- Signing out keeps the log on the phone. Signing in to an account merges the phone's log with the account's backup (nothing is lost on either side) and uploads the phone's entries.
+- **Signed in without the consent** (§3.4): the status line "Backup paused · Agree to back up" in error colour, then "Nothing is backed up until you agree. What was backed up before stays until you delete the account.", the consent's words, "Privacy policy" and "Agree and back up" in place of "Back up now". "Sign out" and "Delete account…" are as above (deleting works without the consent).
+- Signing out keeps the log on the phone and the backup in the account (the hint says so: "Delete the account to delete the backup."). Signing in to an account merges the phone's log with the account's backup (nothing is lost on either side) and uploads the phone's entries.
+
+### 3.4 Consent and privacy
+
+The log is health information about a child (GDPR art. 9), so the backup asks for **explicit consent** before anything is uploaded, and the app links its privacy policy ([`docs/PRIVACY.md`](../PRIVACY.md), Danish [`PRIVACY.da.md`](../PRIVACY.da.md)).
+
+- **The checkbox.** Above the sign-in choices on the Welcome and the Account screen: an unticked checkbox row (the whole row the toggle, at least 48 dp, TalkBack reads the text and its state) with the consent in words, and "Privacy policy" (an underlined text button that opens the policy in the browser, in the app's language). "Continue with Google", "Sign in" and "Create account" stay enabled; pressed while unticked they send nothing and say "Tick the box to agree to the backup first." above the main button. Ticking clears that line. "Forgot password?" does not need it.
+- **What is recorded.** Signing in from the form records, on this phone, that the account agreed to consent **version 1** ([`BackupConsent.VERSION`](../../core/src/main/kotlin/com/ffmathy/pooparazzi/core/cloud/Cloud.kt)) and when (device-local preferences `backup_consent`, excluded from backups and device transfers, so a new phone asks again). The first sync under that version writes `users/{uid}` `{ consentVersion, consentedAt: server time }` before it uploads anything (§4.3). Raising the version asks every account again.
+- **Without it** (an account signed in before this version, or a sign-in that went through only after the app stopped waiting): nothing is read or sent, no row is flagged, and the status is **Paused** until "Agree and back up" (§3.3).
+- **Withdrawing** is deleting the account (Settings › Account › Delete account…), which deletes the backup and the consent record; the log on the phone stays.
+- **Settings › Privacy** (before About): "Privacy policy" · "What is stored, where, for how long, and your rights" (opens the policy), and "Download my data" · "The whole log and the babies' names as a JSON file", which asks where to save `pooparazzi-log-<date>.json` (the system's file picker) and then says "Saved 214 entries" or "Couldn't save the file. Try again." in a toast. The file (`LogExport`) holds `format: "pooparazzi-log"`, `version: 1`, `exportedAtMillis`, the babies with their names, and every entry that is not deleted, of every baby, oldest first, in the backup's JSON shape. It works with or without an account: the backup holds nothing the phone does not.
 
 ## 4. Sync with the backend
 
 ### 4.1 Data
 
 ```
+users/{uid}                             { consentVersion: the consent agreed to (§3.4), consentedAt: server time }
 users/{uid}/entries/{entryId}           { json: EntryJson of the entry (≤ 2 KB), syncedAt: server time of the write }
 ```
 
-Nothing else is stored: no settings, no babies, no names. The rules (`firebase/firestore.rules`) let a signed-in account read, write and delete only its own entries, in exactly that shape.
+Nothing else is stored: no settings, no babies, no names. The rules (`firebase/firestore.rules`) let a signed-in account read, write and delete only its own consent record and entries, in exactly that shape, and refuse every entry written before the account's consent record exists. A **deleted** entry is uploaded as a tombstone (`Entry.forCloud`): its id, kind, baby id, `updatedAtMillis` and `deleted: true`, with `startMillis` 0 and every detail cleared, so what was logged does not stay in the backup once it is deleted. The phone that deleted it keeps its own copy until it is purged (7 days); another phone merges the tombstone.
 
 ### 4.2 Pending uploads
 
@@ -120,21 +135,22 @@ Each local row has a second pending flag beside the Data Layer's `pendingSync`: 
 
 | Write | `pendingSync` (watch) | `cloudPending` (backend) |
 |---|---|---|
-| Local write on this device | true | true while an account is signed in, else false |
-| Merged from the other device (Data Layer) | false | true while an account is signed in, else false |
+| Local write on this device | true | true while an agreed account (§3.4) is signed in, else false |
+| Merged from the other device (Data Layer) | false | true while an agreed account is signed in, else false |
 | Merged from the backend | true | false |
 | A row identical to the backend's version | unchanged | cleared |
 
-A soft-deleted row is purged only when both flags are clear. Without an account nothing is flagged, so deletes are purged as before; signing out clears every flag. The first time a device syncs for an account (for a different account than before, or after signing out), every row is marked `cloudPending`: that is the "everything logged so far is backed up". The download that runs first starts at the beginning of the backup and clears the flag on rows the backend already holds unchanged, so signing in again on the same phone uploads only differences.
+A soft-deleted row is purged only when both flags are clear. Without an account (or with one that has not agreed) nothing is flagged, so deletes are purged as before; signing out clears every flag. The first time a device syncs for an account (for a different account than before, or after signing out), every row is marked `cloudPending`: that is the "everything logged so far is backed up". The download that runs first starts at the beginning of the backup and clears the flag on rows the backend already holds unchanged, so signing in again on the same phone uploads only differences.
 
 ### 4.3 A sync
 
 One at a time, never throwing, and always a pull before a push:
 
-1. Signed out → status Off.
+1. Signed out → status Off. Signed in without the consent (§3.4) → status Paused, nothing read or sent.
 2. **Pull:** page through `users/{uid}/entries` ordered by (`syncedAt`, document id), starting after the stored cursor, 500 per page. Merge each page into the database (last-writer-wins, per-baby conflict rules, forwarded to the watch), then store the cursor of its last document. A document that does not decode (or whose entry id is not its document id) is skipped; one without a server time yet (this phone's own write still in flight) is skipped too, and the cursor stops before it so it is read once it has one.
-3. **Push:** upload the current version of `cloudPending` rows in batches of up to 400 writes, each with `syncedAt` set by the server; clear the flag of each row that was not written again meanwhile. An upload overwrites the document, so pulling first matters: a newer version another phone backed up is merged (and wins) before this phone sends its own.
-4. Status Backed up (time), or Offline / Error. The app stops waiting for a backend call after 30 s and counts it as Offline, so a phone without a connection never waits on a sync. Stopping to wait does not cancel a write: Firestore keeps the batch queued in memory and sends it once it can (offline, or with the day's write quota used up, that can take hours). So at most one batch is ever queued: the next upload, and deleting the backup, first wait for it (again at most 30 s, else Offline) instead of queueing the same rows again. The rows stay pending meanwhile, so a batch that lands late is sent once more at the next sync (one extra write per entry).
+3. **Consent:** before the first push under a consent version, write `users/{uid}` (§4.1) and remember on this phone that it is written; if it fails, nothing is sent and the status says so.
+4. **Push:** upload the current version of `cloudPending` rows (deleted ones as tombstones, §4.1) in batches of up to 400 writes, each with `syncedAt` set by the server; clear the flag of each row that was not written again meanwhile. An upload overwrites the document, so pulling first matters: a newer version another phone backed up is merged (and wins) before this phone sends its own.
+5. Status Backed up (time), or Offline / Error. The app stops waiting for a backend call after 30 s and counts it as Offline, so a phone without a connection never waits on a sync. Stopping to wait does not cancel a write: Firestore keeps the batch queued in memory and sends it once it can (offline, or with the day's write quota used up, that can take hours). So at most one batch is ever queued: the next upload, and deleting the backup, first wait for it (again at most 30 s, else Offline) instead of queueing the same rows again. The rows stay pending meanwhile, so a batch that lands late is sent once more at the next sync (one extra write per entry).
 
 ### 4.4 When it runs (and what it costs)
 

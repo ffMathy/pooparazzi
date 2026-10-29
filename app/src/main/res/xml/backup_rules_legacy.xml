@@ -8,6 +8,7 @@
     <exclude domain="sharedpref" path="system_surfaces.xml" />
     <exclude domain="sharedpref" path="widget_memo.xml" />
     <exclude domain="sharedpref" path="account_welcome.xml" />
+    <exclude domain="sharedpref" path="backup_consent.xml" />
     <exclude domain="file" path="datastore/pooparazzi_settings.preferences_pb" />
     <exclude domain="file" path="datastore/pooparazzi_cloud.preferences_pb" />
 </full-backup-content>

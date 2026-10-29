@@ -60,6 +60,8 @@ PHONE = {
     "30-widget-twins.png": "widget-twins",
     "31-notification-twins.png": "notification-twins",
     "34-statistics-twins.png": "statistics-twins",
+    "37-account-paused.png": "account-paused",
+    "38-settings-privacy.png": "settings-privacy",
 }
 
 # Recorded file (wear/screenshots/<lang>/) -> README file (docs/screenshots/<lang>/watch-<name>.png).

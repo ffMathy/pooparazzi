@@ -5,9 +5,10 @@ The phone app can back the log up to a small Firebase backend. Accounts are opti
 | Part | Firebase product | What it holds |
 |---|---|---|
 | Accounts | Authentication: Google sign-in, and email and password | Email address (and the password hash for email accounts) |
-| The backup | Cloud Firestore, `users/{uid}/entries/{entryId}` | Each log entry as JSON (times, kind, feed type and side, diaper details, an opaque baby id) and the server time it was written |
+| The backup | Cloud Firestore, `users/{uid}/entries/{entryId}` | Each log entry as JSON (times, kind, feed type and side, diaper details, an opaque baby id) and the server time it was written; a deleted entry only as a tombstone without its times and details |
+| The consent | Cloud Firestore, `users/{uid}` | The consent version the account agreed to before its first upload, and the server time ([PRIVACY.md](PRIVACY.md)) |
 
-Baby names are **never uploaded**: they stay on the phone and the watch. The security rules ([`firebase/firestore.rules`](../firebase/firestore.rules)) refuse every other document, so there is nowhere for a name to go.
+The log is health data about a child, so the backup is subject to the GDPR's rules for special category data: the app asks for explicit consent before uploading anything, and the privacy side (the policy, the records, the impact assessment and the breach plan) is in [PRIVACY.md](PRIVACY.md) and [privacy/](privacy). Baby names are **never uploaded**: they stay on the phone and the watch. The security rules ([`firebase/firestore.rules`](../firebase/firestore.rules)) refuse every other document, so there is nowhere for a name to go.
 
 ## Cost
 
@@ -32,6 +33,7 @@ The one heavy moment is the **first sign-in on a phone with a long history**: ev
 1. Go to the [Firebase console](https://console.firebase.google.com/), click **Create a project** and name it, for example, Pooparazzi. Google Analytics is not needed.
 2. Keep the project on the **Spark** plan (the default). Do not upgrade it to Blaze.
 3. Under Project settings › General, set the **public-facing name** (Pooparazzi). It appears in the password reset email.
+4. Under Project settings › **Privacy** (Data privacy), review and **accept the Data Processing Terms** and fill in the data protection contact (the controller's name and email, as in [PRIVACY.md](PRIVACY.md)). The GDPR needs a processing agreement with Google as the processor.
 
 ### 2. Turn on sign-in
 
@@ -54,6 +56,8 @@ The one heavy moment is the **first sign-in on a phone with a long history**: ev
 
    Or open Firestore › **Rules** in the console, paste the whole of [`firebase/firestore.rules`](../firebase/firestore.rules) and click Publish.
 
+   The rules refuse entries from an account without a consent record ([PRIVACY.md](PRIVACY.md)). App versions from before the consent never write one, so once these rules are deployed they can no longer back up: deploy them together with the first release that asks for the consent (or soon after), and expect older installs to show "Couldn't back up" until they are updated.
+
 ### 4. Connect the app
 
 1. Project settings › General › Your apps › **Add app** › Android. Package name **`com.ffmathy.pooparazzi`**. Nickname: Pooparazzi.
@@ -75,7 +79,20 @@ Only the phone app uses Firebase. The watch app shares the applicationId but has
 
 Anyone with the app can create an account; there are no invitations. That is fine for a small group: on the Spark plan nothing can cost money, and the worst a misbehaving client could do is use up the day's free quota. Firebase also limits account creation per IP address.
 
-**Removing someone:** delete their user under Authentication › Users, and their data under Firestore › `users` › their user id (shown in Authentication › Users). People can also delete their own account and backup in the app.
+**Removing someone:** delete their user under Authentication › Users, and their data under Firestore › `users` › their user id (shown in Authentication › Users). People can also delete their own account and backup in the app. A request by email from someone without the phone (PRIVACY.md §8) is handled the same way: find the user by the address, delete the document `users/{uid}` with its `entries` (Firestore › ⋮ › Delete document, "Delete all nested documents") and then the user. Answer within one month.
+
+## Retention
+
+[`firebase/retention/`](../firebase/retention) deletes what the privacy policy says is not kept: every account unused for 2 years (no sign-in and no token refresh, that is, the app not opened) with its backup and consent record, and every backup whose account was deleted in the console. The [`Retention`](../.github/workflows/retention.yml) workflow runs it every Monday.
+
+One-time setup:
+
+1. Google Cloud console of the Firebase project › IAM & Admin › Service accounts › Create service account `retention`, with the roles **Cloud Datastore User** and **Firebase Authentication Admin**. Keys › Add key › JSON.
+2. Add the whole key file's content as the repository secret **`FIREBASE_SERVICE_ACCOUNT`**, then delete the file. Without the secret the workflow does nothing and says so.
+3. Run the workflow by hand (Actions › Retention › Run workflow) with **dry run** on, and check the list it prints.
+4. Once, after the first release that uploads deleted entries as tombstones, run it with **dry run** off and **clear deleted entries** on: it rewrites deleted entries backed up by older versions without their times and details. It reads every entry, so on the Spark plan keep it to a day with read quota to spare.
+
+Run it locally with `GOOGLE_APPLICATION_CREDENTIALS=key.json FIREBASE_PROJECT_ID=<id> npm run retention -- --dry-run` in `firebase/`.
 
 ## What the app does
 
@@ -86,7 +103,11 @@ Anyone with the app can create an account; there are no invitations. That is fin
 
 ## Google Play
 
-An app that lets people create an account must also let them delete it (in the app: Settings › Account › Delete account) and must name a way to request deletion outside the app, for example an email address, in Play Console › App content › **Data safety** › Data deletion. The Data safety form should declare the **email address** (account management) and the logged entries (app functionality), both stored by the developer and encrypted in transit. A privacy policy URL is needed as soon as accounts collect an email address.
+An app that lets people create an account must also let them delete it (in the app: Settings › Account › Delete account) and must name a way to request deletion outside the app: the email address in [PRIVACY.md](PRIVACY.md) §8, in Play Console › App content › **Data safety** › Data deletion.
+
+- **Privacy policy** (Play Console › App content › Privacy policy): `https://github.com/ffMathy/pooparazzi/blob/main/docs/PRIVACY.md`, the same page the app opens (`PrivacyPolicy` in the app).
+- **Data safety:** data is collected (only with an account), encrypted in transit, and can be deleted on request. Declare **Personal info › Email address** (account management; required for an account) and **Health and fitness › Health info** (the log; app functionality; optional, by the consent). Not shared with third parties (Google as processor does not count as sharing). No data is collected without an account.
+- **Health apps declaration** (App content › Health apps): the app is a baby tracker that logs health information entered by the parent; it is not a medical device.
 
 ## Testing the rules
 
@@ -98,4 +119,4 @@ npm install
 npm test
 ```
 
-They check that nobody reads or writes another account's log (or anything while signed out), the shape of an entry document (JSON of at most 2 KB, the server's write time), and that nothing else can be stored. The [`Firestore rules`](../.github/workflows/rules.yml) workflow runs them on every pull request that changes `firebase/`.
+They check that nobody reads or writes another account's log or consent record (or anything while signed out), the shape of an entry document (JSON of at most 2 KB, the server's write time) and of the consent record (a version and the server's write time), that no entry is written before the consent record exists, and that nothing else can be stored. The same run tests the retention job on the Authentication and Firestore emulators (`test/retention.test.js`). The [`Firestore rules`](../.github/workflows/rules.yml) workflow runs them on every pull request that changes `firebase/`.

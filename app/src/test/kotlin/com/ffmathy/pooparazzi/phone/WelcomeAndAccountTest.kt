@@ -75,6 +75,7 @@ class WelcomeAndAccountTest {
         compose.waitUntilAtLeastOneExists(hasText("Your log stays on this phone"), timeoutMillis = 10_000)
         compose.onNode(hasText("Email") and hasSetTextAction()).performTextInput("parent@example.com")
         compose.onNode(hasText("Password") and hasSetTextAction()).performTextInput("secret1")
+        compose.onNodeWithText("I agree", substring = true).performScrollTo().performClick()
         // The mode switch and the main button both read "Sign in": the button is the last one.
         compose.onAllNodes(hasText("Sign in"))[1].performScrollTo().performClick()
         compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)

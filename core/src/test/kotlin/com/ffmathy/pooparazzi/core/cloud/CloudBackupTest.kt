@@ -53,8 +53,8 @@ class CloudBackupTest {
 
     private val now get() = clock.now()
     private val minute = 60_000L
-    private val alice = CloudAccount("uid-alice", "alice@example.com")
-    private val bob = CloudAccount("uid-bob", "bob@example.com")
+    private val alice = CloudAccount("uid-alice", "alice@example.com", BackupConsent.VERSION)
+    private val bob = CloudAccount("uid-bob", "bob@example.com", BackupConsent.VERSION)
     private val twin = "baby-2"
 
     private val scopes = mutableListOf<CoroutineScope>()
@@ -82,7 +82,7 @@ class CloudBackupTest {
         val account = MutableStateFlow(signedIn)
 
         /** Flagged for the backend while an account is signed in, as in the app. */
-        val repo = RoomEntryRepository(db, clock, watch, selectedBaby = baby, cloudBackup = { account.value != null })
+        val repo = RoomEntryRepository(db, clock, watch, selectedBaby = baby, cloudBackup = { account.value?.consented == true })
 
         /**
          * The app's lifetime: on the test's dispatcher, but not the test's background scope, whose work
@@ -706,7 +706,8 @@ class CloudBackupTest {
 
     @Test
     fun aSyncStopsSendingToAnAccountThatSignedOutMidway() = runTest {
-        val phone = Phone(this, alice)
+        // The consent was recorded by an earlier sync, so the first call after the pull is the first batch.
+        val phone = Phone(this, alice, InMemoryCloudBookkeepingStore(CloudBookkeeping(consentUid = alice.uid, consentVersion = BackupConsent.VERSION)))
         val rows = (0 until 900).map { Entry.feed(FeedType.FOOD, now - (it + 1) * 10_000L, id = "r-%03d".format(it)) }
         rows.forEach { phone.db.entryDao().write(EntryEntity.from(it, pendingSync = false)) }
         store.latencyMillis = 1_000
@@ -721,5 +722,107 @@ class CloudBackupTest {
         assertEquals(900, store.entries(bob.uid).size)
         assertTrue(phone.pending().isEmpty())
         assertEquals(CloudStatus.Synced(now), phone.status)
+    }
+
+    // ---- Consent and what a deletion leaves (docs/PRIVACY.md) ---------------------------------------
+
+    @Test
+    fun anAccountThatHasNotAgreedIsNotBackedUp() = runTest {
+        val unagreed = alice.copy(consentVersion = null)
+        val phone = Phone(this, unagreed)
+        val feed = phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        phone.backup.start()
+        advanceUntilIdle()
+        assertEquals(CloudStatus.Paused, phone.status)
+        assertEquals("nothing is read or sent", 0 to 0, store.pulls to store.uploads.size)
+        assertTrue("nothing is flagged for the backend", phone.pending().isEmpty())
+        assertTrue(store.consents.isEmpty())
+
+        phone.backup.syncNow()
+        assertEquals("not even when asked", CloudStatus.Paused, phone.status)
+        assertTrue(store.uploads.isEmpty())
+
+        // An older consent version counts as none.
+        phone.account.value = alice.copy(consentVersion = BackupConsent.VERSION - 1)
+        advanceUntilIdle()
+        assertEquals(CloudStatus.Paused, phone.status)
+
+        // Agreeing: the consent is recorded first, then everything logged so far is backed up.
+        phone.account.value = alice
+        advanceUntilIdle()
+        assertEquals(CloudStatus.Synced(now), phone.status)
+        assertEquals(mapOf(alice.uid to BackupConsent.VERSION), store.consents)
+        assertEquals(setOf(feed.id), store.entries(alice.uid).keys)
+    }
+
+    @Test
+    fun theConsentIsRecordedOncePerVersionAndDeletedWithTheBackup() = runTest {
+        val phone = Phone(this, alice)
+        phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        phone.backup.start()
+        advanceUntilIdle()
+        advanceTimeBy(CloudBackup.PULL_INTERVAL_MILLIS)
+        phone.backup.syncNow()
+        assertEquals(1, store.consentWrites)
+        assertEquals(BackupConsent.VERSION, phone.bookkeeping.values.consentFor(alice.uid))
+
+        // A consent that cannot be recorded stops the sync before anything is sent.
+        val other = Phone(this, bob)
+        other.repo.logFeed(FeedType.FOOD, now - 10 * minute)
+        store.consentFailure = CloudError.OTHER
+        other.backup.start()
+        advanceUntilIdle()
+        assertEquals(CloudStatus.Error, other.status)
+        assertTrue(store.entries(bob.uid).isEmpty())
+        assertEquals("still pending for the next sync", 1, other.pending().size)
+        store.consentFailure = null
+
+        assertTrue(phone.backup.deleteBackup())
+        assertTrue(store.consents.isEmpty())
+        assertNull("recorded again when backing up again", phone.bookkeeping.values.consentFor(alice.uid))
+
+        // Another phone on the account deleted the backup (and its consent record): this one's refused upload writes
+        // the consent again at the next sync.
+        other.backup.syncNow()
+        assertEquals(BackupConsent.VERSION, other.bookkeeping.values.consentFor(bob.uid))
+        store.consents.remove(bob.uid)
+        store.uploadFailure = CloudError.OTHER
+        other.repo.logFeed(FeedType.FORMULA, now - 5 * minute)
+        advanceUntilIdle()
+        assertEquals(CloudStatus.Error, other.status)
+        assertNull(other.bookkeeping.values.consentFor(bob.uid))
+        store.uploadFailure = null
+        other.backup.syncNow()
+        assertEquals(mapOf(bob.uid to BackupConsent.VERSION), store.consents)
+        assertEquals(CloudStatus.Synced(now), other.status)
+    }
+
+    @Test
+    fun aDeletedEntryGoesUpWithoutWhatWasLogged() = runTest {
+        val phone = Phone(this, alice)
+        phone.backup.start()
+        phone.baby.value = twin
+        val diaper = phone.repo.logDiaper(now - minute, pee = true, poop = true)
+        advanceUntilIdle()
+        assertTrue(store.entries(alice.uid).getValue(diaper.id).poop)
+
+        phone.repo.delete(diaper.id)
+        advanceUntilIdle()
+        val stored = store.entries(alice.uid).getValue(diaper.id)
+        val local = phone.repo.get(diaper.id)!!
+        assertEquals(
+            "only the id, kind, baby and write clock",
+            Entry(id = diaper.id, kind = diaper.kind, startMillis = 0, updatedAtMillis = local.updatedAtMillis, deleted = true, babyId = twin),
+            stored,
+        )
+        assertTrue("this phone keeps its own copy until it is purged", local.poop)
+        assertTrue(phone.pending().isEmpty())
+
+        // Another phone learns of the deletion.
+        val second = Phone(this, alice)
+        second.backup.start()
+        advanceUntilIdle()
+        assertTrue(second.repo.get(diaper.id)!!.deleted)
+        assertTrue(second.all().none { it.id == diaper.id && !it.deleted })
     }
 }

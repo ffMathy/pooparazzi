@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone.account
 
 import android.app.Activity
+import com.ffmathy.pooparazzi.core.cloud.BackupConsent
 import com.ffmathy.pooparazzi.core.cloud.CloudAccount
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,10 +11,14 @@ import kotlinx.coroutines.flow.asStateFlow
  * The signed-in account (BABIES_AND_BACKUP §3).
  *
  * @property google signed in with Google: deleting the account asks for Google again instead of a password.
+ * @property consentVersion the backup consent this account agreed to on this phone (§3.4), or null.
  */
-data class AccountUser(val uid: String, val email: String, val google: Boolean) {
+data class AccountUser(val uid: String, val email: String, val google: Boolean, val consentVersion: Int? = null) {
     /** What the backup needs of it. */
-    val cloud: CloudAccount get() = CloudAccount(uid, email)
+    val cloud: CloudAccount get() = CloudAccount(uid, email, consentVersion)
+
+    /** Agreed to the backup as it is now: false pauses the backup until the parent agrees ([Accounts.agreeToBackup]). */
+    val consented: Boolean get() = cloud.consented
 }
 
 /** Why an account action failed, as the Account screen words it. */
@@ -54,6 +59,9 @@ enum class AccountError {
     /** Signing in again for account deletion chose another account than the signed-in one. */
     WRONG_ACCOUNT,
 
+    /** Signing in without ticking the consent: "Tick the box to agree to the backup first." */
+    CONSENT_REQUIRED,
+
     /** Anything else: "Something went wrong. Try again." */
     OTHER,
 }
@@ -71,6 +79,9 @@ sealed interface AccountResult {
 /**
  * The optional account of the phone app (BABIES_AND_BACKUP §3): Firebase Authentication in builds with a Firebase
  * configuration ([FirebaseAccounts]), [NoAccounts] otherwise. Nothing here throws: failures are [AccountResult.Failed].
+ *
+ * Signing in (or creating an account) is agreeing to the backup ([BackupConsent]): the form asks for the consent before
+ * it calls any of them, and the account signed in is recorded as agreed on this phone ([AccountUser.consentVersion]).
  */
 interface Accounts {
     /** False in builds without a Firebase configuration: no Welcome, and Settings says the backup isn't set up. */
@@ -104,6 +115,9 @@ interface Accounts {
 
     /** Deletes the account (after [reauthenticate]); its backup must be deleted first. Signs out on success. */
     suspend fun deleteAccount(): AccountResult
+
+    /** Records that the signed-in account agrees to the backup as it is now, which starts it ("Agree and back up"). */
+    fun agreeToBackup(): AccountResult
 }
 
 /** Builds without a Firebase configuration: no accounts, nothing signed in. */
@@ -121,6 +135,7 @@ object NoAccounts : Accounts {
     override suspend fun reauthenticate(password: String): AccountResult = unavailable
     override suspend fun reauthenticateWithGoogle(activity: Activity): AccountResult = unavailable
     override suspend fun deleteAccount(): AccountResult = unavailable
+    override fun agreeToBackup(): AccountResult = unavailable
 }
 
 /** Checks done before anything is sent, so the common mistakes are worded at once and cost nothing. */

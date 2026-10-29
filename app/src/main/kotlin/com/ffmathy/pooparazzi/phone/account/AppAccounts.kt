@@ -54,7 +54,7 @@ object AppAccounts {
                 firestore.firestoreSettings = FirebaseFirestoreSettings.Builder()
                     .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
                     .build()
-                val accounts = FirebaseAccounts(app, auth, FirebaseConfig.webClientId(app))
+                val accounts = FirebaseAccounts(app, auth, FirebaseConfig.webClientId(app), ConsentPrefs(app))
                 current = accounts
                 CloudBackend(FirestoreCloudStore(firestore, auth), accounts.cloud)
             }

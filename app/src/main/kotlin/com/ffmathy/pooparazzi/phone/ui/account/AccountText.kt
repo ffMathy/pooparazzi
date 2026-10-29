@@ -23,6 +23,7 @@ internal fun AccountError.message(): Int = when (this) {
     AccountError.NO_GOOGLE_ACCOUNT -> R.string.account_error_no_google
     AccountError.RECENT_LOGIN_REQUIRED -> R.string.account_error_recent_login
     AccountError.WRONG_ACCOUNT -> R.string.account_error_wrong_account
+    AccountError.CONSENT_REQUIRED -> R.string.account_error_consent
     AccountError.OTHER -> R.string.account_error_other
 }
 
@@ -36,7 +37,7 @@ internal fun DeleteProblem.message(): Int = when (this) {
 
 /**
  * The backup status line of a signed-in account (§3.2): "Backing up…", "Backed up · 14:31", "Saved on phone · will
- * back up", "Couldn't back up · Tap to retry", "Backup deleted · Back up now to start again". [CloudStatus.Off] while signed in (before the first sync has said
+ * back up", "Couldn't back up · Tap to retry", "Backup deleted · Back up now to start again", "Backup paused · Agree to back up". [CloudStatus.Off] while signed in (before the first sync has said
  * anything) reads as saved on the phone.
  */
 @Composable
@@ -46,4 +47,5 @@ internal fun backupStatusText(status: CloudStatus, clock: ClockFormatter, zone: 
     CloudStatus.Offline, CloudStatus.Off -> stringResource(R.string.account_status_offline)
     CloudStatus.Error -> stringResource(R.string.account_status_error)
     CloudStatus.Deleted -> stringResource(R.string.account_status_deleted)
+    CloudStatus.Paused -> stringResource(R.string.account_status_paused)
 }

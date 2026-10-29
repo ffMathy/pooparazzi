@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone
 
 import android.app.Activity
+import com.ffmathy.pooparazzi.core.cloud.BackupConsent
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.cloud.CloudSync
 import com.ffmathy.pooparazzi.phone.account.AccountError
@@ -16,7 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * [Accounts] without Firebase: each call is recorded and answers with the result queued for it (success by default),
- * applying the same input checks as the real one. A successful sign-in signs in [nextUser].
+ * applying the same input checks as the real one. A successful sign-in signs in [nextUser], agreed to the backup as
+ * the real one records it.
  */
 class FakeAccounts(
     override val available: Boolean = true,
@@ -27,8 +29,8 @@ class FakeAccounts(
     override val user: StateFlow<AccountUser?> = current.asStateFlow()
 
     val calls = mutableListOf<String>()
-    var nextUser = AccountUser("uid-1", "parent@example.com", google = false)
-    var googleUser = AccountUser("uid-g", "parent@gmail.com", google = true)
+    var nextUser = AccountUser("uid-1", "parent@example.com", google = false, consentVersion = BackupConsent.VERSION)
+    var googleUser = AccountUser("uid-g", "parent@gmail.com", google = true, consentVersion = BackupConsent.VERSION)
 
     /** Results by call name ("google", "signIn", "create", "reset", "reauth", "reauthGoogle", "delete"). */
     val results = mutableMapOf<String, AccountResult>()
@@ -46,17 +48,19 @@ class FakeAccounts(
         current.value = user
     }
 
+    private fun AccountUser.agreed() = copy(consentVersion = BackupConsent.VERSION)
+
     override suspend fun signInWithGoogle(activity: Activity): AccountResult =
-        answer("google").also { if (it == AccountResult.Success) current.value = googleUser }
+        answer("google").also { if (it == AccountResult.Success) current.value = googleUser.agreed() }
 
     override suspend fun signIn(email: String, password: String): AccountResult {
         AccountInput.signInError(email, password)?.let { return AccountResult.Failed(it) }
-        return answer("signIn").also { if (it == AccountResult.Success) current.value = nextUser.copy(email = email.trim()) }
+        return answer("signIn").also { if (it == AccountResult.Success) current.value = nextUser.copy(email = email.trim()).agreed() }
     }
 
     override suspend fun createAccount(email: String, password: String): AccountResult {
         AccountInput.createError(email, password)?.let { return AccountResult.Failed(it) }
-        return answer("create").also { if (it == AccountResult.Success) current.value = nextUser.copy(email = email.trim()) }
+        return answer("create").also { if (it == AccountResult.Success) current.value = nextUser.copy(email = email.trim()).agreed() }
     }
 
     override suspend fun sendPasswordReset(email: String): AccountResult {
@@ -78,6 +82,13 @@ class FakeAccounts(
 
     override suspend fun deleteAccount(): AccountResult =
         answer("delete").also { if (it == AccountResult.Success) current.value = null }
+
+    override fun agreeToBackup(): AccountResult {
+        calls += "agree"
+        val user = current.value ?: return AccountResult.Failed(AccountError.OTHER)
+        current.value = user.agreed()
+        return AccountResult.Success
+    }
 }
 
 /** [CloudSync] whose status the test sets, recording what was asked of it. */

@@ -6,8 +6,26 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 
-/** The signed-in account as the backup needs it. Any signed-in account is backed up at once. */
-data class CloudAccount(val uid: String, val email: String)
+/**
+ * The signed-in account as the backup needs it. It is backed up only once the parent has agreed to it
+ * ([consentVersion], BABIES_AND_BACKUP §3.4): the log is health information about a child (GDPR art. 9), so the
+ * backup asks for explicit consent first. Signed in without it, the backup is [CloudStatus.Paused].
+ *
+ * @property consentVersion the [BackupConsent.VERSION] this account agreed to on this phone, or null.
+ */
+data class CloudAccount(val uid: String, val email: String, val consentVersion: Int? = null) {
+    /** Agreed to the current wording of the backup's consent. */
+    val consented: Boolean get() = (consentVersion ?: 0) >= BackupConsent.VERSION
+}
+
+/** The consent the backup asks for (docs/PRIVACY.md). */
+object BackupConsent {
+    /**
+     * The version of the consent wording and the privacy policy it points to. Raise it when what is collected, or why,
+     * changes: every account is then asked again before anything more is backed up.
+     */
+    const val VERSION = 1
+}
 
 /** Where the last pull stopped: the (server write time, document id) of the last document seen. */
 @Serializable
@@ -46,7 +64,13 @@ interface CloudStore {
     /** Up to [limit] documents written after [cursor] (null: from the start), oldest change first. */
     suspend fun changesAfter(uid: String, cursor: CloudCursor?, limit: Int): CloudPage
 
-    /** Deletes the account's whole backup (when the account is deleted). */
+    /**
+     * Stores that the account agreed to the backup's consent [version], stamped with the server time, so the consent can
+     * be shown later (GDPR art. 7(1)). Written before the first upload under that version.
+     */
+    suspend fun recordConsent(uid: String, version: Int)
+
+    /** Deletes the account's whole backup and its consent record (when the account is deleted). */
     suspend fun deleteAll(uid: String)
 
     companion object {
@@ -65,6 +89,12 @@ class CloudBackend(val store: CloudStore, val account: StateFlow<CloudAccount?>)
 sealed interface CloudStatus {
     /** Nobody is signed in, or the build has no backend: "Not signed in". */
     data object Off : CloudStatus
+
+    /**
+     * Signed in, but the account has not agreed to the backup on this phone (signed in before the consent existed):
+     * nothing is backed up until it does: "Backup paused · Agree to back up".
+     */
+    data object Paused : CloudStatus
 
     /** A sync is running: "Backing up…". */
     data object Syncing : CloudStatus

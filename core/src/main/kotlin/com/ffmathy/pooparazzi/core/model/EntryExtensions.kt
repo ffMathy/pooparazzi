@@ -13,6 +13,20 @@ val Entry.isFeed: Boolean get() = kind == EntryKind.FEED
 val Entry.isDiaper: Boolean get() = kind == EntryKind.DIAPER
 val Entry.isBreastfeed: Boolean get() = kind == EntryKind.FEED && feedType == FeedType.BREAST
 
+/**
+ * This entry as the backup stores it (docs/PRIVACY.md, "Deleted entries"). A deleted entry goes up only as a tombstone
+ * that tells the other phones it is gone: its id, kind, baby and write clock, with its time and details cleared. What
+ * was logged does not stay in the backup after it was deleted. Other entries are returned unchanged.
+ */
+fun Entry.forCloud(): Entry = if (!deleted) this else Entry(
+    id = id,
+    kind = kind,
+    startMillis = 0L,
+    updatedAtMillis = updatedAtMillis,
+    deleted = true,
+    babyId = babyId,
+)
+
 /** The diaper kind of a DIAPER entry, or null for other kinds (or an invalid diaper with no flag). */
 val Entry.diaperKind: DiaperKind?
     get() = if (kind == EntryKind.DIAPER) DiaperKind.of(pee, poop) else null

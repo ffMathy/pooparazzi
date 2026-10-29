@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -41,6 +42,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -55,6 +58,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -62,9 +66,11 @@ import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
+import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
+import com.ffmathy.pooparazzi.phone.privacy.openPrivacyPolicy
 import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
 import com.ffmathy.pooparazzi.phone.ui.components.GroupRow
 import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
@@ -77,11 +83,15 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 @Composable
 private fun rememberAccountActions(viewModel: AccountViewModel, extra: AccountActions? = null): AccountActions {
     val activity = LocalActivity.current
+    val context = LocalContext.current
     val extraActions by rememberUpdatedState(extra)
-    return remember(viewModel, activity) {
+    return remember(viewModel, activity, context) {
         object : AccountActions {
             override fun onBack() { extraActions?.onBack() }
             override fun onGoogle() { activity?.let(viewModel::onGoogle) }
+            override fun onAgreed(agreed: Boolean) = viewModel.onAgreed(agreed)
+            override fun onOpenPrivacyPolicy() = context.openPrivacyPolicy()
+            override fun onAgreeSignedIn() = viewModel.onAgreeSignedIn()
             override fun onMode(mode: EmailMode) = viewModel.onMode(mode)
             override fun onEmail(email: String) = viewModel.onEmail(email)
             override fun onPassword(password: String) = viewModel.onPassword(password)
@@ -227,8 +237,9 @@ private fun BodyText(text: String) {
 }
 
 /**
- * "Continue with Google" (when the build can), "or use email", then Sign in / Create account, the fields, the main
- * button and, for signing in, "Forgot password?". The error or notice line sits above the main button.
+ * The consent to the backup (§3.4) and "Privacy policy", then "Continue with Google" (when the build can), "or use
+ * email", then Sign in / Create account, the fields, the main button and, for signing in, "Forgot password?". The
+ * error or notice line sits above the main button; signing in without the consent ticked says so there.
  */
 @Composable
 private fun SignInForm(state: AccountUiState, actions: AccountActions) {
@@ -236,6 +247,8 @@ private fun SignInForm(state: AccountUiState, actions: AccountActions) {
     val focus = LocalFocusManager.current
     val enabled = !state.busy
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ConsentCheckbox(state.agreed, actions::onAgreed, enabled)
+        PrivacyPolicyLink(actions)
         if (state.googleAvailable) {
             PrimaryButton(stringResource(R.string.account_google), onClick = actions::onGoogle, enabled = enabled)
             Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -300,7 +313,49 @@ private fun SignInForm(state: AccountUiState, actions: AccountActions) {
     }
 }
 
-/** Signed in: "Signed in as" the address, the backup status line, "Back up now", "Sign out", "Delete account…". */
+/**
+ * "I agree that my baby's log … is stored in my backup …": a checkbox row, the whole row the toggle (at least 48 dp
+ * tall), read by TalkBack as the text with its checkbox state.
+ */
+@Composable
+private fun ConsentCheckbox(checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .toggleable(value = checked, enabled = enabled, role = Role.Checkbox, onValueChange = onChange)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        XIcon(
+            if (checked) XIcons.checkboxChecked else XIcons.checkbox,
+            contentDescription = null,
+            tint = if (checked) colors.onSurface else colors.outline,
+            modifier = Modifier.padding(top = 2.dp, end = 12.dp),
+        )
+        Text(stringResource(R.string.account_consent), style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+    }
+}
+
+@Composable
+private fun PrivacyPolicyLink(actions: AccountActions) {
+    TextButton(onClick = actions::onOpenPrivacyPolicy, modifier = Modifier.heightIn(min = 48.dp)) {
+        Text(
+            stringResource(R.string.account_privacy_policy),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            textDecoration = TextDecoration.Underline,
+        )
+    }
+}
+
+/**
+ * Signed in: "Signed in as" the address, the backup status line, "Back up now", "Sign out", "Delete account…". An
+ * account that has not agreed to the backup on this phone (§3.4) shows the consent and "Agree and back up" in place of
+ * "Back up now".
+ */
 @Composable
 private fun SignedIn(state: AccountUiState, email: String, actions: AccountActions) {
     val colors = MaterialTheme.colorScheme
@@ -320,17 +375,25 @@ private fun SignedIn(state: AccountUiState, email: String, actions: AccountActio
             Text(email, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
             Spacer(Modifier.height(4.dp))
             // A deleted backup is no failure to retry, but nothing is backed up: it reads as a warning all the same.
-            val tint = if (failed || state.cloud == CloudStatus.Deleted) colors.error else colors.onSurfaceVariant
+            val tint = if (failed || state.cloud == CloudStatus.Deleted || state.cloud == CloudStatus.Paused) colors.error else colors.onSurfaceVariant
             Text(status, style = PhoneType.dataMedium, color = tint, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
     }
     Spacer(Modifier.height(16.dp))
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        PrimaryButton(
-            stringResource(R.string.account_back_up_now),
-            onClick = actions::onBackUpNow,
-            enabled = !state.backingUp && state.cloud != CloudStatus.Syncing,
-        )
+        if (state.user?.consented == false) {
+            BodyText(stringResource(R.string.account_paused_body))
+            Text(stringResource(R.string.account_consent), style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+            PrivacyPolicyLink(actions)
+            state.error?.let { ErrorLine(stringResource(it.message())) }
+            PrimaryButton(stringResource(R.string.account_agree), onClick = actions::onAgreeSignedIn, enabled = !state.busy)
+        } else {
+            PrimaryButton(
+                stringResource(R.string.account_back_up_now),
+                onClick = actions::onBackUpNow,
+                enabled = !state.backingUp && state.cloud != CloudStatus.Syncing,
+            )
+        }
         SecondaryButton(stringResource(R.string.account_sign_out), onClick = actions::onSignOut, enabled = !state.busy)
         BodyText(stringResource(R.string.account_signed_in_hint))
         Spacer(Modifier.height(8.dp))

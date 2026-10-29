@@ -2,7 +2,7 @@ rules_version = '2';
 
 // Pooparazzi's optional backup (docs/BACKEND.md).
 //
-// - Each account reads and writes only its own log, under /users/{uid}/entries.
+// - Each account reads and writes only its own log, under /users/{uid}/entries, and its consent record, /users/{uid}.
 // - Baby names are never uploaded: an entry carries an opaque baby id, and the names stay on the phone and the watch.
 // - Nothing else exists, so everything else is denied.
 service cloud.firestore {
@@ -12,11 +12,30 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    // The account recorded its consent to the backup (below) before its first upload.
+    function consented(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid));
+    }
+
+    // The account's consent to the backup (docs/PRIVACY.md): the version it agreed to and the server time it was
+    // recorded, written before the first upload under that version. Deleting is for account deletion.
+    match /users/{uid} {
+      allow read, delete: if signedInAs(uid);
+      allow create, update: if signedInAs(uid)
+        && request.resource.data.keys().hasAll(['consentVersion', 'consentedAt'])
+        && request.resource.data.keys().hasOnly(['consentVersion', 'consentedAt'])
+        && request.resource.data.consentVersion is int
+        && request.resource.data.consentVersion >= 1
+        && request.resource.data.consentedAt == request.time;
+    }
+
     // One document per log entry: its JSON (EntryJson in the app) and the server time of the write, which the app
-    // pages through to fetch only what changed since its last sync. Deleting is for account deletion.
+    // pages through to fetch only what changed since its last sync. Deleting is for account deletion. Nothing is
+    // written without the consent record.
     match /users/{uid}/entries/{entryId} {
       allow read, delete: if signedInAs(uid);
       allow create, update: if signedInAs(uid)
+        && consented(uid)
         && request.resource.data.keys().hasAll(['json', 'syncedAt'])
         && request.resource.data.keys().hasOnly(['json', 'syncedAt'])
         && request.resource.data.json is string

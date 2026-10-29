@@ -106,8 +106,8 @@ class CoreGraph(
                 sync,
                 scope,
                 selectedBaby = settings.settings.map { it.selectedBaby.id },
-                // Flagged for the backend only while an account is signed in (BABIES_AND_BACKUP §4.2).
-                cloudBackup = cloud?.account?.let { account -> { account.value != null } } ?: { false },
+                // Flagged for the backend only while an account is signed in and agreed to the backup (BABIES_AND_BACKUP §4.2).
+                cloudBackup = cloud?.account?.let { account -> { account.value?.consented == true } } ?: { false },
             )
             val backup = cloud?.let {
                 CloudBackup(repository, it.store, it.account, DataStoreCloudBookkeepingStore(app.cloudDataStore), clock, scope)

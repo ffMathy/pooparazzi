@@ -12,6 +12,7 @@ import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -30,8 +31,9 @@ import java.util.concurrent.Executor
 
 /**
  * The backup in Cloud Firestore (BABIES_AND_BACKUP §4.1): `users/{uid}/entries/{entryId}` holding exactly
- * `{ json, syncedAt }`, the entry's [EntryJson] and the server time of the write, as `firebase/firestore.rules`
- * requires. Nothing else is ever written: no settings, no babies, no names.
+ * `{ json, syncedAt }`, the entry's [EntryJson] and the server time of the write, and `users/{uid}` holding the consent
+ * record `{ consentVersion, consentedAt }`, as `firebase/firestore.rules` requires. Nothing else is ever written: no
+ * settings, no babies, no names.
  *
  * Reads go to the server only ([Source.SERVER]): the backup decides what is new by the stored cursor, not by a cache.
  * Firestore holds a write until the server confirms it, which offline (or with the day's write quota used up) means
@@ -74,6 +76,12 @@ class FirestoreCloudStore(
         )
     }
 
+    override suspend fun recordConsent(uid: String, version: Int) = call {
+        val data = mapOf(FIELD_CONSENT_VERSION to version.toLong(), FIELD_CONSENTED_AT to FieldValue.serverTimestamp())
+        commits.commit { user(uid).set(data) }
+        Unit
+    }
+
     override suspend fun deleteAll(uid: String) = call {
         // An upload still queued must not land after the deletion.
         commits.drain()
@@ -85,10 +93,14 @@ class FirestoreCloudStore(
             page.documents.forEach { batch.delete(it.reference) }
             commits.commit { batch.commit() }
         }
+        // The consent record last: should the deletion stop halfway, the entries left still have it beside them.
+        commits.commit { user(uid).delete() }
+        Unit
     }
 
-    private fun entries(uid: String): CollectionReference =
-        firestore.collection(COLLECTION_USERS).document(uid).collection(COLLECTION_ENTRIES)
+    private fun user(uid: String): DocumentReference = firestore.collection(COLLECTION_USERS).document(uid)
+
+    private fun entries(uid: String): CollectionReference = user(uid).collection(COLLECTION_ENTRIES)
 
     private suspend fun <T> Task<T>.awaitWithin(): T = awaitWithin(timeoutMillis)
 
@@ -146,6 +158,8 @@ class FirestoreCloudStore(
         const val COLLECTION_ENTRIES = "entries"
         const val FIELD_JSON = "json"
         const val FIELD_SYNCED_AT = "syncedAt"
+        const val FIELD_CONSENT_VERSION = "consentVersion"
+        const val FIELD_CONSENTED_AT = "consentedAt"
 
         /** How long one call may take before it counts as offline. */
         const val TIMEOUT_MILLIS = 30_000L

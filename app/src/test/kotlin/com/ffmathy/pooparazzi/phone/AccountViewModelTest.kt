@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.phone
 
 import android.app.Activity
 import android.app.Application
+import com.ffmathy.pooparazzi.core.cloud.BackupConsent
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.account.AccountError
@@ -57,19 +58,53 @@ class AccountViewModelTest {
         val state: AccountUiState get() = vm.state.value
     }
 
+    /** [agreed]: the consent to the backup is ticked, as every sign-in needs. */
     private fun test(
         accounts: FakeAccounts = FakeAccounts(),
         cloud: FakeCloudSync = FakeCloudSync(),
+        agreed: Boolean = true,
         block: suspend TestScope.(Rig) -> Unit,
     ) = runTest(dispatcher) {
         val vm = AccountViewModel(accounts, cloud, backgroundScope, zone = SampleData.ZONE)
         backgroundScope.launch { vm.state.collect {} }
+        if (agreed) vm.onAgreed(true)
         runCurrent()
         block(Rig(vm, accounts, cloud))
     }
 
-    private val googleUser = AccountUser("uid-g", "parent@gmail.com", google = true)
-    private val emailUser = AccountUser("uid-1", "parent@example.com", google = false)
+    private val googleUser = AccountUser("uid-g", "parent@gmail.com", google = true, consentVersion = BackupConsent.VERSION)
+    private val emailUser = AccountUser("uid-1", "parent@example.com", google = false, consentVersion = BackupConsent.VERSION)
+
+    @Test
+    fun signingInWaitsForTheConsent() = test(agreed = false) { rig ->
+        rig.vm.onEmail("parent@example.com")
+        rig.vm.onPassword("secret1")
+        rig.vm.onSubmit()
+        rig.vm.onGoogle(activity)
+        runCurrent()
+        assertEquals(AccountError.CONSENT_REQUIRED, rig.state.error)
+        assertTrue("nothing is sent", rig.accounts.calls.isEmpty())
+        assertNull(rig.state.user)
+
+        rig.vm.onAgreed(true)
+        runCurrent()
+        assertNull("ticking it clears the error", rig.state.error)
+        rig.vm.onSubmit()
+        runCurrent()
+        assertEquals(listOf("signIn"), rig.accounts.calls)
+        assertTrue(rig.state.user!!.consented)
+    }
+
+    @Test
+    fun anAccountSignedInWithoutTheConsentAgreesOnTheAccountScreen() = test(agreed = false) { rig ->
+        rig.accounts.signInAs(emailUser.copy(consentVersion = null))
+        runCurrent()
+        assertFalse(rig.state.user!!.consented)
+        rig.vm.onAgreeSignedIn()
+        runCurrent()
+        assertEquals(listOf("agree"), rig.accounts.calls)
+        assertTrue(rig.state.user!!.consented)
+    }
 
     @Test
     fun aSignInThatTimedOutSaysItMayStillGoThroughAndTheScreenFollowsWhenItDoes() = test { rig ->

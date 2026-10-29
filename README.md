@@ -20,7 +20,8 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 - **Statistics**: from History's chart button, average feeds, pee, poop and sleep per day for the last 7 days next to the last 30 days (or 90 days, all days, or dates you choose), with a bar chart that marks the last 7 days. Only whole days up to yesterday count (until the first whole day, today so far, so a single entry already shows), and days when nothing was logged are left out instead of counting as zero. With several babies it shows the current baby's.
 - **Several babies** (twins, siblings): add and rename them in Settings › Babies, and switch the baby you log for from Home's top bar or the watch's baby button. Each device has its own current baby; a sleep runs per baby, and every sleeping baby keeps its notification.
 - **Phone ↔ watch sync** over the Wearable **Data Layer**. Both apps log offline and merge by last-writer-wins; the babies' names and the language follow the phone. The sync state is a small icon, not text: a watch (and, while signed in, a cloud for the backup) under the name on the phone, a phone on the watch, each marked with a tick, "…", a slash or "!" (tap "!" to retry); TalkBack reads the full status.
-- **Optional backup** to a small Firebase backend (free Spark plan): sign in or create an account at any time and everything logged so far is backed up; sign in on a new phone to restore it. Without an account the log stays on the phone and the watch, and the app says so. Baby names are never uploaded. Setup: [docs/BACKEND.md](docs/BACKEND.md).
+- **Optional backup** to a small Firebase backend (free Spark plan): sign in or create an account at any time and everything logged so far is backed up; sign in on a new phone to restore it. Without an account the log stays on the phone and the watch, and the app says so. Baby names are never uploaded.
+- **Privacy** ([privacy policy](docs/PRIVACY.md), [på dansk](docs/PRIVACY.da.md)): the log is health information about a child, so the backup asks for explicit consent first (a checkbox before signing in; an account signed in before that is paused until it agrees). Deleted entries are backed up without what was logged, unused accounts are deleted after 2 years, and Settings › Privacy has the policy and **Download my data** (the log and the names as JSON). No analytics, ads or tracking. Setup: [docs/BACKEND.md](docs/BACKEND.md); the records, impact assessment and breach plan are in [docs/privacy/](docs/privacy).
 - **Glanceable surfaces**:
   - Phone: two **Glance widgets** (a 4×2 log widget and a 3×1 quick widget, both with Feed, Diaper and Sleep; Feed and Diaper open the same sheets as in the app, the sleep toggle works in place), the 4×2 also on the **cover screen of Samsung flip phones**, and an **ongoing notification** for a running sleep (promoted to a Live Update where Android supports it) showing how long it has run, the last feed and diaper, and today's counts. "Woke up" on it leaves a notification with −5m / −10m / −15m to move the wake-up time.
   - Watch: a **Tile** (Feed and Diaper open the watch app's own screens, the sleep toggle works in place), four **complications** (since last feed, last diaper, asleep/awake, sleep and last feed) and an **Ongoing Activity** while a sleep runs.
@@ -57,7 +58,11 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Welcome (first run) | Account, signed out | Account, signed in | Settings, babies |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-welcome.png" width="200" alt="First-run Welcome: the log stays on this phone, Continue with Google, the email form and Continue without an account"> | <img src="docs/screenshots/en/phone-account.png" width="200" alt="Account, signed out: Continue with Google, then or use email with Sign in and Create account"> | <img src="docs/screenshots/en/phone-account-signed-in.png" width="200" alt="Account, signed in: the address, Backed up 14:31, Back up now, Sign out and Delete account"> | <img src="docs/screenshots/en/phone-settings-babies.png" width="200" alt="Settings, Babies: name fields for Noa, Ida and an unnamed third, Add a baby and the names hint"> |
+| <img src="docs/screenshots/en/phone-welcome.png" width="200" alt="First-run Welcome: the log stays on this phone, the backup consent checkbox and Privacy policy, Continue with Google, the email form and Continue without an account"> | <img src="docs/screenshots/en/phone-account.png" width="200" alt="Account, signed out: the backup consent checkbox and Privacy policy, Continue with Google, then or use email with Sign in and Create account"> | <img src="docs/screenshots/en/phone-account-signed-in.png" width="200" alt="Account, signed in: the address, Backed up 14:31, Back up now, Sign out and Delete account"> | <img src="docs/screenshots/en/phone-settings-babies.png" width="200" alt="Settings, Babies: name fields for Noa, Ida and an unnamed third, Add a baby and the names hint"> |
+
+| Account, backup paused | Settings, privacy |
+|:---:|:---:|
+| <img src="docs/screenshots/en/phone-account-paused.png" width="200" alt="Account signed in without the consent: Backup paused, the consent, Privacy policy and Agree and back up"> | <img src="docs/screenshots/en/phone-settings-privacy.png" width="200" alt="Settings, Privacy: Privacy policy and Download my data"> |
 
 | Home, two babies | Switch baby | History, two babies | Widgets, two babies |
 |:---:|:---:|:---:|:---:|
@@ -95,9 +100,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/da/watch-main-idle.png" width="130" alt="Ur, hovedskærm"> | <img src="docs/screenshots/da/watch-feed-type.png" width="130" alt="Måltid"> | <img src="docs/screenshots/da/watch-side.png" width="130" alt="Hvilken side?"> | <img src="docs/screenshots/da/watch-diaper.png" width="130" alt="Ble"> | <img src="docs/screenshots/da/watch-logged.png" width="130" alt="Registreret med Fortryd"> | <img src="docs/screenshots/da/watch-tile.png" width="130" alt="Flise"> |
 
-| Velkommen | Konto | Hjem, to børn | Skift barn | Ur: to børn | Ur: skift barn |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/da/phone-welcome.png" width="150" alt="Velkommen: Din log bliver på denne telefon"> | <img src="docs/screenshots/da/phone-account.png" width="150" alt="Konto: Fortsæt med Google eller brug e-mail"> | <img src="docs/screenshots/da/phone-home-twins.png" width="150" alt="Hjem med to børn: Noa med pil vælger barn"> | <img src="docs/screenshots/da/phone-switch-baby.png" width="150" alt="Skift barn: Noa og Ida"> | <img src="docs/screenshots/da/watch-main-twins.png" width="130" alt="Ur, hovedskærm med Noa i tiden"> | <img src="docs/screenshots/da/watch-baby-picker.png" width="130" alt="Ur: Skift barn"> |
+| Velkommen | Konto | Privatliv | Hjem, to børn | Skift barn | Ur: to børn | Ur: skift barn |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/da/phone-welcome.png" width="150" alt="Velkommen: Din log bliver på denne telefon, med samtykke til backup"> | <img src="docs/screenshots/da/phone-account.png" width="150" alt="Konto: samtykke, Fortsæt med Google eller brug e-mail"> | <img src="docs/screenshots/da/phone-settings-privacy.png" width="150" alt="Indstillinger, Privatliv: Privatlivspolitik og Download mine data"> | <img src="docs/screenshots/da/phone-home-twins.png" width="150" alt="Hjem med to børn: Noa med pil vælger barn"> | <img src="docs/screenshots/da/phone-switch-baby.png" width="150" alt="Skift barn: Noa og Ida"> | <img src="docs/screenshots/da/watch-main-twins.png" width="130" alt="Ur, hovedskærm med Noa i tiden"> | <img src="docs/screenshots/da/watch-baby-picker.png" width="130" alt="Ur: Skift barn"> |
 
 Every image above also exists in the other language: swap `en` and `da` in the path ([`docs/screenshots/`](docs/screenshots)).
 
@@ -150,7 +155,7 @@ Open the phone app once and set the baby's name in Settings › Babies (and add 
 
 Everything runs on the JVM with Robolectric (no emulator needed): view models, the repository and sync merge, formatting in both languages, TalkBack descriptions, navigation, widgets, the Tile layout and complications, and smoke tests of the apps' entry points. Statistics has plain JUnit tests of its rules in `core` (which days count, rounding, ranges, DST days and chart bins), plus view-model, TalkBack (English and Danish), navigation and screenshot tests in `app`.
 
-The backend's Firestore security rules have their own tests on the Firestore emulator (Node.js 22 and JDK 21):
+The backend's Firestore security rules and the retention job have their own tests on the Firestore and Authentication emulators (Node.js 22 and JDK 21):
 
 ```sh
 cd firebase && npm install && npm test

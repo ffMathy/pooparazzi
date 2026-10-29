@@ -14,6 +14,7 @@ import androidx.credentials.exceptions.GetCredentialInterruptedException
 import androidx.credentials.exceptions.GetCredentialProviderConfigurationException
 import androidx.credentials.exceptions.GetCredentialUnsupportedException
 import androidx.credentials.exceptions.NoCredentialException
+import com.ffmathy.pooparazzi.core.cloud.BackupConsent
 import com.ffmathy.pooparazzi.core.cloud.CloudAccount
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -43,16 +44,24 @@ import kotlinx.coroutines.withTimeoutOrNull
  * configuration, [FirebaseConfig.webClientId]), and email and password. Build it only when [FirebaseConfig.isPresent].
  *
  * There is no invitation and no email confirmation: a new account is signed in at once, and the backup follows
- * [user].
+ * [user] once it has agreed to it ([consents]). A sign-in started from the form, which asks for the consent first,
+ * records the account it signs in as agreed, also when it goes through only after the app stopped waiting for it.
  */
 class FirebaseAccounts(
     context: Context,
     private val auth: FirebaseAuth,
     private val webClientId: String?,
+    private val consents: ConsentStore,
     private val timeoutMillis: Long = TIMEOUT_MILLIS,
+    private val now: () -> Long = System::currentTimeMillis,
 ) : Accounts {
     private val app = context.applicationContext
-    private val current = MutableStateFlow(auth.currentUser?.toAccountUser())
+
+    /** A sign-in from the form is under way: the account it signs in agreed to the backup. */
+    @Volatile
+    private var agreedForSignIn = false
+
+    private val current = MutableStateFlow(auth.currentUser?.toAccountUser()?.withConsent())
     private val cloudAccount = MutableStateFlow(current.value?.cloud)
 
     override val available = true
@@ -67,13 +76,17 @@ class FirebaseAccounts(
         auth.addAuthStateListener { refresh() }
     }
 
-    override suspend fun signInWithGoogle(activity: Activity): AccountResult = withGoogle(activity) { credential ->
-        auth.signInWithCredential(credential).await()
-        refresh()
+    override suspend fun signInWithGoogle(activity: Activity): AccountResult {
+        agreedForSignIn = true
+        return withGoogle(activity) { credential ->
+            auth.signInWithCredential(credential).await()
+            refresh()
+        }
     }
 
     override suspend fun signIn(email: String, password: String): AccountResult {
         AccountInput.signInError(email, password)?.let { return AccountResult.Failed(it) }
+        agreedForSignIn = true
         return attempt {
             auth.signInWithEmailAndPassword(email.trim(), password).await()
             refresh()
@@ -82,6 +95,7 @@ class FirebaseAccounts(
 
     override suspend fun createAccount(email: String, password: String): AccountResult {
         AccountInput.createError(email, password)?.let { return AccountResult.Failed(it) }
+        agreedForSignIn = true
         return attempt {
             auth.createUserWithEmailAndPassword(email.trim(), password).await()
             refresh()
@@ -96,6 +110,7 @@ class FirebaseAccounts(
     }
 
     override suspend fun signOut() {
+        agreedForSignIn = false
         auth.signOut()
         refresh()
         // Forgets the Google account chosen last, so the next "Continue with Google" offers the choice again.
@@ -129,6 +144,13 @@ class FirebaseAccounts(
         }
     }
 
+    override fun agreeToBackup(): AccountResult {
+        val user = auth.currentUser ?: return AccountResult.Failed(AccountError.OTHER)
+        consents.record(user.uid, BackupConsent.VERSION, now())
+        refresh()
+        return AccountResult.Success
+    }
+
     /** Asks the system's Google account picker for an ID token, then runs [block] with its Firebase credential. */
     private suspend fun withGoogle(activity: Activity, block: suspend (AuthCredential) -> Unit): AccountResult {
         val clientId = webClientId ?: return AccountResult.Failed(AccountError.NO_GOOGLE_ACCOUNT)
@@ -160,10 +182,17 @@ class FirebaseAccounts(
     }
 
     private fun refresh() {
-        val signedIn = auth.currentUser?.toAccountUser()
+        val firebaseUser = auth.currentUser
+        if (firebaseUser != null && agreedForSignIn) {
+            agreedForSignIn = false
+            consents.record(firebaseUser.uid, BackupConsent.VERSION, now())
+        }
+        val signedIn = firebaseUser?.toAccountUser()?.withConsent()
         current.value = signedIn
         cloudAccount.value = signedIn?.cloud
     }
+
+    private fun AccountUser.withConsent() = copy(consentVersion = consents.versionFor(uid))
 
     /** Runs a Firebase call within [timeoutMillis] ([attemptWithin]). */
     private suspend fun attempt(block: suspend () -> Unit): AccountResult = attemptWithin(timeoutMillis, ::refresh, block)

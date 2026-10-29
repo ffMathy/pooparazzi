@@ -1,0 +1,65 @@
+# The backup's retention (docs/PRIVACY.md, "How long"; docs/BACKEND.md): every week, deletes the accounts nobody has
+# used for two years, with their backups, and the backups whose account was deleted in the console. Run it by hand to
+# try it first (dry run) or, once, to clear what was logged from deleted entries backed up by older app versions.
+name: Retention
+
+on:
+  schedule:
+    - cron: "37 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only list what would be deleted"
+        type: boolean
+        default: true
+      redact_tombstones:
+        description: "Also clear what was logged from deleted entries (one-off: reads every entry)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: retention
+  cancel-in-progress: false
+
+jobs:
+  retention:
+    name: Delete what is kept too long
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: firebase
+    env:
+      SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - name: Check out
+        if: env.SERVICE_ACCOUNT != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: No backend configured
+        if: env.SERVICE_ACCOUNT == ''
+        working-directory: .
+        run: echo "::notice::FIREBASE_SERVICE_ACCOUNT is not set, so there is no backup to clean up (docs/BACKEND.md)."
+
+      - name: Install
+        if: env.SERVICE_ACCOUNT != ''
+        run: npm ci --no-audit --no-fund
+
+      - name: Retention
+        if: env.SERVICE_ACCOUNT != ''
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          REDACT: ${{ github.event_name == 'workflow_dispatch' && inputs.redact_tombstones }}
+        run: |
+          key="$RUNNER_TEMP/service-account.json"
+          printf '%s' "$SERVICE_ACCOUNT" > "$key"
+          export GOOGLE_APPLICATION_CREDENTIALS="$key"
+          export FIREBASE_PROJECT_ID="$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).project_id)" "$key")"
+          args=()
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          if [ "$REDACT" = "true" ]; then args+=(--redact-tombstones); fi
+          node retention/run.js "${args[@]}"
+          rm -f "$key"

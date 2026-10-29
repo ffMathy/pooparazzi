@@ -23,6 +23,13 @@ const entryJson = (id) => JSON.stringify({ id, kind: 'FEED', startMillis: 1, upd
 const entry = (id) => ({ json: entryJson(id), syncedAt: serverTimestamp() })
 const entryDoc = (db, uid, id) => doc(db, 'users', uid, 'entries', id)
 
+const consent = (version = 1) => ({ consentVersion: version, consentedAt: serverTimestamp() })
+
+/** The consent record the app writes before its first upload. */
+async function seedConsent(uid) {
+  await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'users', uid), consent()))
+}
+
 async function seed(uid, id) {
   await env.withSecurityRulesDisabled((ctx) => setDoc(entryDoc(ctx.firestore(), uid, id), entry(id)))
 }
@@ -36,6 +43,10 @@ after(async () => {
 })
 
 describe('writing entries', () => {
+  beforeEach(async () => {
+    await seedConsent(ANNA.uid)
+  })
+
   test('a signed-in account writes its own entries', async () => {
     const db = as(ANNA)
     await assertSucceeds(setDoc(entryDoc(db, ANNA.uid, 'e1'), entry('e1')))
@@ -56,6 +67,12 @@ describe('writing entries', () => {
     await assertFails(setDoc(ref, { json: { id: 'e1' }, syncedAt: serverTimestamp() }))
     await assertFails(setDoc(ref, { json: 'x'.repeat(2049), syncedAt: serverTimestamp() }))
     await assertSucceeds(setDoc(ref, { json: 'x'.repeat(2048), syncedAt: serverTimestamp() }))
+  })
+
+  test('nothing is written before the account recorded its consent', async () => {
+    await assertFails(setDoc(entryDoc(as(BO), BO.uid, 'e1'), entry('e1')))
+    await assertSucceeds(setDoc(doc(as(BO), 'users', BO.uid), consent()))
+    await assertSucceeds(setDoc(entryDoc(as(BO), BO.uid, 'e1'), entry('e1')))
   })
 
   test('a full batch of 400 entries is accepted (the first upload after signing up)', async () => {
@@ -91,10 +108,36 @@ describe('reading and deleting entries', () => {
   })
 })
 
+describe('the consent record', () => {
+  test('the owner records, reads and deletes its own consent', async () => {
+    const ref = doc(as(ANNA), 'users', ANNA.uid)
+    await assertSucceeds(setDoc(ref, consent()))
+    await assertSucceeds(setDoc(ref, consent(2))) // a newer version
+    await assertSucceeds(getDoc(ref))
+    await assertSucceeds(deleteDoc(ref))
+  })
+
+  test("nobody records, reads or deletes another account's consent", async () => {
+    await seedConsent(ANNA.uid)
+    await assertFails(setDoc(doc(as(BO), 'users', ANNA.uid), consent()))
+    await assertFails(getDoc(doc(as(BO), 'users', ANNA.uid)))
+    await assertFails(deleteDoc(doc(as(BO), 'users', ANNA.uid)))
+    await assertFails(getDoc(doc(signedOut(), 'users', ANNA.uid)))
+  })
+
+  test('only the version and the server time are accepted', async () => {
+    const ref = doc(as(ANNA), 'users', ANNA.uid)
+    await assertFails(setDoc(ref, { ...consent(), babies: ['Emma'] }))
+    await assertFails(setDoc(ref, { consentVersion: 1 }))
+    await assertFails(setDoc(ref, { consentVersion: 0, consentedAt: serverTimestamp() }))
+    await assertFails(setDoc(ref, { consentVersion: '1', consentedAt: serverTimestamp() }))
+    await assertFails(setDoc(ref, { consentVersion: 1, consentedAt: Timestamp.fromMillis(1) }))
+  })
+})
+
 test('everything else is denied', async () => {
   const db = as(ANNA)
   await assertFails(setDoc(doc(db, 'users', ANNA.uid), { babies: ['Emma'] }))
-  await assertFails(getDoc(doc(db, 'users', ANNA.uid)))
   await assertFails(setDoc(doc(db, 'users', ANNA.uid, 'babies', 'b1'), { name: 'Emma' }))
   await assertFails(getDocs(collection(db, 'users')))
   await assertFails(setDoc(doc(db, 'anything', 'x'), {}))

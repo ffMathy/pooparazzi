@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.phone
 import android.app.Application
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.phone.account.ConsentPrefs
 import com.ffmathy.pooparazzi.phone.account.WelcomePrefs
 import com.ffmathy.pooparazzi.phone.system.SurfacePrefs
 import com.ffmathy.pooparazzi.phone.widget.PrefsWidgetMemoStore
@@ -54,8 +55,16 @@ class BackupRulesTest {
         // And the Welcome's answer (BABIES_AND_BACKUP §3.1: remembered on this phone only).
         WelcomePrefs(app).seen = true
         assertTrue(prefsFile("${WelcomePrefs.FILE}.xml").exists())
+        // And the backup's consent (§3.4: a new phone asks again).
+        ConsentPrefs(app).record("uid", 1, 0L)
+        assertTrue(prefsFile("${ConsentPrefs.FILE}.xml").exists())
 
-        val local = setOf("${SurfacePrefs.FILE}.xml", "${PrefsWidgetMemoStore.FILE}.xml", "${WelcomePrefs.FILE}.xml")
+        val local = setOf(
+            "${SurfacePrefs.FILE}.xml",
+            "${PrefsWidgetMemoStore.FILE}.xml",
+            "${WelcomePrefs.FILE}.xml",
+            "${ConsentPrefs.FILE}.xml",
+        )
         val rules = excludedPrefs(R.xml.data_extraction_rules)
         assertEquals(local, rules["cloud-backup"])
         assertEquals(local, rules["device-transfer"])

@@ -422,6 +422,7 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 - **Night dimmer**: re-offer and level (default 10 %, adjustable 5–30 %).
 - Link to the system promoted-notifications setting (§10.5).
 - "Day starts at" (default 00:00; pending open question 4).
+- **Privacy**: "Privacy policy" (opens [`docs/PRIVACY.md`](../PRIVACY.md) in the browser) and "Download my data" (the log and the babies' names as a JSON file); see BABIES_AND_BACKUP §3.4.
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
 
@@ -727,6 +728,7 @@ The backup's cloud (phone only, hidden when nobody is signed in or the build has
 | Offline | `offline` · "Saved on phone · will back up" |
 | Error | `cloudError` in error colour, a 48 dp retry button (backs up again) · "Couldn't back up · Tap to retry" |
 | Backup deleted | `cloudError` in error colour, not a button · "Backup deleted · Back up now to start again" |
+| Backup paused (no consent, BABIES_AND_BACKUP §3.4) | `cloudError` in error colour, not a button · "Backup paused · Agree to back up" |
 
 Phone ↔ watch sync never goes through the backend; the backup is the phone's alone (BABIES_AND_BACKUP §1).
 
