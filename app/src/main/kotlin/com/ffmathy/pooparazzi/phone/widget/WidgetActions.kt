@@ -6,20 +6,6 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.ActionCallback
-import com.ffmathy.pooparazzi.core.model.DiaperKind
-
-/** Pee, Poop or Both on a widget: logs in place (DESIGN_SPEC §3.3.6). */
-class LogDiaperAction : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        val kind = parameters[Kind]?.let { name -> DiaperKind.entries.firstOrNull { it.name == name } } ?: return
-        WidgetCommands.from(context).logDiaper(kind)
-        WidgetUpdater.refresh(context)
-    }
-
-    companion object {
-        val Kind = ActionParameters.Key<String>("diaper_kind")
-    }
-}
 
 /** Start sleep / Woke up on a widget. */
 class ToggleSleepAction : ActionCallback {
@@ -52,9 +38,22 @@ class LogWidgetReceiver : GlanceAppWidgetReceiver() {
     }
 }
 
-/** The 2×1 widget's provider. */
+/** The 3×1 widget's provider (the former 2×1; the class name stays so placed widgets survive). */
 class QuickWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = QuickWidget()
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        WidgetUpdater.cancelIfNoneLeft(context)
+    }
+}
+
+/**
+ * The 4×2 widget on the cover screen (Flex Window) of Samsung's flip phones: the same [LogWidget], under a provider
+ * that only Samsung's cover screen lists (`keyguard` category, `sub_screen` display), so other launchers never show it.
+ */
+class CoverWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = LogWidget()
 
     override fun onDisabled(context: Context) {
         super.onDisabled(context)

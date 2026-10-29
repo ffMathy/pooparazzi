@@ -57,29 +57,6 @@ object RowAConfirmation {
 }
 
 /**
- * How Row B labels its buttons (Pee | Poop | Both): the Material 3 `labelSmall` the design asks for, one step smaller
- * where a word would touch the rounded edges (Danish "Begge" on 192 dp watches or at large font scales), and only the
- * icons where even that does not fit. The content descriptions name each button either way ("Log pee and poop").
- */
-enum class RowBLabels(val typography: Int?) {
-    LABEL_SMALL(Typography.LABEL_SMALL),
-    BODY_SMALL(Typography.BODY_SMALL),
-    ICONS_ONLY(null),
-    ;
-
-    companion object {
-        /** The first style in which every one of [labels] fits [maxWidthDp] at [fontScale]. */
-        fun fitting(labels: List<String>, maxWidthDp: Float, fontScale: Float): RowBLabels {
-            val label = TileTextMeasure.labelSmall(fontScale)
-            if (labels.all { label.widthDp(it) <= maxWidthDp }) return LABEL_SMALL
-            val body = TileTextMeasure.bodySmall(fontScale)
-            if (labels.all { body.widthDp(it) <= maxWidthDp }) return BODY_SMALL
-            return ICONS_ONLY
-        }
-    }
-}
-
-/**
  * An estimate of how wide the renderer draws one line of tile text in a Material 3 type style (by default
  * `titleSmall`: 14 sp, weight 500, 0.4 sp tracking), from the platform's default typeface at the same size, weight,
  * width and tracking plus a small margin. The renderer's own font (the system's) can differ slightly; the margin
@@ -159,19 +136,5 @@ class TileTextMeasure(
 
         /** The width of Row A's secondary label. */
         fun rowATextWidthDp(device: DeviceParameters, withTitle: Boolean): Float = mainSlotWidthDp(device, withTitle) - ROW_A_TEXT_INSET_DP
-
-        /**
-         * The label width inside one Row B button that stays clear of its rounded edges: the label sits in the lower
-         * half of the round-ended button, where the curve takes about 15 % of the width on each side, more as a larger
-         * font pushes the label lower (calibrated on rendered tiles); never less than [horizontalPaddingDp].
-         */
-        fun rowBLabelWidthDp(device: DeviceParameters, withTitle: Boolean, gapDp: Float, horizontalPaddingDp: Float): Float {
-            val button = (mainSlotWidthDp(device, withTitle) - 2f * gapDp) / 3f
-            val curve = ROW_B_CURVE_INSET + ROW_B_CURVE_INSET_PER_SCALE * (device.fontScale - 1f).coerceAtLeast(0f)
-            return button - 2f * maxOf(horizontalPaddingDp, button * curve)
-        }
-
-        private const val ROW_B_CURVE_INSET = 0.15f
-        private const val ROW_B_CURVE_INSET_PER_SCALE = 0.1f
     }
 }

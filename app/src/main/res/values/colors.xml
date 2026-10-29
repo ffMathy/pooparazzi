@@ -21,14 +21,10 @@
     <color name="widget_preview_feed_c">#FFE1C4</color>
     <color name="widget_preview_feed_s">#A35F1A</color>
     <color name="widget_preview_feed_on">#452300</color>
-    <color name="widget_preview_pee_c">#CFEDE6</color>
-    <color name="widget_preview_pee_s">#2C7468</color>
-    <color name="widget_preview_pee_on">#0F3D36</color>
-    <color name="widget_preview_poop_c">#B9E0D7</color>
-    <color name="widget_preview_poop_s">#143F38</color>
-    <color name="widget_preview_poop_on">#0B332D</color>
+    <color name="widget_preview_diaper_c">#CFEDE6</color>
+    <color name="widget_preview_diaper_s">#24665C</color>
+    <color name="widget_preview_diaper_on">#0F3D36</color>
     <color name="widget_preview_sleep_c">#E1E4F8</color>
     <color name="widget_preview_sleep_s">#37418A</color>
     <color name="widget_preview_sleep_on">#1B2152</color>
-    <item name="widget_preview_both_icon" type="drawable">@drawable/x_both_day</item>
 </resources>

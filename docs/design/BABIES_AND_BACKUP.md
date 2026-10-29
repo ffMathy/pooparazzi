@@ -57,7 +57,7 @@ Two things span all babies, because a parent must not lose sight of a sleeping b
 - **Settings › Babies** (replaces Settings › Baby). One name field per baby (label "Name", placeholder its label), saved as typed as before (500 ms after the last keystroke, at once on Done). Under them an "Add a baby" pill (hidden at 8), and the hint "Names stay on this phone and your watch. They're never uploaded." Adding does not switch the current baby.
 - **Home's top bar** (two or more babies). The name becomes a 48 dp button with a 16 dp `chevronDown`; it opens the **Switch baby** sheet: one 56 dp radio row per baby (its label), the current one selected. A tap selects that baby, plays SegmentTick and closes the sheet. Switching closes any open card (its Undo belongs to the other baby) and resets the double-toggle guard. In lights-down the button follows the name's colours.
 - **History** shows the current baby's label under its title when there are two or more.
-- **Widgets.** They log for the phone's current baby. The 4×2 widget's status row starts with the baby's label when there are two or more; both widgets name the baby in their TalkBack descriptions. A receipt belongs to the baby it was made for and is dropped when the current baby changes.
+- **Widgets.** They log for the phone's current baby, and their Feed and Diaper buttons open the app's sheets for that baby. The 4×2 widget's status row starts with the baby's label when there are two or more; every widget (the 4×2, the 3×1 and the cover-screen widget) names the baby in its TalkBack descriptions. A receipt belongs to the baby it was made for and is dropped when the current baby changes.
 
 ### 2.5 Watch UI
 

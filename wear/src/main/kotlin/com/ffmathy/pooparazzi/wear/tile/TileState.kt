@@ -2,7 +2,6 @@ package com.ffmathy.pooparazzi.wear.tile
 
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.format.LabelFormatter
-import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.wear.state.GuardKind
@@ -16,9 +15,6 @@ const val TILE_GUARD_MILLIS = 2_000L
 
 /** What a tile log confirms in the title for [TILE_FEEDBACK_MILLIS]. */
 enum class TileFeedbackKind {
-    /** A diaper (Pee / Poop / Both): "Pee 14:32 · Undo". */
-    DIAPER,
-
     /** A sleep ended from the tile: "Woke up 14:40 · Undo". */
     WOKE_UP,
 
@@ -30,7 +26,7 @@ enum class TileFeedbackKind {
  * The confirmation of the last tile log. While it shows, the tile background opens Logged for [entryId] with Undo
  * active at once (DESIGN_SPEC §3.6, §10.7).
  *
- * @property atMillis the logged time shown in the title ("Pee 14:32").
+ * @property atMillis the logged time shown in the title ("Woke up 14:32").
  * @property untilMillis when the title goes back to its normal content.
  * @property babyId the baby the log was for (null: unknown, from before several babies). The confirmation belongs to
  *   that baby and is dropped once the watch switches to another.
@@ -39,7 +35,6 @@ data class TileFeedback(
     val kind: TileFeedbackKind,
     val entryId: String,
     val atMillis: Long,
-    val diaperKind: DiaperKind?,
     val untilMillis: Long,
     val babyId: String? = null,
 ) {
@@ -58,7 +53,7 @@ sealed interface TileTitle {
     /** A rejected toggle (2 s). */
     data class Guard(val kind: GuardKind) : TileTitle
 
-    /** The last tile log (10 s): "Pee 14:32 · Undo". Wins over [Asleep] (§3.6). */
+    /** The last tile log (10 s): "Woke up 14:32 · Undo". Wins over [Asleep] (§3.6). */
     data class Logged(val feedback: TileFeedback) : TileTitle
 
     /** A sleep runs: "Asleep 1h 07m". */
@@ -127,7 +122,6 @@ data class TileUiState(
                 // The discarded sleep is soft-deleted, so it is missing from the entries until Undo restores it.
                 TileFeedbackKind.SLEEP_CANCELLED -> entry == null
                 TileFeedbackKind.WOKE_UP -> entry?.endMillis != null
-                TileFeedbackKind.DIAPER -> entry != null
             }
         }
 

@@ -138,13 +138,12 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     fun babyLabel(snapshot: WidgetSnapshot): String? =
         if (snapshot.hasSeveralBabies) labels.baby(snapshot.baby, snapshot.babies) else null
 
-    /** A TalkBack name for [baby] ("Log pee for Noa"); [name] alone when [baby] is null (one baby). */
+    /** A TalkBack name for [baby] ("Log feed for Noa"); [name] alone when [baby] is null (one baby). */
     fun forBaby(name: String, baby: String?): String = baby?.let { string(R.string.widget_cd_for_baby, name, it) } ?: name
 
     fun notice(notice: WidgetNotice): String = when (notice.type) {
         NoticeType.ALREADY_ASLEEP -> string(CoreR.string.guard_already_asleep, time(notice.atMillis))
         NoticeType.ALREADY_AWAKE -> string(CoreR.string.guard_already_awake, time(notice.atMillis))
-        NoticeType.ALREADY_LOGGED -> string(CoreR.string.guard_already_logged, time(notice.atMillis))
         NoticeType.UNDONE -> string(CoreR.string.receipt_undone)
     }
 }
@@ -204,6 +203,29 @@ internal fun WidgetButton(
             }
         }
     }
+}
+
+/**
+ * A log button that opens the app on [launch]'s sheet (Feed or Diaper): the same sheet as Home's buttons, so the
+ * details (time offset, feed type, breast order, pee/poop, colour, texture) are asked for exactly as in the app.
+ */
+@Composable
+internal fun SheetButton(
+    launch: HomeLaunch,
+    event: EventColors,
+    description: String,
+    modifier: GlanceModifier,
+    face: @Composable () -> Unit,
+) {
+    val context = LocalContext.current
+    WidgetButton(
+        modifier = modifier,
+        fill = event.container,
+        radius = 20.dp,
+        action = actionStartActivity(DeepLinks.intent(context, launch)),
+        description = description,
+        content = face,
+    )
 }
 
 /**

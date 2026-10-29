@@ -75,7 +75,7 @@ class WidgetSnapshotTest {
         assertEquals(NoticeType.UNDONE, WidgetSnapshot.of(entries, SampleData.settings, memo, now, zone, false).notice!!.type)
         assertNull(WidgetSnapshot.of(entries, SampleData.settings, memo, now + 2_000, zone, false).notice)
         val logged = WidgetSamples.justLogged(night = true)
-        assertEquals(ReceiptKind.LOGGED, logged.receipt!!.kind)
+        assertEquals(ReceiptKind.SLEEP_STARTED, logged.receipt!!.kind)
         assertEquals(now + 2_000, memo.copy(receipt = logged.receipt).nextExpiry(now))
         assertEquals(now + 10_000, memo.copy(receipt = logged.receipt).nextExpiry(now + 2_000))
         assertNull(memo.nextExpiry(now + 2_000))

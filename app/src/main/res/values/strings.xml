@@ -106,17 +106,17 @@
     <string name="settings_font_licences_summary">Google Sans Flex and Atkinson Hyperlegible Next, SIL Open Font License 1.1</string>
     <!-- Home-screen widgets (P5, DESIGN_SPEC §3.3.6) -->
     <string name="widget_log_name">Log and status</string>
-    <string name="widget_log_description">Log diapers and sleep with one tap, and see the latest feed and diaper</string>
-    <string name="widget_quick_name">Feed and sleep</string>
-    <string name="widget_quick_description">Feed and the sleep toggle</string>
+    <string name="widget_log_description">Log feeds, diapers and sleep, and see the latest feed and diaper</string>
+    <string name="widget_quick_name">Feed, diaper and sleep</string>
+    <string name="widget_quick_description">Feed, diaper and the sleep toggle</string>
+    <string name="widget_cover_name">Cover screen</string>
+    <string name="widget_cover_description">Log feeds, diapers and sleep from the cover screen</string>
     <!-- TalkBack names of the widget buttons -->
     <string name="widget_cd_log_feed">Log feed</string>
-    <string name="widget_cd_log_pee">Log pee</string>
-    <string name="widget_cd_log_poop">Log poop</string>
-    <string name="widget_cd_log_both">Log pee and poop</string>
-    <!-- TalkBack names of Undo in the widget receipt -->
-    <!-- TalkBack names of the widget buttons with two or more babies: "Log pee for Noa" -->
+    <string name="widget_cd_log_diaper">Log diaper</string>
+    <!-- TalkBack names of the widget buttons with two or more babies: "Log feed for Noa" -->
     <string name="widget_cd_for_baby">%1$s for %2$s</string>
+    <!-- TalkBack names of Undo in the widget receipt -->
     <string name="widget_undo_pee">Undo pee</string>
     <string name="widget_undo_poop">Undo poop</string>
     <string name="widget_undo_both">Undo pee and poop</string>

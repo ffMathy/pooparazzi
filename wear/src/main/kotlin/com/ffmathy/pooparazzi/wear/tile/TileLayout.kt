@@ -110,15 +110,17 @@ internal val Color.layout: LayoutColor get() = toArgb().argb
 
 /**
  * The tile (DESIGN_SPEC §3.6, §10.9; V1_ADDITIONS §2.2) as a Material 3 `primaryLayout`:
- * - **title**: the guard, the just-logged confirmation ("Pee 14:32 · Undo"), "Asleep 1h 07m", the baby's name, or the
- *   last diaper; hidden below 225 dp;
+ * - **title**: the guard, the just-logged confirmation ("Woke up 14:32 · Undo"), "Asleep 1h 07m", the baby's name,
+ *   or the last diaper; hidden below 225 dp;
  * - **Row A**: Feed (opens the Feed type screen) with the time since the last feed;
- * - **Row B**: Pee | Poop | Both, one tap each;
+ * - **Row B**: Diaper (opens the Diaper screen) with the time since the last diaper;
  * - **edge**: the sleep toggle.
+ *
+ * Feed and Diaper open the same screens as Main's buttons, so the details are asked for exactly as in the app.
  *
  * No button ever relabels or moves for feedback (§3.6): only the title changes, and the background opens Logged with
  * Undo while a confirmation shows. Below 225 dp, where there is no title, Row A's secondary label carries the
- * confirmation instead ("Pee 14:32 · Undo"), as §3.6 allows.
+ * confirmation instead ("Woke up 14:32 · Undo"), as §3.6 allows.
  *
  * @param token makes this layout's clickable ids unique (see [TileMemory.claim]).
  * @param dynamic false renders every time-dependent text as its value at [TileUiState.now] only (screenshots;
@@ -138,6 +140,7 @@ fun MaterialScope.pooparazziTile(state: TileUiState, text: SurfaceText, token: L
 }
 
 private const val CLICK_OPEN_FEED = "open_feed"
+private const val CLICK_OPEN_DIAPER = "open_diaper"
 private const val CLICK_UNDO = "open_undo"
 
 /** Builds the pieces of [pooparazziTile] (one instance per layout). */
@@ -216,15 +219,6 @@ private class TileContent(
         val undoHint = { said: String -> res.getString(R.string.tile_cd_logged, said) }
         val atTime = { said: String, time: String -> res.getString(CoreR.string.receipt_at_time, said, time) }
         return when (feedback.kind) {
-            TileFeedbackKind.DIAPER -> {
-                val kind = feedback.diaperKind ?: DiaperKind.PLAIN
-                val time = text.clock(feedback.atMillis)
-                // Shown as the status word ("Both"), read as the receipt says it ("Pee and poop").
-                Confirmation(
-                    XDrawables.check, events.diaper.strong, res.getString(Labels.diaperKindStatus(kind)), time,
-                    undoHint(atTime(res.getString(SpokenLabels.diaperKind(kind)), time)),
-                )
-            }
             TileFeedbackKind.WOKE_UP -> {
                 val time = text.clock(feedback.atMillis)
                 val label = res.getString(CoreR.string.action_woke_up)
@@ -238,7 +232,7 @@ private class TileContent(
     }
 
     /**
-     * "✓ Pee 14:32 · ↶ Undo" (DESIGN_SPEC §3.6 just-logged title), "Sleep cancelled · Undo" (§4.4: with Undo). The
+     * "✓ Woke up 14:32 · ↶ Undo" (DESIGN_SPEC §3.6 just-logged title), "Sleep cancelled · Undo" (§4.4: with Undo). The
      * background tap is the undo path.
      */
     private fun MaterialScope.loggedTitle(feedback: TileFeedback): LayoutElement {
@@ -293,7 +287,7 @@ private class TileContent(
     fun rows(withTitle: Boolean): LayoutElement = column(
         rowA(withTitle),
         spacer(height = dp(ROW_GAP)),
-        rowB(withTitle),
+        rowB(),
         width = expand(),
         height = expand(),
         horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
@@ -304,23 +298,13 @@ private class TileContent(
      * Without a title (below 225 dp) its secondary label shows a just-logged confirmation for its 10 s.
      */
     private fun rowA(withTitle: Boolean): LayoutElement = with(scope) {
-        val feed = events.feed
         val lastFeed = state.lastFeed
-        val label: String
-        val secondary: LayoutString
-        val spoken: TimeText?
-        val spokenStatic: String
-        if (lastFeed != null) {
-            label = res.getString(CoreR.string.kind_feed)
-            secondary = text.ago(lastFeed.startMillis, now).layout(TEXT_ALIGN_START)
-            spoken = text.template(SurfaceText.Template.of(res, R.string.tile_cd_feed), text.spokenAgo(lastFeed.startMillis, now))
-            spokenStatic = spoken.static
-        } else {
-            label = res.getString(CoreR.string.kind_feed)
-            secondary = res.getString(R.string.status_no_feed_yet).layoutString
-            spoken = null
-            spokenStatic = res.getString(R.string.tile_cd_feed_none)
+        val spoken = lastFeed?.let {
+            text.template(SurfaceText.Template.of(res, R.string.tile_cd_feed), text.spokenAgo(it.startMillis, now))
         }
+        val spokenStatic = spoken?.static ?: res.getString(R.string.tile_cd_feed_none)
+        val secondary = lastFeed?.let { text.ago(it.startMillis, now).layout(TEXT_ALIGN_START) }
+            ?: res.getString(R.string.status_no_feed_yet).layoutString
         val confirmed = (state.title as? TileTitle.Logged)?.feedback?.takeIf { confirmInRowA }?.let(::confirmation)
         val description = if (confirmed != null) {
             // The confirmation first: on these watches nothing else says it.
@@ -338,92 +322,55 @@ private class TileContent(
                 measure = TileTextMeasure.labelSmall(deviceConfiguration.fontScale),
             ).layoutString
         } ?: secondary
-        button(
-            onClick = openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
-            modifier = description,
-            iconContent = { glyph(XDrawables.feed, feed.strong, ROW_A_ICON) },
-            labelContent = { plainText(label.layoutString, Typography.LABEL_MEDIUM, feed.onContainer.layout, start = true) },
-            secondaryLabelContent = { plainText(shownSecondary, Typography.LABEL_SMALL, feed.onContainer.layout, start = true) },
-            width = expand(),
-            height = weight(1f),
-            colors = ButtonColors(
-                containerColor = feed.container.layout,
-                iconColor = feed.strong.layout,
-                labelColor = feed.onContainer.layout,
-                secondaryLabelColor = feed.onContainer.layout,
-            ),
-            style = ButtonStyle.smallButtonStyle(),
-            contentPadding = padding(start = ROW_A_START_PADDING, top = 4f, end = 12f, bottom = 4f),
+        sheetButton(
+            events.feed, XDrawables.feed, res.getString(CoreR.string.kind_feed), shownSecondary, description,
+            openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
         )
     }
 
-    /**
-     * Row B: Pee | Poop | Both (DESIGN_SPEC §3.6), each one tap with no colour or texture (V1_ADDITIONS §2.2). The
-     * labels keep clear of the rounded edges: a smaller style, or the icons alone, where a word would not fit.
-     */
-    private fun rowB(withTitle: Boolean): LayoutElement {
-        val kinds = listOf(DiaperKind.PEE, DiaperKind.POOP, DiaperKind.BOTH)
-        val labels = RowBLabels.fitting(
-            labels = kinds.map { res.getString(Labels.diaperKindStatus(it)) },
-            maxWidthDp = TileTextMeasure.rowBLabelWidthDp(scope.deviceConfiguration, withTitle, ROW_GAP, ROW_B_SIDE_PADDING),
-            fontScale = scope.deviceConfiguration.fontScale,
+    /** Row B: Diaper opens the app's Diaper screen (pee, poop, colour, texture); diapers are never logged from the tile. */
+    private fun rowB(): LayoutElement = with(scope) {
+        val lastDiaper = state.lastDiaper
+        val spoken = lastDiaper?.let {
+            text.template(SurfaceText.Template.of(res, R.string.tile_cd_diaper), text.spokenAgo(it.startMillis, now))
+        }
+        val description = LayoutModifier.contentDescription(
+            spoken?.static ?: res.getString(R.string.tile_cd_diaper_none),
+            spoken?.dynamic?.takeIf { useDynamic },
         )
-        return row(
-            diaperButton(DiaperKind.PEE, TileAction.LOG_PEE, R.string.tile_cd_log_pee, labels),
-            spacer(width = dp(ROW_GAP)),
-            diaperButton(DiaperKind.POOP, TileAction.LOG_POOP, R.string.tile_cd_log_poop, labels),
-            spacer(width = dp(ROW_GAP)),
-            diaperButton(DiaperKind.BOTH, TileAction.LOG_BOTH, R.string.tile_cd_log_both, labels),
-            width = expand(),
-            height = weight(1f),
+        val secondary = lastDiaper?.let { text.ago(it.startMillis, now).layout(TEXT_ALIGN_START) }
+            ?: res.getString(R.string.status_no_diaper_yet).layoutString
+        sheetButton(
+            events.diaper, XDrawables.diaper, res.getString(CoreR.string.kind_diaper), secondary, description,
+            openApp(MainActivity.OPEN_DIAPER, CLICK_OPEN_DIAPER),
         )
     }
 
-    private fun diaperButton(kind: DiaperKind, action: TileAction, description: Int, labels: RowBLabels): LayoutElement = with(scope) {
-        val colors: EventColors = if (kind == DiaperKind.POOP) events.poop else events.pee
-        val labelColor = if (kind == DiaperKind.PEE) events.pee.onContainer else events.poop.onContainer
-        button(
-            onClick = Clickable.Builder().setId(action.clickId(token)).setOnClick(loadAction()).build(),
-            modifier = LayoutModifier.contentDescription(res.getString(description)),
-            labelContent = {
-                val icon = if (kind == DiaperKind.BOTH) {
-                    // Two-tone: droplet in PEE strong, mound in POOP strong (fixed colours, no tint).
-                    protoLayoutScope.basicImage(imageResource(androidImageResource(XDrawables.bothNight)), dp(ROW_B_ICON), dp(ROW_B_ICON))
-                } else {
-                    glyph(XDrawables.forDiaperKind(kind), colors.strong, ROW_B_ICON)
-                }
-                val typography = labels.typography
-                if (typography == null) {
-                    column(icon, horizontalAlignment = HORIZONTAL_ALIGN_CENTER, modifier = LayoutModifier.clearSemantics())
-                } else {
-                    column(
-                        icon,
-                        plainText(res.getString(Labels.diaperKindStatus(kind)).layoutString, typography, labelColor.layout),
-                        horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
-                        modifier = LayoutModifier.clearSemantics(),
-                    )
-                }
-            },
-            width = weight(1f),
-            height = expand(),
-            colors = ButtonColors(containerColor = colors.container.layout, labelColor = labelColor.layout),
-            backgroundContent = if (kind == DiaperKind.BOTH) {
-                // The split fill: PEE container | POOP container, hard stop in the middle.
-                {
-                    row(
-                        box(width = weight(1f), height = expand(), modifier = LayoutModifier.background(events.bothStartContainer.layout)),
-                        box(width = weight(1f), height = expand(), modifier = LayoutModifier.background(events.bothEndContainer.layout)),
-                        width = expand(),
-                        height = expand(),
-                    )
-                }
-            } else {
-                null
-            },
-            horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
-            contentPadding = padding(horizontal = ROW_B_SIDE_PADDING, vertical = 4f),
-        )
-    }
+    /** A full-width row that opens one of the app's logging screens: icon, label and the time since the last one. */
+    private fun MaterialScope.sheetButton(
+        event: EventColors,
+        @DrawableRes icon: Int,
+        label: String,
+        secondary: LayoutString,
+        description: LayoutModifier,
+        onClick: Clickable,
+    ): LayoutElement = button(
+        onClick = onClick,
+        modifier = description,
+        iconContent = { glyph(icon, event.strong, ROW_ICON) },
+        labelContent = { plainText(label.layoutString, Typography.LABEL_MEDIUM, event.onContainer.layout, start = true) },
+        secondaryLabelContent = { plainText(secondary, Typography.LABEL_SMALL, event.onContainer.layout, start = true) },
+        width = expand(),
+        height = weight(1f),
+        colors = ButtonColors(
+            containerColor = event.container.layout,
+            iconColor = event.strong.layout,
+            labelColor = event.onContainer.layout,
+            secondaryLabelColor = event.onContainer.layout,
+        ),
+        style = ButtonStyle.smallButtonStyle(),
+        contentPadding = padding(start = ROW_START_PADDING, top = 4f, end = 12f, bottom = 4f),
+    )
 
     // ---- Edge ------------------------------------------------------------------------------------
 
@@ -492,13 +439,9 @@ private class TileContent(
 
     companion object {
         const val TITLE_ICON = TileTextMeasure.TITLE_ICON_DP
-        const val ROW_A_ICON = 24f
-        const val ROW_B_ICON = 20f
+        const val ROW_ICON = 24f
         const val ROW_GAP = 6f
-
-        /** Keeps Row B's labels off the buttons' rounded edges. */
-        const val ROW_B_SIDE_PADDING = 6f
-        const val ROW_A_START_PADDING = 16f
+        const val ROW_START_PADDING = 16f
         const val LIT_BORDER = 1.5f
         const val BOLD = 700
     }

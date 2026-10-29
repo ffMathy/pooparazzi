@@ -110,11 +110,11 @@ object WearSamples {
     fun tileAfterBreastfeed(): TileUiState =
         TileUiState.from(summarize(SampleData.scenarioWithRecentFeed(), SampleData.NOW_1450, zone), SampleData.BABY_NAME, feedback = null, guard = null)
 
-    /** Just logged Pee + poop from the tile at 14:32: "Both 14:32 · Undo" for 10 s. */
+    /** Woke up on the tile at 14:32 (a nap since 13:50): "Woke up 14:32 · Undo" for 10 s. */
     fun tileJustLogged(): TileUiState {
-        val logged = Entry.diaper(SampleData.NOW_1432, pee = true, poop = true, id = "sample-both-1432")
-        val summary = summarize(SampleData.scenario() + logged, SampleData.NOW_1432, zone)
-        val feedback = TileFeedback(TileFeedbackKind.DIAPER, logged.id, logged.startMillis, DiaperKind.BOTH, SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS)
+        val nap = Entry.sleep(SampleData.at(13, 50), SampleData.NOW_1432, id = "sample-nap-1350")
+        val summary = summarize(SampleData.scenario() + nap, SampleData.NOW_1432, zone)
+        val feedback = TileFeedback(TileFeedbackKind.WOKE_UP, nap.id, SampleData.NOW_1432, SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS)
         return TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null)
     }
 

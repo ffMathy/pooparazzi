@@ -64,19 +64,23 @@ class TileLayoutTest {
     private fun String.has(value: String): Boolean = contains("value=$value,")
 
     @Test
-    fun idleShowsTheNameFeedWithTimeSinceAndTheOneTapButtons() {
+    fun idleShowsTheNameFeedAndDiaperWithTimeSinceAndTheToggle() {
         val proto = build(WearSamples.tileIdle())
         assertTrue(proto.has("Noa"))
         assertTrue(proto.has("Feed"))
         assertTrue(proto.has("2h 10m ago"))
         assertTrue(proto.has("Feed. Last feed 2 hours 10 minutes ago"))
         // "Start sleep" says what it showed, so a stale tap cannot end a sleep started elsewhere.
-        for (id in listOf("log_pee#5", "log_poop#5", "log_both#5", "sleep_start#5")) assertTrue(id, proto.contains(id))
+        assertTrue(proto.contains("sleep_start#5"))
         assertFalse(proto.contains("sleep_end"))
         assertTrue(proto.has("Start sleep"))
-        // Feed opens the app on Feed type; it never logs from the tile.
+        // Feed and Diaper open the app on Feed type and Diaper; they never log from the tile.
         assertTrue(proto.contains(MainActivity.OPEN_FEED_TYPE))
-        assertFalse(proto.contains("log_feed"))
+        assertTrue(proto.contains("open_diaper"))
+        assertTrue(proto.has("Diaper"))
+        assertTrue(proto.has("48m ago"))
+        assertTrue(proto.has("Diaper. Last diaper 48 minutes ago"))
+        assertFalse(proto.contains("log_"))
         // No background action outside the confirmation.
         assertFalse(proto.contains(MainActivity.OPEN_LOGGED))
     }
@@ -112,12 +116,12 @@ class TileLayoutTest {
     @Test
     fun justLoggedTitleWinsAndTheBackgroundOpensLoggedWithUndo() {
         val state = WearSamples.tileJustLogged()
-        assertEquals("sample-both-1432", state.undoEntryId)
+        assertEquals("sample-nap-1350", state.undoEntryId)
         val proto = build(state)
-        assertTrue(proto.has("Both 14:32 · "))
+        assertTrue(proto.has("Woke up 14:32 · "))
         assertTrue(proto.has("Undo"))
         assertTrue(proto.contains(MainActivity.OPEN_LOGGED))
-        assertTrue(proto.contains("sample-both-1432"))
+        assertTrue(proto.contains("sample-nap-1350"))
         // Buttons never relabel for feedback.
         assertTrue(proto.has("Start sleep"))
     }
@@ -152,7 +156,7 @@ class TileLayoutTest {
     @Test
     fun aConfirmationGoesWhenItsEntryIsUndone() {
         val feedback = WearSamples.tileJustLogged().feedback
-        // The same moment, but the logged diaper was undone in the app (or deleted on the phone).
+        // The same moment, but the nap was undone in the app (or deleted on the phone).
         val summary = summarize(SampleData.scenario(), SampleData.NOW_1432, SampleData.ZONE)
         val state = TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null)
         assertTrue(state.title is TileTitle.Name)
@@ -160,9 +164,15 @@ class TileLayoutTest {
     }
 
     @Test
-    fun aSpokenConfirmationNamesTheDiaperInWords() {
-        // Never "Both" or a "+" (DESIGN_SPEC §9.4).
-        assertTrue(build(WearSamples.tileJustLogged()).has("Pee and poop at 14:32. Tap the tile to undo"))
+    fun aSpokenConfirmationSaysWhatWasLoggedAndHowToUndo() {
+        assertTrue(build(WearSamples.tileJustLogged()).has("Woke up at 14:32. Tap the tile to undo"))
+    }
+
+    @Test
+    fun withoutDiapersRowBSaysSo() {
+        val proto = build(WearSamples.tileIdle().copy(lastDiaper = null))
+        assertTrue(proto.has("No diapers yet"))
+        assertTrue(proto.has("Diaper. No diapers yet"))
     }
 
     @Test
@@ -176,7 +186,7 @@ class TileLayoutTest {
     @Test
     fun aSleepCancelledOnTheTileOffersUndo() {
         val sleep = WearSamples.tileIdle()
-        val feedback = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, "cancelled-sleep", sleep.now, null, sleep.now + TILE_FEEDBACK_MILLIS)
+        val feedback = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, "cancelled-sleep", sleep.now, sleep.now + TILE_FEEDBACK_MILLIS)
         val state = sleep.copy(feedback = feedback)
         // DESIGN_SPEC §4.4: "Sleep cancelled", with Undo; the background opens it on the watch.
         assertEquals("cancelled-sleep", state.undoEntryId)
@@ -192,7 +202,7 @@ class TileLayoutTest {
         // Undone in the app: the discarded sleep runs again, so there is nothing left to undo.
         val summary = summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, SampleData.ZONE)
         val running = checkNotNull(summary.runningSleep)
-        val feedback = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, running.id, summary.now, null, summary.now + TILE_FEEDBACK_MILLIS)
+        val feedback = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, running.id, summary.now, summary.now + TILE_FEEDBACK_MILLIS)
         assertNull(TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null).feedback)
         // Still discarded (not among the entries): it stands.
         val other = feedback.copy(entryId = "discarded")
@@ -230,10 +240,10 @@ class TileLayoutTest {
     fun aConfirmationForAnotherBabyIsDroppedAfterASwitch() {
         val logged = WearSamples.tileJustLogged()
         val feedback = checkNotNull(logged.feedback).copy(babyId = Baby.FIRST_ID)
-        val summary = summarize(SampleData.scenario() + Entry.diaper(SampleData.NOW_1432, pee = true, poop = true, id = feedback.entryId), SampleData.NOW_1432, SampleData.ZONE)
+        val summary = summarize(SampleData.scenario() + Entry.sleep(SampleData.at(13, 50), SampleData.NOW_1432, id = feedback.entryId), SampleData.NOW_1432, SampleData.ZONE)
         assertEquals(feedback, TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null, babyId = Baby.FIRST_ID).feedback)
         // A "Sleep cancelled" is not among the entries either way: only its baby tells it apart.
-        val cancelled = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, "discarded", summary.now, null, summary.now + TILE_FEEDBACK_MILLIS, Baby.FIRST_ID)
+        val cancelled = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, "discarded", summary.now, summary.now + TILE_FEEDBACK_MILLIS, Baby.FIRST_ID)
         assertNull(TileUiState.from(summarize(emptyList(), SampleData.NOW_1432, SampleData.ZONE), "Ida", cancelled, guard = null, babyId = SampleData.TWIN_ID).feedback)
         assertEquals(cancelled, TileUiState.from(summary, SampleData.BABY_NAME, cancelled, guard = null, babyId = Baby.FIRST_ID).feedback)
     }
@@ -243,8 +253,8 @@ class TileLayoutTest {
         // No title below 225 dp (DESIGN_SPEC §3.6): the feedback is Row A's secondary label for the 10 s.
         val proto = build(WearSamples.tileJustLogged(), sizeDp = 192)
         assertFalse(proto.has("Noa"))
-        assertTrue(proto, proto.has("Both · Undo") || proto.has("Both 14:32 · Undo") || proto.has("Both 14:32"))
-        assertTrue(proto.contains("Pee and poop at 14:32. Tap the tile to undo. Feed."))
+        assertTrue(proto, proto.has("Woke up · Undo") || proto.has("Woke up 14:32 · Undo") || proto.has("Woke up 14:32"))
+        assertTrue(proto.contains("Woke up at 14:32. Tap the tile to undo. Feed."))
         // Without a confirmation Row A says the time since the last feed.
         assertTrue(build(WearSamples.tileIdle(), sizeDp = 192).has("2h 10m ago"))
     }

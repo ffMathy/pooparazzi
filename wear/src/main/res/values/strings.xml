@@ -8,6 +8,7 @@
 
     <!-- Main: idle status block before the first feed is logged -->
     <string name="status_no_feed_yet">No feeds yet</string>
+    <string name="status_no_diaper_yet">No diapers yet</string>
 
     <!-- Pinned EdgeButton guard (DESIGN_SPEC §3.5.2): two centred lines, so keep the line break. -->
     <string name="edge_guard_already_asleep">Already\nasleep</string>
@@ -60,7 +61,7 @@
     <string name="status_since">%1$s %2$s</string>
 
     <!-- ===== Tile (DESIGN_SPEC §3.6, V1_ADDITIONS §2.2) ===== -->
-    <string name="tile_description">Log diapers and sleep in one tap; see the time since the last feed.</string>
+    <string name="tile_description">Log feeds, diapers and sleep; see the time since the last feed and diaper.</string>
     <!-- Title after a tile log: "Pee 14:32" (no "at": the title chord is about 168 dp). %1$s label, %2$s clock time. -->
     <string name="tile_title_logged" translatable="false">%1$s %2$s</string>
     <!-- Title while a sleep runs: "Asleep 1h 07m". %1$s is a duration. -->
@@ -77,9 +78,8 @@
     <!-- Row A. %1$s is spoken time since the last feed ("2 hours 10 minutes ago"). -->
     <string name="tile_cd_feed">Feed. Last feed %1$s</string>
     <string name="tile_cd_feed_none">Feed. No feeds yet</string>
-    <string name="tile_cd_log_pee">Log pee diaper</string>
-    <string name="tile_cd_log_poop">Log poop diaper</string>
-    <string name="tile_cd_log_both">Log both, pee and poop diaper</string>
+    <string name="tile_cd_diaper">Diaper. Last diaper %1$s</string>
+    <string name="tile_cd_diaper_none">Diaper. No diapers yet</string>
 
     <!-- ===== Complications (DESIGN_SPEC §3.7) ===== -->
     <string name="complication_since_feed">Since last feed</string>

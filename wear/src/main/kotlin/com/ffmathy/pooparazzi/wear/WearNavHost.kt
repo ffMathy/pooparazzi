@@ -81,6 +81,9 @@ sealed interface WearDeepLink {
     /** Feed type screen (Tile row A, idle). */
     data object FeedType : WearDeepLink
 
+    /** Diaper screen (Tile row B). */
+    data object Diaper : WearDeepLink
+
     /** Logged for an entry the Tile just wrote, with Undo active at once. */
     data class Logged(val entryId: String) : WearDeepLink
 
@@ -141,6 +144,10 @@ fun WearNavHost(
             WearDeepLink.FeedType -> {
                 viewModel.beginFeed()
                 go(WearRoutes.FEED_TYPE)
+            }
+            WearDeepLink.Diaper -> {
+                viewModel.beginDiaper()
+                go(WearRoutes.DIAPER)
             }
             is WearDeepLink.Logged -> viewModel.openReceipt(deepLink.entryId, fromTile = true)
             WearDeepLink.Today -> go(WearRoutes.TODAY)

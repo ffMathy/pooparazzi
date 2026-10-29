@@ -9,14 +9,10 @@
     <color name="widget_preview_feed_c">#3B2715</color>
     <color name="widget_preview_feed_s">#F2B577</color>
     <color name="widget_preview_feed_on">#FFDCBB</color>
-    <color name="widget_preview_pee_c">#13312C</color>
-    <color name="widget_preview_pee_s">#8FD0C3</color>
-    <color name="widget_preview_pee_on">#BFE9E0</color>
-    <color name="widget_preview_poop_c">#0E2622</color>
-    <color name="widget_preview_poop_s">#358276</color>
-    <color name="widget_preview_poop_on">#A8DCD1</color>
+    <color name="widget_preview_diaper_c">#13312C</color>
+    <color name="widget_preview_diaper_s">#62B3A5</color>
+    <color name="widget_preview_diaper_on">#BFE9E0</color>
     <color name="widget_preview_sleep_c">#222844</color>
     <color name="widget_preview_sleep_s">#7C88C4</color>
     <color name="widget_preview_sleep_on">#D6DBF6</color>
-    <item name="widget_preview_both_icon" type="drawable">@drawable/x_both_night</item>
 </resources>

@@ -1,7 +1,5 @@
 # v1 additions after the mockup review
 
-> **Renamed:** the product is now called **Pooparazzi**. This design document predates the rename and keeps the working name "Xaternity"; in code, read `com.ffmathy.xaternity` as `com.ffmathy.pooparazzi`, `xaternity://` as `pooparazzi://` and `Xaternity*` classes as `Pooparazzi*`.
-
 > **Several babies and the backup:** [`BABIES_AND_BACKUP.md`](BABIES_AND_BACKUP.md) adds several babies (a current baby per device) and an optional account that backs the log up; it wins where it differs from this document (one baby, "phone ↔ watch only").
 
 This document extends [`DESIGN_SPEC.md`](DESIGN_SPEC.md), which stays the source of truth for everything it covers: the Lamp, tokens, typography, icons, formatting grammar, night behaviour and accessibility. This file covers what the user asked for after approving the mockups:
@@ -299,7 +297,7 @@ Baby **Noa**, 7 months. Today is **Mon 26 Oct 2026** and now is **14:32**, in ti
 
 ## 7. Architecture contract
 
-**Package root:** `com.ffmathy.xaternity`. Both apps use `applicationId "com.ffmathy.xaternity"`, which the Wearable Data Layer requires.
+**Package root:** `com.ffmathy.pooparazzi`. Both apps use `applicationId "com.ffmathy.pooparazzi"`, which the Wearable Data Layer requires.
 
 | Module | Namespace | Contents |
 |---|---|---|
@@ -316,7 +314,7 @@ These names are what the apps code against.
 - Extensions: `isInterval`, `isRunning`, `durationMillis(now)`.
 
 **`data/`**
-- Room `XaternityDatabase` and `EntryDao`. Storage is LWW-friendly: `upsert` only replaces a row when the incoming `updatedAtMillis` is ≥ the stored one.
+- Room `PooparazziDatabase` and `EntryDao`. Storage is LWW-friendly: `upsert` only replaces a row when the incoming `updatedAtMillis` is ≥ the stored one.
 - `EntryRepository` (interface) plus `RoomEntryRepository`:
   - `fun observeEntries(): Flow<List<Entry>>`: non-deleted entries.
   - `suspend fun logFeed(type: FeedType?, at: Long, side: BreastSide? = null): Entry`: a feed instant of any type, or an untyped feed (`null`); `side` is the optional side order of a BREAST feed. Deduplicated within 5 s (same type).
