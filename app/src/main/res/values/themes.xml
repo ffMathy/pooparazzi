@@ -8,18 +8,18 @@
     <!-- System splash (DESIGN_SPEC §3.3.8): dark at night, light by day, never always-black. -->
     <style name="Theme.Pooparazzi.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_lamp</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_diaper</item>
         <item name="postSplashScreenTheme">@style/Theme.Pooparazzi</item>
     </style>
 
     <!-- Explicit variants for SplashScreen.setSplashScreenTheme (API 33+), following the app's resolved Appearance. -->
     <style name="Theme.Pooparazzi.Starting.Night">
         <item name="windowSplashScreenBackground">@color/splash_night_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_lamp_night</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_diaper_night</item>
     </style>
 
     <style name="Theme.Pooparazzi.Starting.Day">
         <item name="windowSplashScreenBackground">@color/splash_day_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_lamp_day</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_diaper_day</item>
     </style>
 </resources>

@@ -453,8 +453,8 @@ Feed and diaper are never Live Updates. API details: §10.5.
 
 #### 3.3.8 P7 Splash and app icon
 
-- System splash via a `values-night` colour. Night: `#0C0A08` with the `lamp` glyph in `#E8D8C3`. Day: `#FBF6F0` with `#3A332C`. Never an always-black splash.
-- The app icon's lamp glyph is parchment `#E8D8C3`, not amber (amber means FEED).
+- System splash via a `values-night` colour. Night: `#0C0A08` with the `diaper` glyph in `#E8D8C3`. Day: `#FBF6F0` with `#3A332C`. Never an always-black splash.
+- The app icon's diaper glyph is parchment `#E8D8C3`, not amber (amber means FEED).
 
 ### 3.4 Shared phone rules
 
@@ -825,7 +825,7 @@ Day has no containerLit. The checked Sleep toggle uses SLEEP container + a 2 dp 
 
 | Use | Value |
 |---|---|
-| Splash Night | background `#0C0A08`, `lamp` glyph `#E8D8C3` |
+| Splash Night | background `#0C0A08`, `diaper` glyph `#E8D8C3` |
 | Splash Day | background `#FBF6F0`, glyph `#3A332C` |
 | App icon glyph | `#E8D8C3` |
 | Watch ambient | text, icons and TimeText `#B8A48E`; ring, dot and EdgeButton outline `#7C88C4` |
@@ -1020,7 +1020,7 @@ Each quoted string is one path. All are stroked unless noted.
 | `chevronDown` | | `M6 9.5l6 6 6-6` |
 | `close` | X | `M6 6l12 12` `M18 6 6 18` |
 | `clock` | clock face (backdate, Adjust start, Earlier, time fields) | `M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17z` `M12 7.5V12l3 2` |
-| `lamp` | table lamp (brand glyph, splash, tile header) | `M8.5 3.5h7l3.5 8h-14z` `M12 11.5v6.5` `M8.5 20.5h7` |
+| `lamp` | table lamp (brand glyph, tile header) | `M8.5 3.5h7l3.5 8h-14z` `M12 11.5v6.5` `M8.5 20.5h7` |
 | `awake` | sun with 8 rays | `M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z` `M12 2.5v2` `M12 19.5v2` `M2.5 12h2` `M19.5 12h2` `M5.3 5.3l1.4 1.4` `M17.3 17.3l1.4 1.4` `M5.3 18.7l1.4-1.4` `M17.3 6.7l1.4-1.4` |
 | `sleepRunning` | ring + filled crescent = "a sleep is running" on glance surfaces (widget, tile, complication, notification small icon). Static, no ember, so it cannot go stale | ring (stroked): `M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19z` + crescent (**filled**, no stroke): `M16 13.3A4.25 4.25 0 1 1 10.7 8a3.5 3.5 0 0 0 5.3 5.3z` |
 
