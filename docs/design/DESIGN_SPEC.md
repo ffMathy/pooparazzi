@@ -251,6 +251,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | Diaper just logged | (idle row 1) | "Pee just now" + " · 14:32" |
 
 - Row 2 uses the **kind icon** (`pee` PEE strong, `poop` POOP strong, two-tone `both`), never the generic `diaper`. Its lead starts with the kind word: Pee / Poop / Both.
+- Both rows share one text size: the largest from 18 sp down to 14 sp (0.5 sp steps) at which each fits one line. A row that needs two lines even at 14 sp wraps at that shared size and does not pull the other row down.
 - Measured worst cases: row 1 "Last fed 10h 45m ago · 01:40" = 257.9 dp; row 2 "Poop 10h 45m ago · 03:47" = 231.5 dp.
 - Tap → the edit sheet for that row's latest entry (row 1: the last sleep, or the last feed while asleep; row 2: the last diaper). This is the one-tap correction path.
 
