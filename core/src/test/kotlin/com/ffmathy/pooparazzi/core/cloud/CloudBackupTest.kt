@@ -79,15 +79,31 @@ class CloudBackupTest {
             .also { opened += it }
         val watch = FakeEntrySync()
         val baby = MutableStateFlow(Baby.FIRST_ID)
-        val repo = RoomEntryRepository(db, clock, watch, selectedBaby = baby, cloudBackup = true)
         val account = MutableStateFlow(signedIn)
+
+        /** Flagged for the backend while an account is signed in, as in the app. */
+        val repo = RoomEntryRepository(db, clock, watch, selectedBaby = baby, cloudBackup = { account.value != null })
 
         /**
          * The app's lifetime: on the test's dispatcher, but not the test's background scope, whose work
          * `advanceUntilIdle` does not wait for. Cancelled after the test.
          */
-        private val scope = CoroutineScope(test.coroutineContext + SupervisorJob()).also { scopes += it }
-        val backup = CloudBackup(repo, store, account, bookkeeping, clock, scope, monotonicMillis = { test.testScheduler.currentTime })
+        private var scope = newScope()
+        var backup = newBackup()
+            private set
+
+        private fun newScope() = CoroutineScope(test.coroutineContext + SupervisorJob()).also { scopes += it }
+
+        private fun newBackup() =
+            CloudBackup(repo, store, account, bookkeeping, clock, scope, monotonicMillis = { test.testScheduler.currentTime })
+
+        /** The app starting again: a new backup on the same database and bookkeeping (whatever it kept in memory is lost). */
+        fun restart() {
+            scope.cancel()
+            scope = newScope()
+            backup = newBackup()
+            backup.start()
+        }
 
         suspend fun all(): List<Entry> = repo.observeAllEntries().first()
         suspend fun pending(): List<Entry> = repo.cloudPending(100_000)
@@ -295,7 +311,7 @@ class CloudBackupTest {
     // ---- Pushing ----------------------------------------------------------------------------------
 
     @Test
-    fun aLocalWriteIsPushedAMomentLaterWithoutAPull() = runTest {
+    fun aLocalWriteIsPushedAMomentLaterAfterAPull() = runTest {
         val phone = Phone(this, alice)
         phone.backup.start()
         advanceUntilIdle()
@@ -309,7 +325,7 @@ class CloudBackupTest {
         advanceTimeBy(1_000)
         runCurrent()
         assertEquals(feed, store.entries(alice.uid)[feed.id])
-        assertEquals(pulls, store.pulls)
+        assertEquals("every sync pulls before it pushes: one read when nothing is new", pulls + 1, store.pulls)
 
         // Writes in quick succession go up together.
         val uploads = store.uploads.size
@@ -393,7 +409,7 @@ class CloudBackupTest {
         phone.backup.start()
         advanceUntilIdle()
         assertEquals("a refused write", CloudStatus.Error, phone.status)
-        assertEquals("pulled, but nothing sent", 1 to listOf(feed), store.pulls to phone.pending())
+        assertEquals("pulled (at sign-in, and again before the push a moment later), but nothing sent", 2 to listOf(feed), store.pulls to phone.pending())
 
         store.uploadFailure = null
         store.failure = CloudError.SIGNED_OUT
@@ -417,8 +433,42 @@ class CloudBackupTest {
         advanceUntilIdle()
         assertEquals(CloudStatus.Off, phone.status)
         assertEquals(0 to 0, store.pulls to store.uploads.size)
-        assertEquals(1, phone.pending().size)
+        assertTrue("signed out, nothing is pending for a backend", phone.pending().isEmpty())
         assertFalse(phone.backup.deleteBackup())
+    }
+
+    @Test
+    fun withoutAnAccountDeletedRowsArePurged() = runTest {
+        val phone = Phone(this)
+        phone.backup.start()
+        val feed = phone.repo.logFeed(FeedType.FOOD, now - minute)
+        phone.repo.delete(feed.id)
+        advanceUntilIdle()
+        clock.advanceBy(EntryRules.SOFT_DELETE_RETENTION_MILLIS + minute)
+        assertEquals("purged as without a backend", 1, phone.repo.purgeDeleted())
+
+        // Signed in once, then out: what was waiting to go up is not waited for any more.
+        phone.account.value = alice
+        advanceUntilIdle()
+        store.failure = CloudError.OFFLINE
+        val diaper = phone.repo.logDiaper(now - minute, pee = true, poop = false)
+        phone.repo.delete(diaper.id)
+        advanceUntilIdle()
+        assertEquals(CloudStatus.Offline, phone.status)
+        phone.account.value = null
+        advanceUntilIdle()
+        assertTrue(phone.pending().isEmpty())
+        clock.advanceBy(EntryRules.SOFT_DELETE_RETENTION_MILLIS + minute)
+        assertEquals(1, phone.repo.purgeDeleted())
+
+        // Signing in again backs up everything (the first sync for the account again), from the start of the backup.
+        store.failure = null
+        val later = phone.repo.logFeed(FeedType.FORMULA, now - minute)
+        phone.account.value = alice
+        advanceUntilIdle()
+        assertEquals(CloudStatus.Synced(now), phone.status)
+        assertEquals(later, store.entries(alice.uid)[later.id])
+        assertTrue(phone.pending().isEmpty())
     }
 
     @Test
@@ -452,16 +502,15 @@ class CloudBackupTest {
 
         assertTrue(phone.backup.deleteBackup())
         assertTrue(store.entries(alice.uid).isEmpty())
-        assertEquals("nothing is backed up any more", CloudStatus.Error, phone.status)
+        assertEquals("nothing is backed up any more", CloudStatus.Deleted, phone.status)
         // Between deleting the data and deleting the account, nothing goes up again.
         val b = phone.repo.logFeed(FeedType.FOOD, now - 20 * minute)
         advanceUntilIdle()
         advanceTimeBy(CloudBackup.PULL_INTERVAL_MILLIS)
         phone.backup.requestSync()
-        phone.backup.syncNow()
         advanceUntilIdle()
         assertTrue(store.entries(alice.uid).isEmpty())
-        assertEquals("Back up now says so too", CloudStatus.Error, phone.status)
+        assertEquals(CloudStatus.Deleted, phone.status)
 
         // Should the account deletion fail and the parent sign in again, everything is backed up again.
         phone.account.value = null
@@ -469,6 +518,30 @@ class CloudBackupTest {
         phone.account.value = alice
         advanceUntilIdle()
         assertEquals(setOf(a.id, b.id), store.entries(alice.uid).keys)
+        assertEquals(CloudStatus.Synced(now), phone.status)
+    }
+
+    @Test
+    fun aDeletedBackupStaysDeletedAfterARestartUntilBackUpNow() = runTest {
+        val phone = Phone(this, alice)
+        val a = phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        phone.backup.start()
+        advanceUntilIdle()
+        assertTrue(phone.backup.deleteBackup())
+        assertEquals(alice.uid, phone.bookkeeping.values.deletedUid)
+
+        // The account deletion failed, and the app is started again later, still signed in: nothing goes up by itself.
+        val b = phone.repo.logFeed(FeedType.FOOD, now - 20 * minute)
+        phone.restart()
+        advanceUntilIdle()
+        assertTrue(store.entries(alice.uid).isEmpty())
+        assertEquals(CloudStatus.Deleted, phone.status)
+
+        // "Back up now" is the parent asking for it: everything is backed up again.
+        phone.backup.syncNow()
+        assertEquals(setOf(a.id, b.id), store.entries(alice.uid).keys)
+        assertEquals(CloudStatus.Synced(now), phone.status)
+        assertNull(phone.bookkeeping.values.deletedUid)
     }
 
     @Test
@@ -492,7 +565,7 @@ class CloudBackupTest {
     // ---- Review fixes -----------------------------------------------------------------------------
 
     @Test
-    fun aStaleUploadFromAnotherPhoneIsOverwrittenAgainAndBothPhonesConverge() = runTest {
+    fun aPushPullsFirstSoAnOlderEditNeverOverwritesANewerOne() = runTest {
         val a = Phone(this, alice)
         val b = Phone(this, alice)
         val feed = a.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
@@ -504,7 +577,7 @@ class CloudBackupTest {
 
         // Phone A edits the feed while offline.
         store.failure = CloudError.OFFLINE
-        val stale = a.repo.update(feed.copy(startMillis = now - 31 * minute))
+        a.repo.update(feed.copy(startMillis = now - 31 * minute))
         advanceUntilIdle()
         assertEquals(CloudStatus.Offline, a.status)
 
@@ -515,20 +588,13 @@ class CloudBackupTest {
         advanceUntilIdle()
         assertEquals(newer, store.entries(alice.uid)[feed.id])
 
-        // Phone A comes back and pushes (no pull) its older edit over B's: the upload is a blind overwrite.
-        a.repo.logDiaper(now - minute, pee = true, poop = false)
-        advanceUntilIdle()
-        assertEquals(stale, store.entries(alice.uid)[feed.id])
-
-        // B's next pull sees the backend's version lose to its own, and sends its own again; A then pulls it.
-        advanceTimeBy(CloudBackup.PULL_INTERVAL_MILLIS)
-        b.backup.requestSync()
+        // Phone A comes back: the push after its next write pulls B's newer edit first, so A's older one is never sent.
+        val diaper = a.repo.logDiaper(now - minute, pee = true, poop = false)
         advanceUntilIdle()
         assertEquals(newer, store.entries(alice.uid)[feed.id])
-        a.backup.requestSync()
-        advanceUntilIdle()
         assertEquals(newer, a.repo.get(feed.id))
-        assertEquals(newer, b.repo.get(feed.id))
+        assertEquals("only the diaper went up", listOf(diaper.id), store.uploads.last())
+        assertEquals(CloudStatus.Synced(now), a.status)
         assertTrue(a.pending().isEmpty())
         assertTrue(b.pending().isEmpty())
     }

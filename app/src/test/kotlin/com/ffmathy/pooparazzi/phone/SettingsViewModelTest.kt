@@ -199,6 +199,25 @@ class SettingsViewModelTest : CoreTestBase() {
         assertEquals(Settings.MAX_BABIES, vm.state.value!!.babies.size)
         assertFalse("the pill is hidden at the cap", vm.state.value!!.canAddBaby)
     }
+
+    /** A watch from before several babies would resolve conflicts across them: no second baby until it is updated. */
+    @Test
+    fun anOldWatchKeepsAddABabyDisabled() = coreTest { core ->
+        val vm = SettingsViewModel(
+            core.settings, NoopEntrySync, LocaleApplier { applied += it }, backgroundScope, versionName = "0.1.0",
+            watchNeedsUpdate = { true },
+        ).also { core.collect(it.state) }
+        runCurrent()
+        val state = vm.state.value!!
+        assertTrue(state.watchNeedsUpdate)
+        assertTrue("shown, but disabled", state.canAddBaby)
+        vm.onAddBaby()
+        runCurrent()
+        assertEquals("nothing is added", 1, core.settings.current().babies.size)
+
+        // An up-to-date watch (or none): as before.
+        assertFalse(settings(core).state.value!!.watchNeedsUpdate)
+    }
 }
 
 /** Settings › Account (BABIES_AND_BACKUP §3.2). */

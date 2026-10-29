@@ -55,6 +55,7 @@
     <string name="settings_section_babies">Børn</string>
     <string name="settings_baby_field">Navn</string>
     <string name="settings_add_baby">Tilføj et barn</string>
+    <string name="settings_add_baby_watch_update">Opdatér Pooparazzi på dit ur først.</string>
     <string name="settings_babies_hint">Navnene bliver på telefonen og dit ur. De bliver aldrig sendt op.</string>
     <string name="settings_appearance_hint">Auto bruger Nat om aftenen og natten, mens barnet sover, og når telefonen bruger mørkt tema.</string>
     <string name="settings_section_watch">Ur</string>
@@ -104,6 +105,7 @@
     <string name="account_status_synced">Backup taget · %1$s</string>
     <string name="account_status_offline">Gemt på telefonen · tager backup senere</string>
     <string name="account_status_error">Kunne ikke tage backup · Tryk for at prøve igen</string>
+    <string name="account_status_deleted">Backup slettet · Tag backup nu for at starte igen</string>
     <string name="account_unavailable">Backup er ikke sat op i denne version. Alt gemmes på denne telefon.</string>
     <string name="welcome_title">Din log bliver på denne telefon</string>
     <string name="welcome_body_local">Uden en konto gemmes alt, hvad du registrerer, kun på denne telefon og dit ur. Hvis telefonen bliver væk eller nulstilles, forsvinder loggen med den.</string>
@@ -124,6 +126,7 @@
     <string name="account_error_email_in_use">Den e-mail har allerede en konto</string>
     <string name="account_error_weak_password">Brug mindst 6 tegn</string>
     <string name="account_error_no_connection">Ingen forbindelse. Prøv igen.</string>
+    <string name="account_error_timed_out">Intet svar endnu. Det kan stadig gå igennem om lidt.</string>
     <string name="account_error_too_many">For mange forsøg. Vent lidt, og prøv igen.</string>
     <string name="account_error_no_google">Ingen Google-konto på denne telefon. Tilføj en i systemindstillingerne, eller brug e-mail.</string>
     <string name="account_error_recent_login">Log ind igen for at slette din konto.</string>

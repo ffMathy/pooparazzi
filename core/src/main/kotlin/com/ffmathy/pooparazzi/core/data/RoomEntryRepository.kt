@@ -45,7 +45,8 @@ import java.io.IOException
  * that version. A slow push of an older version can therefore never land after a newer one and leave the
  * Data Layer holding stale data with nothing left to retry.
  *
- * With [cloudBackup], rows also carry `cloudPending` for the backend (BABIES_AND_BACKUP §4.2):
+ * While [cloudBackup] says so (an account is signed in), rows also carry `cloudPending` for the backend
+ * (BABIES_AND_BACKUP §4.2):
  *
  * | Write | `pendingSync` (other device) | `cloudPending` (backend) |
  * |---|---|---|
@@ -58,8 +59,9 @@ import java.io.IOException
  * @param syncScope where pushes run. Null pushes inline before the call returns (deterministic for tests).
  * @param selectedBaby the id of the device's current baby (`Settings.selectedBaby`). Writes read it when they run;
  *   [observeEntries] follows it.
- * @param cloudBackup true in a phone build with a backend: local writes and merges from the other device are then
- *   flagged for upload.
+ * @param cloudBackup true while an account is signed in (a phone build with a backend): local writes and merges from
+ *   the other device are then flagged for upload. Read on every write, so it must be cheap. Signed out, nothing is
+ *   flagged, so soft deletes are purged as without a backend; the first sync for an account flags everything.
  */
 class RoomEntryRepository(
     private val database: PooparazziDatabase,
@@ -67,7 +69,7 @@ class RoomEntryRepository(
     private val sync: EntrySync = NoopEntrySync,
     private val syncScope: CoroutineScope? = null,
     private val selectedBaby: Flow<String> = flowOf(Baby.FIRST_ID),
-    private val cloudBackup: Boolean = false,
+    private val cloudBackup: () -> Boolean = { false },
 ) : EntryRepository {
 
     private val dao = database.entryDao()
@@ -292,6 +294,11 @@ class RoomEntryRepository(
         dao.markAllCloudPending()
     }
 
+    /** Clears every row's backend flag: signed out, nothing is pending for any backend (and soft deletes can go). */
+    suspend fun clearCloudPending() {
+        dao.clearAllCloudPending()
+    }
+
     /** How many rows the backend lacks. */
     fun observeCloudPendingCount(): Flow<Int> = dao.observeCloudPending().map { it.count }.distinctUntilChanged()
 
@@ -364,7 +371,7 @@ class RoomEntryRepository(
             kept,
             pendingSync = fromCloud,
             createdLocally = false,
-            cloudPending = !fromCloud && cloudBackup,
+            cloudPending = !fromCloud && cloudBackup(),
         )
         return when {
             dao.upsert(incoming) -> if (stored == null) Merge.INSERTED else Merge.UPDATED
@@ -373,7 +380,7 @@ class RoomEntryRepository(
                     // The backend holds exactly this row's version: nothing is left to upload. Otherwise the stored row
                     // beats the backend's version (an older one, or a tie it loses), so the backend must get it again,
                     // or the backup and the other phones keep the losing version for good.
-                    val cloudPending = stored.toEntry() != kept && cloudBackup
+                    val cloudPending = stored.toEntry() != kept && cloudBackup()
                     if (stored.cloudPending != cloudPending) dao.write(stored.copy(cloudPending = cloudPending))
                 }
                 Merge.SKIPPED
@@ -394,7 +401,7 @@ class RoomEntryRepository(
                 entry,
                 pendingSync = true,
                 createdLocally = stored?.createdLocally ?: true,
-                cloudPending = cloudBackup,
+                cloudPending = cloudBackup(),
             ),
         )
     }
@@ -484,7 +491,7 @@ class RoomEntryRepository(
                     deleted = true,
                     updatedAtMillis = nextStamp(row.updatedAtMillis),
                     pendingSync = true,
-                    cloudPending = cloudBackup,
+                    cloudPending = cloudBackup(),
                 ),
             )
         }

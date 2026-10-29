@@ -11,6 +11,7 @@ import com.ffmathy.pooparazzi.core.data.EndResult
 import com.ffmathy.pooparazzi.core.data.EntryRepository
 import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.LogResult
+import com.ffmathy.pooparazzi.core.data.observeCurrentLog
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
@@ -87,14 +88,19 @@ class HomeViewModel(
      */
     val timerStarted: Flow<Unit> = timerStarts.receiveAsFlow()
 
-    /** Null until the entries and settings have loaded, so Home never flashes an empty "No feeds yet" state. */
+    /**
+     * Null until the entries and settings have loaded, so Home never flashes an empty "No feeds yet" state. The settings
+     * and the baby's entries come as one ([observeCurrentLog]), so a switch of baby never shows the previous baby's log
+     * under the new baby's name.
+     */
     val state: StateFlow<HomeUiState?> = combine(
-        repository.observeEntries(),
-        settings.settings,
+        repository.observeCurrentLog(settings.settings),
         sync.status,
         now,
         combine(card, sheet, switchingBaby) { c, s, sw -> Triple(c, s, sw) },
-    ) { entries, s, syncStatus, _, (c, sh, sw) ->
+    ) { log, syncStatus, _, (c, sh, sw) ->
+        val entries = log.entries
+        val s = log.settings
         // [now] only re-runs this each minute; the time itself is read fresh, so an entry written elsewhere within the
         // current minute (the watch, a widget, the lock-screen notification) shows at once instead of at the next tick.
         HomeStateBuilder.build(

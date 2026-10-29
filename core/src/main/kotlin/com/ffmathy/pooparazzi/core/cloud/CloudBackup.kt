@@ -22,19 +22,23 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * The backup of the log to the signed-in account's [store] (BABIES_AND_BACKUP §4.3–4.4).
  *
- * A sync runs whenever an account is signed in, one at a time:
+ * A sync runs whenever an account is signed in, one at a time, and always pulls before it pushes:
  *
- * 1. The first sync for an account on this device (or for another account than the last) flags every row for upload
- *    ("everything logged so far is backed up") and always pulls first, so rows the backend already holds unchanged are
- *    cleared again and only differences are uploaded.
- * 2. **Pull** (when asked): pages of changes after the stored cursor, merged into the database (last-writer-wins and
- *    the per-baby conflict rules, forwarded to the watch). The cursor is stored after each page, so an interrupted pull
- *    resumes where it stopped.
+ * 1. The first sync for an account on this device (or for another account than the last, or after signing out) flags
+ *    every row for upload ("everything logged so far is backed up") and pulls from the start, so rows the backend
+ *    already holds unchanged are cleared again and only differences are uploaded.
+ * 2. **Pull**: pages of changes after the stored cursor, merged into the database (last-writer-wins and the per-baby
+ *    conflict rules, forwarded to the watch). The cursor is stored after each page, so an interrupted pull resumes
+ *    where it stopped. Pulling first means a newer version another phone backed up is merged before this phone sends
+ *    its own: an upload is a plain overwrite, and would otherwise put an older version over it.
  * 3. **Push**: the current version of the pending rows, in batches; each row is cleared unless written again meanwhile.
  *
- * Syncs run when an account signs in, on [requestSync] (the app in the foreground, at most one pull a
- * minute) and [syncNow], and as a push alone [pushDelayMillis] after a write leaves rows pending. Nothing keeps a
- * listener open on the backend: a pull with nothing new costs one read.
+ * Syncs run when an account signs in, on [requestSync] (the app in the foreground, at most once a minute) and
+ * [syncNow], and [pushDelayMillis] after a write leaves rows pending. Nothing keeps a listener open on the backend: a
+ * pull with nothing new costs one read.
+ *
+ * Rows are flagged for the backend only while an account is signed in (the repository asks [account]); signing out
+ * clears every flag, so soft deletes are purged as without a backup, and the next sign-in flags everything again (1.).
  *
  * Nothing here throws: failures become [status] ([CloudError.OFFLINE] → [CloudStatus.Offline] and so on) and the rows
  * stay pending for the next sync.
@@ -66,10 +70,6 @@ class CloudBackup(
     /** When the last pull started ([monotonicMillis]); guarded by [pullLock]. */
     private var lastPullAt: Long? = null
 
-    /** The account whose backup was deleted: nothing more is uploaded for it until the account changes. */
-    @Volatile
-    private var deletedUid: String? = null
-
     override fun start() {
         if (!started.compareAndSet(false, true)) return
         scope.launch { followAccount() }
@@ -78,12 +78,12 @@ class CloudBackup(
 
     override suspend fun syncNow() {
         // In the backup's own scope: leaving the screen that asked must not cut a sync short.
-        scope.launch { sync(pull = true) }.join()
+        scope.launch { sync(backUpAgain = true) }.join()
     }
 
     override fun requestSync() {
-        val pull = claimPull()
-        scope.launch { sync(pull) }
+        if (!claimPull()) return
+        scope.launch { sync() }
     }
 
     override suspend fun deleteBackup(): Boolean = scope.async {
@@ -93,9 +93,10 @@ class CloudBackup(
                 // Forgotten first: should the deletion stop halfway, a later sync for this account backs up everything.
                 bookkeeping.update { it.forget(uid) }
                 store.deleteAll(uid)
-                deletedUid = uid
+                // Kept on disk: should the account deletion fail and the app restart, nothing goes up again by itself.
+                bookkeeping.update { it.copy(deletedUid = uid) }
                 // Nothing is backed up for this account any more: the status must not keep saying it is.
-                if (account.value?.uid == uid) state.value = CloudStatus.Error
+                if (account.value?.uid == uid) state.value = CloudStatus.Deleted
                 true
             }
         } catch (e: CancellationException) {
@@ -109,21 +110,44 @@ class CloudBackup(
     /** Shows where the account stands and starts a full sync whenever one signs in. */
     private suspend fun followAccount() {
         account.map { it?.uid }.distinctUntilChanged().collect { uid ->
-            if (uid != deletedUid) deletedUid = null
             if (uid == null) {
                 state.value = CloudStatus.Off
             } else {
                 lastSyncOf(uid)?.let { state.value = CloudStatus.Synced(it) }
                 claimPull()
-                scope.launch { sync(pull = true) }
+            }
+            // The bookkeeping first, under the sync lock, so the sync after it sees the account as it now is.
+            scope.launch {
+                mutex.withLock { accountChanged(uid) }
+                if (uid != null) sync()
             }
         }
     }
 
     /**
-     * Pushes [pushDelayMillis] after the last write that left rows pending, while an account is signed in. Every write
+     * Another account, or nobody, is signed in now: a deleted backup of an account no longer signed in is no reason to
+     * hold anything back any more. Signed out, nothing is pending for any backend: the flags are cleared (so deleted rows
+     * can be purged), and the next sign-in counts as the first and flags everything again. Call with [mutex] held.
+     */
+    private suspend fun accountChanged(uid: String?) {
+        try {
+            bookkeeping.update { values ->
+                val kept = values.deletedUid?.takeIf { it == uid }
+                if (uid == null) values.copy(deletedUid = kept, fullUploadUid = null) else values.copy(deletedUid = kept)
+            }
+            if (uid == null && account.value == null) repository.clearCloudPending()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not update the backup's bookkeeping", e)
+        }
+    }
+
+    /**
+     * Syncs [pushDelayMillis] after the last write that left rows pending, while an account is signed in. Every write
      * to a pending row counts, also one that leaves their number as it was (ending a sleep that is still waiting to go
-     * up, or a row written again while its upload was on its way).
+     * up, or a row written again while its upload was on its way). It pulls first like every sync (one read when
+     * nothing is new), so the upload never puts this phone's older version over a newer one in the backup.
      */
     @OptIn(FlowPreview::class)
     private suspend fun followPending() {
@@ -131,7 +155,7 @@ class CloudBackup(
             if (pending.count > 0 && signedIn != null) pending to signedIn.uid else null
         }
             .debounce(pushDelayMillis)
-            .collect { due -> if (due != null) sync(pull = false) }
+            .collect { due -> if (due != null) sync() }
     }
 
     private suspend fun lastSyncOf(uid: String): Long? = try {
@@ -151,9 +175,10 @@ class CloudBackup(
         due
     }
 
-    private suspend fun sync(pull: Boolean) {
+    /** One sync; [backUpAgain] ("Back up now") also backs up an account whose backup was deleted. */
+    private suspend fun sync(backUpAgain: Boolean = false) {
         try {
-            mutex.withLock { syncLocked(pull) }
+            mutex.withLock { syncLocked(backUpAgain) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -162,32 +187,14 @@ class CloudBackup(
     }
 
     /** One sync for the current account. Call with [mutex] held. */
-    private suspend fun syncLocked(pull: Boolean) {
+    private suspend fun syncLocked(backUpAgain: Boolean) {
         val uid = account.value?.uid
         if (uid == null) {
             state.value = CloudStatus.Off
             return
         }
-        if (uid == deletedUid) {
-            // Its backup was deleted: nothing goes up for it again, and the status says nothing is backed up.
-            state.value = CloudStatus.Error
-            return
-        }
-        state.value = CloudStatus.Syncing
         val outcome = try {
-            val firstForAccount = bookkeeping.get().fullUploadUid != uid
-            if (firstForAccount) {
-                // Flagged before anything is sent, so an interrupted first sync leaves the rows pending.
-                repository.markAllForCloud()
-                // Pulled from the start: a cursor this device kept for the account from an earlier time would skip the
-                // unchanged documents, so nothing would be cleared and the whole log would go up again.
-                bookkeeping.update { it.copy(fullUploadUid = uid, cursorUid = uid, cursor = null) }
-            }
-            if (pull || firstForAccount) pull(uid)
-            push(uid)
-            val now = clock.now()
-            bookkeeping.update { it.copy(lastSyncUid = uid, lastSyncAtMillis = now) }
-            CloudStatus.Synced(now)
+            syncAccount(uid, backUpAgain)
         } catch (e: CancellationException) {
             throw e
         } catch (e: CloudException) {
@@ -199,6 +206,29 @@ class CloudBackup(
         }
         // A sync that outlived its account (signed out meanwhile) says nothing about the new one.
         if (account.value?.uid == uid) state.value = outcome
+    }
+
+    /** Pulls and pushes for [uid], unless its backup was deleted; returns the status to show. */
+    private suspend fun syncAccount(uid: String, backUpAgain: Boolean): CloudStatus {
+        if (bookkeeping.get().isDeleted(uid)) {
+            // Its backup was deleted: nothing goes up for it again by itself, and the status says so.
+            if (!backUpAgain) return CloudStatus.Deleted
+            bookkeeping.update { it.copy(deletedUid = null) }
+        }
+        state.value = CloudStatus.Syncing
+        val firstForAccount = bookkeeping.get().fullUploadUid != uid
+        if (firstForAccount) {
+            // Flagged before anything is sent, so an interrupted first sync leaves the rows pending.
+            repository.markAllForCloud()
+            // Pulled from the start: a cursor this device kept for the account from an earlier time would skip the
+            // unchanged documents, so nothing would be cleared and the whole log would go up again.
+            bookkeeping.update { it.copy(fullUploadUid = uid, cursorUid = uid, cursor = null) }
+        }
+        pull(uid)
+        push(uid)
+        val now = clock.now()
+        bookkeeping.update { it.copy(lastSyncUid = uid, lastSyncAtMillis = now) }
+        return CloudStatus.Synced(now)
     }
 
     /** Merges every change after the stored cursor, a page at a time. */

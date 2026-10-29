@@ -18,6 +18,7 @@ import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.EntrySync
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
+import com.ffmathy.pooparazzi.core.sync.WatchVersionCheck
 import com.ffmathy.pooparazzi.phone.BuildConfig
 import com.ffmathy.pooparazzi.phone.account.Accounts
 import com.ffmathy.pooparazzi.phone.account.AppAccounts
@@ -59,6 +60,8 @@ sealed interface AccountSummary {
  *   stored name.
  * @property account what Settings › Account says (BABIES_AND_BACKUP §3.2).
  * @property canAddBaby false at [Settings.MAX_BABIES] (the "Add a baby" pill is hidden then).
+ * @property watchNeedsUpdate the paired watch runs a version from before several babies: "Add a baby" is disabled, with
+ *   "Update Pooparazzi on your watch first." under it.
  */
 @Immutable
 data class SettingsUiState(
@@ -70,6 +73,7 @@ data class SettingsUiState(
     val versionName: String,
     val account: AccountSummary = AccountSummary.Unavailable,
     val canAddBaby: Boolean = babies.size < Settings.MAX_BABIES,
+    val watchNeedsUpdate: Boolean = false,
 )
 
 /** Everything the parent can do in Settings. Defaults do nothing, so previews and screenshots can pass [None]. */
@@ -106,6 +110,8 @@ interface SettingsActions {
  * [settings] (so it syncs to the watch) and applied through [locales].
  *
  * @param writeScope outlives this view model, so a pending name write still lands after the screen closed.
+ * @param watchNeedsUpdate whether the paired watch runs a version from before several babies
+ *   ([com.ffmathy.pooparazzi.core.sync.WatchVersionCheck]); asked once, when Settings opens.
  */
 class SettingsViewModel(
     private val settings: SettingsRepository,
@@ -117,7 +123,11 @@ class SettingsViewModel(
     private val versionName: String = BuildConfig.VERSION_NAME,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val nameDebounceMillis: Long = NAME_DEBOUNCE_MILLIS,
+    private val watchNeedsUpdate: suspend () -> Boolean = { false },
 ) : ViewModel(), SettingsActions {
+
+    /** An old watch would resolve conflicts across babies: no second baby until it is updated. */
+    private val oldWatch = MutableStateFlow(false)
 
     /** What each touched field shows, by baby id. */
     private val nameDrafts = MutableStateFlow<Map<String, String>>(emptyMap())
@@ -141,7 +151,7 @@ class SettingsViewModel(
         }
     }
 
-    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, nameDrafts, account) { s, status, drafts, account ->
+    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, nameDrafts, account, oldWatch) { s, status, drafts, account, old ->
         SettingsUiState(
             babies = s.babies.map { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
             appearance = s.appearance,
@@ -150,8 +160,13 @@ class SettingsViewModel(
             zone = zone,
             versionName = versionName,
             account = account,
+            watchNeedsUpdate = old,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    init {
+        viewModelScope.launch { oldWatch.value = watchNeedsUpdate() }
+    }
 
     override fun onBabyNameChange(id: String, name: String) {
         val limited = name.take(Settings.MAX_BABY_NAME_LENGTH)
@@ -170,6 +185,7 @@ class SettingsViewModel(
     }
 
     override fun onAddBaby() {
+        if (oldWatch.value) return
         viewModelScope.launch { settings.addBaby() }
     }
 
@@ -209,7 +225,12 @@ class SettingsViewModel(
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                SettingsViewModel(Core.settings, Core.sync, AppLocales, Core.graph.scope, AppAccounts.accounts, Core.cloud)
+                val app = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
+                val watch = WatchVersionCheck.create(app)
+                SettingsViewModel(
+                    Core.settings, Core.sync, AppLocales, Core.graph.scope, AppAccounts.accounts, Core.cloud,
+                    watchNeedsUpdate = watch::needsUpdate,
+                )
             }
         }
     }

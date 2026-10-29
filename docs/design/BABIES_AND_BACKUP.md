@@ -54,7 +54,7 @@ Two things span all babies, because a parent must not lose sight of a sleeping b
 
 ### 2.4 Phone UI
 
-- **Settings › Babies** (replaces Settings › Baby). One name field per baby (label "Name", placeholder its label), saved as typed as before (500 ms after the last keystroke, at once on Done). Under them an "Add a baby" pill (hidden at 8), and the hint "Names stay on this phone and your watch. They're never uploaded." Adding does not switch the current baby.
+- **Settings › Babies** (replaces Settings › Baby). One name field per baby (label "Name", placeholder its label), saved as typed as before (500 ms after the last keystroke, at once on Done). Under them an "Add a baby" pill (hidden at 8), and the hint "Names stay on this phone and your watch. They're never uploaded." Adding does not switch the current baby. While a paired watch runs a Pooparazzi from before several babies, the pill is disabled with "Update Pooparazzi on your watch first." under it: such a watch ignores baby ids and resolves conflicts across all babies (it would soft-delete one twin's running sleep, or a diaper changed seconds after the other twin's, as a duplicate). Both apps advertise the Wearable capability `pooparazzi_babies` beside `pooparazzi_tracker`; a node with the second but not the first is such a watch. With one baby nothing else changes.
 - **Home's top bar** (two or more babies). The name becomes a 48 dp button with a 16 dp `chevronDown`; it opens the **Switch baby** sheet: one 56 dp radio row per baby (its label), the current one selected. A tap selects that baby, plays SegmentTick and closes the sheet. Switching closes any open card (its Undo belongs to the other baby) and resets the double-toggle guard. In lights-down the button follows the name's colours.
 - **History** shows the current baby's label under its title when there are two or more.
 - **Widgets.** They log for the phone's current baby, and their Feed and Diaper buttons open the app's sheets for that baby. The 4×2 widget's status row starts with the baby's label when there are two or more; every widget (the 4×2, the 3×1 and the cover-screen widget) names the baby in its TalkBack descriptions. A receipt belongs to the baby it was made for and is dropped when the current baby changes.
@@ -91,13 +91,14 @@ The first Settings section. One row that opens the **Account** screen, whose sum
 | Backed up | email · "Backed up · 14:31" |
 | Offline | email · "Saved on phone · will back up" |
 | Error | email · "Couldn't back up · Tap to retry" (a tap also backs up again) |
+| Backup deleted, account not (§3.3) | email · "Backup deleted · Back up now to start again" (a tap opens the Account screen only) |
 | No Firebase configuration in this build | (not tappable) "Backup isn't set up in this build. Everything is saved on this phone." |
 
 ### 3.3 Account screen
 
-- **Signed out:** the explanation of §3.1, "Continue with Google" first (one tap, no password), then "or use email": a Sign in / Create account choice, email and password fields, the main button, "Forgot password?" (sign in; sends a reset link to the typed address), and errors in words ("Wrong email or password", "That email already has an account", "Use at least 6 characters", "No connection. Try again.").
+- **Signed out:** the explanation of §3.1, "Continue with Google" first (one tap, no password), then "or use email": a Sign in / Create account choice, email and password fields, the main button, "Forgot password?" (sign in; sends a reset link to the typed address), and errors in words ("Wrong email or password", "That email already has an account", "Use at least 6 characters", "No connection. Try again."). A call without an answer within 30 s says "No answer yet. It may still go through in a moment.": Firebase keeps trying, and should the sign-in go through after all, the screen follows the account (signed in, the error gone).
 - **Create account** creates the account and signs in; the backup starts at once. There is no invitation and no email confirmation step.
-- **Signed in:** the address, the backup status line, "Back up now", "Sign out", and "Delete account…". That opens a "Delete account?" confirmation in place on the screen (not a separate dialog window, so the password field behaves like the rest of the screen; Back cancels it): it says what is deleted and that the log on this phone stays, then asks to sign in again — the password, or for a Google account just "Delete", which opens Google's account picker. It then deletes the backup and the account. If the backup cannot be deleted, the account is kept and it says so (the next sync completes the backup again); if the backup was deleted but the account was not, it says exactly that, and trying again finishes the job. Closing Google's picker is not an error and says nothing. Account deletion inside the app is a Google Play requirement.
+- **Signed in:** the address, the backup status line, "Back up now", "Sign out", and "Delete account…". That opens a "Delete account?" confirmation in place on the screen (not a separate dialog window, so the password field behaves like the rest of the screen; Back cancels it): it says what is deleted and that the log on this phone stays, then asks to sign in again — the password, or for a Google account just "Delete", which opens Google's account picker. It then deletes the backup and the account. If the backup cannot be deleted, the account is kept and it says so (the next sync completes the backup again); if the backup was deleted but the account was not, it says exactly that, and trying again finishes the job. Until then nothing is uploaded for the account, also after the app restarts (the phone remembers it), and the status line says "Backup deleted · Back up now to start again"; "Back up now", or signing out or in to another account, ends that. Closing Google's picker is not an error and says nothing. Account deletion inside the app is a Google Play requirement.
 - Signing out keeps the log on the phone. Signing in to an account merges the phone's log with the account's backup (nothing is lost on either side) and uploads the phone's entries.
 
 ## 4. Sync with the backend
@@ -116,26 +117,26 @@ Each local row has a second pending flag beside the Data Layer's `pendingSync`: 
 
 | Write | `pendingSync` (watch) | `cloudPending` (backend) |
 |---|---|---|
-| Local write on this device | true | true (phone builds with a backend), else false |
-| Merged from the other device (Data Layer) | false | true (phone builds with a backend), else false |
+| Local write on this device | true | true while an account is signed in, else false |
+| Merged from the other device (Data Layer) | false | true while an account is signed in, else false |
 | Merged from the backend | true | false |
 | A row identical to the backend's version | unchanged | cleared |
 
-A soft-deleted row is purged only when both flags are clear. The first time a device syncs for an account (or for a different account than before), every row is marked `cloudPending`: that is the "everything logged so far is backed up". The download that runs first clears the flag on rows the backend already holds unchanged, so signing in again on the same phone uploads only differences.
+A soft-deleted row is purged only when both flags are clear. Without an account nothing is flagged, so deletes are purged as before; signing out clears every flag. The first time a device syncs for an account (for a different account than before, or after signing out), every row is marked `cloudPending`: that is the "everything logged so far is backed up". The download that runs first starts at the beginning of the backup and clears the flag on rows the backend already holds unchanged, so signing in again on the same phone uploads only differences.
 
 ### 4.3 A sync
 
-One at a time, never throwing:
+One at a time, never throwing, and always a pull before a push:
 
 1. Signed out → status Off.
 2. **Pull:** page through `users/{uid}/entries` ordered by (`syncedAt`, document id), starting after the stored cursor, 500 per page. Merge each page into the database (last-writer-wins, per-baby conflict rules, forwarded to the watch), then store the cursor of its last document. A document that does not decode (or whose entry id is not its document id) is skipped; one without a server time yet (this phone's own write still in flight) is skipped too, and the cursor stops before it so it is read once it has one.
-3. **Push:** upload the current version of `cloudPending` rows in batches of up to 400 writes, each with `syncedAt` set by the server; clear the flag of each row that was not written again meanwhile.
-4. Status Backed up (time), or Offline / Error. Every backend call gives up after 30 s and counts as Offline, so a phone without a connection never waits on a sync.
+3. **Push:** upload the current version of `cloudPending` rows in batches of up to 400 writes, each with `syncedAt` set by the server; clear the flag of each row that was not written again meanwhile. An upload overwrites the document, so pulling first matters: a newer version another phone backed up is merged (and wins) before this phone sends its own.
+4. Status Backed up (time), or Offline / Error. The app stops waiting for a backend call after 30 s and counts it as Offline, so a phone without a connection never waits on a sync. Stopping to wait does not cancel a write: Firestore keeps the batch queued in memory and sends it once it can (offline, or with the day's write quota used up, that can take hours). So at most one batch is ever queued: the next upload, and deleting the backup, first wait for it (again at most 30 s, else Offline) instead of queueing the same rows again. The rows stay pending meanwhile, so a batch that lands late is sent once more at the next sync (one extra write per entry).
 
 ### 4.4 When it runs (and what it costs)
 
 - At app start, when an account signs in, when the phone app comes to the foreground (at most once a minute), and from "Back up now".
-- A push (no pull) about 2 s after any local write or watch merge leaves rows pending.
+- A sync about 2 s after any local write or watch merge leaves rows pending. It pulls first like every sync: one extra read per push when nothing else changed.
 - No snapshot listener: Firestore bills a re-attached listener as a full re-read after 30 minutes away. A pull with nothing new costs one read; each changed entry costs one read; each uploaded entry one write.
 
 For a family logging about 40 entries a day this is roughly 40 writes and well under 200 reads a day, against Spark's free 20 000 writes and 50 000 reads a day. Fifty such accounts use about 10 % of the free quota. A first sign-in with a year of history (about 15 000 entries) uploads in one go and may hit that day's write quota; the rest then follows the next day, automatically.

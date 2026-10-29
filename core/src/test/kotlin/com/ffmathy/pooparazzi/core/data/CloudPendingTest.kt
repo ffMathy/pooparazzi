@@ -34,7 +34,7 @@ class CloudPendingTest {
     @Before
     fun setUp() {
         db = PooparazziDatabase.inMemory(ApplicationProvider.getApplicationContext())
-        phone = RoomEntryRepository(db, clock, watch, cloudBackup = true)
+        phone = RoomEntryRepository(db, clock, watch, cloudBackup = { true })
     }
 
     @After

@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.phone.ui.account.AccountActions
 import com.ffmathy.pooparazzi.phone.ui.account.AccountScreen
 import com.ffmathy.pooparazzi.phone.ui.account.WelcomeScreen
@@ -24,7 +25,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The first-run Welcome and Settings › Account (BABIES_AND_BACKUP §3) on the reference phone (390 × 844 dp, xxhdpi), in
- * English and Danish: `app/screenshots/<lang>/24-…26-*.png`, continuing the tour.
+ * English and Danish: `app/screenshots/<lang>/24-…26-*.png` and `30-*.png`, continuing the tour.
  */
 abstract class AccountScreenshots(private val language: String) {
     @get:Rule
@@ -46,6 +47,11 @@ abstract class AccountScreenshots(private val language: String) {
 
     @Test fun accountSignedIn() = screen("26-account-signed-in", night = true) {
         AccountScreen(AccountSamples.signedIn(), AccountActions.None, windowInsets = ReferenceInsets)
+    }
+
+    /** The backup was deleted but the account was not (its deletion failed): nothing is backed up until "Back up now". */
+    @Test fun accountBackupDeleted() = screen("30-account-backup-deleted", night = true) {
+        AccountScreen(AccountSamples.signedIn(cloud = CloudStatus.Deleted), AccountActions.None, windowInsets = ReferenceInsets)
     }
 
     private fun screen(name: String, night: Boolean, content: @Composable () -> Unit) {

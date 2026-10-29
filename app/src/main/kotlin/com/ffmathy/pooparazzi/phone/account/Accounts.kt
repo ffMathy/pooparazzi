@@ -36,6 +36,12 @@ enum class AccountError {
     /** "No connection. Try again." */
     NO_CONNECTION,
 
+    /**
+     * No answer in time, but the call may still complete (Firebase keeps trying): "No answer yet. It may still go
+     * through in a moment." A sign-in that completes later shows through [Accounts.user].
+     */
+    TIMED_OUT,
+
     /** Too many attempts from this phone: "Too many tries. Wait a moment and try again." */
     TOO_MANY_ATTEMPTS,
 

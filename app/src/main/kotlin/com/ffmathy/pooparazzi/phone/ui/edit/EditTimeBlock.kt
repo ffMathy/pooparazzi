@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -299,7 +300,7 @@ private fun DayMenuItem(text: String, selected: Boolean, onClick: () -> Unit) {
 
 /**
  * A 48 dp target holding a 40 dp outlined pill (r 20, labelLarge onSurface): nudges, "End now", "Add a baby". An
- * [icon] (18 dp, decorative) leads the label.
+ * [icon] (18 dp, decorative) leads the label. Disabled, it is drawn at 38 % and does nothing.
  */
 @Composable
 internal fun OutlinePill(
@@ -309,12 +310,15 @@ internal fun OutlinePill(
     spoken: String? = null,
     fill: Boolean = false,
     icon: ImageVector? = null,
+    enabled: Boolean = true,
 ) {
     val colors = MaterialTheme.colorScheme
     Box(
         modifier
             .heightIn(min = ChipDefaults.TargetHeight)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            // Disabled: M3's 38 % for the whole pill (outline, icon and label).
+            .then(if (enabled) Modifier else Modifier.alpha(0.38f))
             .then(if (spoken != null) Modifier.clearAndSetSemantics { contentDescription = spoken } else Modifier),
         contentAlignment = Alignment.Center,
     ) {

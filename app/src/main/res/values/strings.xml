@@ -94,6 +94,7 @@
     <!-- Label of each baby's name field; its placeholder is the baby's label ("Baby 2") -->
     <string name="settings_baby_field">Name</string>
     <string name="settings_add_baby">Add a baby</string>
+    <string name="settings_add_baby_watch_update">Update Pooparazzi on your watch first.</string>
     <string name="settings_babies_hint">Names stay on this phone and your watch. They\'re never uploaded.</string>
     <string name="settings_appearance_hint">Auto uses Night in the evening and at night, while a sleep runs, and when the phone is in dark theme.</string>
     <string name="settings_section_watch">Watch</string>
@@ -150,6 +151,7 @@
     <string name="account_status_synced">Backed up · %1$s</string>
     <string name="account_status_offline">Saved on phone · will back up</string>
     <string name="account_status_error">Couldn\'t back up · Tap to retry</string>
+    <string name="account_status_deleted">Backup deleted · Back up now to start again</string>
     <string name="account_unavailable">Backup isn\'t set up in this build. Everything is saved on this phone.</string>
     <!-- Welcome (§3.1) and the signed-out Account screen -->
     <string name="welcome_title">Your log stays on this phone</string>
@@ -172,6 +174,7 @@
     <string name="account_error_email_in_use">That email already has an account</string>
     <string name="account_error_weak_password">Use at least 6 characters</string>
     <string name="account_error_no_connection">No connection. Try again.</string>
+    <string name="account_error_timed_out">No answer yet. It may still go through in a moment.</string>
     <string name="account_error_too_many">Too many tries. Wait a moment and try again.</string>
     <string name="account_error_no_google">No Google account on this phone. Add one in system settings, or use email.</string>
     <string name="account_error_recent_login">Sign in again to delete your account.</string>

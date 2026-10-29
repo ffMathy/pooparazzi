@@ -19,6 +19,9 @@ import java.io.IOException
  * @property cursor where the last pull for [cursorUid] stopped.
  * @property fullUploadUid the account every row was last flagged for ("everything logged so far is backed up").
  * @property lastSyncAtMillis when the last sync for [lastSyncUid] succeeded.
+ * @property deletedUid the account whose backup was deleted while the account itself is still there (deleting the
+ *   account failed, or has not run yet): nothing is uploaded for it, also after a restart, until another account (or
+ *   nobody) is signed in or the parent backs up again ("Back up now").
  */
 data class CloudBookkeeping(
     val cursorUid: String? = null,
@@ -26,6 +29,7 @@ data class CloudBookkeeping(
     val fullUploadUid: String? = null,
     val lastSyncUid: String? = null,
     val lastSyncAtMillis: Long? = null,
+    val deletedUid: String? = null,
 ) {
     /** The cursor to pull [uid] from: null (from the start) when the stored one belongs to another account. */
     fun cursorFor(uid: String): CloudCursor? = cursor.takeIf { cursorUid == uid }
@@ -33,7 +37,10 @@ data class CloudBookkeeping(
     /** When the last sync for [uid] succeeded, or null. */
     fun lastSyncFor(uid: String): Long? = lastSyncAtMillis.takeIf { lastSyncUid == uid }
 
-    /** These values with everything about [uid] forgotten (its backup was deleted). */
+    /** True while [uid]'s backup is deleted and nothing may be uploaded for it. */
+    fun isDeleted(uid: String): Boolean = deletedUid == uid
+
+    /** These values with everything about [uid] forgotten (its backup is being deleted). [deletedUid] is kept. */
     fun forget(uid: String): CloudBookkeeping = copy(
         cursorUid = cursorUid.takeUnless { it == uid },
         cursor = cursor.takeUnless { cursorUid == uid },
@@ -69,6 +76,7 @@ class DataStoreCloudBookkeepingStore(private val dataStore: DataStore<Preference
         fullUploadUid = this[KEY_FULL_UPLOAD_UID],
         lastSyncUid = this[KEY_LAST_SYNC_UID],
         lastSyncAtMillis = this[KEY_LAST_SYNC_AT],
+        deletedUid = this[KEY_DELETED_UID],
     )
 
     private fun MutablePreferences.write(values: CloudBookkeeping) {
@@ -77,6 +85,7 @@ class DataStoreCloudBookkeepingStore(private val dataStore: DataStore<Preference
         putOrRemove(KEY_FULL_UPLOAD_UID, values.fullUploadUid)
         putOrRemove(KEY_LAST_SYNC_UID, values.lastSyncUid)
         putOrRemove(KEY_LAST_SYNC_AT, values.lastSyncAtMillis)
+        putOrRemove(KEY_DELETED_UID, values.deletedUid)
     }
 
     /** Sets [key] to [value], or removes it for null. */
@@ -91,5 +100,6 @@ class DataStoreCloudBookkeepingStore(private val dataStore: DataStore<Preference
         val KEY_FULL_UPLOAD_UID = stringPreferencesKey("full_upload_uid")
         val KEY_LAST_SYNC_UID = stringPreferencesKey("last_sync_uid")
         val KEY_LAST_SYNC_AT = longPreferencesKey("last_sync_at")
+        val KEY_DELETED_UID = stringPreferencesKey("deleted_uid")
     }
 }

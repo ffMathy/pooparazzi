@@ -22,6 +22,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -163,6 +166,16 @@ class AccountViewModel(
             delete = f.delete?.takeIf { user != null },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial())
+
+    init {
+        // A sign-in that timed out ("it may still go through") and then went through after all: the screen follows the
+        // account, and the old error goes with the form it belonged to.
+        viewModelScope.launch {
+            accounts.user.map { it?.uid }.distinctUntilChanged().drop(1).collect { uid ->
+                if (uid != null) form.update { it.copy(error = null, password = "") }
+            }
+        }
+    }
 
     private fun initial() = AccountUiState(
         available = accounts.available,

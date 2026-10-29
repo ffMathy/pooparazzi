@@ -319,7 +319,8 @@ private fun SignedIn(state: AccountUiState, email: String, actions: AccountActio
             Text(stringResource(R.string.account_signed_in_as), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
             Text(email, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
             Spacer(Modifier.height(4.dp))
-            val tint = if (failed) colors.error else colors.onSurfaceVariant
+            // A deleted backup is no failure to retry, but nothing is backed up: it reads as a warning all the same.
+            val tint = if (failed || state.cloud == CloudStatus.Deleted) colors.error else colors.onSurfaceVariant
             Text(status, style = PhoneType.dataMedium, color = tint, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
     }

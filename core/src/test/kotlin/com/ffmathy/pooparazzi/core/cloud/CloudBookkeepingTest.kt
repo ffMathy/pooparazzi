@@ -32,6 +32,12 @@ class CloudBookkeepingTest {
 
         assertEquals(CloudBookkeeping(lastSyncUid = "b", lastSyncAtMillis = 9), values.forget("a"))
         assertEquals(values.copy(lastSyncUid = null, lastSyncAtMillis = null), values.forget("b"))
+
+        // A deleted backup stays deleted when the rest is forgotten.
+        val deleted = values.copy(deletedUid = "a")
+        assertEquals(true, deleted.isDeleted("a"))
+        assertEquals(false, deleted.isDeleted("b"))
+        assertEquals("a", deleted.forget("a").deletedUid)
     }
 
     @Test
@@ -40,10 +46,12 @@ class CloudBookkeepingTest {
         val store = DataStoreCloudBookkeepingStore(PreferenceDataStoreFactory.create(scope = scope) { file })
         assertEquals(CloudBookkeeping(), store.get())
 
-        val full = CloudBookkeeping("a", cursor, "a", "a", 1234)
+        val full = CloudBookkeeping("a", cursor, "a", "a", 1234, deletedUid = "a")
         store.update { full }
         assertEquals(full, store.get())
         store.update { it.forget("a") }
+        assertEquals(CloudBookkeeping(deletedUid = "a"), store.get())
+        store.update { it.copy(deletedUid = null) }
         assertEquals(CloudBookkeeping(), store.get())
     }
 }

@@ -1,16 +1,20 @@
 package com.ffmathy.pooparazzi.phone
 
 import android.app.Application
+import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.sample.SampleData
+import com.ffmathy.pooparazzi.core.settings.Appearance
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import com.ffmathy.pooparazzi.phone.launch.ReceiptKind
 import com.ffmathy.pooparazzi.phone.widget.InMemoryWidgetMemoStore
 import com.ffmathy.pooparazzi.phone.widget.NoticeType
 import com.ffmathy.pooparazzi.phone.widget.WidgetCommands
 import com.ffmathy.pooparazzi.phone.widget.WidgetSnapshot
+import com.ffmathy.pooparazzi.phone.widget.WidgetSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
 import org.junit.Assert.assertEquals
@@ -185,5 +189,35 @@ class WidgetCommandsTest : CoreTestBase() {
         assertTrue(snapshot.hasSeveralBabies)
         assertEquals(SampleData.TWIN_ID, snapshot.baby.id)
         assertNull("Ida has no feeds yet", snapshot.lastFeed)
+    }
+
+    /** Auto dims for naps while any baby is asleep (BABIES_AND_BACKUP §2.3), as the app does: the widgets too. */
+    @Test
+    fun underAutoTheWidgetsDimWhileAnyBabyIsAsleep() = coreTest { rig ->
+        rig.settings.setAppearance(Appearance.AUTO)
+        rig.settings.ensureBabies(listOf(SampleData.TWIN_ID))
+        val source = WidgetSource(ApplicationProvider.getApplicationContext(), Core.graph, store)
+        assertFalse(source.current().night)
+        commands(rig).toggleSleep()
+        runCurrent()
+        rig.settings.selectBaby(SampleData.TWIN_ID)
+        runCurrent()
+        val snapshot = source.current()
+        assertEquals(SampleData.TWIN_ID, snapshot.baby.id)
+        assertFalse("Ida is awake", snapshot.asleep)
+        assertTrue("but Noa is asleep", snapshot.night)
+    }
+
+    /** A switch of baby never labels the new baby with the previous one's facts, not even for one snapshot. */
+    @Test
+    fun aSwitchNeverPairsTheNewBabyWithTheOtherBabysFacts() = coreTest { rig ->
+        rig.settings.ensureBabies(listOf(SampleData.TWIN_ID))
+        val seen = rig.collect(WidgetSource(ApplicationProvider.getApplicationContext(), Core.graph, store).snapshots())
+        assertNotNull("Noa's last feed", seen.last().lastFeed)
+        rig.settings.selectBaby(SampleData.TWIN_ID)
+        runCurrent()
+        val ida = seen.filter { it.babyId == SampleData.TWIN_ID }
+        assertTrue(ida.isNotEmpty())
+        assertTrue("never Noa's feed under Ida's name: $ida", ida.all { it.lastFeed == null && it.lastDiaper == null })
     }
 }

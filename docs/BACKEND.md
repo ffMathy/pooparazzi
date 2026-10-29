@@ -11,17 +11,17 @@ Baby names are **never uploaded**: they stay on the phone and the watch. The sec
 
 ## Cost
 
-Use the free **Spark** plan and do not add a billing account. A Spark project cannot be charged anything: when a daily quota runs out, requests fail until the quota resets at midnight Pacific time, and the app keeps the entries pending and sends them later.
+Use the free **Spark** plan and do not add a billing account. A Spark project cannot be charged anything: when a daily quota runs out, it stops serving until the quota resets at midnight Pacific time. Reads are refused (the app says "Couldn't back up"); writes are not refused but held: Firestore on the phone keeps the batch and retries it. The app stops waiting after 30 seconds ("Saved on phone · will back up"), keeps the entries pending, and queues no second batch while that one is outstanding, so a used-up quota does not multiply the writes. The batch lands once the quota is back (or, if the app was closed meanwhile, the next sync sends the entries again).
 
 | Spark quota (per project) | Free | Pooparazzi's use |
 |---|---|---|
-| Firestore document reads | 50 000 a day | about 1 per sync with nothing new, plus 1 per changed entry |
+| Firestore document reads | 50 000 a day | about 1 per sync with nothing new (every push pulls first), plus 1 per changed entry |
 | Firestore document writes | 20 000 a day | 1 per logged, edited or deleted entry |
 | Firestore deletes | 20 000 a day | only when an account is deleted |
 | Firestore storage | 1 GiB | about 0.5 KB per entry: a year of logging is about 7 MB |
 | Authentication (Google, email and password) | no charge | – |
 
-A family logging about 40 entries a day uses about 40 writes and well under 200 reads a day, so 50 accounts stay around a tenth of the free quota. The app never keeps a live listener on the backup, because Firestore bills a listener that reconnects after 30 minutes as a full re-read. It asks only for what changed since its last sync, when it starts, when it comes to the foreground (at most once a minute) and a couple of seconds after something was logged.
+A family logging about 40 entries a day uses about 40 writes and well under 200 reads a day, so 50 accounts stay around a tenth of the free quota. The app never keeps a live listener on the backup, because Firestore bills a listener that reconnects after 30 minutes as a full re-read. It asks only for what changed since its last sync, when it starts, when it comes to the foreground (at most once a minute) and a couple of seconds after something was logged (before uploading it, so it never overwrites a newer edit from another phone).
 
 The one heavy moment is the **first sign-in on a phone with a long history**: every entry is uploaded once (a year is about 15 000 writes). If that passes the day's write quota, the rest uploads by itself the next day.
 

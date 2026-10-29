@@ -51,7 +51,8 @@ object SystemSurfaces {
                 .collect { state -> guard("notifications") { notifications.render(state) } }
         }
         graph.scope.launch {
-            combine(graph.repository.observeEntries(), graph.settings.settings) { _, _ -> Unit }
+            // Every baby's entries: under Auto the widgets dim while any baby is asleep, not only the current one.
+            combine(graph.repository.observeAllEntries(), graph.settings.settings) { _, _ -> Unit }
                 .conflate()
                 .collect {
                     guard("widgets") { WidgetUpdater.refresh(app) }

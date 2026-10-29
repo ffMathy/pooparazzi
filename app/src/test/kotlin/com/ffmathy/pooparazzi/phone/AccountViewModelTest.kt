@@ -72,6 +72,24 @@ class AccountViewModelTest {
     private val emailUser = AccountUser("uid-1", "parent@example.com", google = false)
 
     @Test
+    fun aSignInThatTimedOutSaysItMayStillGoThroughAndTheScreenFollowsWhenItDoes() = test { rig ->
+        rig.accounts.results["signIn"] = AccountResult.Failed(AccountError.TIMED_OUT)
+        rig.vm.onEmail("parent@example.com")
+        rig.vm.onPassword("secret1")
+        rig.vm.onSubmit()
+        runCurrent()
+        assertEquals(AccountError.TIMED_OUT, rig.state.error)
+        assertNull(rig.state.user)
+
+        // Firebase finished the sign-in after all.
+        rig.accounts.signInAs(emailUser)
+        runCurrent()
+        assertEquals(emailUser, rig.state.user)
+        assertNull("no stale error", rig.state.error)
+        assertEquals("", rig.state.password)
+    }
+
+    @Test
     fun signingInWithEmailSignsIn() = test { rig ->
         rig.vm.onEmail(" parent@example.com ")
         rig.vm.onPassword("secret1")

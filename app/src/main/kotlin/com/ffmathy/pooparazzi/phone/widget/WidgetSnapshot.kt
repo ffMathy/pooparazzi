@@ -6,6 +6,7 @@ import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.isRunning
+import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
@@ -51,7 +52,8 @@ data class WidgetSnapshot(
         /**
          * The snapshot at [now] of the current baby's [entries]. Receipts and notices are dropped once expired, and a
          * receipt also when its log no longer stands (undone or edited away in the app or on the watch) or was made for
-         * another baby than the current one.
+         * another baby than the current one. Auto dims for naps while any baby is asleep ([allEntries], every baby's
+         * log; BABIES_AND_BACKUP §2.3), as the app does.
          */
         fun of(
             entries: List<Entry>,
@@ -60,11 +62,13 @@ data class WidgetSnapshot(
             now: Long,
             zone: ZoneId,
             systemDark: Boolean,
+            allEntries: List<Entry> = entries,
         ): WidgetSnapshot {
             val summary = summarize(entries, now, zone)
             val sleep = summary.runningSleep
+            val anyAsleep = sleep != null || allEntries.any { it.isSleep && it.isRunning }
             return WidgetSnapshot(
-                night = NightRule.isNight(settings.appearance, systemDark, localTime(now, zone), sleepRunning = sleep != null),
+                night = NightRule.isNight(settings.appearance, systemDark, localTime(now, zone), sleepRunning = anyAsleep),
                 zone = zone,
                 language = settings.language,
                 lastFeed = summary.lastFeed,

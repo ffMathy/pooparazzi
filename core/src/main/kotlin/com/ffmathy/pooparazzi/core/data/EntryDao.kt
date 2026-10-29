@@ -88,6 +88,10 @@ abstract class EntryDao {
     @Query("UPDATE entries SET cloudPending = 1 WHERE cloudPending = 0")
     abstract suspend fun markAllCloudPending(): Int
 
+    /** Clears the flag of every row (signed out: nothing is pending for any backend). */
+    @Query("UPDATE entries SET cloudPending = 0 WHERE cloudPending = 1")
+    abstract suspend fun clearAllCloudPending(): Int
+
     /** How many rows the backend lacks, and the sum of their write stamps (which changes with every write to them). */
     @Query("SELECT COUNT(*) AS count, COALESCE(SUM(updatedAtMillis), 0) AS stamps FROM entries WHERE cloudPending = 1")
     abstract fun observeCloudPending(): Flow<CloudPendingState>

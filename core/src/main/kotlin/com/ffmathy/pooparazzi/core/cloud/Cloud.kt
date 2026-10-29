@@ -77,6 +77,12 @@ sealed interface CloudStatus {
 
     /** The last sync failed for another reason: "Couldn't back up · Tap to retry". */
     data object Error : CloudStatus
+
+    /**
+     * The account's backup was deleted but the account was not (its deletion failed): nothing is uploaded for it until
+     * "Back up now" or another account: "Backup deleted · account still exists".
+     */
+    data object Deleted : CloudStatus
 }
 
 /** The backup of the log to the account's [CloudStore] (BABIES_AND_BACKUP §4). Nothing here throws. */
@@ -86,15 +92,18 @@ interface CloudSync {
     /** Starts following the account and the pending entries. Called once, from `CoreGraph.start()`. */
     fun start()
 
-    /** Pulls and pushes now, and returns when done (the Account screen's "Back up now"). Never throws. */
+    /**
+     * Pulls and pushes now, and returns when done (the Account screen's "Back up now"). Never throws. Also backs up an
+     * account whose backup was deleted ([CloudStatus.Deleted]) again: the parent asked for it.
+     */
     suspend fun syncNow()
 
-    /** Pulls and pushes in the background; at most one pull a minute (the app coming to the foreground). */
+    /** Pulls and pushes in the background, at most once a minute (the app coming to the foreground). */
     fun requestSync()
 
     /**
      * Deletes the signed-in account's backup (before the account itself is deleted) and uploads nothing more for that
-     * account until it changes. Returns true on success.
+     * account, also after a restart, until another account signs in or [syncNow]. Returns true on success.
      */
     suspend fun deleteBackup(): Boolean
 }

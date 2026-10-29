@@ -6,9 +6,11 @@ import com.ffmathy.pooparazzi.core.cloud.CloudError
 import com.ffmathy.pooparazzi.core.model.EntryJson
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.account.AccountError
+import com.ffmathy.pooparazzi.phone.account.AccountResult
 import com.ffmathy.pooparazzi.phone.account.FirestoreCloudStore
 import com.ffmathy.pooparazzi.phone.account.FirestoreCloudStore.Stamp
 import com.ffmathy.pooparazzi.phone.account.FirestoreCloudStore.StoredDocument
+import com.ffmathy.pooparazzi.phone.account.attemptWithin
 import com.ffmathy.pooparazzi.phone.account.toAccountError
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.FirebaseTooManyRequestsException
@@ -19,6 +21,8 @@ import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.firestore.FirebaseFirestoreException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -97,5 +101,19 @@ class FirebaseMappingTest {
         )
         assertEquals(AccountError.WRONG_ACCOUNT, FirebaseAuthInvalidUserException("ERROR_USER_MISMATCH", "x").toAccountError())
         assertEquals(AccountError.OTHER, IllegalStateException("x").toAccountError())
+    }
+
+    @Test
+    fun anAccountCallWithoutAnAnswerInTimeMayStillGoThrough() = runTest {
+        var refreshed = 0
+        val timedOut = attemptWithin(30_000, onTimeout = { refreshed++ }) { CompletableDeferred<Unit>().await() }
+        assertEquals("not \"No connection\": Firebase keeps trying", AccountResult.Failed(AccountError.TIMED_OUT), timedOut)
+        assertEquals("the account is read again", 1, refreshed)
+        assertEquals(AccountResult.Success, attemptWithin(30_000, onTimeout = { refreshed++ }) {})
+        assertEquals(
+            AccountResult.Failed(AccountError.NO_CONNECTION),
+            attemptWithin(30_000, onTimeout = {}) { throw FirebaseNetworkException("offline") },
+        )
+        assertEquals(1, refreshed)
     }
 }

@@ -11,7 +11,11 @@ import com.ffmathy.pooparazzi.phone.launch.ReceiptKind
 import com.ffmathy.pooparazzi.phone.ui.home.CardVariant
 import com.ffmathy.pooparazzi.phone.ui.home.HomeHaptic
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
+import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -42,6 +46,23 @@ class HomeBabySwitchTest : HomeViewModelTestBase() {
         home.viewModel.onSwitchBaby()
         assertFalse(home.settle().switchingBaby)
         assertTrue(home.haptics.isEmpty())
+    }
+
+    /** The settings and the baby's entries come as one: a switch never shows Noa's log under Ida's name. */
+    @Test
+    fun aSwitchNeverShowsTheOtherBabysLogUnderTheNewName() = homeTest { home ->
+        home.seed(SampleData.scenario(SampleData.ZONE))
+        home.addTwin()
+        assertNotNull(home.settle().row1)
+        val seen = mutableListOf<HomeUiState>()
+        backgroundScope.launch { home.viewModel.state.filterNotNull().collect { seen += it } }
+        runCurrent()
+        home.viewModel.onSwitchBaby()
+        home.viewModel.onSelectBaby(SampleData.TWIN_ID)
+        home.settle()
+        val ida = seen.filter { it.babyId == SampleData.TWIN_ID }
+        assertTrue(ida.isNotEmpty())
+        assertTrue("never Noa's rows under Ida's name", ida.all { it.row1 == null && it.row2 == null })
     }
 
     @Test

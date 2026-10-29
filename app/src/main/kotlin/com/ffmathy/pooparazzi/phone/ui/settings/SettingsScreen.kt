@@ -197,8 +197,8 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 
 /**
  * Settings › Babies (BABIES_AND_BACKUP §2.4): one name field per baby (its label as the placeholder), "Add a baby"
- * (hidden at [Settings.MAX_BABIES]; the new baby's field takes the focus) and the hint that names stay on the parent's
- * devices.
+ * (hidden at [Settings.MAX_BABIES]; the new baby's field takes the focus; disabled, with a line saying why, while the
+ * paired watch runs a version from before several babies) and the hint that names stay on the parent's devices.
  */
 @Composable
 private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
@@ -236,7 +236,16 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
             },
             icon = XIcons.plus,
             modifier = Modifier.padding(top = 4.dp),
+            enabled = !state.watchNeedsUpdate,
         )
+        if (state.watchNeedsUpdate) {
+            Text(
+                stringResource(R.string.settings_add_baby_watch_update),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
+            )
+        }
     }
     Text(
         stringResource(R.string.settings_babies_hint),
@@ -316,7 +325,8 @@ private fun AccountRow(state: SettingsUiState, actions: SettingsActions) {
                         if (failed) actions.onRetryBackup()
                         actions.onOpenAccount()
                     },
-                    summaryColor = if (failed) colors.error else colors.onSurfaceVariant,
+                    // "Backup deleted": nothing is backed up, but only "Back up now" on the Account screen starts again.
+                    summaryColor = if (failed || account.status == CloudStatus.Deleted) colors.error else colors.onSurfaceVariant,
                     // "Backed up · 14:31" has digits: Google Sans Flex with tabular figures (the digit rule).
                     summaryStyle = PhoneType.dataSmall,
                 )

@@ -19,9 +19,14 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 import java.io.IOException
+import java.util.concurrent.Executor
 
 /**
  * The backup in Cloud Firestore (BABIES_AND_BACKUP §4.1): `users/{uid}/entries/{entryId}` holding exactly
@@ -29,14 +34,18 @@ import java.io.IOException
  * requires. Nothing else is ever written: no settings, no babies, no names.
  *
  * Reads go to the server only ([Source.SERVER]): the backup decides what is new by the stored cursor, not by a cache.
- * Firestore holds a write until the server confirms it, which offline means for ever: every call gives up after
- * [timeoutMillis] as [CloudError.OFFLINE], so the backup's rows stay pending for the next sync.
+ * Firestore holds a write until the server confirms it, which offline (or with the day's write quota used up) means
+ * for a long time: every call stops waiting after [timeoutMillis] as [CloudError.OFFLINE], so the backup's rows stay
+ * pending for the next sync. Stopping to wait does not cancel the write: Firestore keeps the batch queued (in memory)
+ * and sends it when it can. So at most one commit is in flight ([CommitGate]): the next upload, and deleting the
+ * backup, first wait for the outstanding one (again within [timeoutMillis]) instead of queueing the same rows again.
  */
 class FirestoreCloudStore(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val timeoutMillis: Long = TIMEOUT_MILLIS,
 ) : CloudStore {
+    private val commits = CommitGate(timeoutMillis)
 
     override suspend fun upload(uid: String, entries: List<Entry>) {
         if (entries.isEmpty()) return
@@ -48,7 +57,7 @@ class FirestoreCloudStore(
                 val data = mapOf(FIELD_JSON to EntryJson.encode(entry), FIELD_SYNCED_AT to FieldValue.serverTimestamp())
                 batch.set(collection.document(entry.id), data)
             }
-            batch.commit().awaitWithin()
+            commits.commit { batch.commit() }
         }
     }
 
@@ -66,26 +75,22 @@ class FirestoreCloudStore(
     }
 
     override suspend fun deleteAll(uid: String) = call {
+        // An upload still queued must not land after the deletion.
+        commits.drain()
         val collection = entries(uid)
         while (true) {
             val page = collection.limit(DELETE_PAGE.toLong()).get(Source.SERVER).awaitWithin()
             if (page.isEmpty) break
             val batch = firestore.batch()
             page.documents.forEach { batch.delete(it.reference) }
-            batch.commit().awaitWithin()
+            commits.commit { batch.commit() }
         }
     }
 
     private fun entries(uid: String): CollectionReference =
         firestore.collection(COLLECTION_USERS).document(uid).collection(COLLECTION_ENTRIES)
 
-    private suspend fun <T> Task<T>.awaitWithin(): T {
-        // A Task<Void> completes with null: the timeout is told apart by the wrapper, not by the value.
-        val done = withTimeoutOrNull(timeoutMillis) { Box(await()) } ?: throw CloudException(CloudError.OFFLINE)
-        return done.value
-    }
-
-    private class Box<T>(val value: T)
+    private suspend fun <T> Task<T>.awaitWithin(): T = awaitWithin(timeoutMillis)
 
     /** Runs a Firestore call, turning its failure into a [CloudException]. */
     private suspend fun <T> call(block: suspend () -> T): T = try {
@@ -103,6 +108,38 @@ class FirestoreCloudStore(
 
     /** A server time, as `syncedAt` holds it. */
     internal class Stamp(val seconds: Long, val nanos: Int)
+
+    /**
+     * At most one commit in flight. A commit that timed out keeps going in Firestore; while it has not finished, the
+     * next [commit] (or [drain]) waits for it, at most [timeoutMillis] and then as [CloudError.OFFLINE], instead of
+     * starting another. Its outcome was its own caller's to hear: only its end matters here.
+     */
+    internal class CommitGate(private val timeoutMillis: Long) {
+        private val mutex = Mutex()
+        private var outstanding: Task<*>? = null
+
+        /** Starts a commit with [start] once the one before has finished, and waits for it (within the timeout). */
+        suspend fun <T> commit(start: () -> Task<T>): T = mutex.withLock {
+            settle()
+            val task = start()
+            outstanding = task
+            task.awaitWithin(timeoutMillis)
+        }
+
+        /** Waits for the outstanding commit, if any, within the timeout. */
+        suspend fun drain() = mutex.withLock { settle() }
+
+        private suspend fun settle() {
+            val task = outstanding ?: return
+            if (!task.isComplete) {
+                val ended = withTimeoutOrNull(timeoutMillis) {
+                    suspendCancellableCoroutine { done -> task.addOnCompleteListener(Executor { it.run() }) { done.resume(Unit) } }
+                }
+                if (ended == null) throw CloudException(CloudError.OFFLINE)
+            }
+            outstanding = null
+        }
+    }
 
     companion object {
         const val COLLECTION_USERS = "users"
@@ -152,3 +189,12 @@ class FirestoreCloudStore(
         }
     }
 }
+
+/** Awaits the task for at most [timeoutMillis], then gives up as [CloudError.OFFLINE] (the task itself goes on). */
+private suspend fun <T> Task<T>.awaitWithin(timeoutMillis: Long): T {
+    // A Task<Void> completes with null: the timeout is told apart by the wrapper, not by the value.
+    val done = withTimeoutOrNull(timeoutMillis) { Box(await()) } ?: throw CloudException(CloudError.OFFLINE)
+    return done.value
+}
+
+private class Box<T>(val value: T)

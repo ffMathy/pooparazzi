@@ -165,25 +165,8 @@ class FirebaseAccounts(
         cloudAccount.value = signedIn?.cloud
     }
 
-    /**
-     * Runs a Firebase call, turning its failure into words. Firebase Authentication can wait a long time for a
-     * connection: after [timeoutMillis] the call counts as [AccountError.NO_CONNECTION].
-     */
-    private suspend fun attempt(block: suspend () -> Unit): AccountResult = try {
-        // withTimeoutOrNull: its own cancellation never leaks out as if the caller had been cancelled.
-        val done = withTimeoutOrNull(timeoutMillis) { block() }
-        if (done == null) {
-            refresh()
-            AccountResult.Failed(AccountError.NO_CONNECTION)
-        } else {
-            AccountResult.Success
-        }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Log.w(TAG, "Account action failed", e)
-        AccountResult.Failed(e.toAccountError())
-    }
+    /** Runs a Firebase call within [timeoutMillis] ([attemptWithin]). */
+    private suspend fun attempt(block: suspend () -> Unit): AccountResult = attemptWithin(timeoutMillis, ::refresh, block)
 
     private companion object {
         const val TAG = "Accounts"
@@ -197,6 +180,29 @@ class FirebaseAccounts(
             google = providerData.any { it.providerId == GoogleAuthProvider.PROVIDER_ID },
         )
     }
+}
+
+/**
+ * Runs a Firebase call, turning its failure into words. Firebase Authentication can wait a long time for a connection:
+ * after [timeoutMillis] the app stops waiting, but the call is not cancelled in Firebase and may still complete (a
+ * sign-in then arrives through the auth state listener, and the screens follow [Accounts.user]). So it counts as
+ * [AccountError.TIMED_OUT] ("it may still go through"), not as no connection; [onTimeout] reads the account again.
+ */
+@VisibleForTesting
+internal suspend fun attemptWithin(timeoutMillis: Long, onTimeout: () -> Unit, block: suspend () -> Unit): AccountResult = try {
+    // withTimeoutOrNull: its own cancellation never leaks out as if the caller had been cancelled.
+    val done = withTimeoutOrNull(timeoutMillis) { block() }
+    if (done == null) {
+        onTimeout()
+        AccountResult.Failed(AccountError.TIMED_OUT)
+    } else {
+        AccountResult.Success
+    }
+} catch (e: CancellationException) {
+    throw e
+} catch (e: Exception) {
+    Log.w("Accounts", "Account action failed", e)
+    AccountResult.Failed(e.toAccountError())
 }
 
 /** The words of a failed Firebase Authentication or Credential Manager call. */

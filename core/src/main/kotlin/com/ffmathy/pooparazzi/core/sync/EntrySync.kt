@@ -104,6 +104,12 @@ object SyncPaths {
     /** Declared in core's `res/values/wear.xml`, so both apps advertise it. */
     const val CAPABILITY = "pooparazzi_tracker"
 
+    /**
+     * Advertised (beside [CAPABILITY]) by app versions that keep the log per baby. An older version ignores baby ids and
+     * resolves conflicts across babies; see [WatchVersionCheck].
+     */
+    const val BABIES_CAPABILITY = "pooparazzi_babies"
+
     fun entry(id: String): String = ENTRY_PREFIX + id
 
     /** The entry id in an `/entries/<id>` path, or null for any other path. */

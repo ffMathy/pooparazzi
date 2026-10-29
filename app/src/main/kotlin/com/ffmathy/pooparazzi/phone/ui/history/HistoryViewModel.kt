@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EntryRepository
+import com.ffmathy.pooparazzi.core.data.observeCurrentLog
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.EntrySync
@@ -48,17 +49,20 @@ class HistoryViewModel(
     private var nextReceiptKey = 0L
     private val actions = Mutex()
 
-    /** Null until the entries have loaded. */
+    /**
+     * Null until the entries have loaded. The settings and the baby's entries come as one ([observeCurrentLog]), so a
+     * switch of baby never lists the previous baby's log under the new baby's label.
+     */
     val state: StateFlow<HistoryUiState?> = combine(
-        repository.observeEntries(),
-        settings.settings,
+        repository.observeCurrentLog(settings.settings),
         sync.status,
         now,
         combine(day, receipt) { d, r -> d to r },
-    ) { entries, s, status, _, (d, r) ->
+    ) { log, status, _, (d, r) ->
+        val s = log.settings
         // [now] only re-runs this each minute; the time is read fresh, so an entry logged elsewhere within the current
         // minute (the watch, a widget) is listed at once.
-        HistoryStateBuilder.build(entries, status, clock.now(), zone, d, r, babies = s.babies, babyId = s.selectedBaby.id)
+        HistoryStateBuilder.build(log.entries, status, clock.now(), zone, d, r, babies = s.babies, babyId = s.selectedBaby.id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
@@ -117,10 +121,10 @@ class HistoryViewModel(
     }
 
     private suspend fun currentState(): HistoryUiState? = state.value ?: run {
-        val entries = repository.observeEntries().first()
-        val s = settings.current()
+        val log = repository.observeCurrentLog(settings.settings).first()
+        val s = log.settings
         HistoryStateBuilder.build(
-            entries, sync.status.value, clock.now(), zone, day.value, receipt.value,
+            log.entries, sync.status.value, clock.now(), zone, day.value, receipt.value,
             babies = s.babies,
             babyId = s.selectedBaby.id,
         )
