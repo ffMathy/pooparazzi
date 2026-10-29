@@ -17,7 +17,9 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 - **Breast feeds with side order**: a breast feed is logged like any feed, at one time (no timer, no duration). After Breast, tick **Left** and/or **Right**: the order you tick is the order recorded ("Right → Left"). The side is optional; "Log feed" (watch: "Save") with nothing ticked records just the time. Wherever the last feed is shown (phone Home, the widget, the watch), its order is shown too ("Left → Right", or "L → R" where space is tight), so you know which side to start on next.
 - **Diapers**: Pee and Poop are independent checkboxes, both optional (nothing ticked is a plain change). With Poop on, pick an optional **colour** (yellow, green, brown, black, red, pale) and **texture** (watery, seedy, mushy, formed, hard); red, black and pale show a gentle "talk to your doctor" hint.
 - **History, edit and undo**: a day view with a 24-hour ribbon and day totals; tap any entry to edit its times, type, side or diaper details, or delete it; add a past entry; every log shows an **Undo** card (phone) or button (watch), with "Earlier?" chips to move it back.
-- **Phone ↔ watch sync** over the Wearable **Data Layer**. Both apps log offline and merge by last-writer-wins; the baby's name and the language follow the phone.
+- **Several babies** (twins, siblings): add and rename them in Settings › Babies, and switch the baby you log for from Home's top bar or the watch's baby button. Each device has its own current baby; a sleep runs per baby, and every sleeping baby keeps its notification.
+- **Phone ↔ watch sync** over the Wearable **Data Layer**. Both apps log offline and merge by last-writer-wins; the babies' names and the language follow the phone.
+- **Optional, invite-only backup** to a small Firebase backend (free Spark plan): sign in or create an account at any time and everything logged so far is backed up; sign in on a new phone to restore it. Without an account the log stays on the phone and the watch, and the app says so. Baby names are never uploaded. Setup: [docs/BACKEND.md](docs/BACKEND.md).
 - **Glanceable surfaces**:
   - Phone: two **Glance widgets** (a 4×2 log widget and a 2×1 quick widget) and an **ongoing notification** for a running sleep (promoted to a Live Update where Android supports it).
   - Watch: a **Tile**, four **complications** (since last feed, last diaper, asleep/awake, sleep and last feed) and an **Ongoing Activity** while a sleep runs.
@@ -76,10 +78,11 @@ Every image above also exists in the other language: swap `en` and `da` in the p
 
 | Module | What it holds |
 |---|---|
-| [`core/`](core) | Android library shared by both apps: the `Entry` model and validation, the Room database and repository, the Data Layer sync (`sync/`), settings, summaries and the Lamp state (`domain/`), text formatting, the design tokens, type and icons, and the sample data used by previews and screenshots. |
-| [`app/`](app) | The phone app (Compose, Material 3): Home, the Feed (with its Breast step) / Diaper sheets, History, Edit, Settings, the Glance widgets (`widget/`) and the running-sleep notification (`notify/`). |
+| [`core/`](core) | Android library shared by both apps: the `Entry` model and validation, the Room database and repository, the Data Layer sync (`sync/`), the backup sync engine (`cloud/`), settings and babies, summaries and the Lamp state (`domain/`), text formatting, the design tokens, type and icons, and the sample data used by previews and screenshots. |
+| [`app/`](app) | The phone app (Compose, Material 3): Home, the Feed (with its Breast step) / Diaper sheets, History, Edit, Settings, Welcome and Account (`account/`: Firebase Authentication and the Firestore backup), the Glance widgets (`widget/`) and the running-sleep notifications (`notify/`). |
 | [`wear/`](wear) | The Wear OS app (Compose for Wear OS, Material 3): Main, Feed type, Side, Diaper, Logged, Today and Adjust, plus the Tile (`tile/`), complications (`complication/`) and the Ongoing Activity (`ongoing/`). |
-| [`docs/design/`](docs/design) | The design: [`DESIGN_SPEC.md`](docs/design/DESIGN_SPEC.md) (the "Night Light" direction: screens, tokens, icons, accessibility) and [`V1_ADDITIONS.md`](docs/design/V1_ADDITIONS.md) (feed types, tick-ordered sides, optional diaper details, English + Danish), which wins where they differ. |
+| [`docs/design/`](docs/design) | The design: [`DESIGN_SPEC.md`](docs/design/DESIGN_SPEC.md) (the "Night Light" direction: screens, tokens, icons, accessibility) and [`V1_ADDITIONS.md`](docs/design/V1_ADDITIONS.md) (feed types, tick-ordered sides, optional diaper details, English + Danish) and [`BABIES_AND_BACKUP.md`](docs/design/BABIES_AND_BACKUP.md) (several babies, the optional account and backup); each later one wins where they differ. |
+| [`firebase/`](firebase) | The backend: Firestore security rules, their emulator tests and the deploy configuration ([docs/BACKEND.md](docs/BACKEND.md)). |
 | [`scripts/`](scripts) | `readme_screenshots.py`, which builds the README images. |
 | [`third_party/fonts/`](third_party/fonts) | Licences for the bundled fonts (Atkinson Hyperlegible Next and Google Sans Flex, both SIL OFL 1.1). |
 
@@ -93,6 +96,8 @@ export ANDROID_HOME=/path/to/android-sdk
 ```
 
 The APKs land in `app/build/outputs/apk/debug/app-debug.apk` and `wear/build/outputs/apk/debug/wear-debug.apk`.
+
+Accounts and the backup need the Firebase project's `google-services.json` at `app/google-services.json` ([docs/BACKEND.md](docs/BACKEND.md#4-connect-the-app)). Without the file the phone app builds and runs as before, with accounts turned off.
 
 ## Install on devices
 
@@ -108,7 +113,7 @@ adb connect <watch-ip>:<port>        # or: adb pair <watch-ip>:<pair-port> first
 adb -s <watch-ip>:<port> install -r wear/build/outputs/apk/debug/wear-debug.apk
 ```
 
-Open the phone app once and set the baby's name; the watch picks it up (and the language) over the Data Layer. Add the Tile from the watch's tile carousel and the complications from a watch face's edit screen.
+Open the phone app once and set the baby's name in Settings › Babies (and add more babies there); the watch picks them up (and the language) over the Data Layer. Add the Tile from the watch's tile carousel and the complications from a watch face's edit screen.
 
 ## Tests
 
@@ -117,6 +122,12 @@ Open the phone app once and set the baby's name; the watch picks it up (and the 
 ```
 
 Everything runs on the JVM with Robolectric (no emulator needed): view models, the repository and sync merge, formatting in both languages, TalkBack descriptions, navigation, widgets, the Tile layout and complications, and smoke tests of the apps' entry points.
+
+The backend's Firestore security rules have their own tests on the Firestore emulator (Node.js 22 and JDK 21):
+
+```sh
+cd firebase && npm install && npm test
+```
 
 ## Screenshots
 
