@@ -78,9 +78,10 @@
 
     <!-- Igangværende notifikationer -->
     <string name="notification_channel_timers">Søvn i gang</string>
-    <string name="notification_channel_timers_description">Viser en igangværende søvn med Vågnede</string>
+    <string name="notification_channel_timers_description">Viser en igangværende søvn med Vågnede og lader dig bagefter rykke opvågningen</string>
     <string name="notification_asleep_title">%1$s sover</string>
-    <string name="notification_since">Siden kl. %1$s</string>
+    <string name="notification_woke_up_title">%1$s vågnede kl. %2$s</string>
+    <string name="notification_metric_asleep_for">Har sovet</string>
     <string name="notification_metric_since">Siden</string>
     <!-- Indstillinger › Notifikationer -->
     <string name="settings_section_notifications">Notifikationer</string>

@@ -24,6 +24,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,8 +45,15 @@ class TimerNotificationsTest : CoreTestBase() {
     private val manager = app.getSystemService(NotificationManager::class.java)
     private val zone = SampleData.ZONE
 
+    private val deviceZone = TimeZone.getDefault()
+
+    @After
+    fun restoreZone() = TimeZone.setDefault(deviceZone)
+
     @Before
     fun setUp() {
+        // The receiver formats in the device time zone, as the app-scope observer does.
+        TimeZone.setDefault(TimeZone.getTimeZone(SampleData.ZONE))
         Settings.System.putString(app.contentResolver, Settings.System.TIME_12_24, "24")
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
     }
@@ -54,18 +62,22 @@ class TimerNotificationsTest : CoreTestBase() {
 
     private fun asleep(language: AppLanguage = AppLanguage.SYSTEM, name: String = "Noa") = TimerState(
         sleep = RunningTimer("sleep-1", SampleData.at(2, 5)),
-        lastFeedStartMillis = SampleData.at(1, 40),
+        now = SampleData.NOW_0312,
         babyName = name,
         language = language,
         zone = zone,
     )
+
+    private fun text(notification: Notification): String = notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
+
+    private fun bigText(notification: Notification): String = notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString()
 
     @Test
     fun aRunningSleepShowsASilentOngoingNotificationWithWokeUp() {
         TimerNotifications(app).render(asleep())
         val notification = posted(TimerNotifications.SLEEP_ID)!!
         assertEquals("Noa is asleep", notification.extras.getString(Notification.EXTRA_TITLE))
-        assertEquals("Since 02:05", notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        assertEquals("1h 07m · since 02:05", text(notification))
         assertTrue(notification.flags and Notification.FLAG_ONGOING_EVENT != 0)
         assertEquals(Notification.VISIBILITY_PUBLIC, notification.visibility)
         assertFalse("no ticking time", notification.extras.getBoolean(Notification.EXTRA_SHOW_WHEN))
@@ -80,12 +92,37 @@ class TimerNotificationsTest : CoreTestBase() {
         assertNull(channel.sound)
     }
 
+    /** Expanded: the last feed with its order, the last diaper and today's counts, each relative and absolute. */
+    @Test
+    fun expandedItShowsTheLastFeedTheLastDiaperAndToday() {
+        val state = TimerState.of(SampleData.scenarioAt0312(zone), SampleData.settings, SampleData.NOW_0312 + 30_000, zone)
+        assertEquals("the time is whole minutes", SampleData.NOW_0312, state.now)
+        TimerNotifications(app).render(state)
+        val lines = bigText(posted(TimerNotifications.SLEEP_ID)!!).lines()
+        assertEquals("1h 07m · since 02:05", lines.first())
+        assertTrue(lines.toString(), lines.any { it.startsWith("Fed ") && it.contains(" ago · ") })
+        assertTrue(lines.toString(), lines.last().startsWith("Today · 1 feed · "))
+    }
+
+    /** The duration follows the clock: a non-waking alarm re-renders at the next minute while the sleep shows. */
+    @Test
+    fun aMinuteAlarmKeepsTheDurationCurrent() {
+        val alarms = shadowOf(app.getSystemService(android.app.AlarmManager::class.java))
+        TimerNotifications(app).render(asleep())
+        val alarm = alarms.nextScheduledAlarm!!
+        assertEquals(android.app.AlarmManager.RTC, alarm.type)
+        assertEquals(0L, alarm.triggerAtTime % 60_000L)
+
+        TimerNotifications(app).render(asleep().copy(sleep = null))
+        assertNull("no sleep, no alarm", alarms.nextScheduledAlarm)
+    }
+
     @Test
     fun theTextFollowsTheAppLanguageAndTheMissingName() {
         TimerNotifications(app).render(asleep(language = AppLanguage.DA))
         val danish = posted(TimerNotifications.SLEEP_ID)!!
         assertEquals("Noa sover", danish.extras.getString(Notification.EXTRA_TITLE))
-        assertEquals("Siden kl. 02:05", danish.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        assertEquals("1t 07m · siden kl. 02:05", text(danish))
         assertEquals("Vågnede", danish.actions.single().title.toString())
 
         TimerNotifications(app).render(asleep(name = ""))
@@ -138,8 +175,49 @@ class TimerNotificationsTest : CoreTestBase() {
         assertEquals(SampleData.NOW_0312, rig.entry("sample-sleep-0205")!!.endMillis)
         assertNull(posted(TimerNotifications.SLEEP_ID))
 
+        // It leaves "woke up at 03:12" with the Earlier offsets, as the undo card in the app.
+        val wokeUp = posted(TimerNotifications.WOKE_UP_ID)!!
+        assertEquals("Noa woke up at 03:12", wokeUp.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals("Slept 1h 07m · 02:05 – 03:12", text(wokeUp))
+        assertEquals(listOf("−5m", "−10m", "−15m"), wokeUp.actions.map { it.title.toString() })
+        assertTrue(wokeUp.actions.none { it.isAuthenticationRequired })
+
         // A second tap (or one after the watch ended it) changes nothing.
         assertNull(TimerActionReceiver.endSleep(app, "sample-sleep-0205"))
+    }
+
+    /** The offsets move the wake-up time from the tap, never cumulatively; tapping the selected one moves it back. */
+    @Test
+    fun earlierOffsetsMoveTheWakeUpTime() = coreTest(now = SampleData.NOW_0312, seed = SampleData.scenarioAt0312(SampleData.ZONE)) { rig ->
+        val id = "sample-sleep-0205"
+        TimerActionReceiver.endSleep(app, id)
+        TimerActionReceiver.moveWakeUp(app, id, SampleData.NOW_0312, minutes = -10, current = 0)
+        assertEquals(SampleData.at(3, 2), rig.entry(id)!!.endMillis)
+        val moved = posted(TimerNotifications.WOKE_UP_ID)!!
+        assertEquals("Noa woke up at 03:02", moved.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals(listOf("−5m", "✓ −10m", "−15m"), moved.actions.map { it.title.toString() })
+
+        TimerActionReceiver.moveWakeUp(app, id, SampleData.NOW_0312, minutes = -15, current = -10)
+        assertEquals("not cumulative", SampleData.at(2, 57), rig.entry(id)!!.endMillis)
+
+        TimerActionReceiver.moveWakeUp(app, id, SampleData.NOW_0312, minutes = -15, current = -15)
+        assertEquals("back to the tap", SampleData.NOW_0312, rig.entry(id)!!.endMillis)
+        assertEquals(listOf("−5m", "−10m", "−15m"), posted(TimerNotifications.WOKE_UP_ID)!!.actions.map { it.title.toString() })
+    }
+
+    /** An offset that would end the sleep before it started is left out. */
+    @Test
+    fun offsetsBeforeTheStartAreLeftOut() {
+        val state = asleep().copy(sleep = null)
+        val sleep = com.ffmathy.pooparazzi.core.model.Entry(
+            id = "short",
+            kind = com.ffmathy.pooparazzi.core.model.EntryKind.SLEEP,
+            startMillis = SampleData.at(3, 0),
+            endMillis = SampleData.NOW_0312,
+            updatedAtMillis = SampleData.NOW_0312,
+        )
+        val notification = TimerNotifications(app).buildWokeUp(state, sleep, SampleData.NOW_0312, 0)
+        assertEquals(listOf("−5m", "−10m"), notification.actions.map { it.title.toString() })
     }
 
     @Test
@@ -161,7 +239,7 @@ class TimerNotificationsTest : CoreTestBase() {
 
         val sleep = rig.repository.startSleep(SampleData.NOW_1432).getOrThrow()
         runCurrent()
-        assertEquals("Since 14:32", posted(TimerNotifications.SLEEP_ID)!!.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        assertEquals("<1m · since 14:32", text(posted(TimerNotifications.SLEEP_ID)!!))
 
         // The watch ends the sleep: the entry arrives through sync.
         rig.clock.advanceBy(20 * MINUTE)
