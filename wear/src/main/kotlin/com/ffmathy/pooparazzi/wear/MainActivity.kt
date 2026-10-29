@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        /** One of [OPEN_MAIN], [OPEN_FEED_TYPE], [OPEN_LOGGED], [OPEN_TODAY]. */
+        /** One of [OPEN_MAIN], [OPEN_FEED_TYPE], [OPEN_DIAPER], [OPEN_LOGGED], [OPEN_TODAY]. */
         const val EXTRA_OPEN = "com.ffmathy.pooparazzi.wear.extra.OPEN"
 
         /** The entry for [OPEN_LOGGED]. */
@@ -88,6 +88,7 @@ class MainActivity : ComponentActivity() {
         /** Main, closing any picker (complications, the Ongoing Activity). */
         const val OPEN_MAIN = "main"
         const val OPEN_FEED_TYPE = "feed_type"
+        const val OPEN_DIAPER = "diaper"
 
         /** "End feed" of an older tile (when breastfeeds were timed): opens Main now. */
         private const val LEGACY_OPEN_END_FEED = "end_feed"
@@ -103,6 +104,7 @@ class MainActivity : ComponentActivity() {
         internal fun deepLinkOf(intent: Intent?): WearDeepLink? = when (intent?.getStringExtra(EXTRA_OPEN)) {
             OPEN_MAIN -> WearDeepLink.Main
             OPEN_FEED_TYPE -> WearDeepLink.FeedType
+            OPEN_DIAPER -> WearDeepLink.Diaper
             LEGACY_OPEN_END_FEED -> WearDeepLink.Main
             OPEN_TODAY -> WearDeepLink.Today
             OPEN_LOGGED -> intent.getStringExtra(EXTRA_ENTRY_ID)?.let { WearDeepLink.Logged(it) }

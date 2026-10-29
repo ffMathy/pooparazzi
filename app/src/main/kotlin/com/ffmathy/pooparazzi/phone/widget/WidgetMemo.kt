@@ -26,17 +26,16 @@ data class WidgetReceipt(
     val previousJson: String? = null,
 )
 
-/** A short line in row 1 that needs no action: the 2 s guard and dedupe lines, and "Undone" (DESIGN_SPEC §10.7). */
+/** A short line in row 1 that needs no action: the 2 s guard lines and "Undone" (DESIGN_SPEC §10.7). */
 @Serializable
 data class WidgetNotice(
     val type: NoticeType,
     /** The time the line names ("Already asleep since 02:05"). */
     val atMillis: Long,
     val expiresAtMillis: Long,
-    val diaperKind: DiaperKind? = null,
 )
 
-enum class NoticeType { ALREADY_ASLEEP, ALREADY_AWAKE, ALREADY_LOGGED, UNDONE }
+enum class NoticeType { ALREADY_ASLEEP, ALREADY_AWAKE, UNDONE }
 
 /** Everything the widgets remember between taps. Device-local; shared by every placed widget. */
 @Serializable

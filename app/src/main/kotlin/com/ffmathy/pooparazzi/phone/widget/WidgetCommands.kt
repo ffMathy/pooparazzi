@@ -6,9 +6,7 @@ import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EndResult
 import com.ffmathy.pooparazzi.core.data.EntryRepository
-import com.ffmathy.pooparazzi.core.data.LogResult
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
-import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.EntryJson
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
@@ -19,12 +17,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * What the widget buttons do without opening the app (DESIGN_SPEC §3.3.6, §10.7, §10.11): the one-tap diaper logs,
- * the sleep toggle and Undo of the last widget log. Writes go through the repository, so they are idempotent (dedupe,
+ * What the widget buttons do without opening the app (DESIGN_SPEC §3.3.6, §10.7, §10.11): the sleep toggle and Undo
+ * of the last widget log. Writes go through the repository, so they are idempotent (dedupe,
  * one running sleep) and sync like any other log. Each log leaves a receipt with Undo in row 1 for
  * [RECEIPT_MILLIS]; guards, duplicates and "Undone" leave a [NOTICE_MILLIS] line instead.
  *
- * Feed is not here: it opens the app on the Feed sheet, which needs a choice.
+ * Feed and Diaper are not here: they open the app on its Feed and Diaper sheets, which ask for the details.
  * Commands run one at a time (two quick taps are applied in order).
  */
 class WidgetCommands(
@@ -32,17 +30,6 @@ class WidgetCommands(
     private val store: WidgetMemoStore,
     private val clock: Clock,
 ) {
-    /** Pee, Poop or Both, logged now with no colour or texture (they can be added later in the app). */
-    suspend fun logDiaper(kind: DiaperKind) = lock.withLock {
-        val now = clock.now()
-        val result = attempt { repository.logDiaperChecked(at = now, pee = kind != DiaperKind.POOP, poop = kind != DiaperKind.PEE) }
-            ?: return@withLock
-        when (result) {
-            is LogResult.Logged -> receipt(ReceiptKind.LOGGED, result.entry.id, result.entry.startMillis, now, diaperKind = kind)
-            is LogResult.Duplicate -> notice(NoticeType.ALREADY_LOGGED, result.entry.startMillis, now, diaperKind = kind)
-        }
-    }
-
     /** Start sleep / Woke up, with the 2 s double-toggle guard ("Already asleep since 02:05"). */
     suspend fun toggleSleep() = lock.withLock {
         val now = clock.now()
@@ -106,13 +93,13 @@ class WidgetCommands(
         }
     }
 
-    private fun receipt(kind: ReceiptKind, entryId: String, at: Long, now: Long, diaperKind: DiaperKind? = null, previous: String? = null) {
-        val receipt = WidgetReceipt(kind, entryId, at, now + RECEIPT_MILLIS, diaperKind, previous)
+    private fun receipt(kind: ReceiptKind, entryId: String, at: Long, now: Long, previous: String? = null) {
+        val receipt = WidgetReceipt(kind, entryId, at, now + RECEIPT_MILLIS, previousJson = previous)
         store.update { it.copy(receipt = receipt, notice = null) }
     }
 
-    private fun notice(type: NoticeType, at: Long, now: Long, diaperKind: DiaperKind? = null) {
-        store.update { it.copy(notice = WidgetNotice(type, at, now + NOTICE_MILLIS, diaperKind)) }
+    private fun notice(type: NoticeType, at: Long, now: Long) {
+        store.update { it.copy(notice = WidgetNotice(type, at, now + NOTICE_MILLIS)) }
     }
 
     private inline fun <T> attempt(block: () -> T): T? = try {
@@ -130,7 +117,7 @@ class WidgetCommands(
         /** How long a widget receipt offers Undo (DESIGN_SPEC §3.3.6). */
         const val RECEIPT_MILLIS = 10_000L
 
-        /** Guard, dedupe and "Undone" lines (DESIGN_SPEC §10.7). */
+        /** Guard and "Undone" lines (DESIGN_SPEC §10.7). */
         const val NOTICE_MILLIS = 2_000L
 
         /** A second sleep toggle within this window is ignored (DESIGN_SPEC §4.4). */

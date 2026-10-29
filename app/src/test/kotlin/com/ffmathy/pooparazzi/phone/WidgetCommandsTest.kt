@@ -1,7 +1,6 @@
 package com.ffmathy.pooparazzi.phone
 
 import android.app.Application
-import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.sample.SampleData
@@ -24,8 +23,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The widget buttons (DESIGN_SPEC §3.3.6, §10.7, §10.11) on a real repository: one-tap diaper logs with a receipt and
- * Undo, dedupe, the sleep toggle with its 2 s guard and 60 s discard, and stale Undo.
+ * The widget buttons (DESIGN_SPEC §3.3.6, §10.7, §10.11) on a real repository: the sleep toggle with its receipt and
+ * Undo, its 2 s guard and 60 s discard, and stale Undo. Feed and Diaper only open the app's sheets.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -39,44 +38,27 @@ class WidgetCommandsTest : CoreTestBase() {
         WidgetSnapshot.of(rig.entries(), rig.settings.current(), store.memo.value, rig.clock.now(), SampleData.ZONE, systemDark = false)
 
     @Test
-    fun poopLogsNowWithAReceiptThatUndoRemoves() = coreTest { rig ->
-        commands(rig).logDiaper(DiaperKind.POOP)
+    fun startSleepHasAReceiptThatUndoRemoves() = coreTest { rig ->
+        commands(rig).toggleSleep()
         runCurrent()
-        val poop = rig.entries().single { it.startMillis == SampleData.NOW_1432 }
-        assertTrue(poop.poop)
-        assertFalse(poop.pee)
-        assertNull("one tap logs no colour", poop.poopColor)
+        val sleep = rig.entries().single { it.isSleep && it.isRunning }
 
         val receipt = snapshot(rig).receipt!!
-        assertEquals(ReceiptKind.LOGGED, receipt.kind)
-        assertEquals(poop.id, receipt.entryId)
-        assertEquals(DiaperKind.POOP, receipt.diaperKind)
-        assertEquals(HomeLaunch.Receipt(ReceiptKind.LOGGED, poop.id), snapshot(rig).backgroundLaunch)
+        assertEquals(ReceiptKind.SLEEP_STARTED, receipt.kind)
+        assertEquals(sleep.id, receipt.entryId)
+        assertEquals(HomeLaunch.Receipt(ReceiptKind.SLEEP_STARTED, sleep.id), snapshot(rig).backgroundLaunch)
 
-        commands(rig).undo(poop.id)
+        commands(rig).undo(sleep.id)
         runCurrent()
-        assertNull(rig.entries().firstOrNull { it.id == poop.id })
+        assertNull(rig.entries().firstOrNull { it.id == sleep.id })
         val after = snapshot(rig)
         assertNull(after.receipt)
         assertEquals(NoticeType.UNDONE, after.notice!!.type)
     }
 
     @Test
-    fun aSecondTapWithinTheDedupeWindowLogsNothingAndSaysSo() = coreTest { rig ->
-        commands(rig).logDiaper(DiaperKind.BOTH)
-        rig.clock.advanceBy(3_000)
-        commands(rig).logDiaper(DiaperKind.BOTH)
-        runCurrent()
-        assertEquals(1, rig.entries().count { it.startMillis >= SampleData.NOW_1432 })
-        val snapshot = snapshot(rig)
-        assertEquals(NoticeType.ALREADY_LOGGED, snapshot.notice!!.type)
-        assertEquals(SampleData.NOW_1432, snapshot.notice!!.atMillis)
-        assertNotNull("the receipt of the first tap stays for Undo", snapshot.receipt)
-    }
-
-    @Test
     fun theReceiptExpiresAfterTenSeconds() = coreTest { rig ->
-        commands(rig).logDiaper(DiaperKind.PEE)
+        commands(rig).toggleSleep()
         runCurrent()
         rig.clock.advanceBy(WidgetCommands.RECEIPT_MILLIS - 1)
         assertNotNull(snapshot(rig).receipt)
@@ -129,24 +111,22 @@ class WidgetCommandsTest : CoreTestBase() {
 
     @Test
     fun aStaleUndoDoesNothing() = coreTest { rig ->
-        commands(rig).logDiaper(DiaperKind.PEE)
+        commands(rig).toggleSleep()
         runCurrent()
-        val pee = snapshot(rig).receipt!!.entryId
-        rig.clock.advanceBy(6_000)
-        commands(rig).logDiaper(DiaperKind.POOP)
-        runCurrent()
+        val sleep = snapshot(rig).receipt!!.entryId
+        rig.clock.advanceBy(WidgetCommands.RECEIPT_MILLIS)
 
-        commands(rig).undo(pee)
+        commands(rig).undo(sleep)
         runCurrent()
-        assertNotNull("Undo of a replaced receipt is ignored", rig.entries().firstOrNull { it.id == pee })
+        assertNotNull("Undo of an expired receipt is ignored", rig.entries().firstOrNull { it.id == sleep })
     }
 
     @Test
     fun aReceiptDisappearsWhenItsLogIsUndoneInTheApp() = coreTest { rig ->
-        commands(rig).logDiaper(DiaperKind.PEE)
+        commands(rig).toggleSleep()
         runCurrent()
-        val pee = snapshot(rig).receipt!!.entryId
-        rig.repository.delete(pee)
+        val sleep = snapshot(rig).receipt!!.entryId
+        rig.repository.delete(sleep)
         runCurrent()
         assertNull(snapshot(rig).receipt)
         assertEquals(HomeLaunch.Home, snapshot(rig).backgroundLaunch)

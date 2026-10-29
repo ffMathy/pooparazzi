@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The 4×2 widget on the cover screen (Flex Window) of Samsung's flip phones, at the Flex Window's size. Samsung lists a
+    widget there when its category is keyguard and widget_cover_samsung.xml says sub_screen. Launchers only list
+    home_screen widgets, so elsewhere this provider is never offered; the home-screen widgets are unchanged.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_cover_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="352dp"
+    android:minHeight="339dp"
+    android:previewLayout="@layout/widget_log_preview"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="keyguard" />

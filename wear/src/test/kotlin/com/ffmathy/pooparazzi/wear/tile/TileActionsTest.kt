@@ -4,7 +4,6 @@ import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
 import com.ffmathy.pooparazzi.core.data.PooparazziDatabase
-import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.isRunning
@@ -26,7 +25,7 @@ import org.robolectric.annotation.Config
 
 /**
  * The tile's one-tap actions against the real repository (DESIGN_SPEC §3.6, §4.4, §10.7; V1_ADDITIONS §2.2):
- * idempotent writes, the 5 s dedupe, the 2 s toggle guard on every surface, and the 10 s confirmation.
+ * idempotent writes, the 2 s toggle guard on every surface, and the 10 s confirmation. Feed and Diaper open the app.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -60,52 +59,14 @@ class TileActionsTest {
 
     private suspend fun stored(): List<Entry> = repo.observeEntries().first()
 
-    private suspend fun diapers() = stored().filter { it.kind == EntryKind.DIAPER }
-
     @Test
-    fun peeLogsAPeeDiaperWithoutDetailsAndConfirmsForTenSeconds() = test {
-        assertEquals(XHaptic.CONFIRM, tap(TileAction.LOG_PEE))
-        val diaper = diapers().single()
-        assertTrue(diaper.pee)
-        assertFalse(diaper.poop)
-        assertNull(diaper.poopColor)
-        assertEquals(SampleData.NOW_1432, diaper.startMillis)
-        val feedback = checkNotNull(memory.feedback)
-        assertEquals(TileFeedbackKind.DIAPER, feedback.kind)
-        assertEquals(diaper.id, feedback.entryId)
-        assertEquals(DiaperKind.PEE, feedback.diaperKind)
-        assertEquals(SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS, feedback.untilMillis)
-    }
-
-    @Test
-    fun bothLogsPeeAndPoopWithoutColourOrTexture() = test {
-        tap(TileAction.LOG_BOTH)
-        val diaper = diapers().single()
-        assertTrue(diaper.pee && diaper.poop)
-        assertNull(diaper.poopColor)
-        assertNull(diaper.poopTexture)
-        assertEquals(DiaperKind.BOTH, memory.feedback?.diaperKind)
-    }
-
-    @Test
-    fun aReplayedClickIdNeverLogsTwice() = test {
-        val id = TileAction.LOG_POOP.clickId(7)
-        assertEquals(XHaptic.CONFIRM, actions.handle(id, clock.now()))
+    fun aReplayedClickIdNeverTogglesTwice() = test {
+        val id = TileAction.SLEEP_START.clickId(7)
+        assertEquals(XHaptic.TOGGLE_ON, actions.handle(id, clock.now()))
         clock.advanceBy(60_000)
         // The host sends the same lastClickableId again with a later refresh: nothing happens.
         assertNull(actions.handle(id, clock.now()))
-        assertEquals(1, diapers().size)
-    }
-
-    @Test
-    fun aSecondTapWithinFiveSecondsIsTheSameDiaper() = test {
-        tap(TileAction.LOG_PEE)
-        clock.advanceBy(3_000)
-        assertEquals(XHaptic.REJECT, tap(TileAction.LOG_PEE))
-        assertEquals(1, diapers().size)
-        clock.advanceBy(10_000)
-        assertEquals(XHaptic.CONFIRM, tap(TileAction.LOG_PEE))
-        assertEquals(2, diapers().size)
+        assertEquals(1, sleeps().size)
     }
 
     @Test
@@ -113,6 +74,9 @@ class TileActionsTest {
         assertNull(actions.handle("", clock.now()))
         assertNull(actions.handle(null, clock.now()))
         assertNull(actions.handle("open_feed", clock.now()))
+        assertNull(actions.handle("open_diaper", clock.now()))
+        // A diaper button of a tile rendered before the diaper buttons opened the app: no longer logs.
+        assertNull(actions.handle("log_pee#3", clock.now()))
         assertTrue(stored().isEmpty())
     }
 
@@ -205,13 +169,13 @@ class TileActionsTest {
     @Test
     fun aLogClearsAShowingGuard() = test {
         memory.guard = TileGuard(GuardKind.ALREADY_AWAKE, clock.now() + TILE_GUARD_MILLIS)
-        tap(TileAction.LOG_POOP)
+        tap(TileAction.SLEEP_START)
         assertNull(memory.guard)
     }
 
     @Test
     fun clickIdsCarryTheirActionAndTarget() {
-        assertEquals(TileAction.LOG_BOTH, TileAction.fromClickId(TileAction.LOG_BOTH.clickId(42)))
+        assertEquals(TileAction.SLEEP_START, TileAction.fromClickId(TileAction.SLEEP_START.clickId(42)))
         assertEquals("sleep_start#3", TileAction.SLEEP_START.clickId(3))
         assertEquals("sleep_end#3#sleep-1", TileAction.SLEEP_END.clickId(3, "sleep-1"))
         assertEquals(TileAction.SLEEP_END, TileAction.fromClickId("sleep_end#3#sleep-1"))

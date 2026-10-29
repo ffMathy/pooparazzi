@@ -31,16 +31,16 @@ private fun LogWidgetAfterBreastfeedPreview() = LogWidgetContent(WidgetSamples.a
 private fun LogWidgetNarrowPreview() = LogWidgetContent(WidgetSamples.asleep())
 
 @OptIn(ExperimentalGlancePreviewApi::class)
-@Preview(widthDp = 171, heightDp = 100)
+@Preview(widthDp = 260, heightDp = 100)
 @Composable
 private fun QuickWidgetIdlePreview() = QuickWidgetContent(WidgetSamples.idle(night = true))
 
 @OptIn(ExperimentalGlancePreviewApi::class)
-@Preview(widthDp = 171, heightDp = 100)
+@Preview(widthDp = 260, heightDp = 100)
 @Composable
 private fun QuickWidgetAsleepPreview() = QuickWidgetContent(WidgetSamples.asleep())
 
 @OptIn(ExperimentalGlancePreviewApi::class)
-@Preview(widthDp = 171, heightDp = 100)
+@Preview(widthDp = 260, heightDp = 100)
 @Composable
 private fun QuickWidgetAfterBreastfeedPreview() = QuickWidgetContent(WidgetSamples.afterBreastfeed(night = false))
