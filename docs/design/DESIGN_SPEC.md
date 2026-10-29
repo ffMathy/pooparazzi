@@ -423,20 +423,22 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
 
-Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (§8.5) and the device font (no tnum). They show **absolute times only, always with "at"** ("Fed at 12:22"). Buttons log in place without launching the app.
+Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (§8.5) and the device font (no tnum). They show **absolute times only, always with "at"** ("Fed at 12:22"). The sleep toggle logs in place without launching the app; Feed and Diaper open the app on the same Feed and Diaper sheets as Home's buttons, so the optional details (feed type and breast order, pee/poop, colour, texture) are asked for exactly as in the app.
 
 **4×2** (reference 358 × 208, system corner radius (reference r 24), surfaceContainer, padding 12)
 
 | Row | Idle | Asleep | Just logged |
 |---|---|---|---|
-| 1 (24, not a separate target) | `feed` 16 + 6 + "Fed at 12:22" labelLarge 15 sp onSurface; 16 gap; `pee` 16 + "Pee at 13:44" | "Fed at 01:40", "Pee at 01:52" | `check` 16 onSurfaceVariant + 6 + "Poop logged at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo poop") |
-| 2 (68) | 4 equal buttons, gap 8, r 20; icon 24 at +10, label 15 sp at +40: Feed (FEED colours), Pee, Poop, Both (split fill, two-tone icon, POOP onContainer label) | unchanged | unchanged |
+| 1 (24, not a separate target) | `feed` 16 + 6 + "Fed at 12:22" labelLarge 15 sp onSurface; 16 gap; `pee` 16 + "Pee at 13:44" | "Fed at 01:40", "Pee at 01:52" | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
+| 2 (68) | 2 equal buttons, gap 8, r 20; icon 24 at +10, label 15 sp at +40: Feed (FEED colours, opens the Feed sheet), Diaper (DIAPER colours, `diaper`, opens the Diaper sheet) | unchanged | unchanged |
 | 3 (68) | Sleep toggle, full width, r 34, SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake since 13:27" dataSmall | checked: r 20, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned `sleepRunning` 16 + 6 + "Asleep since 02:05" | unchanged |
 
 - Just logged: nothing else changes. No button moves, relabels or changes colour, and Undo never sits where a log button is. The receipt reverts on the next log or after 10 s.
 - The widget background (outside the buttons) opens the app with the undo card for the last widget log.
 
 **2×1** (reference 171 × 100, padding 12): two buttons 76 tall, r 20, content column (icon 24, label 14 sp): Feed (`feed`, "Feed"); Sleep (padding 0 8, label max 2 lines: "Start" / "sleep" at large font scales). When asleep, Sleep shows `wake` + "Woke up" with the checked style.
+
+**Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else.
 
 Breakpoints: §10.11.
 
@@ -1324,7 +1326,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 ### 10.11 Glance widget
 
 - 4×2 and 2×1 with `SizeMode.Responsive`. A 2×2 falls back to the 4×2 content without the status row.
-- `actionRunCallback` per button (no app launch). Idempotent writes. 48 dp targets. System corner radius. Generated previews (Glance 1.2 `providePreview`).
+- `actionRunCallback` for the sleep toggle and Undo (no app launch), idempotent writes; Feed and Diaper start the app on their sheet (`pooparazzi://home/feed`, `pooparazzi://home/diaper`). 48 dp targets. System corner radius. Generated previews (Glance 1.2 `providePreview`).
 - Absolute clock times only: RemoteViews cannot tick a relative "ago" in the app grammar, and the update budget would leave it stale.
 - Update the widget on every log and every sleep change.
 - **Palette**: build every colour as a single-value `ColorProvider` chosen at update time from the NIGHT / DAY token sets. No day/night pairs and no `GlanceTheme` dynamic colours. Call `updateAll()` at sunset, at sunrise, on an Appearance change and on every sleep start/stop.

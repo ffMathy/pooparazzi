@@ -137,7 +137,6 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     fun notice(notice: WidgetNotice): String = when (notice.type) {
         NoticeType.ALREADY_ASLEEP -> string(CoreR.string.guard_already_asleep, time(notice.atMillis))
         NoticeType.ALREADY_AWAKE -> string(CoreR.string.guard_already_awake, time(notice.atMillis))
-        NoticeType.ALREADY_LOGGED -> string(CoreR.string.guard_already_logged, time(notice.atMillis))
         NoticeType.UNDONE -> string(CoreR.string.receipt_undone)
     }
 }

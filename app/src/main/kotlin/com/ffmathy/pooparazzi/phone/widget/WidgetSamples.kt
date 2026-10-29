@@ -1,6 +1,5 @@
 package com.ffmathy.pooparazzi.phone.widget
 
-import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.Appearance
@@ -14,24 +13,23 @@ import com.ffmathy.pooparazzi.phone.launch.ReceiptKind
 object WidgetSamples {
     private val zone = SampleData.ZONE
 
-    /** The poop logged on the widget at 14:32 in [justLogged]. */
-    val poop1432: Entry = Entry.diaper(SampleData.NOW_1432, pee = false, poop = true, id = "sample-widget-poop-1432")
+    /** The sleep started on the widget at 14:32 in [justLogged]. */
+    val sleep1432: Entry = Entry.sleep(SampleData.NOW_1432, id = "sample-widget-sleep-1432")
 
     /** 14:32: "Fed at 12:22", "Pee at 13:44", "Awake since 13:27". */
     fun idle(night: Boolean): WidgetSnapshot = build(SampleData.scenario(zone), SampleData.NOW_1432, night)
 
-    /** 14:32, Poop just logged on the widget: "Poop logged at 14:32" with Undo. */
+    /** 14:32, sleep just started on the widget: "Sleep started at 14:32" with Undo. */
     fun justLogged(night: Boolean): WidgetSnapshot = build(
-        SampleData.scenario(zone) + poop1432,
+        SampleData.scenario(zone) + sleep1432,
         SampleData.NOW_1432,
         night,
         WidgetMemo(
             receipt = WidgetReceipt(
-                kind = ReceiptKind.LOGGED,
-                entryId = poop1432.id,
+                kind = ReceiptKind.SLEEP_STARTED,
+                entryId = sleep1432.id,
                 atMillis = SampleData.NOW_1432,
                 expiresAtMillis = SampleData.NOW_1432 + WidgetCommands.RECEIPT_MILLIS,
-                diaperKind = DiaperKind.POOP,
             ),
         ),
     )
