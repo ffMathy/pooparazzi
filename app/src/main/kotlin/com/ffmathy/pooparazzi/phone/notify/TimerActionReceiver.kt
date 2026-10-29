@@ -6,36 +6,53 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.ffmathy.pooparazzi.core.Core
+import com.ffmathy.pooparazzi.core.CoreGraph
 import com.ffmathy.pooparazzi.core.data.EndResult
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.phone.system.SurfacePrefs
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.ZoneId
 
 /**
  * The timer notifications' broadcasts (not exported): "Woke up", which ends the running sleep without opening the app
- * (also from the lock screen), and the dismissal of a notification, which is remembered so it is not posted again
- * (DESIGN_SPEC §10.5).
+ * (also from the lock screen); the Earlier offsets of the woke-up notification that follows, which move the wake-up
+ * time; the dismissal of a notification, which is remembered so it is not posted again (DESIGN_SPEC §10.5); and the
+ * once-a-minute refresh of the running sleep's duration.
  */
 class TimerActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val entryId = intent.getStringExtra(EXTRA_ENTRY_ID) ?: return
         when (intent.action) {
+            ACTION_REFRESH -> async(context) { refresh(context) }
             ACTION_WOKE_UP -> {
-                val pending = goAsync()
-                val graph = Core.ensureInitialized(context)
-                graph.scope.launch {
-                    try {
-                        endSleep(context, entryId, intent.getStringExtra(EXTRA_BABY_ID))
-                    } finally {
-                        pending.finish()
-                    }
-                }
+                val entryId = intent.getStringExtra(EXTRA_ENTRY_ID) ?: return
+                async(context) { endSleep(context, entryId, intent.getStringExtra(EXTRA_BABY_ID)) }
+            }
+            ACTION_EARLIER -> {
+                val entryId = intent.getStringExtra(EXTRA_ENTRY_ID) ?: return
+                val base = intent.getLongExtra(EXTRA_BASE, -1L).takeIf { it >= 0 } ?: return
+                val minutes = intent.getIntExtra(EXTRA_MINUTES, 0)
+                val current = intent.getIntExtra(EXTRA_CURRENT, 0)
+                async(context) { moveWakeUp(context, entryId, base, minutes, current) }
             }
             ACTION_DISMISSED -> {
+                val entryId = intent.getStringExtra(EXTRA_ENTRY_ID) ?: return
                 val prefs = SurfacePrefs(context)
                 prefs.dismissedTimers = prefs.dismissedTimers + entryId
+            }
+        }
+    }
+
+    private fun async(context: Context, block: suspend () -> Unit) {
+        val pending = goAsync()
+        Core.ensureInitialized(context).scope.launch {
+            try {
+                block()
+            } finally {
+                pending.finish()
             }
         }
     }
@@ -43,14 +60,21 @@ class TimerActionReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "TimerActionReceiver"
         const val ACTION_WOKE_UP = "com.ffmathy.pooparazzi.phone.action.WOKE_UP"
+        const val ACTION_EARLIER = "com.ffmathy.pooparazzi.phone.action.WOKE_UP_EARLIER"
         const val ACTION_DISMISSED = "com.ffmathy.pooparazzi.phone.action.TIMER_DISMISSED"
+        const val ACTION_REFRESH = "com.ffmathy.pooparazzi.phone.action.TIMER_REFRESH"
         const val EXTRA_ENTRY_ID = "entry_id"
         const val EXTRA_BABY_ID = "baby_id"
+        private const val EXTRA_BASE = "base_millis"
+        private const val EXTRA_MINUTES = "offset_minutes"
+        private const val EXTRA_CURRENT = "current_offset_minutes"
+        private const val MINUTE_MILLIS = 60_000L
 
         /**
-         * Ends the running sleep [entryId] now, whichever baby is the current one, and cancels that baby's notification
-         * ([babyId], else the entry's). A sleep that already ended (on the watch, in the app) is left alone; one stopped
-         * within 60 s is discarded by the repository like any mis-tap.
+         * Ends the running sleep [entryId] now, whichever baby is the current one, cancels that baby's notification
+         * ([babyId], else the entry's) and posts their woke-up notification with its Earlier offsets. A sleep that
+         * already ended (on the watch, in the app) is left alone; one stopped within 60 s is discarded by the repository
+         * like any mis-tap.
          */
         suspend fun endSleep(context: Context, entryId: String, babyId: String? = null): EndResult? {
             val graph = Core.ensureInitialized(context)
@@ -62,14 +86,83 @@ class TimerActionReceiver : BroadcastReceiver() {
             } else {
                 null
             }
-            TimerNotifications(context).cancelSleep(babyId ?: sleep?.babyId ?: Baby.FIRST_ID)
+            val notifications = TimerNotifications(context)
+            notifications.cancelSleep(babyId ?: sleep?.babyId ?: Baby.FIRST_ID)
+            if (result is EndResult.Ended) {
+                val end = result.entry.endMillis ?: graph.clock.now()
+                notifications.renderWokeUp(state(graph), result.entry, baseMillis = end, offsetMinutes = 0)
+            }
             return result
         }
+
+        /**
+         * An Earlier offset on the woke-up notification: moves the end of [entryId] to [baseMillis] + [minutes], or back
+         * to [baseMillis] when [minutes] is the [current] offset (as the undo card's chips). An offset that would end the
+         * sleep before it started is refused. A sleep deleted or running again meanwhile drops the notification.
+         */
+        suspend fun moveWakeUp(context: Context, entryId: String, baseMillis: Long, minutes: Int, current: Int): Entry? {
+            val graph = Core.ensureInitialized(context)
+            val notifications = TimerNotifications(context)
+            val stored = graph.repository.get(entryId)
+            val sleep = stored?.takeUnless { it.deleted || it.isRunning || !it.isSleep }
+            if (sleep == null) {
+                notifications.cancelWokeUp(stored?.babyId ?: Baby.FIRST_ID)
+                return null
+            }
+            val next = if (minutes == current) 0 else minutes
+            val target = baseMillis + next * MINUTE_MILLIS
+            val moved = if (target < sleep.startMillis || target > graph.clock.now()) {
+                null
+            } else {
+                runCatching { graph.repository.update(sleep.copy(endMillis = target)) }
+                    .onFailure { Log.w(TAG, "Could not move the wake-up", it) }
+                    .getOrNull()
+            }
+            notifications.renderWokeUp(state(graph), moved ?: sleep, baseMillis, if (moved != null) next else current)
+            return moved
+        }
+
+        /** Re-renders the running sleep's notification with the current time (the once-a-minute alarm). */
+        suspend fun refresh(context: Context) {
+            val graph = Core.ensureInitialized(context)
+            TimerNotifications(context).render(state(graph))
+        }
+
+        /** Every baby's state: each baby who is asleep keeps their notification (BABIES_AND_BACKUP §2.3). */
+        private suspend fun state(graph: CoreGraph): TimerState = TimerState.of(
+            graph.repository.observeAllEntries().first(),
+            graph.settings.settings.first(),
+            graph.clock.now(),
+            ZoneId.systemDefault(),
+        )
 
         fun wokeUpIntent(context: Context, entryId: String, babyId: String): PendingIntent =
             broadcast(context, ACTION_WOKE_UP, entryId, babyId)
 
         fun dismissedIntent(context: Context, entryId: String): PendingIntent = broadcast(context, ACTION_DISMISSED, entryId)
+
+        /** One Earlier offset of the woke-up notification; [current] is the offset applied when it was posted. */
+        fun earlierIntent(context: Context, entryId: String, baseMillis: Long, minutes: Int, current: Int): PendingIntent {
+            val intent = Intent(context, TimerActionReceiver::class.java)
+                .setAction(ACTION_EARLIER)
+                .putExtra(EXTRA_ENTRY_ID, entryId)
+                .putExtra(EXTRA_BASE, baseMillis)
+                .putExtra(EXTRA_MINUTES, minutes)
+                .putExtra(EXTRA_CURRENT, current)
+            return PendingIntent.getBroadcast(
+                context,
+                31 * entryId.hashCode() + minutes,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        }
+
+        fun refreshIntent(context: Context): PendingIntent = PendingIntent.getBroadcast(
+            context,
+            0,
+            Intent(context, TimerActionReceiver::class.java).setAction(ACTION_REFRESH),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
 
         private fun broadcast(context: Context, action: String, entryId: String, babyId: String? = null): PendingIntent {
             val intent = Intent(context, TimerActionReceiver::class.java)

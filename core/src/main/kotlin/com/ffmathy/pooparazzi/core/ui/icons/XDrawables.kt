@@ -54,6 +54,7 @@ object XDrawables {
     @DrawableRes val checkbox: Int = R.drawable.x_checkbox
     @DrawableRes val checkboxChecked: Int = R.drawable.x_checkbox_checked
     @DrawableRes val info: Int = R.drawable.x_info
+    @DrawableRes val chart: Int = R.drawable.x_chart
 
     /** Two-tone `both` in Night/watch colours (droplet `#8FD0C3`, mound `#358276`). Do not tint. */
     @DrawableRes val bothNight: Int = R.drawable.x_both_night
@@ -130,6 +131,7 @@ object XDrawables {
             "checkbox" to checkbox,
             "checkboxChecked" to checkboxChecked,
             "info" to info,
+            "chart" to chart,
         )
 
     /** Which fixed colours the two-tone `both` drawable uses. */

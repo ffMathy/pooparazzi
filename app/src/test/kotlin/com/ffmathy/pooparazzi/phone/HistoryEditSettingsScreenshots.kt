@@ -73,14 +73,14 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
     }
 
     /** Several babies (BABIES_AND_BACKUP §2): History's baby label, and Settings › Babies with twins and an unnamed third. */
-    @Test fun historyTwins() = screen("22-history-twins", night = true) { History(HistorySamples.twins()) }
+    @Test fun historyTwins() = screen("25-history-twins", night = true) { History(HistorySamples.twins()) }
 
-    @Test fun settingsBabies() = screen("23-settings-babies", night = false) {
+    @Test fun settingsBabies() = screen("26-settings-babies", night = false) {
         SettingsScreen(SettingsSamples.babies(), SettingsActions.None, windowInsets = ReferenceInsets)
     }
 
     /** A paired watch from before several babies: "Add a baby" disabled, and why (BABIES_AND_BACKUP §2.4). */
-    @Test fun settingsBabiesWatchUpdate() = screen("29-settings-babies-watch-update", night = false) {
+    @Test fun settingsBabiesWatchUpdate() = screen("32-settings-babies-watch-update", night = false) {
         SettingsScreen(SettingsSamples.state().copy(watchNeedsUpdate = true), SettingsActions.None, windowInsets = ReferenceInsets)
     }
 

@@ -56,6 +56,79 @@
     <!-- Custom accessibility action on a History row (DESIGN_SPEC §9.4) -->
     <string name="action_edit_time">Edit time</string>
 
+    <!-- Statistics (P8). Also the name of History's chart button. -->
+    <string name="statistics_title">Statistics</string>
+    <string name="statistics_subtitle">Average per day</string>
+    <string name="statistics_last_7_days">Last 7 days</string>
+    <string name="statistics_last_30_days">Last 30 days</string>
+    <string name="statistics_last_90_days">Last 90 days</string>
+    <string name="statistics_all_days">All days</string>
+    <!-- The range chip and the legend for a range picked in the date dialog -->
+    <string name="statistics_chosen_dates">Chosen dates</string>
+    <string name="statistics_choose_dates">Choose dates…</string>
+    <!-- Click label of the range chip -->
+    <string name="statistics_change_range">Change range</string>
+    <string name="statistics_feeds">Feeds</string>
+    <!-- "3 of 7 days logged": %1$d days with something logged of the window's %2$d days (the quantity) -->
+    <plurals name="statistics_days_logged">
+        <item quantity="one">%1$d of %2$d day logged</item>
+        <item quantity="other">%1$d of %2$d days logged</item>
+    </plurals>
+    <!-- Chart legend when each bar averages several days -->
+    <plurals name="statistics_bar_days">
+        <item quantity="one">Each bar is %d day</item>
+        <item quantity="other">Each bar is %d days</item>
+    </plurals>
+    <string name="statistics_gaps_feeds">Days with no feeds logged are left out.</string>
+    <string name="statistics_gaps_diapers">Days with no diapers logged are left out.</string>
+    <string name="statistics_gaps_sleep">Days with no sleep logged are left out.</string>
+    <string name="statistics_chart_empty">Nothing logged on these days.</string>
+    <string name="statistics_empty">Statistics start after the first full day of logging.</string>
+    <string name="statistics_footnote">Averages count whole days up to yesterday. A day counts for feeds, diapers or sleep only if any were logged that day. The first day of logging is left out.</string>
+    <!-- TalkBack: "6.7 a day", "14 hours 1 minute a day" -->
+    <string name="statistics_spoken_per_day">%1$s a day</string>
+    <!-- TalkBack for "–" (nothing counted) -->
+    <string name="statistics_spoken_not_logged">not logged</string>
+    <!-- TalkBack, the chart's first sentence with one bar per day: "Poop per day, 26 September to 25 October." -->
+    <string name="statistics_spoken_chart_days">%1$s per day, %2$s.</string>
+    <!-- TalkBack, the same with bars of several days: "Poop per day, 29 April to 25 October, each bar 7 days." -->
+    <string name="statistics_spoken_chart_bars">%1$s per day, %2$s, each bar %3$s.</string>
+    <!-- TalkBack, the highest and lowest bar: one day ("Highest 5 on Wednesday 7 October.") or several ("Highest 3.3 from 11 May to 17 May.") -->
+    <string name="statistics_spoken_highest_on">Highest %1$s on %2$s.</string>
+    <string name="statistics_spoken_highest_from">Highest %1$s from %2$s.</string>
+    <string name="statistics_spoken_lowest_on">Lowest %1$s on %2$s.</string>
+    <string name="statistics_spoken_lowest_from">Lowest %1$s from %2$s.</string>
+    <plurals name="statistics_spoken_gaps_feeds">
+        <item quantity="one">%d day with no feeds logged is left out.</item>
+        <item quantity="other">%d days with no feeds logged are left out.</item>
+    </plurals>
+    <plurals name="statistics_spoken_gaps_diapers">
+        <item quantity="one">%d day with no diapers logged is left out.</item>
+        <item quantity="other">%d days with no diapers logged are left out.</item>
+    </plurals>
+    <plurals name="statistics_spoken_gaps_sleep">
+        <item quantity="one">%d day with no sleep logged is left out.</item>
+        <item quantity="other">%d days with no sleep logged are left out.</item>
+    </plurals>
+    <!-- "Days before 23 October are left out." %1$s is a spoken date. -->
+    <string name="statistics_spoken_before">Days before %1$s are left out.</string>
+    <!-- java.time patterns: visible dates "26 Sep", spoken dates "26 September", spoken days "Wednesday 7 October".
+         The _year forms are used when a range spans two years or is not in the current year. -->
+    <string name="statistics_pattern_date">d MMM</string>
+    <string name="statistics_pattern_date_year">d MMM yyyy</string>
+    <string name="statistics_pattern_spoken_date">d MMMM</string>
+    <string name="statistics_pattern_spoken_date_year">d MMMM yyyy</string>
+    <string name="statistics_pattern_spoken_day">EEEE d MMMM</string>
+    <string name="statistics_pattern_spoken_day_year">EEEE d MMMM yyyy</string>
+    <!-- No average (nothing counted): a dash, never "0" -->
+    <string name="statistics_no_value" translatable="false">–</string>
+    <!-- A range of visible dates: "26 Sep – 25 Oct" -->
+    <string name="join_dash" translatable="false">%1$s – %2$s</string>
+    <!-- TalkBack, a row: "Feeds. Last 7 days: 6.7 a day. Last 30 days: 7.1 a day." -->
+    <string name="statistics_spoken_row" translatable="false">%1$s. %2$s: %3$s. %4$s: %5$s.</string>
+    <!-- TalkBack, a row with another range: "Feeds. Last 7 days: 6.7 a day. Chosen dates: 7.1 a day. Last 30 days: 7.1 a day." -->
+    <string name="statistics_spoken_row_compare" translatable="false">%1$s. %2$s: %3$s. %4$s: %5$s. %6$s: %7$s.</string>
+
     <!-- Edit sheet (P4) -->
     <string name="edit_title_sleep">Edit sleep</string>
     <string name="edit_title_feed">Edit feed</string>
@@ -127,11 +200,14 @@
 
     <!-- Ongoing notification of a running sleep (P6, DESIGN_SPEC §3.3.7). %1$s is the baby's name. -->
     <string name="notification_channel_timers">Sleep in progress</string>
-    <string name="notification_channel_timers_description">Shows a running sleep, with Woke up</string>
+    <string name="notification_channel_timers_description">Shows a running sleep with Woke up, then lets you move the wake-up time</string>
     <string name="notification_asleep_title">%1$s is asleep</string>
-    <!-- "Since 02:05". %1$s is a clock time. -->
-    <string name="notification_since">Since %1$s</string>
-    <!-- Metric label (Android 17), followed by a clock time -->
+    <!-- After Woke up on the notification: "Noa woke up at 03:12". %1$s is the baby's name, %2$s a clock time. -->
+    <string name="notification_woke_up_title">%1$s woke up at %2$s</string>
+    <!-- The selected Earlier offset on the woke-up notification: "✓ −10m" -->
+    <string name="notification_offset_selected" translatable="false">✓ %1$s</string>
+    <!-- Metric labels (Android 17): followed by a duration ("1h 07m"), a clock time -->
+    <string name="notification_metric_asleep_for">Asleep for</string>
     <string name="notification_metric_since">Since</string>
     <!-- Settings › Notifications (DESIGN_SPEC §10.5) -->
     <string name="settings_section_notifications">Notifications</string>

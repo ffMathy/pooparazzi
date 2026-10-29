@@ -93,9 +93,12 @@ internal object HistoryDefaults {
     val FabMargin = 16.dp
 }
 
-/** History wired to its view models: the day, deletes with Undo, and the edit sheet (edit a row, add a past entry). */
+/**
+ * History wired to its view models: the day, deletes with Undo, and the edit sheet (edit a row, add a past entry).
+ * [onOpenStatistics] opens Statistics (P8) over History.
+ */
 @Composable
-fun HistoryRoute(onBack: () -> Unit) {
+fun HistoryRoute(onBack: () -> Unit, onOpenStatistics: () -> Unit) {
     val viewModel: HistoryViewModel = viewModel(factory = HistoryViewModel.Factory)
     val editViewModel: EditViewModel = viewModel(factory = EditViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -103,9 +106,11 @@ fun HistoryRoute(onBack: () -> Unit) {
     rememberEditEffects(editViewModel, onDeleted = viewModel::onEntryDeleted)
     // Only while this screen is resumed: a second tap during the exit transition must not pop Home as well.
     val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
+    val statistics by rememberUpdatedState(dropUnlessResumed(block = onOpenStatistics))
     val actions = remember(viewModel, editViewModel) {
         object : HistoryActions by viewModel {
             override fun onBack() = back()
+            override fun onOpenStatistics() = statistics()
             override fun onEdit(entryId: String) = editViewModel.openEntry(entryId)
             override fun onAddEntry() = editViewModel.openNew(viewModel.addEntryDefaultTime())
         }
@@ -233,8 +238,8 @@ fun HistoryScreen(
 }
 
 /**
- * Back, "History", the current baby's label with two or more babies (BABIES_AND_BACKUP §2.4) and the sync line (a 48 dp
- * retry target in the error state).
+ * Back, "History", the current baby's label with two or more babies (BABIES_AND_BACKUP §2.4), the sync line (a 48 dp
+ * retry target in the error state) and the `chart` button to Statistics.
  */
 @Composable
 private fun HistoryTopBar(state: HistoryUiState, formatters: Formatters, actions: HistoryActions) {
@@ -245,6 +250,7 @@ private fun HistoryTopBar(state: HistoryUiState, formatters: Formatters, actions
         navigationIcon = XIcons.back,
         navigationLabel = stringResource(R.string.cd_back),
         onNavigate = actions::onBack,
+        actions = { IconTarget(XIcons.chart, stringResource(R.string.statistics_title), actions::onOpenStatistics) },
     ) {
         if (state.hasSeveralBabies) {
             Text(

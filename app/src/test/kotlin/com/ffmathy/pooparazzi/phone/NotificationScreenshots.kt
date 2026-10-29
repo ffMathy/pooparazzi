@@ -5,12 +5,14 @@ import android.app.Notification
 import android.content.Context
 import android.provider.Settings
 import android.widget.FrameLayout
+import android.widget.RemoteViews
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -37,12 +39,15 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The per-baby sleep notifications (BABIES_AND_BACKUP §2.3) as the system's own notification template draws them:
- * twins both asleep, so "Noa is asleep" and "Ida is asleep" each with their "Woke up". Written to
- * `app/screenshots/<lang>/28-notification-twins.png`. Rendered by Robolectric from the real [Notification], so the
- * frame is the platform's template on a shade-coloured panel, not a pixel-exact system shade.
+ * The sleep notifications as the system's own templates draw them (Android 16, night): the running sleep at 03:12
+ * expanded (its duration, the last feed and diaper, today's counts and Woke up), then the woke-up notification after
+ * "−10m" (its offsets). Built by [TimerNotifications], turned into the template's [RemoteViews] and captured.
+ * Written to `app/screenshots/<lang>/20-notifications.png`.
+ *
+ * Then the per-baby sleep notifications (BABIES_AND_BACKUP §2.3): twins both asleep, so "Noa is asleep" and "Ida is
+ * asleep" each with their "Woke up", in `31-notification-twins.png`.
  */
-abstract class NotificationScreenshots(private val language: String) {
+abstract class NotificationScreenshots(private val language: AppLanguage) {
     @get:Rule
     val compose = createComposeRule()
 
@@ -54,47 +59,74 @@ abstract class NotificationScreenshots(private val language: String) {
     }
 
     @Test
+    fun notifications() {
+        val zone = SampleData.ZONE
+        val entries = SampleData.scenarioAt0312(zone)
+        val settings = SampleData.settings.copy(language = language)
+        val notifications = TimerNotifications(context)
+        val asleep = TimerState.of(entries, settings, SampleData.NOW_0312, zone)
+        val running = notifications.buildSleep(asleep, asleep.sleeping.single())
+
+        val sleep = entries.single { it.id == asleep.sleeping.single().sleep.entryId }.copy(endMillis = SampleData.at(3, 2))
+        val awake = TimerState.of(entries.map { if (it.id == sleep.id) sleep else it }, settings, SampleData.NOW_0312, zone)
+        val wokeUp = notifications.buildWokeUp(awake, sleep, baseMillis = SampleData.NOW_0312, offsetMinutes = -10)
+
+        val views = listOf(running, wokeUp).map { expanded(it) }
+        compose.setContent {
+            Column(Modifier.testTag(TAG).background(Backdrop).padding(16.dp)) {
+                views.forEach { Card(it) }
+            }
+        }
+        compose.onNodeWithTag(TAG).captureRoboImage("screenshots/${language.tag}/20-notifications.png")
+    }
+
+    @Test
     fun sleepNotificationsForTwins() {
         val noa = Baby(Baby.FIRST_ID, SampleData.BABY_NAME)
         val ida = Baby(SampleData.TWIN_ID, SampleData.TWIN_NAME)
-        val sleeping = listOf(
-            SleepingBaby(noa, RunningTimer("sleep-noa", SampleData.at(13, 5)), lastFeedStartMillis = SampleData.at(12, 40)),
-            SleepingBaby(ida, RunningTimer("sleep-ida", SampleData.at(13, 20)), lastFeedStartMillis = SampleData.at(12, 55)),
+        val state = TimerState(
+            sleeping = listOf(
+                SleepingBaby(noa, RunningTimer("sleep-noa", SampleData.at(13, 5))),
+                SleepingBaby(ida, RunningTimer("sleep-ida", SampleData.at(13, 20))),
+            ),
+            babies = listOf(noa, ida),
+            language = language,
+            zone = SampleData.ZONE,
+            now = SampleData.NOW_1432,
         )
-        val state = TimerState(sleeping = sleeping, babies = listOf(noa, ida), language = AppLanguage.SYSTEM, zone = SampleData.ZONE)
         val notifications = TimerNotifications(context)
-        // The expanded template (title, text and the "Woke up" action), as the shade shows the top notification.
-        @Suppress("DEPRECATION")
-        val views = sleeping.map { Notification.Builder.recoverBuilder(context, notifications.buildSleep(state, it)).createBigContentView() }
+        val views = state.sleeping.map { expanded(notifications.buildSleep(state, it)) }
         compose.setContent {
-            Column(
-                Modifier.testTag(TAG).background(Shade).padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                views.forEach { view ->
-                    AndroidView(
-                        factory = { view.apply(it, FrameLayout(it)) },
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Card),
-                    )
-                }
+            Column(Modifier.testTag(TAG).background(Backdrop).padding(16.dp)) {
+                views.forEach { Card(it) }
             }
         }
-        compose.onNodeWithTag(TAG).captureRoboImage("screenshots/$language/28-notification-twins.png")
+        compose.onNodeWithTag(TAG).captureRoboImage("screenshots/${language.tag}/31-notification-twins.png")
+    }
+
+    private fun expanded(notification: Notification): RemoteViews =
+        Notification.Builder.recoverBuilder(context, notification).createBigContentView()
+
+    @Composable
+    private fun Card(view: RemoteViews) {
+        Box(Modifier.padding(vertical = 8.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Shade)) {
+            AndroidView(factory = { view.apply(it, FrameLayout(it)) }, modifier = Modifier.fillMaxWidth())
+        }
     }
 
     private companion object {
         const val TAG = "notifications"
-        val Shade = Color(0xFFDCD5CB)
-        val Card = Color(0xFFF7F2EA)
+        val Backdrop = Color(0xFF24201C)
+        val Shade = Color(0xFF2E2A27)
     }
 }
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [36], qualifiers = "w390dp-h844dp-xxhdpi", application = Application::class)
-class NotificationScreenshotsEnglish : NotificationScreenshots("en")
+@Config(sdk = [36], qualifiers = "w390dp-h640dp-night-xxhdpi", application = Application::class)
+class NotificationScreenshotsEnglish : NotificationScreenshots(AppLanguage.EN)
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [36], qualifiers = "da-w390dp-h844dp-xxhdpi", application = Application::class)
-class NotificationScreenshotsDanish : NotificationScreenshots("da")
+@Config(sdk = [36], qualifiers = "da-w390dp-h640dp-night-xxhdpi", application = Application::class)
+class NotificationScreenshotsDanish : NotificationScreenshots(AppLanguage.DA)

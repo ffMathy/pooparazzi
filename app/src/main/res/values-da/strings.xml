@@ -25,6 +25,59 @@
     <string name="history_empty">Intet registreret denne dag.</string>
     <string name="action_edit_time">Ret tid</string>
 
+    <!-- Statistik -->
+    <string name="statistics_title">Statistik</string>
+    <string name="statistics_subtitle">Gennemsnit pr. dag</string>
+    <string name="statistics_last_7_days">Seneste 7 dage</string>
+    <string name="statistics_last_30_days">Seneste 30 dage</string>
+    <string name="statistics_last_90_days">Seneste 90 dage</string>
+    <string name="statistics_all_days">Alle dage</string>
+    <string name="statistics_chosen_dates">Valgte datoer</string>
+    <string name="statistics_choose_dates">Vælg datoer…</string>
+    <string name="statistics_change_range">Skift periode</string>
+    <string name="statistics_feeds">Måltider</string>
+    <plurals name="statistics_days_logged">
+        <item quantity="one">%1$d af %2$d dag med registreringer</item>
+        <item quantity="other">%1$d af %2$d dage med registreringer</item>
+    </plurals>
+    <plurals name="statistics_bar_days">
+        <item quantity="one">Hver søjle er %d dag</item>
+        <item quantity="other">Hver søjle er %d dage</item>
+    </plurals>
+    <string name="statistics_gaps_feeds">Dage uden registrerede måltider er ikke talt med.</string>
+    <string name="statistics_gaps_diapers">Dage uden registrerede bleer er ikke talt med.</string>
+    <string name="statistics_gaps_sleep">Dage uden registreret søvn er ikke talt med.</string>
+    <string name="statistics_chart_empty">Intet registreret på disse dage.</string>
+    <string name="statistics_empty">Statistikken begynder efter den første hele dag med registreringer.</string>
+    <string name="statistics_footnote">Gennemsnittene tæller hele dage til og med i går. En dag tæller kun med for måltider, bleer eller søvn, hvis der blev registreret nogen den dag. Den første dag med registreringer er ikke talt med.</string>
+    <string name="statistics_spoken_per_day">%1$s om dagen</string>
+    <string name="statistics_spoken_not_logged">ikke registreret</string>
+    <string name="statistics_spoken_chart_days">%1$s pr. dag, %2$s.</string>
+    <string name="statistics_spoken_chart_bars">%1$s pr. dag, %2$s, hver søjle %3$s.</string>
+    <string name="statistics_spoken_highest_on">Højest %1$s %2$s.</string>
+    <string name="statistics_spoken_highest_from">Højest %1$s fra %2$s.</string>
+    <string name="statistics_spoken_lowest_on">Lavest %1$s %2$s.</string>
+    <string name="statistics_spoken_lowest_from">Lavest %1$s fra %2$s.</string>
+    <plurals name="statistics_spoken_gaps_feeds">
+        <item quantity="one">%d dag uden registrerede måltider er ikke talt med.</item>
+        <item quantity="other">%d dage uden registrerede måltider er ikke talt med.</item>
+    </plurals>
+    <plurals name="statistics_spoken_gaps_diapers">
+        <item quantity="one">%d dag uden registrerede bleer er ikke talt med.</item>
+        <item quantity="other">%d dage uden registrerede bleer er ikke talt med.</item>
+    </plurals>
+    <plurals name="statistics_spoken_gaps_sleep">
+        <item quantity="one">%d dag uden registreret søvn er ikke talt med.</item>
+        <item quantity="other">%d dage uden registreret søvn er ikke talt med.</item>
+    </plurals>
+    <string name="statistics_spoken_before">Dage før %1$s er ikke talt med.</string>
+    <string name="statistics_pattern_date">d. MMM</string>
+    <string name="statistics_pattern_date_year">d. MMM yyyy</string>
+    <string name="statistics_pattern_spoken_date">d. MMMM</string>
+    <string name="statistics_pattern_spoken_date_year">d. MMMM yyyy</string>
+    <string name="statistics_pattern_spoken_day">EEEE \'den\' d. MMMM</string>
+    <string name="statistics_pattern_spoken_day_year">EEEE \'den\' d. MMMM yyyy</string>
+
     <!-- Redigering -->
     <string name="edit_title_sleep">Rediger søvn</string>
     <string name="edit_title_feed">Rediger måltid</string>
@@ -84,9 +137,10 @@
 
     <!-- Igangværende notifikationer -->
     <string name="notification_channel_timers">Søvn i gang</string>
-    <string name="notification_channel_timers_description">Viser en igangværende søvn med Vågnede</string>
+    <string name="notification_channel_timers_description">Viser en igangværende søvn med Vågnede og lader dig bagefter rykke opvågningen</string>
     <string name="notification_asleep_title">%1$s sover</string>
-    <string name="notification_since">Siden kl. %1$s</string>
+    <string name="notification_woke_up_title">%1$s vågnede kl. %2$s</string>
+    <string name="notification_metric_asleep_for">Har sovet</string>
     <string name="notification_metric_since">Siden</string>
     <!-- Indstillinger › Notifikationer -->
     <string name="settings_section_notifications">Notifikationer</string>

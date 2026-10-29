@@ -59,8 +59,9 @@ class Android17SmokeTest {
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
         val noa = Baby(Baby.FIRST_ID, "Noa")
         val state = TimerState(
-            sleeping = listOf(SleepingBaby(noa, RunningTimer("sleep-1", SampleData.at(2, 5)), lastFeedStartMillis = SampleData.at(1, 40))),
+            sleeping = listOf(SleepingBaby(noa, RunningTimer("sleep-1", SampleData.at(2, 5)))),
             babies = listOf(noa),
+            now = SampleData.NOW_0312,
             language = AppLanguage.DA,
             zone = SampleData.ZONE,
         )
@@ -71,5 +72,9 @@ class Android17SmokeTest {
         assertNotNull("the sleep notification", posted)
         assertEquals(Notification.MetricStyle::class.java.name, posted!!.extras.getString(Notification.EXTRA_TEMPLATE))
         assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
+        // "Har sovet" ticks by itself (a TimeDifference from the start), then "Siden" 02:05.
+        val metrics = (Notification.Builder.recoverBuilder(app, posted).style as Notification.MetricStyle).metrics
+        assertEquals(listOf("Har sovet", "Siden"), metrics.map { it.label.toString() })
+        assertTrue(metrics[0].value is Notification.Metric.TimeDifference)
     }
 }

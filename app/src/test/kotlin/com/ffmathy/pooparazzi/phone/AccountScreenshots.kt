@@ -37,20 +37,20 @@ abstract class AccountScreenshots(private val language: String) {
         Settings.System.putString(ApplicationProvider.getApplicationContext<Application>().contentResolver, Settings.System.TIME_12_24, "24")
     }
 
-    @Test fun welcome() = screen("24-welcome", night = false) {
+    @Test fun welcome() = screen("27-welcome", night = false) {
         WelcomeScreen(AccountSamples.signedOut(), AccountActions.None, windowInsets = ReferenceInsets)
     }
 
-    @Test fun accountSignedOut() = screen("25-account-signed-out", night = false) {
+    @Test fun accountSignedOut() = screen("28-account-signed-out", night = false) {
         AccountScreen(AccountSamples.signedOut(), AccountActions.None, windowInsets = ReferenceInsets)
     }
 
-    @Test fun accountSignedIn() = screen("26-account-signed-in", night = true) {
+    @Test fun accountSignedIn() = screen("29-account-signed-in", night = true) {
         AccountScreen(AccountSamples.signedIn(), AccountActions.None, windowInsets = ReferenceInsets)
     }
 
     /** The backup was deleted but the account was not (its deletion failed): nothing is backed up until "Back up now". */
-    @Test fun accountBackupDeleted() = screen("30-account-backup-deleted", night = true) {
+    @Test fun accountBackupDeleted() = screen("33-account-backup-deleted", night = true) {
         AccountScreen(AccountSamples.signedIn(cloud = CloudStatus.Deleted), AccountActions.None, windowInsets = ReferenceInsets)
     }
 

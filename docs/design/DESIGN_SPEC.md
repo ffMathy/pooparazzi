@@ -166,6 +166,7 @@ Home ──Diaper──────────────▶ Diaper sheet ─�
  │ ├─since-row 1 / 2──────▶ Edit sheet (latest entry of that row)
  │ ├─Adjust start (Lamp)──▶ Adjust card in the whisper slot ──Edit chip──▶ Edit sheet (running sleep)
  │ ├─History pill / Today grid ──▶ History ──row──▶ Edit sheet
+ │ │                                        ├─Statistics icon──▶ Statistics (P8) ──range chip──▶ menu / date range dialog
  │ │                                        └─"Add entry" FAB──▶ Edit sheet ("Add past entry" mode)
  │ └─Settings ──────────────▶ Settings (not designed; Appendix B)
 Widget buttons ──▶ log in place (no app launch) · Widget background ──▶ Home with the undo card for the last widget log
@@ -201,6 +202,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | P5 | Phone | Home-screen widgets 4×2, 3×1 | Feed and Diaper open the app's sheets; the sleep toggle logs in one tap |
 | P6 | Phone | Live Update (running sleep) | Status chip and an ongoing notification with "Woke up" |
 | P7 | Phone | Splash | System splash, dark at night and light by day |
+| P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day: the last 7 days next to a chosen range (default the last 30 days), with a bar chart of one kind |
 | W1 | Watch | Main, idle | Status block, Feed / Diaper, "Start sleep"; scroll list below |
 | W2 | Watch | Main, asleep | Lamp, "Woke up"; scroll list with Adjust start |
 | W3 | Watch | Diaper picker | Pee / Poop / Both; Earlier |
@@ -364,7 +366,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 
 | Band (reference y) | Content |
 |---|---|
-| Top bar 24–88 | Back icon button (`back` 24, "Back"); "History" titleLarge. Nothing at the end |
+| Top bar 24–88 | Back icon button (`back` 24, "Back"); "History" titleLarge; at the end the `chart` icon button (24, "Statistics"), its glyph 20 from the screen edge, mirroring Back. It opens Statistics (P8, V1_ADDITIONS §8) |
 | Day switcher 96–144 | `chevronLeft` icon button ("Previous day"); "Today · Mon 26 Oct" titleMedium centred; `chevronRight` icon button ("Next day"), disabled on today (icon outlineVariant) |
 | Ribbon card 152–252 | 350 × 100, r 20, surfaceContainer. Decorative, not tappable |
 | Stats 264–312 | 4 columns: numbers titleLarge onSurface ("5", "4", "2", "7h 57m"), captions labelSmall onSurfaceVariant ("feeds", "pee", "poop", "sleep") |
@@ -438,7 +440,7 @@ Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (
 
 **3×1** (reference 260 × 100, padding 12, minimum 160 wide): three equal buttons 76 tall, gap 8, r 20, content column (icon 24, label 14 sp, max 2 lines, never broken inside a word): Feed (`feed`, opens the Feed sheet); Diaper (`diaper`, DIAPER colours, opens the Diaper sheet); Sleep ("Start sleep", the toggle). When asleep, Sleep shows `wake` + "Woke up" with the checked style. Every widget offers all three: Feed, Diaper and Sleep. (It was a 2×1 with Feed and Sleep; the provider keeps its receiver so placed widgets survive.)
 
-**Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else.
+**Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else. Feed and Diaper open the app's sheet on the cover screen; when that sheet closes (logged, or dismissed with Back) the app finishes and the cover screen shows the widget again, since Home has no room there. On the main screen Home stays, with its undo card.
 
 Breakpoints: §10.11.
 
@@ -447,9 +449,19 @@ Breakpoints: §10.11.
 | Element | Content |
 |---|---|
 | Status chip | small icon `sleepRunning` + "Asleep" (no ticking value) |
-| Title / text | "Noa is asleep" / "Since 02:05" |
+| Title / text | "Noa is asleep" / "1h 07m · since 02:05" (whole minutes, re-rendered each minute) |
+| Expanded | the text, then "Fed 1h 32m ago · 01:40 · L → R", "Pee 20m ago · 02:52", "Today · 1 feed · 1 pee · 0 poop · 2h 42m sleep" (lines without data are left out) |
 | Action | "Woke up" (works from the lock screen) |
-| Metrics (Android 17 `MetricStyle`) | "Since" 02:05, "Last fed" 01:40 (both fixed times) |
+| Metrics (Android 17 `MetricStyle`) | "Asleep for" 1h 07m (system TimeDifference), "Since" 02:05 (fixed time), "Last fed · L → R" 1h 32m (system TimeDifference) |
+
+**Woke-up notification.** "Woke up" on the notification ends the sleep and posts a silent, dismissable notification on the same channel, so the wake-up time can be moved without opening the app, as the undo card's Earlier row does:
+
+| Element | Content |
+|---|---|
+| Title / text | "Noa woke up at 03:12" (no name: "Woke up at 03:12") / "Slept 1h 07m · 02:05 – 03:12" |
+| Expanded | the text, then the feed, diaper and Today lines above |
+| Actions | "−5m" "−10m" "−15m" (lock screen too). Relative to the tap, never cumulative; the selected one reads "✓ −10m" and a second tap returns to the tap time. An offset that would end the sleep before its start is left out |
+| Lifetime | 30 minutes (`setTimeoutAfter`); cancelled when a sleep runs again (a new sleep, or the wake undone in the app) |
 
 Feed and diaper are never Live Updates. API details: §10.5.
 
@@ -1025,8 +1037,9 @@ Each quoted string is one path. All are stroked unless noted.
 | `lamp` | table lamp (brand glyph, tile header) | `M8.5 3.5h7l3.5 8h-14z` `M12 11.5v6.5` `M8.5 20.5h7` |
 | `awake` | sun with 8 rays | `M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z` `M12 2.5v2` `M12 19.5v2` `M2.5 12h2` `M19.5 12h2` `M5.3 5.3l1.4 1.4` `M17.3 17.3l1.4 1.4` `M5.3 18.7l1.4-1.4` `M17.3 6.7l1.4-1.4` |
 | `sleepRunning` | ring + filled crescent = "a sleep is running" on glance surfaces (widget, tile, complication, notification small icon). Static, no ember, so it cannot go stale | ring (stroked): `M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19z` + crescent (**filled**, no stroke): `M16 13.3A4.25 4.25 0 1 1 10.7 8a3.5 3.5 0 0 0 5.3 5.3z` |
+| `chart` | a baseline and three uneven bars (History's button to Statistics, P8) | `M3.5 20.5h17` `M7 17v-5` `M12 17V6` `M17 17v-8` |
 
-28 icons. All were render-checked legible at 18 dp and up; `sleepRunning` at 16, 24 and 56 dp on black.
+29 icons (`chart` was added with Statistics). All were render-checked legible at 18 dp and up; `sleepRunning` at 16, 24 and 56 dp on black.
 
 ### 6.3 Shape-coded avatars (lists)
 
@@ -1075,7 +1088,7 @@ One grammar everywhere the app renders text, including the tile and complication
 **Counts**: "1 feed" / "5 feeds"; "pee", "poop" and "sleep" do not change.
 
 **No ticking durations.** No seconds, no chronometer anywhere:
-- Phone Live Update chip: "Asleep" (no chronometer).
+- Phone Live Update chip: "Asleep" (no chronometer). Its text shows whole minutes ("1h 07m · since 02:05"), re-rendered once a minute, and its Android 17 metrics use the system's TimeDifference.
 - Wear Ongoing Activity / Live Update: "Asleep since 02:05".
 - Tile and complications format their own dynamic text in this grammar.
 - **The only exemption**: the pre-Wear OS 4 complication fallback `TimeDifferenceComplicationText` with `SHORT_DUAL_UNIT` (system format "1h 5m").
@@ -1261,12 +1274,14 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 - Manifest `POST_PROMOTED_NOTIFICATIONS`. Check `NotificationManager.canPostPromotedNotifications()` and fall back to a normal ongoing notification. Link to `ACTION_MANAGE_APP_PROMOTED_NOTIFICATIONS` from Settings.
 - Builder settings:
   - `setOngoing(true)`, `setRequestPromotedOngoing(true)`.
-  - Title "Noa is asleep", text "Since 02:05" (absolute; never a self-updating duration string).
+  - Title "Noa is asleep", text "1h 07m · since 02:05" (whole minutes and the absolute start; no seconds). A non-waking `AlarmManager.RTC` alarm at each minute boundary re-renders it while the notification shows, so a phone that wakes up shows the current value; it is cancelled with the notification.
+  - `BigTextStyle` (below Android 17) adds the last feed, the last diaper and Today's counts.
   - `setShortCriticalText("Asleep")` for the status chip (small icon `sleepRunning`), `setShowWhen(false)`, and **no** `setUsesChronometer`.
   - Action "Woke up" with `setAuthenticationRequired(false)`.
   - `VISIBILITY_PUBLIC`; channel `IMPORTANCE_LOW`; `setSilent(true)`; `setOnlyAlertOnce(true)`.
 - Detect dismissal with `setDeleteIntent` and do not repost.
-- Android 17 `MetricStyle`: "Since" 02:05 (FixedTime), "Last fed" 01:40 (FixedTime). No TimeDifference metric: its system format would break the grammar.
+- Android 17 `MetricStyle`: "Asleep for" (`TimeDifference.forStopwatch(start, FORMAT_ADAPTIVE)`), "Since" 02:05 (FixedTime), "Last fed · L → R" (`TimeDifference.forStopwatch(feed, FORMAT_ADAPTIVE)`). The durations are the system's, so they stay current on the lock screen without a re-render; the parent should not have to subtract times at 3am.
+- "Woke up" posts the woke-up notification (§3.3.7) with three Earlier actions (`setAuthenticationRequired(false)`); each action's broadcast carries the tap time and the offset applied when it was posted, and the receiver updates the sleep's end and re-posts.
 - Ask for `POST_NOTIFICATIONS` in context on the first Start sleep.
 
 ### 10.6 Wear running sleep, ambient, gestures

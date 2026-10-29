@@ -56,7 +56,7 @@ internal object HomeDefaults {
  * Home; a delete there shows the "… deleted" card with Undo.
  *
  * [launch] is a deep link from a widget or notification (DESIGN_SPEC §3.1): Home opens the sheet or undo card it asks
- * for and reports it through [onLaunchHandled]. The first sleep started here asks for the notification permission, so
+ * for and reports it through [onLaunchHandled]; when such a sheet closes, [onLaunchedSheetClosed]. The first sleep started here asks for the notification permission, so
  * the running sleep can show its ongoing notification (§3.3.1, §10.5).
  */
 @Composable
@@ -65,6 +65,7 @@ fun HomeRoute(
     onOpenSettings: () -> Unit,
     launch: HomeLaunch? = null,
     onLaunchHandled: (HomeLaunch) -> Unit = {},
+    onLaunchedSheetClosed: () -> Unit = {},
 ) {
     val accessibility = LocalAccessibilityManager.current
     val timings = remember(accessibility) {
@@ -90,6 +91,10 @@ fun HomeRoute(
     val askForNotifications = rememberNotificationPermissionPrompt()
     LaunchedEffect(viewModel) {
         viewModel.timerStarted.collect { askForNotifications() }
+    }
+    val launchedSheetClosed by rememberUpdatedState(onLaunchedSheetClosed)
+    LaunchedEffect(viewModel) {
+        viewModel.launchedSheetClosed.collect { launchedSheetClosed() }
     }
     val handled by rememberUpdatedState(onLaunchHandled)
     LaunchedEffect(launch) {

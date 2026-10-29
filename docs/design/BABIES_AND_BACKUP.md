@@ -41,7 +41,7 @@ A baby's label is its name; an unnamed baby is "Baby" when it is the only one an
 
 ### 2.3 What is per baby
 
-Everything in the log: Home, History, the edit sheet, the widgets, the tile and the complications show and log for the device's current baby. The rules of V1_ADDITIONS §1 apply **per baby**:
+Everything in the log: Home, History, Statistics, the edit sheet, the widgets, the tile and the complications show and log for the device's current baby. The rules of V1_ADDITIONS §1 apply **per baby**:
 
 - one running sleep **per baby** (twins can sleep at the same time);
 - the 5 s dedupe and the cross-device duplicate rule compare entries of the **same baby** only (two diapers changed within seconds of each other on twins are two entries);
@@ -49,7 +49,7 @@ Everything in the log: Home, History, the edit sheet, the widgets, the tile and 
 
 Two things span all babies, because a parent must not lose sight of a sleeping baby when switching to the other:
 
-- **The phone's running-sleep notification** shows every baby that is asleep, one notification each ("Noa is asleep", "Ida is asleep"), each with its own "Woke up".
+- **The phone's running-sleep notification** shows every baby that is asleep, one notification each ("Noa is asleep", "Ida is asleep"), each with its own "Woke up". Each keeps the content of DESIGN_SPEC §3.3.7 for its own baby (how long the sleep has run, that baby's last feed and diaper and today's counts), and "Woke up" leaves that baby's own woke-up notification with its Earlier offsets; other babies' notifications stay.
 - **Auto appearance** dims for naps while *any* baby is asleep.
 
 ### 2.4 Phone UI
@@ -57,6 +57,7 @@ Two things span all babies, because a parent must not lose sight of a sleeping b
 - **Settings › Babies** (replaces Settings › Baby). One name field per baby (label "Name", placeholder its label), saved as typed as before (500 ms after the last keystroke, at once on Done). Under them an "Add a baby" pill (hidden at 8), and the hint "Names stay on this phone and your watch. They're never uploaded." Adding does not switch the current baby. While a paired watch runs a Pooparazzi from before several babies, the pill is disabled with "Update Pooparazzi on your watch first." under it: such a watch ignores baby ids and resolves conflicts across all babies (it would soft-delete one twin's running sleep, or a diaper changed seconds after the other twin's, as a duplicate). Both apps advertise the Wearable capability `pooparazzi_babies` beside `pooparazzi_tracker`; a node with the second but not the first is such a watch. With one baby nothing else changes.
 - **Home's top bar** (two or more babies). The name becomes a 48 dp button with a 16 dp `chevronDown`; it opens the **Switch baby** sheet: one 56 dp radio row per baby (its label), the current one selected. A tap selects that baby, plays SegmentTick and closes the sheet. Switching closes any open card (its Undo belongs to the other baby) and resets the double-toggle guard. In lights-down the button follows the name's colours.
 - **History** shows the current baby's label under its title when there are two or more.
+- **Statistics** (reached from History) averages the current baby's log only, and shows the same label under its title when there are two or more.
 - **Widgets.** They log for the phone's current baby, and their Feed and Diaper buttons open the app's sheets for that baby. The 4×2 widget's status row starts with the baby's label when there are two or more; every widget (the 4×2, the 3×1 and the cover-screen widget) names the baby in its TalkBack descriptions. A receipt belongs to the baby it was made for and is dropped when the current baby changes.
 
 ### 2.5 Watch UI

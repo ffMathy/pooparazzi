@@ -73,7 +73,7 @@ abstract class HomeScreenshots(private val language: String) {
     @Test fun diaperSheetHint() = sheet("09-diaper-sheet-hint", night = true, HomeSamples.diaperSheetHint())
 
     /** Twins (BABIES_AND_BACKUP §2.2): the current baby's name with a chevron is the switcher. */
-    @Test fun homeTwins() = home("20-home-twins", night = false, HomeSamples.twins())
+    @Test fun homeTwins() = home("23-home-twins", night = false, HomeSamples.twins())
 
     /** Not part of the tour (written under build/): twins with "Couldn't save · Tap to retry" under the switcher. */
     @Test fun homeTwinsSyncError() {
@@ -87,7 +87,7 @@ abstract class HomeScreenshots(private val language: String) {
     @Test fun switchBabySheet() {
         compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.twinsSwitching(), HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.waitForIdle()
-        captureScreenRoboImage(path("21-switch-baby-sheet"))
+        captureScreenRoboImage(path("24-switch-baby-sheet"))
     }
 
     /**

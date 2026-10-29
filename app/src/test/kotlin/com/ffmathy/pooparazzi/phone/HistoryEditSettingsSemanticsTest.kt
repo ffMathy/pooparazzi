@@ -20,6 +20,7 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -70,6 +71,7 @@ class HistoryEditSettingsSemanticsTest {
         override fun onPreviousDay() { calls += "previous" }
         override fun onNextDay() { calls += "next" }
         override fun onAddEntry() { calls += "add" }
+        override fun onOpenStatistics() { calls += "statistics" }
     }
 
     private val edit = object : EditActions {
@@ -144,6 +146,16 @@ class HistoryEditSettingsSemanticsTest {
         compose.onNode(hasScrollAction()).performScrollToIndex(HistorySamples.today().entries.size + 3)
         compose.waitForIdle()
         compose.onNodeWithText("Add entry").assertExists()
+    }
+
+    /** The `chart` button at the end of the top bar opens Statistics; the list and Back stay single nodes. */
+    @Test
+    fun historyOpensStatistics() {
+        compose.setContent { NightLightTheme(night = true) { HistoryScreen(HistorySamples.today(), history) } }
+        compose.onNodeWithContentDescription("Statistics").assertHasClickAction().performClick()
+        compose.onAllNodes(hasScrollAction()).assertCountEquals(1)
+        compose.onAllNodesWithContentDescription("Back").assertCountEquals(1)
+        assertEquals(listOf("statistics"), calls)
     }
 
     private fun showSheet(state: EditUiState) {

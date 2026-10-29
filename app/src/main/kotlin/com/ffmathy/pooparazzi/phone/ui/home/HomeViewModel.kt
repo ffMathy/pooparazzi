@@ -78,6 +78,10 @@ class HomeViewModel(
     private val switchingBaby = MutableStateFlow(false)
     private val haptics = Channel<HomeHaptic>(Channel.BUFFERED)
     private val timerStarts = Channel<Unit>(Channel.CONFLATED)
+    private val launchedSheetCloses = Channel<Unit>(Channel.CONFLATED)
+
+    /** The open sheet came from a widget ([onLaunch]), not from Home's own buttons. */
+    private var sheetFromLaunch = false
 
     /** Haptics to play, one per parent-triggered action. */
     val effects: Flow<HomeHaptic> = haptics.receiveAsFlow()
@@ -87,6 +91,12 @@ class HomeViewModel(
      * show its ongoing notification (DESIGN_SPEC §3.3.1, §10.5).
      */
     val timerStarted: Flow<Unit> = timerStarts.receiveAsFlow()
+
+    /**
+     * A sheet a widget opened has closed (logged or dismissed) and its write is done: on a Samsung flip's cover screen
+     * the app then returns to the widget instead of showing Home there.
+     */
+    val launchedSheetClosed: Flow<Unit> = launchedSheetCloses.receiveAsFlow()
 
     /**
      * Null until the entries and settings have loaded, so Home never flashes an empty "No feeds yet" state. The settings
@@ -178,11 +188,13 @@ class HomeViewModel(
 
     override fun onFeed() = act {
         if (homeBlocked()) return@act
+        sheetFromLaunch = false
         sheet.value = SheetModel.Feed(clock.now())
     }
 
     override fun onDiaper() = act {
         if (homeBlocked()) return@act
+        sheetFromLaunch = false
         sheet.value = SheetModel.Diaper(stamp = clock.now())
     }
 
@@ -441,6 +453,11 @@ class HomeViewModel(
             cooldownPending = false
             homeReadyAt = elapsedRealtime() + timings.homeCooldownMillis
         }
+        // Runs after the save that closed the sheet (actions run in order), so the log is written by now.
+        if (sheetFromLaunch && sheet.value == null) {
+            sheetFromLaunch = false
+            launchedSheetCloses.trySend(Unit)
+        }
     }
 
     // ---- Deep links (widgets, notifications) --------------------------------------------------
@@ -453,8 +470,14 @@ class HomeViewModel(
         when (launch) {
             // History is opened by the navigation (PooparazziNavHost); Home has nothing to show for it.
             HomeLaunch.Home, HomeLaunch.History -> Unit
-            HomeLaunch.Feed -> openSheet(SheetModel.Feed(clock.now()))
-            HomeLaunch.Diaper -> openSheet(SheetModel.Diaper(stamp = clock.now()))
+            HomeLaunch.Feed -> {
+                sheetFromLaunch = true
+                openSheet(SheetModel.Feed(clock.now()))
+            }
+            HomeLaunch.Diaper -> {
+                sheetFromLaunch = true
+                openSheet(SheetModel.Diaper(stamp = clock.now()))
+            }
             is HomeLaunch.Receipt -> showReceipt(launch)
         }
     }
