@@ -20,7 +20,7 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 - **Phone ↔ watch sync** over the Wearable **Data Layer**. Both apps log offline and merge by last-writer-wins; the baby's name and the language follow the phone.
 - **Glanceable surfaces**:
   - Phone: two **Glance widgets** (a 4×2 log widget and a 3×1 quick widget, both with Feed, Diaper and Sleep; Feed and Diaper open the same sheets as in the app, the sleep toggle works in place), the 4×2 also on the **cover screen of Samsung flip phones**, and an **ongoing notification** for a running sleep (promoted to a Live Update where Android supports it).
-  - Watch: a **Tile**, four **complications** (since last feed, last diaper, asleep/awake, sleep and last feed) and an **Ongoing Activity** while a sleep runs.
+  - Watch: a **Tile** (Feed and Diaper open the watch app's own screens, the sleep toggle works in place), four **complications** (since last feed, last diaper, asleep/awake, sleep and last feed) and an **Ongoing Activity** while a sleep runs.
 - **Night Light design**: a dim, warm Night theme for the dark hours and a Day theme, chosen automatically (or fixed in Settings). Large targets, TalkBack descriptions in full words ("2 hours 10 minutes ago"), large-font and small-watch layouts.
 - **English and Danish**, with an in-app language choice (Settings › Language) that the widgets, notifications and the watch follow.
 

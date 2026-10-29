@@ -2,6 +2,7 @@
 <!-- Danish twins of values/strings.xml. -->
 <resources>
     <string name="status_no_feed_yet">Ingen måltider endnu</string>
+    <string name="status_no_diaper_yet">Ingen bleskift endnu</string>
 
     <string name="edge_guard_already_asleep">Sover\nallerede</string>
     <string name="edge_guard_already_awake">Allerede\nvågen</string>
@@ -33,7 +34,7 @@
     <string name="spoken_then_action">%1$s. %2$s</string>
     <string name="status_since">%1$s %2$s</string>
 
-    <string name="tile_description">Registrér bleer og søvn med ét tryk, og se tiden siden sidste måltid.</string>
+    <string name="tile_description">Registrér måltider, bleer og søvn, og se tiden siden sidste måltid og ble.</string>
     <string name="tile_title_asleep">Sover %1$s</string>
     <string name="tile_guard_already_asleep">Sover allerede</string>
     <string name="tile_guard_already_awake">Allerede vågen</string>
@@ -42,9 +43,8 @@
     <string name="tile_cd_asleep">Sover, %1$s</string>
     <string name="tile_cd_feed">Måltid. Sidste måltid %1$s</string>
     <string name="tile_cd_feed_none">Måltid. Ingen måltider endnu</string>
-    <string name="tile_cd_log_pee">Registrér tis</string>
-    <string name="tile_cd_log_poop">Registrér bæ</string>
-    <string name="tile_cd_log_both">Registrér begge, tis og bæ</string>
+    <string name="tile_cd_diaper">Ble. Sidste bleskift %1$s</string>
+    <string name="tile_cd_diaper_none">Ble. Ingen bleskift endnu</string>
 
     <string name="complication_since_feed">Siden sidste måltid</string>
     <string name="complication_last_diaper">Sidste ble</string>

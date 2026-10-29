@@ -53,7 +53,7 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 | Feature | Surfaces |
 |---|---|
 | One-tap logging of Feed and Sleep start/stop; Diaper in 2 taps (Diaper → Pee / Poop / Both) | Phone Home, watch Main |
-| One-tap Pee / Poop / Both | Phone widget (4×2), watch Tile |
+| Feed and Diaper open the app's own sheets/screens (offset, type, side order, pee/poop, colour, texture); sleep toggles in one tap | Phone widgets (4×2, 3×1, Samsung cover screen), watch Tile |
 | Status at a glance: time since last feed, awake/asleep duration, last diaper | Phone Home, watch Main, Tile, complications, widget, Live Update |
 | Undo after every log | Phone undo card, watch Logged screen, widget receipt, Tile title |
 | Backdating at log time and later editing | Diaper picker offsets, undo-card offsets, Adjust start, phone edit sheet, watch Adjust screen |
@@ -597,14 +597,14 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 |---|---|
 | Header | `lamp` 24 `#E8D8C3`, y 11–35 (system app icon) |
 | Title (titleSlot) | y 37–53, titleSmall `#E8D8C3`, centred: **"Pee 48m ago"** (last diaper) |
-| Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; "Feed" labelMedium 15 sp `#FFDCBB` over "2h 10m ago" labelSmall `#FFDCBB` |
-| Row B | three buttons 57.3 wide, gap 6, 52 tall, r 26: content column icon 20 + label labelSmall 13 sp. Pee / Poop / Both in diaper colours (Both split, two-tone) |
+| Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; "Feed" labelMedium 15 sp `#FFDCBB` over "2h 10m ago" labelSmall `#FFDCBB`. Opens the app's Feed type screen |
+| Row B | Diaper button 184 × 52, r 26, DIAPER container `#13312C`: `diaper` 24 DIAPER strong at 16 from the start; "Diaper" labelMedium 15 sp `#BFE9E0` over "48m ago" (or "No diapers yet") labelSmall. Opens the app's Diaper screen, like Main's Diaper button; diapers are never logged from the tile |
 | EdgeButton | drawn 46 tall (y 179–225), 48 dp hit box, 9 dp below Row B; fill `#222844`, "Start sleep" labelMedium 15 sp `#D6DBF6` |
 
 | State | Title | Other changes |
 |---|---|---|
 | Idle | "Pee 48m ago" | — |
-| Just logged (10 s) | `check` 14 `#F2B577` + 4 + "Fed 14:32 · " `#E8D8C3` + `undo` 14 + 3 + "Undo" (weight 700) | Row A secondary "just now". The tile background opens Logged for that entry with Undo active at once |
+| Just logged (10 s, a Woke up or Sleep cancelled from the tile) | `check` 14 `#7C88C4` + 4 + "Woke up 14:32 · " `#E8D8C3` + `undo` 14 + 3 + "Undo" (weight 700) | The tile background opens Logged for that entry with Undo active at once |
 | Asleep | `sleepRunning` 14 `#7C88C4` + 4 + "Asleep 1h 07m" titleSmall `#AEB6E6` | Row A secondary "1h 32m ago"; EdgeButton fill `#2E3660` + 1.5 dp `#7C88C4` border, "Woke up" |
 | Guard (2 s) | `sleep` + "Already asleep" (or `awake` + "Already awake") in `#AEB6E6` | `Reject`; nothing moves |
 
