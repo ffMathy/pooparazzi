@@ -117,7 +117,6 @@ private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: Hom
             label = stringResource(CoreR.string.action_woke_up),
             container = sleep.containerLit,
             labelColor = sleep.onContainer,
-            radius = BigButtonDefaults.CheckedRadius,
             border = BorderStroke(2.dp, sleep.strong),
             modifier = Modifier.fillMaxWidth(),
             minHeight = minHeight,

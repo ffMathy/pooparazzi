@@ -360,7 +360,7 @@ private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: 
 }
 
 /**
- * The sleep toggle: "Start sleep" with "Awake since 13:27" at the end, or the checked "Woke up" (r 20, lit fill, 2 dp
+ * The sleep toggle: "Start sleep" with "Awake since 13:27" at the end, or the checked "Woke up" (lit fill, 2 dp
  * strong border) with "Asleep since 02:05". Under it, what the last week expects: "Next sleep ~15:25" or "Wakes ~05:30"
  * (V1_ADDITIONS §9). The end text wraps rather than clips when alone, and is dropped when narrow.
  */
@@ -385,7 +385,7 @@ private fun SleepToggle(snapshot: WidgetSnapshot, strings: WidgetStrings, colors
         modifier = modifier,
         fill = if (sleepStart != null) sleep.containerLit else sleep.container,
         border = if (sleepStart != null) sleep.strong else null,
-        radius = if (sleepStart != null) 20.dp else 34.dp,
+        radius = 34.dp,
         action = actionRunCallback<ToggleSleepAction>(),
         description = listOfNotNull(status, forecastSpoken).fold(name) { said, part -> strings.string(R.string.spoken_pair, said, part) },
     ) {
