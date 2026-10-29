@@ -16,6 +16,8 @@ import com.ffmathy.pooparazzi.phone.account.AppAccounts
 import com.ffmathy.pooparazzi.phone.account.NoAccounts
 import com.ffmathy.pooparazzi.phone.account.WelcomePrefs
 import com.ffmathy.pooparazzi.phone.account.WelcomeStore
+import com.ffmathy.pooparazzi.phone.launch.AppLink
+import com.ffmathy.pooparazzi.phone.launch.AppLinkInbox
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,6 +44,7 @@ class AppViewModel(
     settings: SettingsRepository,
     private val accounts: Accounts = NoAccounts,
     private val welcomeSeen: WelcomeStore = WelcomeStore.Seen,
+    private val links: AppLinkInbox = AppLinkInbox(),
 ) : ViewModel() {
     val appearance: StateFlow<AppearanceInputs?> = combine(
         settings.settings.map { it.appearance }.distinctUntilChanged(),
@@ -75,6 +78,22 @@ class AppViewModel(
         }
     }
 
+    /** Someone is signed in: an invite waiting for it goes to the join confirmation. */
+    val signedIn: StateFlow<Boolean> = accounts.user.map { it != null }.distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, accounts.user.value != null)
+
+    /** An invite link waiting to be joined (BABIES_AND_BACKUP §3.5), until it is or is put aside. */
+    val invite: StateFlow<String?> = links.invite
+
+    /** An email sign-in link waiting for the Account (or Welcome) screen to take it (§3.3). */
+    val emailLink: StateFlow<String?> = links.emailLink
+
+    /** An App Link of the website opened the app. */
+    fun openLink(link: AppLink) = links.post(link)
+
+    /** The invite was joined or put aside. */
+    fun inviteHandled() = links.inviteHandled()
+
     /** The Welcome was answered: signed in, or "Continue without an account". Not asked again on this phone. */
     fun finishWelcome() {
         welcomeSeen.seen = true
@@ -94,7 +113,7 @@ class AppViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
-                AppViewModel(Core.repository, Core.settings, AppAccounts.accounts, WelcomePrefs(app))
+                AppViewModel(Core.repository, Core.settings, AppAccounts.accounts, WelcomePrefs(app), AppLinkInbox.shared)
             }
         }
     }

@@ -12,6 +12,18 @@ if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
+/**
+ * The Firebase project id from app/google-services.json, or null without the file. Its default Hosting site,
+ * `<project_id>.web.app` (also `<project_id>.firebaseapp.com`), serves the invite and email sign-in links that open the
+ * app (App Links, docs/BACKEND.md › App Links).
+ */
+val firebaseProjectId: String? = file("google-services.json").takeIf { it.exists() }?.let { json ->
+    @Suppress("UNCHECKED_CAST")
+    val info = (groovy.json.JsonSlurper().parse(json) as Map<String, Any?>)["project_info"] as Map<String, Any?>?
+    (info?.get("project_id") as String?)?.trim()?.takeIf { it.matches(Regex("[a-z0-9-]+")) }
+        ?: throw GradleException("app/google-services.json has no valid project_info.project_id")
+}
+
 android {
     // R class namespace (V1_ADDITIONS §7); the applicationId stays shared with the watch for the Data Layer.
     namespace = "com.ffmathy.pooparazzi.phone"
@@ -23,6 +35,8 @@ android {
         // One version base for both apps (root build script): the phone takes base * 10, the watch base * 10 + 1.
         versionCode = rootProject.extra["pooparazzi.versionBase"] as Int * 10
         versionName = rootProject.extra["pooparazzi.versionName"] as String
+        // The App Links' host (src/appLinks/AndroidManifest.xml, merged only with a Firebase configuration).
+        manifestPlaceholders["firebaseProjectId"] = firebaseProjectId.orEmpty()
     }
     signingConfigs {
         // The upload key from the root build script, when configured (CI); docs/RELEASING.md.
@@ -67,6 +81,14 @@ android {
         // Hermetic unit tests: Firebase never starts in them, even on a machine with app/google-services.json
         // (AppAccounts). Tests that need accounts install a fake.
         unitTests.all { it.systemProperty("pooparazzi.accounts.disabled", "true") }
+    }
+}
+
+// The invite and email sign-in App Links exist only with a Firebase configuration: without one there is no site to
+// open, and no intent filter is declared at all.
+if (firebaseProjectId != null) {
+    androidComponents {
+        onVariants { variant -> variant.sources.manifests.addStaticManifestFile("src/appLinks/AndroidManifest.xml") }
     }
 }
 

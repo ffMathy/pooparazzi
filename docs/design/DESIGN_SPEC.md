@@ -422,6 +422,7 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 - **Night dimmer**: re-offer and level (default 10 %, adjustable 5–30 %).
 - Link to the system promoted-notifications setting (§10.5).
 - "Day starts at" (default 00:00; pending open question 4).
+- With the optional account (BABIES_AND_BACKUP §3): Account first, then **Family** while signed in (the members, "Invite someone", "Leave family", "Remove" for the family's creator; §3.4), and a **Privacy policy** row in About.
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
 
@@ -1428,7 +1429,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 ## 12. Open questions for the user
 
-1. **Two caregivers.** Do you want a shared log for two parents (each with a phone/watch)? It needs a cloud backend and accounts, and brings "who logged it", partner notifications (muted at night) and duplicate merging. The mockups assume one family account with phone + watch only.
+1. **Two caregivers.** Answered by families (BABIES_AND_BACKUP §3.4–3.5): members invited by a single-use link share the log and the babies. "Who logged it" and partner notifications are not part of it.
 2. **Feeding details.** Is one "Fed" timestamp enough, or do you want breast side (left/right), bottle amount or feed duration? Each adds a step after the tap.
 3. **Diaper on the phone Home.** Keep "Diaper → Pee / Poop / Both" (2 taps, big buttons; the widget and tile are 1 tap), or put Pee | Poop | Both directly on Home as three smaller buttons?
 4. **Day boundary.** Should "Today" start at midnight (designed) or at a time like 07:00, so a night is not split across two days?

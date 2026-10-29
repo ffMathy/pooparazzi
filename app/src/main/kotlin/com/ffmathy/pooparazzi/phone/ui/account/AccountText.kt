@@ -13,13 +13,11 @@ import java.time.ZoneId
 @StringRes
 internal fun AccountError.message(): Int = when (this) {
     AccountError.INVALID_EMAIL -> R.string.account_error_invalid_email
-    AccountError.MISSING_PASSWORD -> R.string.account_error_missing_password
-    AccountError.WRONG_CREDENTIALS -> R.string.account_error_wrong_credentials
-    AccountError.EMAIL_IN_USE -> R.string.account_error_email_in_use
-    AccountError.WEAK_PASSWORD -> R.string.account_error_weak_password
     AccountError.NO_CONNECTION -> R.string.account_error_no_connection
     AccountError.TIMED_OUT -> R.string.account_error_timed_out
     AccountError.TOO_MANY_ATTEMPTS -> R.string.account_error_too_many
+    AccountError.EMAIL_QUOTA -> R.string.account_error_email_quota
+    AccountError.LINK_INVALID -> R.string.account_error_link_invalid
     AccountError.NO_GOOGLE_ACCOUNT -> R.string.account_error_no_google
     AccountError.RECENT_LOGIN_REQUIRED -> R.string.account_error_recent_login
     AccountError.WRONG_ACCOUNT -> R.string.account_error_wrong_account

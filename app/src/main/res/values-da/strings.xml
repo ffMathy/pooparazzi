@@ -110,7 +110,7 @@
     <string name="settings_baby_field">Navn</string>
     <string name="settings_add_baby">Tilføj et barn</string>
     <string name="settings_add_baby_watch_update">Opdatér Pooparazzi på dit ur først.</string>
-    <string name="settings_babies_hint">Navnene bliver på telefonen og dit ur. De bliver aldrig sendt op.</string>
+    <string name="settings_babies_hint">Navnene bliver på telefonen og dit ur.</string>
     <string name="settings_appearance_hint">Auto bruger Nat om aftenen og natten, mens barnet sover, og når telefonen bruger mørkt tema.</string>
     <string name="settings_section_watch">Ur</string>
     <string name="settings_sync_now">Synkroniser nu</string>
@@ -164,22 +164,12 @@
     <string name="account_unavailable">Backup er ikke sat op i denne version. Alt gemmes på denne telefon.</string>
     <string name="welcome_title">Din log bliver på denne telefon</string>
     <string name="welcome_body_local">Uden en konto gemmes alt, hvad du registrerer, kun på denne telefon og dit ur. Hvis telefonen bliver væk eller nulstilles, forsvinder loggen med den.</string>
-    <string name="welcome_body_later">Du kan oprette en konto når som helst under Indstillinger. Alt, hvad der er registreret indtil da, kommer med i backuppen, så snart du gør det.</string>
+    <string name="welcome_body_later">Du kan oprette en konto når som helst under Indstillinger. Alt, hvad der er registreret indtil da, kommer med i backuppen, så snart du gør det, og du kan dele det med din familie.</string>
     <string name="welcome_continue_without">Fortsæt uden konto</string>
     <string name="account_google">Fortsæt med Google</string>
     <string name="account_or_email">eller brug e-mail</string>
-    <string name="account_mode_sign_in">Log ind</string>
-    <string name="account_mode_create">Opret konto</string>
     <string name="account_email">E-mail</string>
-    <string name="account_password">Adgangskode</string>
-    <string name="account_password_hint">Mindst 6 tegn</string>
-    <string name="account_forgot_password">Glemt adgangskode?</string>
-    <string name="account_reset_sent">Hvis %1$s har en konto, er et link til at vælge en ny adgangskode på vej.</string>
     <string name="account_error_invalid_email">Skriv en gyldig e-mailadresse</string>
-    <string name="account_error_missing_password">Skriv din adgangskode</string>
-    <string name="account_error_wrong_credentials">Forkert e-mail eller adgangskode</string>
-    <string name="account_error_email_in_use">Den e-mail har allerede en konto</string>
-    <string name="account_error_weak_password">Brug mindst 6 tegn</string>
     <string name="account_error_no_connection">Ingen forbindelse. Prøv igen.</string>
     <string name="account_error_timed_out">Intet svar endnu. Det kan stadig gå igennem om lidt.</string>
     <string name="account_error_too_many">For mange forsøg. Vent lidt, og prøv igen.</string>
@@ -193,9 +183,65 @@
     <string name="account_signed_in_hint">Når du logger ud, bliver loggen på denne telefon.</string>
     <string name="account_delete">Slet konto…</string>
     <string name="account_delete_title">Slet konto?</string>
-    <string name="account_delete_body">Det sletter din backup og din konto. Loggen på denne telefon bliver.</string>
-    <string name="account_delete_password_prompt">Skriv din adgangskode for at bekræfte.</string>
+    <string name="account_delete_body">Det sletter din konto og din plads i familien. Er du familiens eneste medlem, slettes dens backup også. Loggen på denne telefon bliver.</string>
     <string name="account_delete_google_prompt">Du logger ind med Google igen for at bekræfte.</string>
     <string name="account_delete_backup_failed">Kunne ikke slette din backup, så din konto er bevaret. Prøv igen.</string>
     <string name="account_delete_account_failed">Din backup blev slettet, men din konto blev ikke. Prøv igen.</string>
+    <string name="settings_babies_hint_family">Navnene deles med din familie og gemmes i din backup.</string>
+    <string name="account_email_link">Send mig et login-link på e-mail</string>
+    <string name="account_link_sent_title">Tjek din e-mail</string>
+    <string name="account_link_sent">Vi har sendt et login-link til %1$s. Tryk på linket i den på denne telefon.</string>
+    <string name="account_send_again">Send igen</string>
+    <string name="account_use_another_email">Brug en anden e-mail</string>
+    <string name="account_link_needs_email">Skriv den e-mailadresse, linket blev sendt til, for at logge ind.</string>
+    <string name="account_sign_in">Log ind</string>
+    <string name="account_error_email_quota">For mange login-e-mails i dag. Prøv igen i morgen, eller brug Google.</string>
+    <string name="account_error_link_invalid">Det link er udløbet eller allerede brugt. Send et nyt.</string>
+    <string name="account_privacy_consent">Ved at fortsætte accepterer du %1$s.</string>
+    <string name="account_privacy_link">privatlivspolitikken</string>
+    <string name="account_join_waiting">Log ind for at blive en del af familien.</string>
+    <string name="account_delete_link_prompt">Vi sender dig et link på e-mail til at bekræfte. Åbn det på denne telefon.</string>
+    <string name="account_delete_send_link">Send mig et link</string>
+    <string name="account_delete_link_sent">Tjek din e-mail. Når du trykker på linket i den på denne telefon, slettes din konto.</string>
+
+    <!-- Indstillinger › Familie -->
+    <string name="settings_section_family">Familie</string>
+    <string name="family_you">Dig</string>
+    <string name="family_creator">Startede familien</string>
+    <string name="family_you_creator">Dig · Startede familien</string>
+    <string name="family_alone">Kun dig indtil videre. Invitér nogen for at dele loggen og børnene.</string>
+    <string name="family_invite">Invitér nogen</string>
+    <string name="family_invite_text">Bliv en del af min familie i Pooparazzi, så vi deler babyloggen: %1$s (virker én gang og i 7 dage)</string>
+    <string name="family_invite_chooser">Del invitationen</string>
+    <string name="family_leave">Forlad familien</string>
+    <string name="family_leave_title">Forlad familien?</string>
+    <string name="family_leave_body">Du kan ikke længere se dens log og børn. Din telefon beholder sin log og starter en ny familie for dig selv.</string>
+    <string name="family_leave_confirm">Forlad</string>
+    <string name="family_remove">Fjern</string>
+    <string name="family_remove_cd">Fjern %1$s</string>
+    <string name="family_remove_title">Fjern %1$s?</string>
+    <string name="family_remove_body">De kan ikke længere se familiens log.</string>
+    <string name="family_loading">Henter familien…</string>
+    <string name="family_waiting">Sætter din familie op…</string>
+    <string name="family_error">Kunne ikke hente familien. Tryk for at prøve igen.</string>
+
+    <!-- En invitation åbnes -->
+    <string name="join_screen_title">Familieinvitation</string>
+    <string name="join_loading">Åbner invitationen…</string>
+    <string name="join_title">Bliv medlem af familien hos %1$s?</string>
+    <string name="join_title_unknown">Bliv medlem af denne familie?</string>
+    <string name="join_body">Dine børn og din log på denne telefon føjes til familiens og deles med dens medlemmer. Du ser også deres.</string>
+    <string name="join_merge">Dit første barn og familiens første barn bliver ét barn.</string>
+    <string name="join_accept">Bliv medlem</string>
+    <string name="join_not_now">Ikke nu</string>
+    <string name="join_joined">Du er med i familien. Din log og dine børn deles nu.</string>
+    <string name="join_done">Færdig</string>
+    <string name="join_expired">Invitationen er udløbet eller allerede brugt. Bed om en ny.</string>
+    <string name="join_invalid">Dette invitationslink er ikke gyldigt.</string>
+    <string name="join_already_member">Du er allerede med i denne familie.</string>
+    <string name="join_try_again">Prøv igen</string>
+
+    <!-- Indstillinger › Om -->
+    <string name="settings_privacy">Privatlivspolitik</string>
+    <string name="settings_privacy_summary">Hvad der gemmes, hvor, og dine rettigheder</string>
 </resources>

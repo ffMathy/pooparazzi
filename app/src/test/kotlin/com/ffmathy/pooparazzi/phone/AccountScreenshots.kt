@@ -12,7 +12,13 @@ import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.phone.ui.account.AccountActions
 import com.ffmathy.pooparazzi.phone.ui.account.AccountScreen
 import com.ffmathy.pooparazzi.phone.ui.account.WelcomeScreen
+import com.ffmathy.pooparazzi.phone.ui.family.JoinActions
+import com.ffmathy.pooparazzi.phone.ui.family.JoinScreen
 import com.ffmathy.pooparazzi.phone.ui.preview.AccountSamples
+import com.ffmathy.pooparazzi.phone.ui.preview.FamilySamples
+import com.ffmathy.pooparazzi.phone.ui.preview.SettingsSamples
+import com.ffmathy.pooparazzi.phone.ui.settings.SettingsActions
+import com.ffmathy.pooparazzi.phone.ui.settings.SettingsScreen
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Before
@@ -24,8 +30,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The first-run Welcome and Settings › Account (BABIES_AND_BACKUP §3) on the reference phone (390 × 844 dp, xxhdpi), in
- * English and Danish: `app/screenshots/<lang>/24-…26-*.png` and `30-*.png`, continuing the tour.
+ * The first-run Welcome, Settings › Account, Settings › Family and the join confirmation (BABIES_AND_BACKUP §3) on the
+ * reference phone (390 × 844 dp, xxhdpi), in English and Danish: `app/screenshots/<lang>/27-…29-*.png`, `33-*.png` and
+ * `37-…39-*.png`, continuing the tour.
  */
 abstract class AccountScreenshots(private val language: String) {
     @get:Rule
@@ -52,6 +59,21 @@ abstract class AccountScreenshots(private val language: String) {
     /** The backup was deleted but the account was not (its deletion failed): nothing is backed up until "Back up now". */
     @Test fun accountBackupDeleted() = screen("33-account-backup-deleted", night = true) {
         AccountScreen(AccountSamples.signedIn(cloud = CloudStatus.Deleted), AccountActions.None, windowInsets = ReferenceInsets)
+    }
+
+    /** "Check your email": the sign-in link is on its way (§3.3). */
+    @Test fun accountLinkSent() = screen("39-account-link-sent", night = false) {
+        AccountScreen(AccountSamples.linkSent(), AccountActions.None, windowInsets = ReferenceInsets)
+    }
+
+    /** Settings › Family (§3.4): the parent started the family; a partner and a grandparent joined. */
+    @Test fun settingsFamily() = screen("37-settings-family", night = false) {
+        SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets, family = FamilySamples.state())
+    }
+
+    /** The join confirmation of an invite link (§3.5). */
+    @Test fun joinFamily() = screen("38-join-family", night = true) {
+        JoinScreen(FamilySamples.join, JoinActions.None, windowInsets = ReferenceInsets)
     }
 
     private fun screen(name: String, night: Boolean, content: @Composable () -> Unit) {

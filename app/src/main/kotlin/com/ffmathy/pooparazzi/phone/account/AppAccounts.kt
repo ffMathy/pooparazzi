@@ -5,12 +5,17 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
+import com.ffmathy.pooparazzi.core.CoreGraph
 import com.ffmathy.pooparazzi.core.cloud.CloudBackend
+import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.MemoryCacheSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * The phone's accounts, once per process: [FirebaseAccounts] when the build carries a Firebase configuration
@@ -23,16 +28,26 @@ object AppAccounts {
     /** Set by the unit tests (app/build.gradle.kts): no Firebase, whatever configuration the build has. */
     const val DISABLED_PROPERTY = "pooparazzi.accounts.disabled"
 
+    /** The process's scope for the family work (it lives as long as the app). */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     @Volatile
     private var current: Accounts? = null
+
+    @Volatile
+    private var currentFamilies: Families? = null
+    private var service: FamilyService? = null
     private var backend: CloudBackend? = null
 
     /** The accounts: [NoAccounts] until [init] (and in builds without a configuration). */
     val accounts: Accounts get() = current ?: NoAccounts
 
+    /** The signed-in account's family: [NoFamilies] until [init] (and in builds without a configuration). */
+    val families: Families get() = currentFamilies ?: NoFamilies
+
     /**
      * Sets up the accounts and returns the backend the backup needs, or null without a configuration. Call once, from
-     * `Application.onCreate()`, before `Core.init`.
+     * `Application.onCreate()`, before `Core.init`; then [start] with the graph.
      */
     fun init(context: Context): CloudBackend? = synchronized(this) {
         // Once per process: Firestore's settings can be set only before its first use.
@@ -54,9 +69,18 @@ object AppAccounts {
                 firestore.firestoreSettings = FirebaseFirestoreSettings.Builder()
                     .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
                     .build()
-                val accounts = FirebaseAccounts(app, auth, FirebaseConfig.webClientId(app))
+                val store = FirestoreCloudStore(firestore, auth)
+                val familyStore = FirebaseFamilyStore(firestore, store)
+                val domain = FirebaseConfig.hostingDomain(app)
+                val accounts = FirebaseAccounts(
+                    app, auth, FirebaseConfig.webClientId(app), domain, EmailLinkPrefs(app),
+                    deleteUserDocument = familyStore::deleteUser,
+                )
+                val families = FamilyService(familyStore, accounts.user, FamilyPrefs(app), scope, domain)
                 current = accounts
-                CloudBackend(FirestoreCloudStore(firestore, auth), accounts.cloud)
+                currentFamilies = families
+                service = families
+                CloudBackend(store, families.account)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Firebase could not start: accounts are off", e)
@@ -67,15 +91,33 @@ object AppAccounts {
         backend
     }
 
-    /** Replaces the accounts (a fake) for tests. */
+    /**
+     * Starts resolving the family once the core graph exists ([init] first): the backup's status says when the first
+     * upload to the family is done, and the backup from before families is merged into the graph's log.
+     */
+    fun start(graph: CoreGraph) {
+        val families = service ?: return
+        val room = graph.repository as? RoomEntryRepository
+        families.start(graph.cloud.status) { entries -> room?.applyCloudEntries(entries) }
+    }
+
+    /** The app came to the foreground: the family may have changed elsewhere (removed by its creator). */
+    fun onAppResumed() {
+        currentFamilies?.refresh()
+    }
+
+    /** Replaces the accounts (fakes) for tests. */
     @VisibleForTesting
-    fun install(accounts: Accounts) {
+    fun install(accounts: Accounts, families: Families = NoFamilies) {
         current = accounts
+        currentFamilies = families
     }
 
     @VisibleForTesting
     fun reset() {
         current = null
+        currentFamilies = null
+        service = null
         backend = null
     }
 }

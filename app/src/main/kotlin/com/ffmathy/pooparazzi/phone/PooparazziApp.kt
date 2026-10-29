@@ -17,6 +17,8 @@ class PooparazziApp : Application() {
         // The optional account and backup (BABIES_AND_BACKUP §3–4): null in builds without a Firebase configuration.
         val backend = AppAccounts.init(this)
         val graph = Core.init(this, cloud = backend)
+        // The account's family (created on the first sign-in) and the move of the backup from before families.
+        AppAccounts.start(graph)
         // The phone keeps a baby for every baby id among its entries (BABIES_AND_BACKUP §2.1); the watch never adopts.
         graph.adoptBabiesFromEntries()
         SystemSurfaces.start(this, graph)

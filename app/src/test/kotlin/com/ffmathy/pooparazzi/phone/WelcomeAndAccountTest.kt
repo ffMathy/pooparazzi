@@ -25,8 +25,8 @@ import org.robolectric.annotation.Config
 
 /**
  * The real app with a fake account backend (BABIES_AND_BACKUP §3.1–3.3): the Welcome comes first on a phone that has
- * not answered it, "Continue without an account" or signing in leads to Home, and Settings › Account opens the
- * Account screen with Google first.
+ * not answered it, "Continue without an account" or signing in (Google, or an email link) leads to Home, and Settings ›
+ * Account opens the Account screen with Google first. No passwords anywhere.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -73,13 +73,21 @@ class WelcomeAndAccountTest {
     @Test
     fun signingInOnTheWelcomeOpensHome() {
         compose.waitUntilAtLeastOneExists(hasText("Your log stays on this phone"), timeoutMillis = 10_000)
-        compose.onNode(hasText("Email") and hasSetTextAction()).performTextInput("parent@example.com")
-        compose.onNode(hasText("Password") and hasSetTextAction()).performTextInput("secret1")
-        // The mode switch and the main button both read "Sign in": the button is the last one.
-        compose.onAllNodes(hasText("Sign in"))[1].performScrollTo().performClick()
+        compose.onNodeWithText("Continue with Google").performScrollTo().performClick()
         compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
-        assertTrue(accounts.calls == listOf("signIn"))
+        assertTrue(accounts.calls == listOf("google"))
         assertTrue(WelcomePrefs(app).seen)
+    }
+
+    @Test
+    fun theWelcomeOffersAnEmailLinkAndThePrivacyPolicy() {
+        compose.waitUntilAtLeastOneExists(hasText("Your log stays on this phone"), timeoutMillis = 10_000)
+        compose.onNode(hasText("Email") and hasSetTextAction()).performTextInput("parent@example.com")
+        compose.onNodeWithText("Email me a sign-in link").performScrollTo().performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Check your email"), timeoutMillis = 5_000)
+        assertTrue(accounts.calls == listOf("sendLink:parent@example.com"))
+        compose.onNodeWithText("By continuing you agree to the privacy policy.").performScrollTo().assertExists()
+        compose.onNode(hasText("Password") and hasSetTextAction()).assertDoesNotExist()
     }
 
     @Test
@@ -93,7 +101,8 @@ class WelcomeAndAccountTest {
         compose.onNodeWithText("Your log is only on this phone. Sign in to back it up.").assertExists()
         compose.onNodeWithText("Not signed in").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Continue with Google"), timeoutMillis = 5_000)
-        compose.onNodeWithText("Forgot password?").assertExists()
+        compose.onNodeWithText("Email me a sign-in link").assertExists()
+        compose.onNodeWithText("Forgot password?").assertDoesNotExist()
 
         // Signed in elsewhere (here: by the fake), the screen shows the account.
         accounts.signInAs(accounts.nextUser)
@@ -101,7 +110,7 @@ class WelcomeAndAccountTest {
         compose.onNodeWithText("Back up now").assertExists()
         compose.onNodeWithText("Delete account…").performScrollTo().performClick()
         compose.waitUntilAtLeastOneExists(hasText("Delete account?"), timeoutMillis = 5_000)
-        compose.onNodeWithText("Enter your password to confirm.").assertExists()
+        compose.onNodeWithText("We'll email you a link to confirm. Open it on this phone.").assertExists()
         compose.onNodeWithText("Cancel").performClick()
         compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Delete account?")).fetchSemanticsNodes().isEmpty() }
     }

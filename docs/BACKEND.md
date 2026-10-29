@@ -85,7 +85,7 @@ The one heavy moment is the **first sign-in, or joining a family, on a phone wit
 3. Authentication › Settings › User account management: keep **email enumeration protection** on (the default).
 4. Optional: Authentication › Templates › Email address sign-in: the sender name and reply-to. The app sets the language of the email to the app's language.
 
-The app sends the link with `ActionCodeSettings`: `url = https://<project-id>.web.app/signin`, `handleCodeInApp = true`, Android package `com.ffmathy.pooparazzi` (install if not available: false), and `linkDomain = <project-id>.web.app`. The email then links to `https://<project-id>.web.app/__/auth/links?…`, a page Firebase Hosting serves by itself, which opens the app (App Links, below) or, without the app, the `/signin` page of this site.
+The app sends the link with `ActionCodeSettings`: `url = https://<project-id>.web.app/signin`, `handleCodeInApp = true`, Android package `com.ffmathy.pooparazzi` (install if not available: true, so the link offers Google Play on a phone without the app), and `linkDomain = <project-id>.web.app`. The email then links to `https://<project-id>.web.app/__/auth/links?…`, a page Firebase Hosting serves by itself, which opens the app (App Links, below) or, without the app, the `/signin` page of this site.
 
 ### 3. Create the database and its rules
 

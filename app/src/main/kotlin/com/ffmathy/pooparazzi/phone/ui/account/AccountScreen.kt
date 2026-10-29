@@ -44,16 +44,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -65,7 +70,6 @@ import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
-import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
 import com.ffmathy.pooparazzi.phone.ui.components.GroupRow
 import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
 import com.ffmathy.pooparazzi.phone.ui.preview.AccountSamples
@@ -73,24 +77,28 @@ import com.ffmathy.pooparazzi.phone.ui.theme.LocalNightLight
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
 import com.ffmathy.pooparazzi.core.R as CoreR
 
-/** The view model's actions with the activity the Google account picker opens over. */
+/** The view model's actions with the activity the Google account picker opens over, and the privacy policy link. */
 @Composable
 private fun rememberAccountActions(viewModel: AccountViewModel, extra: AccountActions? = null): AccountActions {
     val activity = LocalActivity.current
+    val uriHandler = LocalUriHandler.current
     val extraActions by rememberUpdatedState(extra)
-    return remember(viewModel, activity) {
+    // While the screen shows, it takes the email sign-in links that open the app.
+    LaunchedEffect(viewModel) { viewModel.receiveLinks() }
+    return remember(viewModel, activity, uriHandler) {
         object : AccountActions {
             override fun onBack() { extraActions?.onBack() }
             override fun onGoogle() { activity?.let(viewModel::onGoogle) }
-            override fun onMode(mode: EmailMode) = viewModel.onMode(mode)
             override fun onEmail(email: String) = viewModel.onEmail(email)
-            override fun onPassword(password: String) = viewModel.onPassword(password)
-            override fun onSubmit() = viewModel.onSubmit()
-            override fun onForgotPassword() = viewModel.onForgotPassword()
+            override fun onSendLink() = viewModel.onSendLink()
+            override fun onUseAnotherEmail() = viewModel.onUseAnotherEmail()
+            override fun onFinishSignIn() = viewModel.onFinishSignIn()
+            override fun onOpenPrivacy() {
+                runCatching { uriHandler.openUri(viewModel.state.value.privacyUrl) }
+            }
             override fun onBackUpNow() = viewModel.onBackUpNow()
             override fun onSignOut() = viewModel.onSignOut()
             override fun onDeleteStart() = viewModel.onDeleteStart()
-            override fun onDeletePassword(password: String) = viewModel.onDeletePassword(password)
             override fun onDeleteConfirm() = viewModel.onDeleteConfirm(activity)
             override fun onDeleteDismiss() = viewModel.onDeleteDismiss()
             override fun onContinueWithout() { extraActions?.onContinueWithout() }
@@ -124,8 +132,8 @@ fun WelcomeRoute(onDone: () -> Unit) {
 
 /**
  * Settings › Account (BABIES_AND_BACKUP §3.3). Signed out: the explanation, "Continue with Google" first, then "or use
- * email" with the email form. Signed in: the address, the backup status, "Back up now", "Sign out" and "Delete
- * account…".
+ * email" with "Email me a sign-in link", and the privacy policy. Signed in: the address, the backup status, "Back up
+ * now", "Sign out" and "Delete account…".
  */
 @Composable
 fun AccountScreen(
@@ -227,8 +235,10 @@ private fun BodyText(text: String) {
 }
 
 /**
- * "Continue with Google" (when the build can), "or use email", then Sign in / Create account, the fields, the main
- * button and, for signing in, "Forgot password?". The error or notice line sits above the main button.
+ * "Continue with Google" (when the build can), "or use email", then the email address and "Email me a sign-in link";
+ * once sent, "Check your email" with "Send again" and "Use another email". A link opened on a phone that did not ask
+ * for it asks for the address instead. There are no passwords. The error line sits above the email button, and the
+ * consent to the privacy policy under everything.
  */
 @Composable
 private fun SignInForm(state: AccountUiState, actions: AccountActions) {
@@ -236,69 +246,109 @@ private fun SignInForm(state: AccountUiState, actions: AccountActions) {
     val focus = LocalFocusManager.current
     val enabled = !state.busy
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (state.googleAvailable) {
-            PrimaryButton(stringResource(R.string.account_google), onClick = actions::onGoogle, enabled = enabled)
-            Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                HorizontalDivider(Modifier.weight(1f), color = colors.outlineVariant)
-                Text(
-                    stringResource(R.string.account_or_email),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = colors.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                )
-                HorizontalDivider(Modifier.weight(1f), color = colors.outlineVariant)
-            }
-        }
-        ConnectedChoiceGroup(
-            options = EmailMode.entries,
-            selected = state.mode,
-            onSelect = actions::onMode,
-            label = { stringResource(if (it == EmailMode.SIGN_IN) R.string.account_mode_sign_in else R.string.account_mode_create) },
-            enabled = enabled,
-        )
-        AccountField(
-            value = state.email,
-            onChange = actions::onEmail,
-            label = stringResource(R.string.account_email),
-            keyboardType = KeyboardType.Email,
-            imeAction = ImeAction.Next,
-            enabled = enabled,
-        )
-        AccountField(
-            value = state.password,
-            onChange = actions::onPassword,
-            label = stringResource(R.string.account_password),
-            keyboardType = KeyboardType.Password,
-            imeAction = ImeAction.Done,
-            enabled = enabled,
-            supporting = if (state.mode == EmailMode.CREATE) stringResource(R.string.account_password_hint) else null,
-            onDone = {
-                focus.clearFocus()
-                actions.onSubmit()
-            },
-        )
-        state.error?.let { ErrorLine(stringResource(it.message())) }
-        if (state.notice == AccountNotice.RESET_SENT) {
+        if (state.joining) {
             Text(
-                stringResource(R.string.account_reset_sent, state.noticeEmail),
-                style = MaterialTheme.typography.bodyMedium,
+                stringResource(R.string.account_join_waiting),
+                style = MaterialTheme.typography.titleSmall,
                 color = colors.onSurface,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
-        val submit = if (state.mode == EmailMode.SIGN_IN) R.string.account_mode_sign_in else R.string.account_mode_create
-        if (state.googleAvailable) {
-            SecondaryButton(stringResource(submit), onClick = actions::onSubmit, enabled = enabled)
+        if (state.linkNeedsEmail) {
+            BodyText(stringResource(R.string.account_link_needs_email))
+            EmailField(state, actions, imeAction = ImeAction.Done) {
+                focus.clearFocus()
+                actions.onFinishSignIn()
+            }
+            state.error?.let { ErrorLine(stringResource(it.message())) }
+            PrimaryButton(stringResource(R.string.account_sign_in), onClick = actions::onFinishSignIn, enabled = enabled)
         } else {
-            PrimaryButton(stringResource(submit), onClick = actions::onSubmit, enabled = enabled)
-        }
-        if (state.mode == EmailMode.SIGN_IN) {
-            TextButton(onClick = actions::onForgotPassword, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(stringResource(R.string.account_forgot_password), style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
+            if (state.googleAvailable) {
+                PrimaryButton(stringResource(R.string.account_google), onClick = actions::onGoogle, enabled = enabled)
+                Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    HorizontalDivider(Modifier.weight(1f), color = colors.outlineVariant)
+                    Text(
+                        stringResource(R.string.account_or_email),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                    HorizontalDivider(Modifier.weight(1f), color = colors.outlineVariant)
+                }
+            }
+            val sentTo = state.linkSentTo
+            if (sentTo == null) {
+                EmailField(state, actions, imeAction = ImeAction.Send) {
+                    focus.clearFocus()
+                    actions.onSendLink()
+                }
+                state.error?.let { ErrorLine(stringResource(it.message())) }
+                val send = stringResource(R.string.account_email_link)
+                if (state.googleAvailable) {
+                    SecondaryButton(send, onClick = actions::onSendLink, enabled = enabled)
+                } else {
+                    PrimaryButton(send, onClick = actions::onSendLink, enabled = enabled)
+                }
+            } else {
+                Column(Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
+                    Text(stringResource(R.string.account_link_sent_title), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+                    Spacer(Modifier.height(4.dp))
+                    BodyText(stringResource(R.string.account_link_sent, sentTo))
+                }
+                state.error?.let { ErrorLine(stringResource(it.message())) }
+                SecondaryButton(stringResource(R.string.account_send_again), onClick = actions::onSendLink, enabled = enabled)
+                TextButton(onClick = actions::onUseAnotherEmail, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.account_use_another_email), style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
+                }
             }
         }
+        PrivacyConsent(actions::onOpenPrivacy)
     }
 }
+
+/** The address the sign-in link goes to. */
+@Composable
+private fun EmailField(state: AccountUiState, actions: AccountActions, imeAction: ImeAction, onDone: () -> Unit) {
+    AccountField(
+        value = state.email,
+        onChange = actions::onEmail,
+        label = stringResource(R.string.account_email),
+        keyboardType = KeyboardType.Email,
+        imeAction = imeAction,
+        enabled = !state.busy,
+        onDone = onDone,
+    )
+}
+
+/** "By continuing you agree to the privacy policy", the last words a link to it. */
+@Composable
+private fun PrivacyConsent(onOpen: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val open by rememberUpdatedState(onOpen)
+    val link = stringResource(R.string.account_privacy_link)
+    val sentence = stringResource(R.string.account_privacy_consent, link)
+    val text = remember(sentence, link, colors.onSurface) {
+        buildAnnotatedString {
+            val start = sentence.indexOf(link).coerceAtLeast(0)
+            append(sentence.substring(0, start))
+            withLink(
+                LinkAnnotation.Clickable(
+                    tag = PRIVACY_TAG,
+                    styles = TextLinkStyles(SpanStyle(color = colors.onSurface, textDecoration = TextDecoration.Underline)),
+                ) { open() },
+            ) { append(link) }
+            append(sentence.substring((start + link.length).coerceAtMost(sentence.length)))
+        }
+    }
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp),
+    )
+}
+
+private const val PRIVACY_TAG = "privacy"
 
 /** Signed in: "Signed in as" the address, the backup status line, "Back up now", "Sign out", "Delete account…". */
 @Composable
@@ -346,10 +396,10 @@ private fun SignedIn(state: AccountUiState, email: String, actions: AccountActio
 }
 
 /**
- * "Delete account?" in place of "Delete account…": what is deleted and what stays, then the password (email accounts)
- * or a confirmation only (Google accounts sign in with Google again when it is confirmed). Errors in words, a partial
- * failure as it is. Inline rather than a dialog window, so the password field sits with the rest of the screen; Back
- * cancels it.
+ * "Delete account?" in place of "Delete account…": what is deleted and what stays, then how it is confirmed: Google
+ * accounts sign in with Google again ("Delete"); email accounts get a link ("Email me a link") that completes the
+ * deletion when it opens the app. Errors in words, a partial failure as it is. Inline rather than a dialog window, so
+ * it sits with the rest of the screen; Back cancels it.
  */
 @Composable
 private fun DeleteConfirmation(dialog: DeleteState, actions: AccountActions) {
@@ -372,27 +422,29 @@ private fun DeleteConfirmation(dialog: DeleteState, actions: AccountActions) {
                 modifier = Modifier.semantics { heading() },
             )
             BodyText(stringResource(R.string.account_delete_body))
-            if (dialog.google) {
-                BodyText(stringResource(R.string.account_delete_google_prompt))
-            } else {
-                BodyText(stringResource(R.string.account_delete_password_prompt))
-                AccountField(
-                    value = dialog.password,
-                    onChange = actions::onDeletePassword,
-                    label = stringResource(R.string.account_password),
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done,
-                    enabled = !dialog.busy,
-                    onDone = actions::onDeleteConfirm,
-                )
+            val prompt = when {
+                dialog.google -> R.string.account_delete_google_prompt
+                dialog.linkSent -> R.string.account_delete_link_sent
+                else -> R.string.account_delete_link_prompt
             }
+            Text(
+                stringResource(prompt),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (dialog.linkSent) colors.onSurface else colors.onSurfaceVariant,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
             dialog.problem?.let { ErrorLine(stringResource(it.message())) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = actions::onDeleteDismiss, enabled = !dialog.busy, modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(stringResource(CoreR.string.action_cancel), style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
                 }
+                val confirm = when {
+                    dialog.google -> stringResource(CoreR.string.action_delete)
+                    dialog.linkSent -> stringResource(R.string.account_send_again)
+                    else -> stringResource(R.string.account_delete_send_link)
+                }
                 TextButton(onClick = actions::onDeleteConfirm, enabled = !dialog.busy, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(CoreR.string.action_delete), style = MaterialTheme.typography.labelLarge, color = colors.error)
+                    Text(confirm, style = MaterialTheme.typography.labelLarge, color = colors.error)
                 }
             }
         }
@@ -417,7 +469,6 @@ private fun AccountField(
     keyboardType: KeyboardType,
     imeAction: ImeAction,
     enabled: Boolean,
-    supporting: String? = null,
     onDone: () -> Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
@@ -427,16 +478,15 @@ private fun AccountField(
         onValueChange = onChange,
         modifier = Modifier.fillMaxWidth(),
         label = { Text(label) },
-        supportingText = supporting?.let { { Text(it) } },
         singleLine = true,
         enabled = enabled,
         textStyle = MaterialTheme.typography.titleMedium,
         shape = RoundedCornerShape(16.dp),
-        visualTransformation = if (keyboardType == KeyboardType.Password) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction, autoCorrectEnabled = false),
         keyboardActions = KeyboardActions(
             onNext = { focus.moveFocus(FocusDirection.Down) },
             onDone = { onDone() },
+            onSend = { onDone() },
         ),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = colors.onSurface,

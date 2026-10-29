@@ -17,6 +17,9 @@ object AccountSamples {
         zone = SampleData.ZONE,
     )
 
+    /** "Check your email": a sign-in link went to the parent's address. */
+    fun linkSent(): AccountUiState = signedOut().copy(email = user.email, linkSentTo = user.email)
+
     fun signedIn(cloud: CloudStatus = CloudStatus.Synced(SampleData.SYNCED_1431)): AccountUiState =
         signedOut().copy(user = user, cloud = cloud)
 }

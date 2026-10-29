@@ -59,7 +59,7 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Welcome (first run) | Account, signed out | Account, signed in | Settings, babies |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-welcome.png" width="200" alt="First-run Welcome: the log stays on this phone, Continue with Google, the email form and Continue without an account"> | <img src="docs/screenshots/en/phone-account.png" width="200" alt="Account, signed out: Continue with Google, then or use email with Sign in and Create account"> | <img src="docs/screenshots/en/phone-account-signed-in.png" width="200" alt="Account, signed in: the address, Backed up 14:31, Back up now, Sign out and Delete account"> | <img src="docs/screenshots/en/phone-settings-babies.png" width="200" alt="Settings, Babies: name fields for Noa, Ida and an unnamed third, Add a baby and the names hint"> |
+| <img src="docs/screenshots/en/phone-welcome.png" width="200" alt="First-run Welcome: the log stays on this phone, Continue with Google, Email me a sign-in link, the privacy policy and Continue without an account"> | <img src="docs/screenshots/en/phone-account.png" width="200" alt="Account, signed out: Continue with Google, then or use email with Email me a sign-in link; no passwords"> | <img src="docs/screenshots/en/phone-account-signed-in.png" width="200" alt="Account, signed in: the address, Backed up 14:31, Back up now, Sign out and Delete account"> | <img src="docs/screenshots/en/phone-settings-babies.png" width="200" alt="Settings, Babies: name fields for Noa, Ida and an unnamed third, Add a baby and the names hint"> |
 
 | Home, two babies | Switch baby | History, two babies | Widgets, two babies |
 |:---:|:---:|:---:|:---:|
@@ -68,6 +68,12 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 | Sleep notifications, two babies | Statistics, two babies |
 |:---:|:---:|
 | <img src="docs/screenshots/en/phone-notification-twins.png" width="200" alt="One sleep notification per baby: Noa is asleep and Ida is asleep, each with Woke up"> | <img src="docs/screenshots/en/phone-statistics-twins.png" width="200" alt="Statistics labelled Noa under the title: only Noa's log counts"> |
+
+#### Families and passwordless sign-in
+
+| Check your email | Settings, family | Joining a family |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/phone-account-link-sent.png" width="200" alt="Account: Check your email, the sign-in link went to parent@example.com, Send again and Use another email"> | <img src="docs/screenshots/en/phone-settings-family.png" width="200" alt="Settings, Family: you started the family, a partner and a grandparent with Remove, Invite someone and Leave family"> | <img src="docs/screenshots/en/phone-join-family.png" width="200" alt="Join partner@example.com's family? Your babies and log are added and shared; Join and Not now"> |
 
 ### Watch
 
@@ -97,9 +103,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/da/watch-main-idle.png" width="130" alt="Ur, hovedskærm"> | <img src="docs/screenshots/da/watch-feed-type.png" width="130" alt="Måltid"> | <img src="docs/screenshots/da/watch-side.png" width="130" alt="Hvilken side?"> | <img src="docs/screenshots/da/watch-diaper.png" width="130" alt="Ble"> | <img src="docs/screenshots/da/watch-logged.png" width="130" alt="Registreret med Fortryd"> | <img src="docs/screenshots/da/watch-tile.png" width="130" alt="Flise"> |
 
-| Velkommen | Konto | Hjem, to børn | Skift barn | Ur: to børn | Ur: skift barn |
+| Velkommen | Konto | Familie | Bliv medlem | Ur: to børn | Ur: skift barn |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/da/phone-welcome.png" width="150" alt="Velkommen: Din log bliver på denne telefon"> | <img src="docs/screenshots/da/phone-account.png" width="150" alt="Konto: Fortsæt med Google eller brug e-mail"> | <img src="docs/screenshots/da/phone-home-twins.png" width="150" alt="Hjem med to børn: Noa med pil vælger barn"> | <img src="docs/screenshots/da/phone-switch-baby.png" width="150" alt="Skift barn: Noa og Ida"> | <img src="docs/screenshots/da/watch-main-twins.png" width="130" alt="Ur, hovedskærm med Noa i tiden"> | <img src="docs/screenshots/da/watch-baby-picker.png" width="130" alt="Ur: Skift barn"> |
+| <img src="docs/screenshots/da/phone-welcome.png" width="150" alt="Velkommen: Din log bliver på denne telefon"> | <img src="docs/screenshots/da/phone-account.png" width="150" alt="Konto: Fortsæt med Google eller brug e-mail"> | <img src="docs/screenshots/da/phone-settings-family.png" width="150" alt="Indstillinger, Familie: medlemmerne, Invitér nogen og Forlad familien"> | <img src="docs/screenshots/da/phone-join-family.png" width="150" alt="Bliv medlem af familien hos partner@example.com?"> | <img src="docs/screenshots/da/watch-main-twins.png" width="130" alt="Ur, hovedskærm med Noa i tiden"> | <img src="docs/screenshots/da/watch-baby-picker.png" width="130" alt="Ur: Skift barn"> |
 
 Every image above also exists in the other language: swap `en` and `da` in the path ([`docs/screenshots/`](docs/screenshots)).
 

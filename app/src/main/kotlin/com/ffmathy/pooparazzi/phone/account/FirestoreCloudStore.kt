@@ -47,7 +47,7 @@ class FirestoreCloudStore(
     private val auth: FirebaseAuth,
     private val timeoutMillis: Long = TIMEOUT_MILLIS,
 ) : CloudStore {
-    private val commits = CommitGate(timeoutMillis)
+    internal val commits = CommitGate(timeoutMillis)
 
     override suspend fun upload(familyId: String, entries: List<Entry>) =
         write(collection(familyId, COLLECTION_ENTRIES), entries.map { it.id to EntryJson.encode(it) })
@@ -65,14 +65,28 @@ class FirestoreCloudStore(
         // An upload still queued must not land after the deletion.
         commits.drain()
         val family = firestore.collection(COLLECTION_FAMILIES).document(familyId)
+        val member = family.collection(COLLECTION_MEMBERS).document(uid)
         // Read while still a member (the rules let members alone read): the last one out takes the family's data along.
-        val members = family.collection(COLLECTION_MEMBERS).limit(2).get(Source.SERVER).awaitWithin()
+        val members = try {
+            family.collection(COLLECTION_MEMBERS).limit(2).get(Source.SERVER).awaitWithin()
+        } catch (e: FirebaseFirestoreException) {
+            // Refused while signed in: no longer a member (an earlier attempt got this far, or removed). Nothing to do.
+            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED && auth.currentUser != null) return@call
+            throw e
+        }
         if (members.documents.all { it.id == uid }) {
             deleteCollection(family.collection(COLLECTION_ENTRIES))
             deleteCollection(family.collection(COLLECTION_BABIES))
-            commits.commit { family.delete() }
+            // The family goes in one batch with its last member's document, as the rules require.
+            commits.commit {
+                firestore.batch().apply {
+                    delete(family)
+                    delete(member)
+                }.commit()
+            }
+        } else {
+            commits.commit { member.delete() }
         }
-        commits.commit { family.collection(COLLECTION_MEMBERS).document(uid).delete() }
         Unit
     }
 
@@ -93,7 +107,7 @@ class FirestoreCloudStore(
     }
 
     /** Up to [limit] documents of [collection] written after [cursor], in the order of changes. */
-    private suspend fun read(collection: CollectionReference, cursor: CloudCursor?, limit: Int): List<StoredDocument> = call {
+    internal suspend fun read(collection: CollectionReference, cursor: CloudCursor?, limit: Int): List<StoredDocument> = call {
         var query: Query = collection.orderBy(FIELD_SYNCED_AT).orderBy(FieldPath.documentId())
         if (cursor != null) query = query.startAfter(Timestamp(cursor.seconds, cursor.nanos), cursor.documentId)
         val snapshot = query.limit(limit.toLong()).get(Source.SERVER).awaitWithin()
@@ -105,7 +119,7 @@ class FirestoreCloudStore(
     }
 
     /** Deletes every document of [collection], a page at a time. */
-    private suspend fun deleteCollection(collection: CollectionReference) {
+    internal suspend fun deleteCollection(collection: CollectionReference) {
         while (true) {
             val page = collection.limit(DELETE_PAGE.toLong()).get(Source.SERVER).awaitWithin()
             if (page.isEmpty) break
@@ -118,7 +132,7 @@ class FirestoreCloudStore(
     private suspend fun <T> Task<T>.awaitWithin(): T = awaitWithin(timeoutMillis)
 
     /** Runs a Firestore call, turning its failure into a [CloudException]. */
-    private suspend fun <T> call(block: suspend () -> T): T = try {
+    internal suspend fun <T> call(block: suspend () -> T): T = try {
         block()
     } catch (e: CancellationException) {
         throw e
@@ -178,14 +192,8 @@ class FirestoreCloudStore(
         const val TIMEOUT_MILLIS = 30_000L
 
         /** Documents deleted per batch when the account is deleted. */
-        private const val DELETE_PAGE = 400
+        internal const val DELETE_PAGE = 400
 
-        /**
-         * One page of [changesAfter] from its documents in query order. A document without `syncedAt` is a write of
-         * this phone the server has not stamped yet (it shows up stamped later): skipped, and the cursor stops before
-         * it so nothing after it is passed over. A document that does not decode, or whose entry id is not its
-         * document id, is skipped but still moves the cursor on. [CloudPage.documents] counts every document.
-         */
         /** What a failed call means for the backup (timeouts are [CloudError.OFFLINE] already, in awaitWithin). */
         internal fun errorOf(e: Exception, signedIn: () -> Boolean): CloudError = when (e) {
             is FirebaseFirestoreException -> when (e.code) {
@@ -199,6 +207,12 @@ class FirestoreCloudStore(
             else -> CloudError.OTHER
         }
 
+        /**
+         * One page of [changesAfter] from its documents in query order. A document without `syncedAt` is a write of
+         * this phone the server has not stamped yet (it shows up stamped later): skipped, and the cursor stops before
+         * it so nothing after it is passed over. A document that does not decode, or whose entry id is not its
+         * document id, is skipped but still moves the cursor on. [CloudPage.documents] counts every document.
+         */
         internal fun pageOf(documents: List<StoredDocument>): CloudPage<Entry> =
             pageOf(documents, EntryJson::decodeOrNull) { it.id }
 
@@ -225,7 +239,7 @@ class FirestoreCloudStore(
 }
 
 /** Awaits the task for at most [timeoutMillis], then gives up as [CloudError.OFFLINE] (the task itself goes on). */
-private suspend fun <T> Task<T>.awaitWithin(timeoutMillis: Long): T {
+internal suspend fun <T> Task<T>.awaitWithin(timeoutMillis: Long): T {
     // A Task<Void> completes with null: the timeout is told apart by the wrapper, not by the value.
     val done = withTimeoutOrNull(timeoutMillis) { Box(await()) } ?: throw CloudException(CloudError.OFFLINE)
     return done.value

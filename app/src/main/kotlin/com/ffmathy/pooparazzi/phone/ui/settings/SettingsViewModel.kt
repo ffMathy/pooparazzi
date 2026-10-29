@@ -23,6 +23,7 @@ import com.ffmathy.pooparazzi.phone.BuildConfig
 import com.ffmathy.pooparazzi.phone.account.Accounts
 import com.ffmathy.pooparazzi.phone.account.AppAccounts
 import com.ffmathy.pooparazzi.phone.account.NoAccounts
+import com.ffmathy.pooparazzi.phone.account.PrivacyPolicy
 import com.ffmathy.pooparazzi.phone.app.AppLocales
 import com.ffmathy.pooparazzi.phone.app.LocaleApplier
 import kotlinx.coroutines.CoroutineScope
@@ -62,6 +63,7 @@ sealed interface AccountSummary {
  * @property canAddBaby false at [Settings.MAX_BABIES] (the "Add a baby" pill is hidden then).
  * @property watchNeedsUpdate the paired watch runs a version from before several babies: "Add a baby" is disabled, with
  *   "Update Pooparazzi on your watch first." under it.
+ * @property privacyUrl where Settings › About › Privacy policy opens ([PrivacyPolicy]).
  */
 @Immutable
 data class SettingsUiState(
@@ -74,6 +76,7 @@ data class SettingsUiState(
     val account: AccountSummary = AccountSummary.Unavailable,
     val canAddBaby: Boolean = babies.size < Settings.MAX_BABIES,
     val watchNeedsUpdate: Boolean = false,
+    val privacyUrl: String = PrivacyPolicy.REPOSITORY_URL,
 )
 
 /** Everything the parent can do in Settings. Defaults do nothing, so previews and screenshots can pass [None]. */
@@ -97,6 +100,9 @@ interface SettingsActions {
     /** The account row in "Couldn't back up · Tap to retry": backs up again. */
     fun onRetryBackup() {}
     fun onOpenLicences() {}
+
+    /** Settings › About › Privacy policy: opens it in the browser. */
+    fun onOpenPrivacy() {}
 
     /** Settings › Notifications: the system setting for Live Updates or notifications. */
     fun onOpenNotificationSettings() {}
@@ -161,6 +167,7 @@ class SettingsViewModel(
             versionName = versionName,
             account = account,
             watchNeedsUpdate = old,
+            privacyUrl = PrivacyPolicy.url(accounts.hostingDomain),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
