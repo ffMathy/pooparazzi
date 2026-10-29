@@ -48,6 +48,8 @@ PHONE = {
     "18-widget-3x1.png": "widget-3x1",
     "19-widget-cover.png": "widget-cover",
     "20-notifications.png": "notifications",
+    "21-statistics.png": "statistics",
+    "22-statistics-night.png": "statistics-night",
 }
 
 # Recorded file (wear/screenshots/<lang>/) -> README file (docs/screenshots/<lang>/watch-<name>.png).
