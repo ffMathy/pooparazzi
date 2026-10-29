@@ -169,6 +169,11 @@
     <string name="settings_baby_field">Name</string>
     <string name="settings_add_baby">Add a baby</string>
     <string name="settings_add_baby_watch_update">Update Pooparazzi on your watch first.</string>
+    <string name="settings_remove_baby_cd">Remove %1$s</string>
+    <string name="settings_remove_baby_title">Remove %1$s?</string>
+    <string name="settings_remove_baby_body">Their log is deleted from this phone and your watch. This can\'t be undone.</string>
+    <string name="settings_remove_baby_body_family">Their log is deleted for everyone in your family and from your backup. This can\'t be undone.</string>
+    <string name="settings_remove_baby_confirm">Remove</string>
     <string name="settings_babies_hint">Names stay on this phone and your watch.</string>
     <string name="settings_appearance_hint">Auto uses Night in the evening and at night, while a sleep runs, and when the phone is in dark theme.</string>
     <string name="settings_section_watch">Watch</string>

@@ -196,6 +196,18 @@ class RoomEntryRepository(
         return before
     }
 
+    override suspend fun deleteBabyEntries(babyId: String): Int {
+        val ids = database.withTransaction {
+            dao.activeOf(babyId).map { row ->
+                val stored = row.toEntry()
+                writeLocal(stored.copy(deleted = true, updatedAtMillis = nextStamp(stored.updatedAtMillis)), row)
+                row.id
+            }
+        }
+        push(ids)
+        return ids.size
+    }
+
     override suspend fun restore(previous: Entry): Entry {
         val restoring = previous.normalized().requireValid()
         val written = database.withTransaction {

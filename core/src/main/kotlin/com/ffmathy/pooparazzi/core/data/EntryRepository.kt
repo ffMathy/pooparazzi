@@ -133,6 +133,12 @@ interface EntryRepository {
     /** Soft-deletes [id]. Returns the snapshot before deletion (for Undo via [restore]), or null for an unknown id. */
     suspend fun delete(id: String): Entry?
 
+    /**
+     * Soft-deletes every entry of baby [babyId] (removing the baby, BABIES_AND_BACKUP §2.4): each is pushed to the
+     * other device and, with an account, goes to the family's backup as a tombstone. Returns how many were deleted.
+     */
+    suspend fun deleteBabyEntries(babyId: String): Int
+
     /** Undo: writes [previous] back (re-inserting it when needed, for its own baby) with a new [Entry.updatedAtMillis]. */
     suspend fun restore(previous: Entry): Entry
 

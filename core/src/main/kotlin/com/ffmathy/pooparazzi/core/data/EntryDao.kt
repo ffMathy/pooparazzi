@@ -19,6 +19,10 @@ abstract class EntryDao {
     @Query("SELECT * FROM entries WHERE babyId = :babyId AND deleted = 0 ORDER BY startMillis ASC, id ASC")
     abstract fun observeActive(babyId: String): Flow<List<EntryEntity>>
 
+    /** Non-deleted entries of [babyId], once. */
+    @Query("SELECT * FROM entries WHERE babyId = :babyId AND deleted = 0")
+    abstract suspend fun activeOf(babyId: String): List<EntryEntity>
+
     @Query("SELECT * FROM entries WHERE id = :id")
     abstract suspend fun get(id: String): EntryEntity?
 

@@ -29,7 +29,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -257,6 +260,12 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
                     onChange = { actions.onBabyNameChange(baby.id, it) },
                     onDone = { actions.onBabyNameDone(baby.id) },
                     modifier = Modifier.focusRequester(requester),
+                    removeLabel = if (state.canRemoveBaby) {
+                        stringResource(R.string.settings_remove_baby_cd, labels.baby(baby, state.babies))
+                    } else {
+                        null
+                    },
+                    onRemove = { actions.onRemoveBaby(baby.id) },
                 )
             }
         }
@@ -289,16 +298,46 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
         }
     }
     // Signed in, the names go to the family's backup too (BABIES_AND_BACKUP §1).
-    val hint = if (state.account is AccountSummary.SignedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint
+    val signedIn = state.account is AccountSummary.SignedIn
+    val hint = if (signedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint
     Text(
         stringResource(hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
     )
+    state.removing?.let { RemoveBabyDialog(labels.baby(it, state.babies), signedIn, actions) }
 }
 
-/** A baby's name (shown in the top bar and notifications); empty shows its [placeholder] label. Done saves at once. */
+/** "Remove Noa?": the baby's log goes with it (for the whole family when signed in), with Cancel and "Remove". */
+@Composable
+private fun RemoveBabyDialog(label: String, signedIn: Boolean, actions: SettingsActions) {
+    val colors = MaterialTheme.colorScheme
+    val body = if (signedIn) R.string.settings_remove_baby_body_family else R.string.settings_remove_baby_body
+    AlertDialog(
+        onDismissRequest = actions::onDismissRemoveBaby,
+        title = { Text(stringResource(R.string.settings_remove_baby_title, label)) },
+        text = { Text(stringResource(body)) },
+        confirmButton = {
+            TextButton(onClick = actions::onConfirmRemoveBaby) {
+                Text(stringResource(R.string.settings_remove_baby_confirm), color = colors.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = actions::onDismissRemoveBaby) {
+                Text(stringResource(CoreR.string.action_cancel), color = colors.onSurface)
+            }
+        },
+        containerColor = colors.surfaceContainerHigh,
+        titleContentColor = colors.onSurface,
+        textContentColor = colors.onSurfaceVariant,
+    )
+}
+
+/**
+ * A baby's name (shown in the top bar and notifications); empty shows its [placeholder] label. Done saves at once.
+ * With a [removeLabel] (two or more babies) a 48 dp remove button ends the field.
+ */
 @Composable
 private fun NameField(
     name: String,
@@ -306,6 +345,8 @@ private fun NameField(
     onChange: (String) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    removeLabel: String? = null,
+    onRemove: () -> Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
     val focus = LocalFocusManager.current
@@ -315,6 +356,13 @@ private fun NameField(
         modifier = modifier.fillMaxWidth(),
         label = { Text(stringResource(R.string.settings_baby_field)) },
         placeholder = { Text(placeholder) },
+        trailingIcon = removeLabel?.let { label ->
+            {
+                IconButton(onClick = onRemove) {
+                    XIcon(XIcons.delete, contentDescription = label, tint = colors.onSurfaceVariant)
+                }
+            }
+        },
         singleLine = true,
         textStyle = MaterialTheme.typography.titleMedium,
         shape = RoundedCornerShape(16.dp),

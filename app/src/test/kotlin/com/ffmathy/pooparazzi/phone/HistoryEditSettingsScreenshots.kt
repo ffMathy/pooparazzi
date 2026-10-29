@@ -96,6 +96,18 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
     }
 
     /** A paired watch from before several babies: "Add a baby" disabled, and why (BABIES_AND_BACKUP §2.4). */
+    /** "Remove Baby 3?": removing a baby deletes its log (BABIES_AND_BACKUP §2.4); dialogs live in their own window. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test fun settingsRemoveBaby() {
+        compose.setContent {
+            NightLightTheme(night = false) {
+                SettingsScreen(SettingsSamples.removeBaby(), SettingsActions.None, windowInsets = ReferenceInsets)
+            }
+        }
+        compose.waitForIdle()
+        captureScreenRoboImage(path("44-settings-remove-baby", tour = true))
+    }
+
     @Test fun settingsBabiesWatchUpdate() = screen("32-settings-babies-watch-update", night = false) {
         SettingsScreen(SettingsSamples.state().copy(watchNeedsUpdate = true), SettingsActions.None, windowInsets = ReferenceInsets)
     }

@@ -225,6 +225,45 @@ class SettingsViewModelTest : CoreTestBase() {
     }
 
     @Test
+    fun removingABabyAsksFirstThenDeletesItAndItsLog() = coreTest { core ->
+        val twin = core.settings.addBaby()
+        val noa = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432 - 30 * MINUTE)
+        val ida = Entry.diaper(SampleData.NOW_1432 - 20 * MINUTE, pee = true, poop = false, babyId = twin.id)
+        core.seed(listOf(noa))
+        // From the other device: an entry of the twin (Add past entry would log it for the current baby).
+        core.repository.applyRemote(ida)
+        val before = core.repository.observeAllEntries().first().map { it.id }
+        assertTrue(ida.id in before)
+        val vm = SettingsViewModel(
+            core.settings, NoopEntrySync, LocaleApplier { applied += it }, backgroundScope,
+            versionName = "0.1.0", entries = core.repository, clock = core.clock,
+        ).also { core.collect(it.state) }
+        runCurrent()
+        assertTrue(vm.state.value!!.canRemoveBaby)
+
+        // Cancel removes nothing.
+        vm.onRemoveBaby(twin.id)
+        runCurrent()
+        assertEquals(twin.id, vm.state.value!!.removing?.id)
+        vm.onDismissRemoveBaby()
+        runCurrent()
+        assertEquals(null, vm.state.value!!.removing)
+        assertEquals(2, core.settings.current().babies.size)
+
+        // A name typed meanwhile is dropped with the baby, never written after it.
+        vm.onBabyNameChange(twin.id, "Ida")
+        vm.onRemoveBaby(twin.id)
+        vm.onConfirmRemoveBaby()
+        runCurrent()
+        assertEquals(listOf(Baby.FIRST_ID), core.settings.current().babies.map { it.id })
+        assertEquals(listOf(twin.id), core.settings.current().removedBabies.map { it.id })
+        assertEquals(null, vm.state.value!!.removing)
+        assertFalse(vm.state.value!!.canRemoveBaby)
+        assertEquals("only the removed baby's log is deleted", before - ida.id, core.repository.observeAllEntries().first().map { it.id })
+        assertTrue(core.entry(ida.id)!!.deleted)
+    }
+
+    @Test
     fun downloadMyDataWritesTheWholeLogAndTheNames() = coreTest { core ->
         core.settings.renameBaby(Baby.FIRST_ID, "Noa")
         val feed = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432 - 30 * MINUTE)
