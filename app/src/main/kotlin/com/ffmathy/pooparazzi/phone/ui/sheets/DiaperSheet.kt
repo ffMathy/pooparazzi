@@ -83,7 +83,7 @@ internal fun DiaperSheetContent(sheet: HomeSheetUi.Diaper, zone: ZoneId, formatt
     val readiness = rememberPickerReadiness()
     val title = titleWithTime(CoreR.string.kind_diaper, formatters.clock.format(sheet.time, zone))
     SheetColumn(title) {
-        SheetHeader(title, callbacks.onCancel)
+        SheetHeader(title, callbacks.onCancel, was = sheet.was?.let { formatters.clock.format(it, zone) })
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
         Spacer(Modifier.height(12.dp))

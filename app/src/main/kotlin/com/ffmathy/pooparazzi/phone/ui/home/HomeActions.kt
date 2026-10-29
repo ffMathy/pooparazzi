@@ -57,8 +57,8 @@ interface HomeActions {
 
     // Sheets
     /**
-     * Selects an offset chip. In a receipt it applies at once; in Adjust start, on Save. In both, re-tapping the
-     * selected chip returns it to 0.
+     * A nudge chip: moves the sheet's time by [minutes] more (taps add up). In a receipt it applies at once; in Adjust
+     * start, on Save; in Feed and Diaper, on log.
      */
     fun onSheetOffset(minutes: Int) {}
 

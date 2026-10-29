@@ -13,7 +13,7 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 ## Features
 
 - **Sleep**: one button starts a sleep and the same button ("Woke up") ends it. The running sleep is shown as a ring with its length; the start can be adjusted while it runs.
-- **Feeds**: Breast, Formula or Food, or **just the time**. Log it now or a few minutes ago (−5m / −10m / −15m).
+- **Feeds**: Breast, Formula or Food, or **just the time**. Log it now or a little earlier: −15m / −10m / −5m / +5m nudge the time and add up, with "was 14:32" beside it.
 - **Breast feeds with side order**: a breast feed is logged like any feed, at one time (no timer, no duration). After Breast, tick **Left** and/or **Right**: the order you tick is the order recorded ("Right → Left"). The side is optional; "Log feed" (watch: "Save") with nothing ticked records just the time. Wherever the last feed is shown (phone Home, the widget, the watch), its order is shown too ("Left → Right", or "L → R" where space is tight), so you know which side to start on next.
 - **Formula with an amount**: after Formula (on the phone), an optional slider sets how much was given, in **ml** (10 ml steps up to 300 ml), or in **fl oz** (½ oz steps up to 10 oz) where the region measures in ounces (the US, Liberia, Myanmar). Leaving it at "No amount" records just the time. The amount shows on the receipt, in History ("12:22 · 120 ml"), on the watch's Today list, and can be changed in the edit sheet.
 - **Diapers**: Pee and Poop are independent checkboxes, both optional (nothing ticked is a plain change). With Poop on, pick an optional **colour** (yellow, green, brown, black, red, pale) and **texture** (watery, seedy, mushy, formed, hard); red, black and pale show a gentle "talk to your doctor" hint.
@@ -45,9 +45,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-home-receipt.png" width="200" alt="Receipt after logging: Formula logged · 14:32 with Undo, offset chips, Edit and Done"> | <img src="docs/screenshots/en/phone-feed-sheet.png" width="200" alt="Feed sheet: Breast, Formula, Food, Just the time"> | <img src="docs/screenshots/en/phone-breast-sheet.png" width="200" alt="Feed sheet after Breast, with Right then Left ticked"> | <img src="docs/screenshots/en/phone-diaper-sheet.png" width="200" alt="Diaper sheet with poop colour and texture"> |
 
-| Formula: amount | Edit formula feed |
-|:---:|:---:|
-| <img src="docs/screenshots/en/phone-formula-sheet.png" width="200" alt="Feed sheet after Formula, with the optional amount slider at 120 ml (or 4 fl oz where ounces are used)"> | <img src="docs/screenshots/en/phone-edit-formula.png" width="200" alt="Edit a formula feed with its optional amount"> |
+| Formula: amount | Edit formula feed | Diaper, backdated |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/phone-formula-sheet.png" width="200" alt="Feed sheet after Formula, with the optional amount slider at 120 ml (or 4 fl oz where ounces are used)"> | <img src="docs/screenshots/en/phone-edit-formula.png" width="200" alt="Edit a formula feed with its optional amount"> | <img src="docs/screenshots/en/phone-diaper-sheet-nudged.png" width="200" alt="Diaper sheet after tapping −5m twice: Diaper · 14:22, was 14:32"> |
 
 | History | History, Night | Edit feed | Edit diaper |
 |:---:|:---:|:---:|:---:|

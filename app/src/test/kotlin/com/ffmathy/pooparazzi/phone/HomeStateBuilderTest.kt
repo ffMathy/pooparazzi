@@ -85,7 +85,7 @@ class HomeStateBuilderTest {
     fun adjustingStartShowsTheChosenStart() {
         val sheet = HomeSamples.adjustingStart().sheet as HomeSheetUi.Adjust
         assertEquals(SampleData.at(1, 50), sheet.time)
-        assertEquals(-15, sheet.chips.single { it.selected }.minutes)
+        assertEquals(SampleData.at(2, 5), sheet.was)
     }
 
     @Test

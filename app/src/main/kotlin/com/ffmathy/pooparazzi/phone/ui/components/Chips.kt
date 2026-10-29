@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -39,7 +38,6 @@ import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.phone.ui.home.OffsetChipUi
-import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Chip geometry (DESIGN_SPEC §3.3.1 "Chip", §5.8). */
 object ChipDefaults {
@@ -157,8 +155,9 @@ private fun ChipContent(
 }
 
 /**
- * Offset chips sharing one row in equal widths (gap 8), so "Now −5m −10m −15m" never wraps a chip onto its own line:
- * the labels shrink instead. [leading] and [trailing] sit before and after the chips at their own widths.
+ * Nudge chips sharing one row in equal widths (gap 8), so "−15m −10m −5m +5m" never wraps a chip onto its own line:
+ * the labels shrink instead. They are buttons, not a choice: each tap moves the time by its minutes more, like the edit
+ * sheet's nudges. [leading] and [trailing] sit before and after the chips at their own widths.
  */
 @Composable
 fun OffsetChipRow(
@@ -166,7 +165,6 @@ fun OffsetChipRow(
     formatters: Formatters,
     onOffset: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    role: Role? = null,
     acceptsTaps: Boolean = true,
     leading: (@Composable RowScope.() -> Unit)? = null,
     trailing: (@Composable RowScope.() -> Unit)? = null,
@@ -183,7 +181,6 @@ fun OffsetChipRow(
                 formatters,
                 onClick = { onOffset(chip.minutes) },
                 modifier = Modifier.weight(1f),
-                role = role,
                 acceptsTaps = acceptsTaps,
                 fill = true,
             )
@@ -192,28 +189,25 @@ fun OffsetChipRow(
     }
 }
 
-/** An offset chip: "Now", "−5m", "+5m"; spoken "5 minutes earlier" (DESIGN_SPEC §9.5). */
+/** A nudge chip: "−5m", "+5m", never selected; spoken "5 minutes earlier" (DESIGN_SPEC §9.5). */
 @Composable
 fun OffsetChip(
     chip: OffsetChipUi,
     formatters: Formatters,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    role: Role? = null,
     acceptsTaps: Boolean = true,
     fill: Boolean = false,
 ) {
-    val now = stringResource(CoreR.string.action_now)
     XChip(
-        selected = chip.selected,
+        selected = false,
         onClick = onClick,
-        label = if (chip.minutes == 0) now else formatters.duration.offset(chip.minutes),
+        label = formatters.duration.offset(chip.minutes),
         modifier = modifier,
         enabled = chip.enabled,
         width = ChipDefaults.OffsetWidth,
-        role = role,
-        spokenLabel = if (chip.minutes == 0) null else formatters.relative.offsetSpoken(chip.minutes),
-        reserveCheck = true,
+        role = Role.Button,
+        spokenLabel = formatters.relative.offsetSpoken(chip.minutes),
         acceptsTaps = acceptsTaps,
         fill = fill,
     )

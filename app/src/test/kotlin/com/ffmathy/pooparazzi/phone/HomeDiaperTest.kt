@@ -78,7 +78,7 @@ class HomeDiaperTest : HomeViewModelTestBase() {
         assertEquals(PoopTexture.SEEDY, diaper.poopTexture)
         assertEquals(SampleData.NOW_1432 - 15 * MINUTE, diaper.startMillis)
         assertEquals(ReceiptVariant.DiaperLogged(DiaperKind.BOTH), state.receipt.variant)
-        assertEquals("the sheet's offset is pre-selected", -15, state.receipt.chips.single { it.selected }.minutes)
+        assertEquals("the sheet's offset carries over", -15, state.receipt.offsetMinutes)
     }
 
     @Test

@@ -39,6 +39,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ffmathy.pooparazzi.core.ui.tokens.LocalXPalette
+import com.ffmathy.pooparazzi.core.ui.type.PhoneType
+import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Sheet geometry (DESIGN_SPEC §3.3.2, §5.8). */
@@ -111,9 +113,12 @@ private fun DragHandle(top: Dp) {
     )
 }
 
-/** Header (48): the title at the 24 gutter and "Cancel" at the end. */
+/**
+ * Header (48): the title at the 24 gutter and "Cancel" at the end; after a nudge, "was 14:32" ([was]) dataMedium
+ * onSurfaceVariant between them, like the edit sheet's time field.
+ */
 @Composable
-internal fun SheetHeader(title: String, onCancel: () -> Unit, modifier: Modifier = Modifier) {
+internal fun SheetHeader(title: String, onCancel: () -> Unit, modifier: Modifier = Modifier, was: String? = null) {
     val colors = MaterialTheme.colorScheme
     Row(modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
@@ -127,6 +132,15 @@ internal fun SheetHeader(title: String, onCancel: () -> Unit, modifier: Modifier
                 .weight(1f)
                 .semantics { heading() },
         )
+        if (was != null) {
+            Text(
+                stringResource(R.string.edit_was, was),
+                style = PhoneType.dataMedium,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
         Box(
             Modifier
                 .heightIn(min = 48.dp)

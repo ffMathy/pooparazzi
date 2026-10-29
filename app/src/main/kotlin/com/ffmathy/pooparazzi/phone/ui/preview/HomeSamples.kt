@@ -54,8 +54,7 @@ object HomeSamples {
 
     /**
      * 14:50, a breast feed (Left → Right) just logged for 14:32 with the −15m chip from the Feed sheet opened at 14:47:
-     * "Last fed 18m ago · 14:32 · Left → Right" and the receipt "Breast logged · 14:32", sub "Left → Right", −15m
-     * selected.
+     * "Last fed 18m ago · 14:32 · Left → Right" and the receipt "Breast logged", "14:32 · was 14:47 · Left → Right".
      */
     fun breastLogged(): HomeUiState {
         val feed = SampleData.recentBreastfeed(zone)
@@ -154,6 +153,16 @@ object HomeSamples {
             color = PoopColor.YELLOW,
             texture = PoopTexture.SEEDY,
         ),
+    )
+
+    /**
+     * The Diaper sheet opened at 14:32 and nudged −5m twice: "Diaper · 14:22", "was 14:32" beside it, +5m enabled (it
+     * no longer reaches the future).
+     */
+    fun diaperSheetNudged(): HomeUiState = build(
+        SampleData.scenario(zone),
+        SampleData.NOW_1432,
+        sheet = SheetModel.Diaper(stamp = SampleData.NOW_1432, offsetMinutes = -10, pee = true),
     )
 
     /** The Diaper sheet with Poop on and Pale selected: the health hint shows. */

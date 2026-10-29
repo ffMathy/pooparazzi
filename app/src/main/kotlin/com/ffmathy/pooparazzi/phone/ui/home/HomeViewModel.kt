@@ -330,24 +330,26 @@ class HomeViewModel(
             is SheetModel.Receipt -> receiptOffset(current, minutes)
             is SheetModel.Adjust -> adjustOffset(current, minutes)
             is SheetModel.Feed, is SheetModel.Diaper -> {
-                if (current.offsetMinutes == minutes) return@act
+                // Each tap nudges the time further, like the edit sheet's nudges; never into the future.
+                val next = current.offsetMinutes + minutes
+                if (current.stamp + next * MINUTE_MILLIS > clock.now()) {
+                    haptic(HomeHaptic.REJECT)
+                    return@act
+                }
                 sheet.value = when (current) {
-                    is SheetModel.Feed -> current.copy(offsetMinutes = minutes)
-                    else -> (current as SheetModel.Diaper).copy(offsetMinutes = minutes)
+                    is SheetModel.Feed -> current.copy(offsetMinutes = next)
+                    else -> (current as SheetModel.Diaper).copy(offsetMinutes = next)
                 }
                 haptic(HomeHaptic.SEGMENT_TICK)
             }
         }
     }
 
-    /**
-     * A receipt's offset applies at once, relative to its base time and never cumulative; re-tapping the selected chip
-     * returns it to 0.
-     */
+    /** A receipt's offset applies at once; each tap nudges the time further from its base time (shown as "was"). */
     private suspend fun receiptOffset(receipt: SheetModel.Receipt, minutes: Int) {
         val (id, field) = receipt.spec.subject ?: return
         val entry = repository.get(id)?.takeUnless { it.deleted } ?: return
-        val next = if (receipt.offsetMinutes == minutes) 0 else minutes
+        val next = receipt.offsetMinutes + minutes
         if (!HomeStateBuilder.offsetAllowed(entry, field, receipt.stamp, next, clock.now())) {
             haptic(HomeHaptic.REJECT)
             return
@@ -360,10 +362,10 @@ class HomeViewModel(
             .onFailure { haptic(HomeHaptic.REJECT) }
     }
 
-    /** Adjust start's offset waits for Save; re-tapping the selected chip returns it to 0. */
+    /** Adjust start's offset waits for Save; each tap nudges it further from the start the sheet opened with. */
     private suspend fun adjustOffset(adjust: SheetModel.Adjust, minutes: Int) {
         val entry = repository.get(adjust.entryId)?.takeUnless { it.deleted } ?: return
-        val next = if (adjust.offsetMinutes == minutes) 0 else minutes
+        val next = adjust.offsetMinutes + minutes
         if (!HomeStateBuilder.offsetAllowed(entry, MoveField.START, adjust.stamp, next, clock.now())) {
             haptic(HomeHaptic.REJECT)
             return
