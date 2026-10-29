@@ -74,8 +74,8 @@ import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
 import com.ffmathy.pooparazzi.phone.ui.components.GroupRow
 import com.ffmathy.pooparazzi.phone.ui.components.RadioGroup
 import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
-import com.ffmathy.pooparazzi.phone.ui.components.syncIcon
 import com.ffmathy.pooparazzi.phone.ui.components.syncLineText
+import com.ffmathy.pooparazzi.phone.ui.components.watchGlyph
 import com.ffmathy.pooparazzi.phone.ui.edit.OutlinePill
 import com.ffmathy.pooparazzi.phone.ui.history.HistoryRowDefaults
 import com.ffmathy.pooparazzi.phone.ui.preview.SettingsSamples
@@ -359,7 +359,7 @@ private fun SyncRow(state: SettingsUiState, actions: SettingsActions) {
                 // The line first (Danish "Synkroniseret med ur · 14:31" needs the full width), "Sync now" under it.
                 val tint = if (state.sync is SyncStatus.Error) colors.error else colors.onSurfaceVariant
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    XIcon(syncIcon(state.sync), contentDescription = null, tint = tint, size = 20.dp)
+                    XIcon(watchGlyph(state.sync), contentDescription = null, tint = tint, size = 20.dp)
                     Spacer(Modifier.width(12.dp))
                     Text(line, style = PhoneType.dataMedium, color = tint)
                 }

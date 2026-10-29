@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.phone.ui.home.HomeActions
@@ -75,11 +76,25 @@ abstract class HomeScreenshots(private val language: String) {
     /** Twins (BABIES_AND_BACKUP §2.2): the current baby's name with a chevron is the switcher. */
     @Test fun homeTwins() = home("23-home-twins", night = false, HomeSamples.twins())
 
-    /** Not part of the tour (written under build/): twins with "Couldn't save · Tap to retry" under the switcher. */
+    /** Not part of the tour (written under build/): twins with the watch's retry ("Couldn't save") under the switcher. */
     @Test fun homeTwinsSyncError() {
         val error = HomeSamples.twins(sync = SyncStatus.Error)
         compose.setContent { Themed(night = true) { HomeScreen(error, HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/$language-home-twins-sync-error.png")
+    }
+
+    /**
+     * The status icons in their error states (DESIGN_SPEC §4.5): the watch and the cloud with "!", each a 48 dp retry
+     * button over the name.
+     */
+    @Test fun homeSyncErrors() = home("35-home-sync-errors", night = true, HomeSamples.syncStates(SyncStatus.Error, CloudStatus.Error))
+
+    /** Not part of the tour: the status icons at a 200 % font scale, with both retry targets (written under build/). */
+    @Test fun largeFontSyncErrors() {
+        RuntimeEnvironment.setFontScale(2f)
+        val state = HomeSamples.syncStates(SyncStatus.Error, CloudStatus.Error)
+        compose.setContent { Themed(night = true) { HomeScreen(state, HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/font200-$language-home-sync-errors.png")
     }
 
     /** The Switch baby sheet, opened from the name. */
