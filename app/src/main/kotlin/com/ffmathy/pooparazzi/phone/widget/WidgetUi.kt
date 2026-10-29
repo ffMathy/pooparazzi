@@ -223,7 +223,7 @@ internal fun SheetButton(
 
 /**
  * The widget surface: surfaceContainer with the system widget corner radius (reference r 24). A tap outside the buttons
- * opens the app (with the undo card for the last widget log, DESIGN_SPEC §3.3.6).
+ * opens the app (with the receipt for the last widget log, DESIGN_SPEC §3.3.6).
  */
 @Composable
 internal fun WidgetSurface(colors: WidgetColors, launch: HomeLaunch, modifier: GlanceModifier = GlanceModifier, content: @Composable () -> Unit) {

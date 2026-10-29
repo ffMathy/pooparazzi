@@ -64,7 +64,7 @@ private fun DiaperSheetHintPreview() = SheetPreview(night = true) {
     )
 }
 
-@Preview(name = "Adjust time sheet · Adjust start", widthDp = 390)
+@Preview(name = "Adjust start sheet", widthDp = 390)
 @Composable
 private fun AdjustSheetPreview() = SheetPreview(night = true) {
     val formatters = rememberFormatters(SampleData.ZONE)
@@ -73,5 +73,17 @@ private fun AdjustSheetPreview() = SheetPreview(night = true) {
         SampleData.ZONE,
         formatters,
         AdjustSheetCallbacks({}, {}, {}, {}),
+    )
+}
+
+@Preview(name = "Receipt sheet", widthDp = 390)
+@Composable
+private fun ReceiptSheetPreview() = SheetPreview(night = true) {
+    val formatters = rememberFormatters(SampleData.ZONE)
+    ReceiptSheetContent(
+        HomeSamples.justLogged().sheet as HomeSheetUi.Receipt,
+        SampleData.ZONE,
+        formatters,
+        ReceiptSheetCallbacks({}, {}, {}, {}, {}),
     )
 }

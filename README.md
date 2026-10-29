@@ -16,7 +16,7 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 - **Feeds**: Breast, Formula or Food, or **just the time**. Log it now or a few minutes ago (−5m / −10m / −15m).
 - **Breast feeds with side order**: a breast feed is logged like any feed, at one time (no timer, no duration). After Breast, tick **Left** and/or **Right**: the order you tick is the order recorded ("Right → Left"). The side is optional; "Log feed" (watch: "Save") with nothing ticked records just the time. Wherever the last feed is shown (phone Home, the widget, the watch), its order is shown too ("Left → Right", or "L → R" where space is tight), so you know which side to start on next.
 - **Diapers**: Pee and Poop are independent checkboxes, both optional (nothing ticked is a plain change). With Poop on, pick an optional **colour** (yellow, green, brown, black, red, pale) and **texture** (watery, seedy, mushy, formed, hard); red, black and pale show a gentle "talk to your doctor" hint.
-- **History, edit and undo**: a day view with a 24-hour ribbon and day totals; tap any entry to edit its times, type, side or diaper details, or delete it; add a past entry; every log shows an **Undo** card (phone) or button (watch); on the phone, "Adjust time" on the card opens a sheet to move it by a few minutes (no timeout while it is open).
+- **History, edit and undo**: a day view with a 24-hour ribbon and day totals; tap any entry to edit its times, type, side or diaper details, or delete it; add a past entry; every log shows an **Undo** receipt: on the phone a sheet with the logged time, Undo, chips to move it by a few minutes, Edit and Done (no timeout); on the watch a Logged screen with Undo.
 - **Phone ↔ watch sync** over the Wearable **Data Layer**. Both apps log offline and merge by last-writer-wins; the baby's name and the language follow the phone.
 - **Glanceable surfaces**:
   - Phone: two **Glance widgets** (a 4×2 log widget and a 3×1 quick widget, both with Feed, Diaper and Sleep; Feed and Diaper open the same sheets as in the app, the sleep toggle works in place), the 4×2 also on the **cover screen of Samsung flip phones**, and an **ongoing notification** for a running sleep (promoted to a Live Update where Android supports it).
@@ -32,11 +32,11 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Home, Night | Home, Day | Asleep at night | Breast feed logged |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-home-night.png" width="200" alt="Home, Night theme"> | <img src="docs/screenshots/en/phone-home-day.png" width="200" alt="Home, Day theme"> | <img src="docs/screenshots/en/phone-home-asleep.png" width="200" alt="Home while asleep"> | <img src="docs/screenshots/en/phone-home-breast-logged.png" width="200" alt="Home after logging a breast feed, with its side order on the undo card"> |
+| <img src="docs/screenshots/en/phone-home-night.png" width="200" alt="Home, Night theme"> | <img src="docs/screenshots/en/phone-home-day.png" width="200" alt="Home, Day theme"> | <img src="docs/screenshots/en/phone-home-asleep.png" width="200" alt="Home while asleep"> | <img src="docs/screenshots/en/phone-home-breast-logged.png" width="200" alt="The receipt after logging a breast feed, with its side order and the −15m it was backdated by"> |
 
-| Undo card | Feed sheet | Breast: side order | Diaper sheet |
+| Receipt | Feed sheet | Breast: side order | Diaper sheet |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-home-undo.png" width="200" alt="Undo card after logging"> | <img src="docs/screenshots/en/phone-feed-sheet.png" width="200" alt="Feed sheet: Breast, Formula, Food, Just the time"> | <img src="docs/screenshots/en/phone-breast-sheet.png" width="200" alt="Feed sheet after Breast, with Right then Left ticked"> | <img src="docs/screenshots/en/phone-diaper-sheet.png" width="200" alt="Diaper sheet with poop colour and texture"> |
+| <img src="docs/screenshots/en/phone-home-receipt.png" width="200" alt="Receipt after logging: Formula logged · 14:32 with Undo, offset chips, Edit and Done"> | <img src="docs/screenshots/en/phone-feed-sheet.png" width="200" alt="Feed sheet: Breast, Formula, Food, Just the time"> | <img src="docs/screenshots/en/phone-breast-sheet.png" width="200" alt="Feed sheet after Breast, with Right then Left ticked"> | <img src="docs/screenshots/en/phone-diaper-sheet.png" width="200" alt="Diaper sheet with poop colour and texture"> |
 
 | History | History, Night | Edit feed | Edit diaper |
 |:---:|:---:|:---:|:---:|
@@ -46,9 +46,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-add-past-entry.png" width="200" alt="Add a past entry"> | <img src="docs/screenshots/en/phone-settings.png" width="200" alt="Settings"> | <img src="docs/screenshots/en/phone-widget-4x2.png" width="200" alt="4x2 log widget in its states"> | <img src="docs/screenshots/en/phone-widget-3x1.png" width="200" alt="3x1 quick widget in its sizes"> |
 
-| Adjust time | Adjust start | Cover screen (Samsung flip) |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-adjust-time.png" width="200" alt="Adjust time sheet opened from the undo card: offset chips, Edit and Save"> | <img src="docs/screenshots/en/phone-adjust-start.png" width="200" alt="Adjust start sheet for the running sleep"> | <img src="docs/screenshots/en/phone-widget-cover.png" width="200" alt="The 4x2 widget on a Samsung flip's cover screen, idle and asleep"> |
+| Adjust start | Cover screen (Samsung flip) |
+|:---:|:---:|
+| <img src="docs/screenshots/en/phone-adjust-start.png" width="200" alt="Adjust start sheet for the running sleep"> | <img src="docs/screenshots/en/phone-widget-cover.png" width="200" alt="The 4x2 widget on a Samsung flip's cover screen, idle and asleep"> |
 
 ### Watch
 

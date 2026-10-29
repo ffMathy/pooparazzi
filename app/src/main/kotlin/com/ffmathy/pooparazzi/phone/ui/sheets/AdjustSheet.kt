@@ -26,7 +26,7 @@ import com.ffmathy.pooparazzi.phone.ui.home.titleWithTime
 import java.time.ZoneId
 import com.ffmathy.pooparazzi.core.R as CoreR
 
-/** What the Adjust time sheet can ask for. */
+/** What the Adjust start sheet can ask for. */
 internal class AdjustSheetCallbacks(
     val onOffset: (Int) -> Unit,
     val onEdit: (String) -> Unit,
@@ -35,16 +35,15 @@ internal class AdjustSheetCallbacks(
 )
 
 /**
- * The Adjust time sheet (DESIGN_SPEC §3.3.1): "Adjust start · 02:05" (a sleep's start) or "Adjust time · 14:27", the
- * title showing the time Save writes; −15m · −10m · −5m · +5m from the entry's time when the sheet opened (re-tapping
- * the selected chip returns to it), then "Edit" (the full edit sheet) at the start and Save at the end. It has no
- * timeout: it stays open until Save, Edit or Cancel.
+ * The Adjust start sheet (DESIGN_SPEC §3.3.1), from the running Lamp: "Adjust start · 01:50", the title showing the
+ * start Save writes; −15m · −10m · −5m · +5m from the start when the sheet opened (re-tapping the selected chip returns
+ * to it), then "Edit" (the full edit sheet) at the start and Save at the end. It has no timeout: it stays open until
+ * Save, Edit or Cancel.
  */
 @Composable
 internal fun AdjustSheetContent(sheet: HomeSheetUi.Adjust, zone: ZoneId, formatters: Formatters, callbacks: AdjustSheetCallbacks) {
     val readiness = rememberPickerReadiness()
-    val kind = if (sheet.sleepStart) CoreR.string.action_adjust_start else CoreR.string.action_adjust_time
-    val title = titleWithTime(kind, formatters.clock.format(sheet.time, zone))
+    val title = titleWithTime(CoreR.string.action_adjust_start, formatters.clock.format(sheet.time, zone))
     SheetColumn(title) {
         SheetHeader(title, callbacks.onCancel)
         Spacer(Modifier.height(12.dp))
@@ -61,7 +60,7 @@ internal fun AdjustSheetContent(sheet: HomeSheetUi.Adjust, zone: ZoneId, formatt
 
 /** "Edit": 56 tall, r 28, 1 dp outline, `edit` 20 + 8 + labelLarge onSurface; opens the edit sheet for the entry. */
 @Composable
-private fun EditButton(enabled: Boolean, onClick: () -> Unit) {
+internal fun EditButton(enabled: Boolean, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     OutlinedButton(
         onClick = onClick,

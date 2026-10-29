@@ -10,9 +10,10 @@ import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.phone.ui.home.CardModel
 import com.ffmathy.pooparazzi.phone.ui.home.CardSpec
+import com.ffmathy.pooparazzi.phone.ui.home.GuardKind
 import com.ffmathy.pooparazzi.phone.ui.home.HomeStateBuilder
 import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
-import com.ffmathy.pooparazzi.phone.ui.home.MoveField
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptSpec
 import com.ffmathy.pooparazzi.phone.ui.home.SheetModel
 import com.ffmathy.pooparazzi.phone.ui.home.Undo
 
@@ -47,7 +48,8 @@ object HomeSamples {
 
     /**
      * 14:50, a breast feed (Left → Right) just logged for 14:32 with the −15m chip from the Feed sheet opened at 14:47:
-     * "Last fed 18m ago · 14:32 · Left → Right" and the undo card "Breast logged · Left → Right".
+     * "Last fed 18m ago · 14:32 · Left → Right" and the receipt "Breast logged · 14:32", sub "Left → Right", −15m
+     * selected.
      */
     fun breastLogged(): HomeUiState {
         val feed = SampleData.recentBreastfeed(zone)
@@ -56,71 +58,62 @@ object HomeSamples {
             SampleData.scenarioWithRecentFeed(zone),
             SampleData.NOW_1450,
             sync = SyncStatus.Synced(SampleData.at(14, 49)),
-            card = CardModel(
-                key = 1,
-                spec = CardSpec.FeedLogged(feed.id, FeedType.BREAST, feed.breastSide),
-                baseTime = stamp,
+            sheet = SheetModel.Receipt(
+                stamp = stamp,
                 offsetMinutes = -15,
+                key = 1,
+                spec = ReceiptSpec.FeedLogged(feed.id, FeedType.BREAST, feed.breastSide),
                 undo = Undo.Delete(feed.id),
             ),
         )
     }
 
     /**
-     * 14:32, Formula just logged from the Feed sheet: the undo card with Undo and "Adjust time". The log is on its way to the
-     * watch ("Syncing with watch…"), as in the approved mockup.
+     * 14:32, Formula just logged from the Feed sheet: the receipt "Formula logged · 14:32" with Undo, the offset chips
+     * (+5m disabled: it would be in the future), Edit and Done. The log is on its way to the watch ("Syncing with
+     * watch…").
      */
     fun justLogged(): HomeUiState = build(
         SampleData.scenario(zone) + formula1432,
         SampleData.NOW_1432,
         sync = SyncStatus.Pending,
-        card = justLoggedCard(),
-    )
-
-    private fun justLoggedCard() = CardModel(
-        key = 1,
-        spec = CardSpec.FeedLogged(formula1432.id, FeedType.FORMULA),
-        baseTime = SampleData.NOW_1432,
-        undo = Undo.Delete(formula1432.id),
+        sheet = SheetModel.Receipt(
+            stamp = SampleData.NOW_1432,
+            key = 1,
+            spec = ReceiptSpec.FeedLogged(formula1432.id, FeedType.FORMULA),
+            undo = Undo.Delete(formula1432.id),
+        ),
     )
 
     /**
-     * 03:12, asleep since 02:05 with "Adjust start" tapped and −15m chosen: the Adjust time sheet "Adjust start · 01:50"
-     * with −15m · −10m · −5m · +5m, Edit and Save.
+     * 03:12, asleep since 02:05 with "Adjust start" tapped and −15m chosen: the sheet "Adjust start · 01:50" with
+     * −15m · −10m · −5m · +5m, Edit and Save.
      */
     fun adjustingStart(): HomeUiState = build(
         SampleData.scenarioAt0312(zone),
         SampleData.NOW_0312,
         sync = SyncStatus.Synced(SampleData.SYNCED_0311),
-        sheet = SheetModel.Adjust(stamp = SampleData.at(2, 5), offsetMinutes = -15, entryId = SLEEP_0205, field = MoveField.START),
+        sheet = SheetModel.Adjust(stamp = SampleData.at(2, 5), offsetMinutes = -15, entryId = SLEEP_0205),
     )
 
-    /**
-     * 14:32, Formula just logged and "Adjust time" tapped on its card: the sheet "Adjust time · 14:32" (+5m disabled,
-     * it would be in the future) over the paused card.
-     */
-    fun adjustingFeed(): HomeUiState {
-        val card = justLoggedCard()
-        return build(
-            SampleData.scenario(zone) + formula1432,
-            SampleData.NOW_1432,
-            sync = SyncStatus.Pending,
-            card = card.copy(paused = true),
-            sheet = SheetModel.Adjust(stamp = card.baseTime, entryId = formula1432.id, field = MoveField.START, cardKey = card.key),
-        )
-    }
+    /** 14:32, a toggle drawn before the sleep started elsewhere: the notice "Asleep" + "Already asleep since 14:30". */
+    fun guardNotice(): HomeUiState = build(
+        SampleData.scenario(zone) + Entry.sleep(SampleData.at(14, 30), null, id = "sample-sleep-1430"),
+        SampleData.NOW_1432,
+        card = CardModel(key = 1, spec = CardSpec.Guard(GuardKind.ASLEEP, SampleData.at(14, 30))),
+    )
 
-    /** 03:12, asleep since 02:05, a wet diaper just logged: the card offers "End sleep" and "Adjust time". */
+    /** 03:12, asleep since 02:05, a wet diaper just logged: the receipt also offers "End sleep". */
     fun loggedDuringSleep(): HomeUiState {
         val pee = Entry.diaper(SampleData.NOW_0312, pee = true, poop = false, id = "sample-pee-0312")
         return build(
             SampleData.scenarioAt0312(zone) + pee,
             SampleData.NOW_0312,
             sync = SyncStatus.Synced(SampleData.SYNCED_0311),
-            card = CardModel(
+            sheet = SheetModel.Receipt(
+                stamp = SampleData.NOW_0312,
                 key = 1,
-                spec = CardSpec.DiaperLogged(pee.id, DiaperKind.PEE),
-                baseTime = SampleData.NOW_0312,
+                spec = ReceiptSpec.DiaperLogged(pee.id, DiaperKind.PEE),
                 duringSleep = true,
                 undo = Undo.Delete(pee.id),
             ),

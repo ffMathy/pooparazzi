@@ -5,8 +5,8 @@ import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.sample.SampleData
-import com.ffmathy.pooparazzi.phone.ui.home.CardRow
-import com.ffmathy.pooparazzi.phone.ui.home.CardVariant
+import com.ffmathy.pooparazzi.phone.ui.home.NoticeVariant
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
 import com.ffmathy.pooparazzi.phone.ui.home.GuardKind
 import com.ffmathy.pooparazzi.phone.ui.home.HomeHaptic
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
@@ -52,7 +52,7 @@ class HomeRemoteChangesTest : HomeViewModelTestBase() {
         val stored = home.repository.get(elsewhere.id)!!
         assertFalse("the other device's sleep is not cancelled", stored.deleted)
         assertTrue(stored.isRunning)
-        assertEquals(CardRow.Guard(GuardKind.ASLEEP, elsewhere.startMillis), state.card!!.row)
+        assertEquals(NoticeVariant.Guard(GuardKind.ASLEEP, elsewhere.startMillis), state.card!!.variant)
         assertEquals(listOf(HomeHaptic.REJECT), home.haptics)
     }
 
@@ -67,7 +67,7 @@ class HomeRemoteChangesTest : HomeViewModelTestBase() {
         val state = home.settle()
         assertTrue("no new sleep", home.entries().none { it.isSleep && it.isRunning })
         assertEquals(SampleData.NOW_1432, home.repository.get(sleep.id)!!.endMillis)
-        assertEquals(CardRow.Guard(GuardKind.AWAKE, SampleData.NOW_1432), state.card!!.row)
+        assertEquals(NoticeVariant.Guard(GuardKind.AWAKE, SampleData.NOW_1432), state.card!!.variant)
         assertEquals(listOf(HomeHaptic.REJECT), home.haptics)
     }
 
@@ -75,12 +75,13 @@ class HomeRemoteChangesTest : HomeViewModelTestBase() {
     fun theTogglesStillWorkWhenTheButtonMatches() = homeTest { home ->
         home.viewModel.onSleepToggle(shownRunning = false)
         assertTrue(home.settle().sleepRunning)
+        home.closeReceipt()
         home.scope.testScheduler.advanceTimeBy(2_100)
         home.clock.advanceBy(5 * MINUTE)
         home.viewModel.onSleepToggle(shownRunning = true)
         val state = home.settle()
         assertFalse(state.sleepRunning)
-        assertEquals(CardVariant.WokeUp(5 * MINUTE), state.card!!.variant)
+        assertEquals(ReceiptVariant.WokeUp(5 * MINUTE), state.receipt.variant)
     }
 
     @Test

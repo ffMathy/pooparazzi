@@ -62,13 +62,13 @@ abstract class DeviceFitScreenshots(private val config: String, private val font
 
     @Test fun homeAdjustStart() = homeSheet("03-home-adjust-start", HomeSamples.adjustingStart())
 
-    @Test fun homeUndoCard() = card("04-home-undo-card", HomeSamples.justLogged())
+    @Test fun homeReceipt() = homeSheet("04-home-receipt", HomeSamples.justLogged())
 
-    @Test fun homeAdjustTime() = homeSheet("04b-home-adjust-time", HomeSamples.adjustingFeed())
+    @Test fun homeGuardNotice() = card("04b-home-guard-notice", HomeSamples.guardNotice())
 
-    @Test fun homeLoggedDuringSleep() = card("05-home-logged-during-sleep", HomeSamples.loggedDuringSleep())
+    @Test fun homeLoggedDuringSleep() = homeSheet("05-home-logged-during-sleep", HomeSamples.loggedDuringSleep())
 
-    @Test fun homeBreastLogged() = card("06-home-breast-logged", HomeSamples.breastLogged())
+    @Test fun homeBreastLogged() = homeSheet("06-home-breast-logged", HomeSamples.breastLogged())
 
     @Test fun feedSheet() = homeSheet("07-feed-sheet", HomeSamples.feedSheet())
 

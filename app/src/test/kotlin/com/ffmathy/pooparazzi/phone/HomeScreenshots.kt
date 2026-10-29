@@ -51,21 +51,22 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun homeAsleepNight() = home("03-home-asleep-night", night = true, HomeSamples.asleep())
 
-    /** "Adjust start" on the running Lamp: the Adjust time sheet, with no timeout. */
+    /** "Adjust start" on the running Lamp: the Adjust start sheet, with no timeout. */
     @Test fun adjustStartSheet() = sheet("03-home-adjust-start", night = true, HomeSamples.adjustingStart())
 
-    @Test fun homeBreastLogged() = home("04-home-breast-logged", night = false, HomeSamples.breastLogged())
+    /** The receipt after a breast feed backdated with −15m in the Feed sheet. */
+    @Test fun homeBreastLogged() = sheet("04-home-breast-logged", night = false, HomeSamples.breastLogged())
 
-    @Test fun homeUndoCard() {
-        // Freeze the clock just after the card's 150 ms fade-in so the drain line is still almost full.
+    /** The receipt after every log: what was logged and when, Undo, the offsets, Edit and Done; no timeout. */
+    @Test fun homeReceipt() = sheet("05-home-receipt", night = true, HomeSamples.justLogged())
+
+    /** The whisper slot's 2 s notice for a toggle drawn before the sleep started elsewhere. */
+    @Test fun homeGuardNotice() {
         compose.mainClock.autoAdvance = false
-        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.justLogged(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.guardNotice(), HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.mainClock.advanceTimeBy(300)
-        compose.onRoot().captureRoboImage(path("05-home-undo-card"))
+        compose.onRoot().captureRoboImage(path("05-home-guard-notice"))
     }
-
-    /** "Adjust time" on the undo card: the sheet over the paused card. */
-    @Test fun adjustTimeSheet() = sheet("05-home-adjust-time", night = false, HomeSamples.adjustingFeed())
 
     @Test fun feedSheet() = sheet("06-feed-sheet", night = true, HomeSamples.feedSheet())
 
@@ -83,16 +84,16 @@ abstract class HomeScreenshots(private val language: String) {
      */
     @Test fun largeFont() {
         RuntimeEnvironment.setFontScale(2f)
-        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.breastLogged(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.idle(), HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/font200-$language-home.png")
     }
 
-    @Test fun largeFontCard() {
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test fun largeFontReceipt() {
         RuntimeEnvironment.setFontScale(2f)
-        compose.mainClock.autoAdvance = false
-        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.justLogged(), HomeActions.None, windowInsets = ReferenceInsets) } }
-        compose.mainClock.advanceTimeBy(300)
-        compose.onRoot().captureRoboImage("build/outputs/roborazzi/font200-$language-card.png")
+        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.loggedDuringSleep(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.waitForIdle()
+        captureScreenRoboImage("build/outputs/roborazzi/font200-$language-receipt.png")
     }
 
     @OptIn(ExperimentalRoborazziApi::class)

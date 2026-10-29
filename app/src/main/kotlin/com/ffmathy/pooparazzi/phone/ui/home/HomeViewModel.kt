@@ -51,8 +51,8 @@ import java.time.ZoneId
 enum class HomeHaptic { CONFIRM, TOGGLE_ON, TOGGLE_OFF, REJECT, SEGMENT_TICK }
 
 /**
- * Home's state machine (DESIGN_SPEC §3.3.1, §4.4; V1_ADDITIONS §2.1, §3.1): logging, the sheets, the undo card and
- * its variants, the Adjust time sheet, the 2 s double-toggle guard, the 60 s discard, dedupe and the input cooldowns.
+ * Home's state machine (DESIGN_SPEC §3.3.1, §4.4; V1_ADDITIONS §2.1, §3.1): logging, the sheets, the receipt sheet
+ * with its offsets and variants, Adjust start, the notices, the 2 s double-toggle guard, the 60 s discard, dedupe and the input cooldowns.
  *
  * Writes go through [repository] (which enforces the entry invariants); everything shown is derived from its
  * entries by [HomeStateBuilder]. Actions run one at a time, in tap order.
@@ -94,7 +94,7 @@ class HomeViewModel(
     ) { entries, s, syncStatus, _, (c, sh) ->
         // [now] only re-runs this each minute; the time itself is read fresh, so an entry written elsewhere within the
         // current minute (the watch, a widget, the lock-screen notification) shows at once instead of at the next tick.
-        HomeStateBuilder.build(entries, s.babyName, syncStatus, clock.now(), zone, c, sh, timings)
+        HomeStateBuilder.build(entries, s.babyName, syncStatus, clock.now(), zone, c, sh)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -102,7 +102,7 @@ class HomeViewModel(
     )
 
     private val actions = Mutex()
-    private var nextCardKey = 0L
+    private var nextKey = 0L
     private var cardJob: Job? = null
     private var messageJob: Job? = null
     private var lastToggleAt: Long? = null
@@ -167,7 +167,7 @@ class HomeViewModel(
     private suspend fun startSleep() {
         attempt { repository.startSleep(clock.now()).getOrThrow() }
             .onSuccess { sleep ->
-                showCard(CardSpec.SleepStarted(sleep.id), baseTime = sleep.startMillis, undo = Undo.Delete(sleep.id))
+                openReceipt(ReceiptSpec.SleepStarted(sleep.id), baseTime = sleep.startMillis, undo = Undo.Delete(sleep.id))
                 haptic(HomeHaptic.TOGGLE_ON)
                 timerStarts.trySend(Unit)
             }
@@ -182,11 +182,11 @@ class HomeViewModel(
             .onSuccess { result ->
                 when (result) {
                     is EndResult.Ended -> {
-                        showCard(CardSpec.WokeUp(sleep.id), baseTime = result.entry.endMillis ?: at, undo = Undo.Restore(result.previous))
+                        openReceipt(ReceiptSpec.WokeUp(sleep.id), baseTime = result.entry.endMillis ?: at, undo = Undo.Restore(result.previous))
                         haptic(HomeHaptic.TOGGLE_OFF)
                     }
                     is EndResult.Discarded -> {
-                        showCard(CardSpec.SleepCancelled, baseTime = at, undo = Undo.Restore(result.previous))
+                        openReceipt(ReceiptSpec.SleepCancelled, baseTime = at, undo = Undo.Restore(result.previous))
                         haptic(HomeHaptic.TOGGLE_OFF)
                     }
                     is EndResult.NotRunning -> {
@@ -203,32 +203,15 @@ class HomeViewModel(
     override fun onAdjustStart() = act {
         if (homeBlocked()) return@act
         val target = summary().runningSleep ?: return@act
-        sheet.value = SheetModel.Adjust(stamp = target.startMillis, entryId = target.id, field = MoveField.START)
+        sheet.value = SheetModel.Adjust(stamp = target.startMillis, entryId = target.id)
     }
 
-    // ---- Undo card ----------------------------------------------------------------------------
+    // ---- Receipt sheet ------------------------------------------------------------------------
 
-    override fun onCardAdjust() = act {
-        if (homeBlocked()) return@act
-        val model = card.value ?: return@act
-        val (id, field) = model.spec.subject ?: return@act
-        repository.get(id)?.takeUnless { it.deleted } ?: return@act
-        // The card waits while the sheet is open: adjusting has no timeout (DESIGN_SPEC §3.3.1).
-        cardJob?.cancel()
-        card.value = model.copy(paused = true)
-        sheet.value = SheetModel.Adjust(
-            stamp = model.baseTime,
-            offsetMinutes = model.offsetMinutes,
-            entryId = id,
-            field = field,
-            cardKey = model.key,
-        )
-    }
-
-    override fun onCardEndSleep() = act {
-        val model = card.value ?: return@act
-        if (!model.spec.canEndSleep) return@act
-        val (id, _) = model.spec.subject ?: return@act
+    override fun onEndSleep() = act {
+        val receipt = sheet.value as? SheetModel.Receipt ?: return@act
+        if (!receipt.spec.canEndSleep) return@act
+        val (id, _) = receipt.spec.subject ?: return@act
         val logged = repository.get(id)?.takeUnless { it.deleted } ?: return@act
         val sleep = summary().runningSleep ?: return@act
         if (logged.startMillis < sleep.startMillis) {
@@ -236,13 +219,13 @@ class HomeViewModel(
             return@act
         }
         lastToggleAt = elapsedRealtime()
-        // "End sleep" ends the running sleep at the logged event's time; the card becomes Woke up for that sleep.
+        // "End sleep" ends the running sleep at the logged event's time; the receipt becomes Woke up for that sleep.
         endSleep(sleep, logged.startMillis)
     }
 
     override fun onUndo() = act {
-        val model = card.value ?: return@act
-        val undo = model.undo ?: return@act
+        val receipt = sheet.value as? SheetModel.Receipt ?: return@act
+        val undo = receipt.undo ?: return@act
         attempt {
             when (undo) {
                 is Undo.Delete -> repository.delete(undo.entryId)
@@ -251,7 +234,8 @@ class HomeViewModel(
         }
             .onSuccess {
                 lastToggleAt = null
-                showCard(CardSpec.Undone, baseTime = clock.now())
+                closeSheet(committed = false)
+                showCard(CardSpec.Undone)
                 haptic(HomeHaptic.REJECT)
             }
             .onFailure { e ->
@@ -260,34 +244,59 @@ class HomeViewModel(
             }
     }
 
-    /** A delete in the edit sheet over Home: the "… deleted" card, whose Undo writes [previous] back. */
+    override fun onReceiptDone() = act {
+        if (sheet.value !is SheetModel.Receipt) return@act
+        closeSheet(committed = true)
+    }
+
+    /** A delete in the edit sheet over Home: the "… deleted" receipt, whose Undo writes [previous] back. */
     fun onEntryDeleted(previous: Entry) = act {
-        showCard(CardSpec.Deleted(previous), baseTime = clock.now(), undo = Undo.Restore(previous))
+        openReceipt(ReceiptSpec.Deleted(previous), baseTime = clock.now(), undo = Undo.Restore(previous))
     }
 
     // ---- Sheets -------------------------------------------------------------------------------
 
     override fun onSheetOffset(minutes: Int) = act {
-        val current = sheet.value ?: return@act
-        if (current is SheetModel.Adjust) {
-            adjustOffset(current, minutes)
-            return@act
+        when (val current = sheet.value) {
+            null -> Unit
+            is SheetModel.Receipt -> receiptOffset(current, minutes)
+            is SheetModel.Adjust -> adjustOffset(current, minutes)
+            is SheetModel.Feed, is SheetModel.Diaper -> {
+                if (current.offsetMinutes == minutes) return@act
+                sheet.value = when (current) {
+                    is SheetModel.Feed -> current.copy(offsetMinutes = minutes)
+                    else -> (current as SheetModel.Diaper).copy(offsetMinutes = minutes)
+                }
+                haptic(HomeHaptic.SEGMENT_TICK)
+            }
         }
-        if (current.offsetMinutes == minutes) return@act
-        val next = when (current) {
-            is SheetModel.Feed -> current.copy(offsetMinutes = minutes)
-            is SheetModel.Diaper -> current.copy(offsetMinutes = minutes)
-            is SheetModel.Adjust -> current
-        }
-        sheet.value = next
-        haptic(HomeHaptic.SEGMENT_TICK)
     }
 
-    /** Offsets are relative to the sheet's stamp, never cumulative; re-tapping the selected chip returns it to 0. */
+    /**
+     * A receipt's offset applies at once, relative to its base time and never cumulative; re-tapping the selected chip
+     * returns it to 0.
+     */
+    private suspend fun receiptOffset(receipt: SheetModel.Receipt, minutes: Int) {
+        val (id, field) = receipt.spec.subject ?: return
+        val entry = repository.get(id)?.takeUnless { it.deleted } ?: return
+        val next = if (receipt.offsetMinutes == minutes) 0 else minutes
+        if (!HomeStateBuilder.offsetAllowed(entry, field, receipt.stamp, next, clock.now())) {
+            haptic(HomeHaptic.REJECT)
+            return
+        }
+        attempt { repository.update(entry.moved(field, receipt.stamp + next * MINUTE_MILLIS)) }
+            .onSuccess {
+                sheet.update { if (it is SheetModel.Receipt && it.key == receipt.key) it.copy(offsetMinutes = next, dedupe = null) else it }
+                haptic(HomeHaptic.SEGMENT_TICK)
+            }
+            .onFailure { haptic(HomeHaptic.REJECT) }
+    }
+
+    /** Adjust start's offset waits for Save; re-tapping the selected chip returns it to 0. */
     private suspend fun adjustOffset(adjust: SheetModel.Adjust, minutes: Int) {
         val entry = repository.get(adjust.entryId)?.takeUnless { it.deleted } ?: return
         val next = if (adjust.offsetMinutes == minutes) 0 else minutes
-        if (!HomeStateBuilder.offsetAllowed(entry, adjust.field, adjust.stamp, next, clock.now())) {
+        if (!HomeStateBuilder.offsetAllowed(entry, MoveField.START, adjust.stamp, next, clock.now())) {
             haptic(HomeHaptic.REJECT)
             return
         }
@@ -297,42 +306,38 @@ class HomeViewModel(
 
     override fun onAdjustSave() = act {
         val adjust = sheet.value as? SheetModel.Adjust ?: return@act
-        if (finishAdjust(adjust, save = true, committed = true)) haptic(HomeHaptic.CONFIRM)
+        closeSheet(committed = true)
+        if (saveAdjust(adjust)) haptic(HomeHaptic.CONFIRM) else haptic(HomeHaptic.REJECT)
     }
 
-    override fun onAdjustEdit(entryId: String) = onAdjustEdit(entryId) {}
-
-    /** "Edit" in the Adjust time sheet; [openEditor] runs once the chosen offset is saved, so the editor shows it. */
-    fun onAdjustEdit(entryId: String, openEditor: () -> Unit) = act {
-        val adjust = sheet.value as? SheetModel.Adjust ?: return@act
-        if (adjust.entryId != entryId) return@act
-        finishAdjust(adjust, save = true, committed = false)
-        openEditor()
+    /** Moves the running sleep's start to the Adjust start sheet's time; returns whether it now has it. */
+    private suspend fun saveAdjust(adjust: SheetModel.Adjust): Boolean {
+        val entry = repository.get(adjust.entryId)?.takeUnless { it.deleted } ?: return false
+        if (!HomeStateBuilder.offsetAllowed(entry, MoveField.START, adjust.stamp, adjust.offsetMinutes, clock.now())) return false
+        val moved = entry.moved(MoveField.START, adjust.stamp + adjust.offsetMinutes * MINUTE_MILLIS)
+        return moved == entry || attempt { repository.update(moved) }.isSuccess
     }
+
+    override fun onSheetEdit(entryId: String) = onSheetEdit(entryId) {}
 
     /**
-     * Closes the Adjust time sheet, first moving the entry to the sheet's time if [save]; the card it was opened from
-     * gets a fresh window. Returns whether the entry now has the sheet's time.
+     * "Edit" in a receipt or Adjust start (which saves its offset first). [openEditor] runs once the sheet has closed
+     * and any offset is saved, so the editor shows it.
      */
-    private suspend fun finishAdjust(adjust: SheetModel.Adjust, save: Boolean, committed: Boolean): Boolean {
-        closeSheet(committed)
-        var saved = false
-        if (save) {
-            val entry = repository.get(adjust.entryId)?.takeUnless { it.deleted }
-            if (entry != null && HomeStateBuilder.offsetAllowed(entry, adjust.field, adjust.stamp, adjust.offsetMinutes, clock.now())) {
-                val target = adjust.stamp + adjust.offsetMinutes * MINUTE_MILLIS
-                val moved = when (adjust.field) {
-                    MoveField.START -> entry.copy(startMillis = target)
-                    MoveField.END -> entry.copy(endMillis = target)
-                }
-                saved = moved == entry || attempt { repository.update(moved) }.isSuccess
+    fun onSheetEdit(entryId: String, openEditor: () -> Unit) = act {
+        when (val current = sheet.value) {
+            is SheetModel.Adjust -> {
+                if (current.entryId != entryId) return@act
+                closeSheet(committed = false)
+                if (!saveAdjust(current)) haptic(HomeHaptic.REJECT)
             }
-            if (!saved) haptic(HomeHaptic.REJECT)
+            is SheetModel.Receipt -> {
+                if (current.spec.subject?.first != entryId) return@act
+                closeSheet(committed = false)
+            }
+            else -> return@act
         }
-        adjust.cardKey?.let { key ->
-            restartWindow(key) { it.copy(paused = false, offsetMinutes = if (saved) adjust.offsetMinutes else it.offsetMinutes) }
-        }
-        return saved
+        openEditor()
     }
 
     override fun onFeedType(type: FeedType?) = act {
@@ -369,8 +374,8 @@ class HomeViewModel(
             .onSuccess { result ->
                 when (result) {
                     is LogResult.Logged -> {
-                        showCard(
-                            CardSpec.FeedLogged(result.entry.id, type, result.entry.breastSide),
+                        openReceipt(
+                            ReceiptSpec.FeedLogged(result.entry.id, type, result.entry.breastSide),
                             baseTime = feedSheet.stamp,
                             offsetMinutes = feedSheet.offsetMinutes,
                             duringSleep = duringSleep,
@@ -418,8 +423,8 @@ class HomeViewModel(
                 when (result) {
                     is LogResult.Logged -> {
                         val kind = result.entry.diaperKind ?: DiaperKind.PLAIN
-                        showCard(
-                            CardSpec.DiaperLogged(result.entry.id, kind),
+                        openReceipt(
+                            ReceiptSpec.DiaperLogged(result.entry.id, kind),
                             baseTime = diaper.stamp,
                             offsetMinutes = diaper.offsetMinutes,
                             duringSleep = duringSleep,
@@ -434,12 +439,7 @@ class HomeViewModel(
     }
 
     override fun onSheetDismiss() = act {
-        val adjust = sheet.value as? SheetModel.Adjust
-        if (adjust != null) {
-            finishAdjust(adjust, save = false, committed = false)
-        } else {
-            sheet.value = null
-        }
+        sheet.value = null
         cooldownPending = false
     }
 
@@ -453,48 +453,46 @@ class HomeViewModel(
     // ---- Deep links (widgets, notifications) --------------------------------------------------
 
     /**
-     * A widget or notification opened Home ([HomeLaunch]): the sheet it asks for, replacing any open one, or the undo
-     * card for a widget log. Stale requests (the log already undone) show nothing.
+     * A widget or notification opened Home ([HomeLaunch]): the sheet it asks for, replacing any open one, or the
+     * receipt for a widget log. Stale requests (the log already undone) show nothing.
      */
     fun onLaunch(launch: HomeLaunch) = act {
-        // A deep link replaces an open Adjust time sheet as if it had been cancelled.
-        (sheet.value as? SheetModel.Adjust)?.let { finishAdjust(it, save = false, committed = false) }
         when (launch) {
             // History is opened by the navigation (PooparazziNavHost); Home has nothing to show for it.
             HomeLaunch.Home, HomeLaunch.History -> Unit
             HomeLaunch.Feed -> sheet.value = SheetModel.Feed(clock.now())
             HomeLaunch.Diaper -> sheet.value = SheetModel.Diaper(stamp = clock.now())
-            is HomeLaunch.Receipt -> showReceipt(launch)
+            is HomeLaunch.Receipt -> showWidgetReceipt(launch)
         }
     }
 
-    /** The undo card for a log made on the widget, as if it had been made here (DESIGN_SPEC §3.3.6). */
-    private suspend fun showReceipt(receipt: HomeLaunch.Receipt) {
+    /** The receipt for a log made on the widget, as if it had been made here (DESIGN_SPEC §3.3.6). */
+    private suspend fun showWidgetReceipt(receipt: HomeLaunch.Receipt) {
         val entry = repository.get(receipt.entryId) ?: return
         when (receipt.kind) {
             ReceiptKind.LOGGED -> {
                 if (entry.deleted) return
                 val spec = when (entry.kind) {
-                    EntryKind.DIAPER -> CardSpec.DiaperLogged(entry.id, entry.diaperKind ?: DiaperKind.PLAIN)
-                    EntryKind.FEED -> CardSpec.FeedLogged(entry.id, entry.feedType, entry.breastSide)
-                    EntryKind.SLEEP -> CardSpec.SleepStarted(entry.id)
+                    EntryKind.DIAPER -> ReceiptSpec.DiaperLogged(entry.id, entry.diaperKind ?: DiaperKind.PLAIN)
+                    EntryKind.FEED -> ReceiptSpec.FeedLogged(entry.id, entry.feedType, entry.breastSide)
+                    EntryKind.SLEEP -> ReceiptSpec.SleepStarted(entry.id)
                 }
                 val sleep = summary().runningSleep
                 val duringSleep = sleep != null && entry.kind != EntryKind.SLEEP && entry.startMillis >= sleep.startMillis
-                showCard(spec, baseTime = entry.startMillis, duringSleep = duringSleep, undo = Undo.Delete(entry.id))
+                openReceipt(spec, baseTime = entry.startMillis, duringSleep = duringSleep, undo = Undo.Delete(entry.id))
             }
             ReceiptKind.SLEEP_STARTED -> if (entry.isSleep && entry.isRunning) {
-                showCard(CardSpec.SleepStarted(entry.id), baseTime = entry.startMillis, undo = Undo.Delete(entry.id))
+                openReceipt(ReceiptSpec.SleepStarted(entry.id), baseTime = entry.startMillis, undo = Undo.Delete(entry.id))
             }
             ReceiptKind.WOKE_UP -> {
                 val end = entry.endMillis
                 if (entry.isSleep && !entry.deleted && end != null) {
-                    showCard(CardSpec.WokeUp(entry.id), baseTime = end, undo = Undo.Restore(entry.copy(endMillis = null)))
+                    openReceipt(ReceiptSpec.WokeUp(entry.id), baseTime = end, undo = Undo.Restore(entry.copy(endMillis = null)))
                 }
             }
             ReceiptKind.SLEEP_CANCELLED -> if (entry.isSleep && entry.deleted) {
-                showCard(
-                    CardSpec.SleepCancelled,
+                openReceipt(
+                    ReceiptSpec.SleepCancelled,
                     baseTime = entry.endMillis ?: clock.now(),
                     undo = Undo.Restore(entry.copy(endMillis = null, deleted = false)),
                 )
@@ -502,86 +500,66 @@ class HomeViewModel(
         }
     }
 
-    // ---- Card machinery -----------------------------------------------------------------------
+    // ---- Receipt and notice machinery ---------------------------------------------------------
 
-    private fun showCard(
-        spec: CardSpec,
+    /** Opens the receipt for a log (replacing any sheet), with no timeout. */
+    private fun openReceipt(
+        spec: ReceiptSpec,
         baseTime: Long,
         offsetMinutes: Int = 0,
         duringSleep: Boolean = false,
         undo: Undo? = null,
-        message: CardMessage? = null,
+        dedupe: Entry? = null,
     ) {
         messageJob?.cancel()
-        val model = CardModel(
-            key = ++nextCardKey,
-            spec = spec,
-            baseTime = baseTime,
+        val receipt = SheetModel.Receipt(
+            stamp = baseTime,
             offsetMinutes = offsetMinutes,
+            key = ++nextKey,
+            spec = spec,
             duringSleep = duringSleep,
             undo = undo,
-            message = message,
+            dedupe = dedupe,
         )
-        card.value = model
-        scheduleExpiry(model)
-        if (message != null) scheduleMessageEnd(model.key, message)
+        sheet.value = receipt
+        if (dedupe != null) {
+            messageJob = viewModelScope.launch {
+                delay(timings.messageMillis)
+                sheet.update { if (it is SheetModel.Receipt && it.key == receipt.key) it.copy(dedupe = null) else it }
+            }
+        }
     }
 
-    /** Restarts the 10 s window of card [key] (the Adjust time sheet closing, dedupe) after applying [transform]. */
-    private fun restartWindow(key: Long, transform: (CardModel) -> CardModel) {
-        val current = card.value?.takeIf { it.key == key } ?: return
-        val next = transform(current).copy(windowKey = current.windowKey + 1)
-        card.value = next
-        scheduleExpiry(next)
-    }
-
-    private fun scheduleExpiry(model: CardModel) {
+    /** A 2 s notice in the whisper slot ("Undone", a guard). */
+    private fun showCard(spec: CardSpec) {
         cardJob?.cancel()
-        val window = if (model.spec is CardSpec.Undone) timings.undoneMillis else timings.undoWindowMillis
+        val model = CardModel(key = ++nextKey, spec = spec)
+        card.value = model
         cardJob = viewModelScope.launch {
-            delay(window)
+            delay(timings.noticeMillis)
             card.update { if (it?.key == model.key) null else it }
         }
     }
 
-    private fun scheduleMessageEnd(key: Long, message: CardMessage) {
-        messageJob?.cancel()
-        messageJob = viewModelScope.launch {
-            delay(timings.messageMillis)
-            card.update { if (it?.key == key && it.message == message) it.copy(message = null) else it }
-        }
-    }
+    /** "Already asleep since 14:32" / "Already awake since 14:40" in the whisper slot (DESIGN_SPEC §4.4). */
+    private fun showGuard(kind: GuardKind, sinceMillis: Long) = showCard(CardSpec.Guard(kind, sinceMillis))
 
-    /** The guard line on the current card, or on a notice card when nothing is showing (DESIGN_SPEC §4.4). */
-    private fun showGuard(kind: GuardKind, sinceMillis: Long) {
-        val message = CardMessage.Guard(kind, sinceMillis)
-        val current = card.value
-        if (current == null || current.spec is CardSpec.Undone) {
-            showCard(CardSpec.Notice(kind), baseTime = sinceMillis, message = message)
-        } else {
-            card.value = current.copy(message = message)
-            scheduleMessageEnd(current.key, message)
-        }
-    }
-
-    /** Dedupe: the card for the existing entry (re-shown if replaced) with "Already logged at …"; the drain restarts. */
+    /** Dedupe: the receipt for the existing entry with "Already logged at …" for 2 s; no new entry. */
     private fun showDuplicate(existing: Entry, duringSleep: Boolean) {
-        val message = CardMessage.Dedupe(existing)
-        val current = card.value
-        if (current != null && current.spec.subject?.first == existing.id) {
-            restartWindow(current.key) { it.copy(message = message) }
-            scheduleMessageEnd(current.key, message)
-        } else {
-            val spec = when (existing.kind) {
-                EntryKind.DIAPER -> CardSpec.DiaperLogged(existing.id, existing.diaperKind ?: DiaperKind.PLAIN)
-                else -> CardSpec.FeedLogged(existing.id, existing.feedType, existing.breastSide)
-            }
-            showCard(spec, baseTime = existing.startMillis, duringSleep = duringSleep, undo = Undo.Delete(existing.id), message = message)
+        val spec = when (existing.kind) {
+            EntryKind.DIAPER -> ReceiptSpec.DiaperLogged(existing.id, existing.diaperKind ?: DiaperKind.PLAIN)
+            else -> ReceiptSpec.FeedLogged(existing.id, existing.feedType, existing.breastSide)
         }
+        openReceipt(spec, baseTime = existing.startMillis, duringSleep = duringSleep, undo = Undo.Delete(existing.id), dedupe = existing)
         haptic(HomeHaptic.REJECT)
     }
 
     // ---- Helpers ------------------------------------------------------------------------------
+
+    private fun Entry.moved(field: MoveField, target: Long): Entry = when (field) {
+        MoveField.START -> copy(startMillis = target)
+        MoveField.END -> copy(endMillis = target)
+    }
 
     private fun closeSheet(committed: Boolean) {
         sheet.value = null

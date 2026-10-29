@@ -89,7 +89,6 @@
     <string name="action_earlier">Earlier</string>
     <string name="action_earlier_question">Earlier?</string>
     <string name="action_adjust_start">Adjust start</string>
-    <string name="action_adjust_time">Adjust time</string>
     <string name="action_now">Now</string>
     <string name="action_retry">Tap to retry</string>
 

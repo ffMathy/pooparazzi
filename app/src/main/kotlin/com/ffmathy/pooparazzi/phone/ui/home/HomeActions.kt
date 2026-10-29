@@ -32,24 +32,29 @@ interface HomeActions {
     fun onSleepToggle(shownRunning: Boolean) {}
 
     // Lamp
-    /** "Adjust start": the Adjust time sheet for the running sleep's start. */
+    /** "Adjust start": the Adjust start sheet for the running sleep's start. */
     fun onAdjustStart() {}
 
-    // Undo card
-    /** "Adjust time": the Adjust time sheet for the card's entry; the card's window waits while it is open. */
-    fun onCardAdjust() {}
-    fun onCardEndSleep() {}
+    // Receipt sheet
+    /** "End sleep": ends the running sleep at the logged event's time; the receipt becomes Woke up. */
+    fun onEndSleep() {}
     fun onUndo() {}
 
+    /** "Done": closes the receipt (its offset is already applied). */
+    fun onReceiptDone() {}
+
     // Sheets
-    /** Selects an offset chip. In the Adjust time sheet, re-tapping the selected chip returns it to 0. */
+    /**
+     * Selects an offset chip. In a receipt it applies at once; in Adjust start, on Save. In both, re-tapping the
+     * selected chip returns it to 0.
+     */
     fun onSheetOffset(minutes: Int) {}
 
-    /** Adjust time sheet, "Save": moves the entry to the sheet's time and closes the sheet. */
+    /** Adjust start, "Save": moves the start to the sheet's time and closes the sheet. */
     fun onAdjustSave() {}
 
-    /** Adjust time sheet, "Edit": saves the chosen offset, closes the sheet and opens the edit sheet for [entryId]. */
-    fun onAdjustEdit(entryId: String) {}
+    /** "Edit" in a receipt or Adjust start (which saves its offset first): closes the sheet, then edits [entryId]. */
+    fun onSheetEdit(entryId: String) {}
 
     /**
      * Feed sheet: Breast reveals the side checkboxes and "Log feed"; Formula / Food log an instant, null ("Just the
@@ -72,7 +77,7 @@ interface HomeActions {
     fun onPoopTexture(texture: PoopTexture?) {}
     fun onDiaperSave() {}
 
-    /** Cancel, a scrim tap, back or a swipe: the sheet closes without logging. */
+    /** Cancel, a scrim tap, back or a swipe: the sheet closes without logging (a receipt keeps its log). */
     fun onSheetDismiss() {}
 
     /** The sheet has finished its closing animation (starts the 600 ms Home cooldown after a commit). */

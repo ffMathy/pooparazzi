@@ -5,8 +5,7 @@ import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 import com.ffmathy.pooparazzi.core.sample.SampleData
-import com.ffmathy.pooparazzi.phone.ui.home.CardRow
-import com.ffmathy.pooparazzi.phone.ui.home.CardVariant
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
 import com.ffmathy.pooparazzi.phone.ui.home.HomeHaptic
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import com.ffmathy.pooparazzi.phone.ui.home.SinceRow
@@ -37,8 +36,7 @@ class HomeDiaperTest : HomeViewModelTestBase() {
         val state = home.settle()
         val diaper = home.entries().single()
         assertFalse(diaper.pee || diaper.poop)
-        assertNull(state.sheet)
-        assertEquals(CardVariant.DiaperLogged(DiaperKind.PLAIN), state.card!!.variant)
+        assertEquals(ReceiptVariant.DiaperLogged(DiaperKind.PLAIN), state.receipt.variant)
         assertEquals(DiaperKind.PLAIN, (state.row2 as SinceRow.LastDiaper).kind)
         // A plain change counts in neither pee nor poop.
         assertEquals(0, state.today.pee)
@@ -55,7 +53,7 @@ class HomeDiaperTest : HomeViewModelTestBase() {
         assertTrue(diaper.pee)
         assertFalse(diaper.poop)
         assertEquals(SampleData.NOW_1432, diaper.startMillis)
-        assertEquals(CardVariant.DiaperLogged(DiaperKind.PEE), state.card!!.variant)
+        assertEquals(ReceiptVariant.DiaperLogged(DiaperKind.PEE), state.receipt.variant)
         assertEquals(DiaperKind.PEE, (state.row2 as SinceRow.LastDiaper).kind)
         assertEquals(HomeHaptic.CONFIRM, home.haptics.last())
     }
@@ -79,9 +77,8 @@ class HomeDiaperTest : HomeViewModelTestBase() {
         assertEquals(PoopColor.YELLOW, diaper.poopColor)
         assertEquals(PoopTexture.SEEDY, diaper.poopTexture)
         assertEquals(SampleData.NOW_1432 - 15 * MINUTE, diaper.startMillis)
-        assertEquals(CardVariant.DiaperLogged(DiaperKind.BOTH), state.card!!.variant)
-        assertEquals(CardRow.AdjustTime, state.card!!.row)
-        assertEquals("the sheet's offset is pre-selected", -15, home.openAdjust().chips.single { it.selected }.minutes)
+        assertEquals(ReceiptVariant.DiaperLogged(DiaperKind.BOTH), state.receipt.variant)
+        assertEquals("the sheet's offset is pre-selected", -15, state.receipt.chips.single { it.selected }.minutes)
     }
 
     @Test
@@ -138,14 +135,13 @@ class HomeDiaperTest : HomeViewModelTestBase() {
         home.viewModel.onDiaperPee(true)
         home.viewModel.onDiaperSave()
         home.settle()
-        home.viewModel.onSheetClosed()
-        home.scope.testScheduler.advanceTimeBy(700)
+        home.closeReceipt()
         home.clock.advanceBy(3_000)
         home.viewModel.onDiaper()
         home.viewModel.onDiaperPee(true)
         home.viewModel.onDiaperSave()
         val state = home.settle()
         assertEquals(1, home.entries().size)
-        assertTrue(state.card!!.row is CardRow.Dedupe)
+        assertEquals(home.entries().single(), state.receipt.dedupe)
     }
 }

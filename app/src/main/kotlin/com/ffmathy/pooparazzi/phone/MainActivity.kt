@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 /**
  * The single activity. An [AppCompatActivity] so the in-app language works on API < 33 (V1_ADDITIONS §5).
  * Draws edge to edge; the system bar icons follow the app's own Night/Day, not the system theme. Deep links from the
- * widgets and notifications (`pooparazzi://home/…`) open Home with a sheet or an undo card.
+ * widgets and notifications (`pooparazzi://home/…`) open Home with a sheet or a receipt.
  */
 class MainActivity : AppCompatActivity() {
     private val appViewModel: AppViewModel by viewModels { AppViewModel.Factory }

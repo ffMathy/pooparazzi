@@ -49,7 +49,7 @@ class InMemorySettings(initial: Settings = SampleData.settings) : SettingsReposi
 
 /**
  * Home's view model on a real core graph: an in-memory Room database driven by the test dispatcher (so writes, the
- * entry flow and the card timers all run in virtual time), a [FixedClock] and [NoopEntrySync], installed with
+ * entry flow and the notice timers all run in virtual time), a [FixedClock] and [NoopEntrySync], installed with
  * [Core.install]. Monotonic time for the guards and cooldowns is the scheduler's virtual time.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -98,15 +98,13 @@ class HomeTestRig(val scope: TestScope, now: Long = SampleData.NOW_1432) {
     /** Taps Feed. */
     fun tapFeed() = viewModel.onFeed()
 
-    /**
-     * Lets a committed sheet finish closing (and Home's cooldown pass), then taps "Adjust time" on the card and returns
-     * the Adjust time sheet.
-     */
-    fun openAdjust(): HomeSheetUi.Adjust {
+    /** Taps Done on the open receipt and lets it finish closing (and Home's cooldown pass). */
+    fun closeReceipt() {
+        viewModel.onReceiptDone()
+        settle()
         viewModel.onSheetClosed()
         scope.testScheduler.advanceTimeBy(700)
-        viewModel.onCardAdjust()
-        return settle().sheet as HomeSheetUi.Adjust
+        settle()
     }
 
     suspend fun entries(): List<Entry> = repository.observeEntries().first()
@@ -121,3 +119,6 @@ class HomeTestRig(val scope: TestScope, now: Long = SampleData.NOW_1432) {
         database.close()
     }
 }
+
+/** The open receipt sheet. */
+val HomeUiState.receipt: HomeSheetUi.Receipt get() = sheet as HomeSheetUi.Receipt

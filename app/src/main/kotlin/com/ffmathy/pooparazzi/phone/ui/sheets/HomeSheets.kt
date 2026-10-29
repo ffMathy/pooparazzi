@@ -8,7 +8,7 @@ import com.ffmathy.pooparazzi.phone.ui.home.HomeActions
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import java.time.ZoneId
 
-/** Home's logging sheets and the Adjust time sheet: at most one is open; each animates closed before Home's cooldown starts. */
+/** Home's logging sheets, the receipt and Adjust start: at most one is open; each animates closed before Home's cooldown starts. */
 @Composable
 internal fun HomeSheets(sheet: HomeSheetUi?, zone: ZoneId, formatters: Formatters, actions: HomeActions, windowInsets: WindowInsets) {
     XModalSheet(
@@ -52,7 +52,7 @@ internal fun HomeSheets(sheet: HomeSheetUi?, zone: ZoneId, formatters: Formatter
     val adjustCallbacks = remember(actions) {
         AdjustSheetCallbacks(
             onOffset = actions::onSheetOffset,
-            onEdit = actions::onAdjustEdit,
+            onEdit = actions::onSheetEdit,
             onSave = actions::onAdjustSave,
             onCancel = actions::onSheetDismiss,
         )
@@ -64,5 +64,22 @@ internal fun HomeSheets(sheet: HomeSheetUi?, zone: ZoneId, formatters: Formatter
         windowInsets = windowInsets,
     ) { adjust ->
         AdjustSheetContent(adjust, zone, formatters, adjustCallbacks)
+    }
+    val receiptCallbacks = remember(actions) {
+        ReceiptSheetCallbacks(
+            onUndo = actions::onUndo,
+            onOffset = actions::onSheetOffset,
+            onEndSleep = actions::onEndSleep,
+            onEdit = actions::onSheetEdit,
+            onDone = actions::onReceiptDone,
+        )
+    }
+    XModalSheet(
+        value = sheet as? HomeSheetUi.Receipt,
+        onDismissRequest = actions::onSheetDismiss,
+        onClosed = actions::onSheetClosed,
+        windowInsets = windowInsets,
+    ) { receipt ->
+        ReceiptSheetContent(receipt, zone, formatters, receiptCallbacks)
     }
 }
