@@ -295,7 +295,7 @@ private fun PeriodHeader(
 
 /**
  * The range chip, like the edit sheet's day chip: "Last 30 days ▾" (48 target, 40 pill with an outline border; the
- * label wraps and the pill grows rather than clip). Its menu offers the presets and "Choose dates…".
+ * label stays on one line and shrinks to fit). Its menu offers the presets and "Choose dates…".
  */
 @Composable
 private fun RangeChip(range: StatsRange, label: String, spoken: String, onRange: (StatsRange) -> Unit, onChooseDates: () -> Unit) {
@@ -318,7 +318,16 @@ private fun RangeChip(range: StatsRange, label: String, spoken: String, onRange:
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(label, style = MaterialTheme.typography.labelLarge, color = colors.onSurface, modifier = Modifier.weight(1f, fill = false))
+                // One line that shrinks rather than wraps ("Seneste 30 dage" is wider than the column on a 390 dp phone).
+                val style = MaterialTheme.typography.labelLarge
+                BasicText(
+                    label,
+                    style = style.copy(color = colors.onSurface),
+                    maxLines = 1,
+                    softWrap = false,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = style.fontSize, stepSize = 0.5.sp),
+                    modifier = Modifier.weight(1f, fill = false),
+                )
                 XIcon(XIcons.chevronDown, contentDescription = null, tint = colors.onSurfaceVariant, size = 16.dp)
             }
         }
