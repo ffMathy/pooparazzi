@@ -166,7 +166,7 @@ private val NightRipple = RippleAlpha(draggedAlpha = 0.08f, focusedAlpha = 0.06f
 private val DayRipple = RippleAlpha(draggedAlpha = 0.16f, focusedAlpha = 0.10f, hoveredAlpha = 0.08f, pressedAlpha = 0.10f)
 
 /**
- * The app's own springs for its custom motion (the big buttons' shape morph), matching the Material motion tokens:
+ * The app's own springs for its custom motion, matching the Material motion tokens:
  * Night standard (no overshoot to speak of), Day expressive (DESIGN_SPEC §5.10).
  */
 @Immutable
