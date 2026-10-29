@@ -160,16 +160,35 @@ private fun TodayGrid(today: DayCounts, lightsDown: Boolean, formatters: Formatt
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             numbers.zip(captions).chunked(columns).forEach { row ->
                 // One size per line across the row, so the numbers (and the captions) share a baseline even when one
-                // of them ("7h 57m", "måltider") has to shrink to fit its column.
+                // of them ("7h 57m", "måltider") has to shrink to fit its column. The numbers and the captions are
+                // each one baseline-aligned line, so a cell whose line box comes out taller on a device cannot sit lower.
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
                     val cellWidth = (maxWidth - 8.dp * (columns - 1)) / columns
                     val numberStyle = fitAll(row.map { it.first }, MaterialTheme.typography.titleMedium, cellWidth, minSp = 12f)
                     val captionStyle = fitAll(row.map { it.second }, MaterialTheme.typography.labelMedium, cellWidth, minSp = 9f)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { (number, caption) ->
-                            Column(Modifier.weight(1f)) {
-                                Text(number, style = numberStyle, color = numberColor, maxLines = 1, softWrap = false)
-                                Text(caption, style = captionStyle, color = colors.onSurfaceVariant, maxLines = 1, softWrap = false)
+                    Column {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (number, _) ->
+                                Text(
+                                    number,
+                                    style = numberStyle,
+                                    color = numberColor,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier.weight(1f).alignByBaseline(),
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (_, caption) ->
+                                Text(
+                                    caption,
+                                    style = captionStyle,
+                                    color = colors.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier.weight(1f).alignByBaseline(),
+                                )
                             }
                         }
                     }

@@ -257,7 +257,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 - Measured worst cases: row 1 "Last fed 10h 45m ago · 01:40" = 257.9 dp; row 2 "Poop 10h 45m ago · 03:47" = 231.5 dp.
 - Tap → the edit sheet for that row's latest entry (row 1: the last sleep, or the last feed while asleep; row 2: the last diaper). This is the one-tap correction path.
 
-**Whisper slot: Today grid** (default). The whole block is a link to History (r 20, padding 14 16). Header "Today" labelMedium onSurfaceVariant + `chevronRight` 16 outline. Below it, a 4-column equal grid (gap 8): number titleMedium onSurface over caption labelMedium onSurfaceVariant. 14:32: "5" feeds, "4" pee, "2" poop, "7h 57m" sleep. 03:12: "1" feed, "1" pee, "0" poop, "2h 42m" sleep (the caption is singular "feed" for 1). In lights-down the numbers are onSurfaceVariant.
+**Whisper slot: Today grid** (default). The whole block is a link to History (r 20, padding 14 16). Header "Today" labelMedium onSurfaceVariant + `chevronRight` 16 outline. Below it, a 4-column equal grid (gap 8): number titleMedium onSurface over caption labelMedium onSurfaceVariant; the numbers share one baseline across the row, and so do the captions. 14:32: "5" feeds, "4" pee, "2" poop, "7h 57m" sleep. 03:12: "1" feed, "1" pee, "0" poop, "2h 42m" sleep (the caption is singular "feed" for 1). In lights-down the numbers are onSurfaceVariant.
 
 **Whisper slot: undo card** (replaces the grid, same slot). Card 350 × 120, r 28, surfaceContainerHighest, no border or shadow. Polite live region. Fades in over 150 ms with no slide. The window is 10 s (§10.7).
 
