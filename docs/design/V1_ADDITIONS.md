@@ -2,6 +2,8 @@
 
 > **Renamed:** the product is now called **Pooparazzi**. This design document predates the rename and keeps the working name "Xaternity"; in code, read `com.ffmathy.xaternity` as `com.ffmathy.pooparazzi`, `xaternity://` as `pooparazzi://` and `Xaternity*` classes as `Pooparazzi*`.
 
+> **Several babies and the backup:** [`BABIES_AND_BACKUP.md`](BABIES_AND_BACKUP.md) adds several babies (a current baby per device) and an optional, invite-only account that backs the log up; it wins where it differs from this document (one baby, "phone ↔ watch only").
+
 This document extends [`DESIGN_SPEC.md`](DESIGN_SPEC.md), which stays the source of truth for everything it covers: the Lamp, tokens, typography, icons, formatting grammar, night behaviour and accessibility. This file covers what the user asked for after approving the mockups:
 
 1. **Feed types**: Breast, Formula or Food. The type is **optional**: a feed can be logged with just its time.
