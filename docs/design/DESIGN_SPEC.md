@@ -203,7 +203,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | P5 | Phone | Home-screen widgets 4×2, 3×1 | Feed and Diaper open the app's sheets; the sleep toggle logs in one tap |
 | P6 | Phone | Live Update (running sleep) | Status chip and an ongoing notification with "Woke up" |
 | P7 | Phone | Splash | System splash, dark at night and light by day |
-| P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day: the last 7 days next to a chosen range (default the last 30 days), with a bar chart of one kind |
+| P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day over a chosen range (the last 7, 30 or 90 days, all days or chosen dates; default the last 30 days), with a bar chart of one kind |
 | W1 | Watch | Main, idle | Status block, Feed / Diaper, "Start sleep"; scroll list below |
 | W2 | Watch | Main, asleep | Lamp, "Woke up"; scroll list with Adjust start |
 | W3 | Watch | Diaper picker | Pee / Poop / Both; Earlier |

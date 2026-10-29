@@ -12,8 +12,8 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -84,12 +84,12 @@ class StatisticsSemanticsTest {
     @Test
     fun theRowsSpeakTheirAveragesAndPoopIsOpen() {
         show(StatisticsSamples.lastThirtyDays())
-        compose.onNodeWithContentDescription("Poop. Last 7 days: 0.7 a day. Last 30 days: 1.8 a day.")
+        compose.onNodeWithContentDescription("Poop. Last 30 days: 1.8 a day.")
             .assertIsSelected()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
-        compose.onNodeWithContentDescription("Pee. Last 7 days: 7.9 a day. Last 30 days: 7.6 a day.").assertExists()
-        compose.onNodeWithContentDescription("Sleep. Last 7 days: 14 hours 1 minute a day. Last 30 days: 14 hours 7 minutes a day.").assertExists()
-        compose.onNodeWithContentDescription("Feeds. Last 7 days: 6.7 a day. Last 30 days: 7.1 a day.")
+        compose.onNodeWithContentDescription("Pee. Last 30 days: 7.6 a day.").assertExists()
+        compose.onNodeWithContentDescription("Sleep. Last 30 days: 14 hours 7 minutes a day.").assertExists()
+        compose.onNodeWithContentDescription("Feeds. Last 30 days: 7.1 a day.")
             .assertIsNotSelected()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
             .performClick()
@@ -106,10 +106,22 @@ class StatisticsSemanticsTest {
         compose.onAllNodes(hasText("25 Oct")).assertCountEquals(0)
     }
 
+    /** Only the chosen range is shown: no "Last 7 days" next to it. */
     @Test
-    fun theWeekHeaderIsAHeading() {
+    fun onlyTheChosenRangeIsShown() {
         show(StatisticsSamples.lastThirtyDays())
-        compose.onNodeWithContentDescription("Last 7 days, 19 October to 25 October").assert(isHeading())
+        compose.onAllNodes(hasText("Last 7 days")).assertCountEquals(0)
+        compose.onAllNodes(hasContentDescription("Last 7 days", substring = true)).assertCountEquals(0)
+    }
+
+    @Test
+    fun theLastSevenDaysAreARange() {
+        show(StatisticsSamples.lastSevenDays())
+        compose.onNodeWithContentDescription("Last 7 days, 19 October to 25 October").assert(clickLabel("Change range"))
+        compose.onNodeWithContentDescription("Poop. Last 7 days: 0.7 a day.").assertIsSelected()
+        compose.onNodeWithContentDescription(
+            "Poop per day, 19 October to 25 October. Highest 2 on Saturday 24 October. Lowest 0 on Friday 23 October.",
+        ).assertExists()
     }
 
     @Test
@@ -134,15 +146,16 @@ class StatisticsSemanticsTest {
         }
         compose.onNodeWithText("Last 30 days").assertIsSelected()
         compose.onNodeWithText("Last 90 days").assertIsNotSelected()
+        compose.onNodeWithText("Last 7 days").assertIsNotSelected().performClick()
         compose.onNodeWithText("All days").performClick()
         compose.onNodeWithText("Choose dates…").assertIsNotSelected().performClick()
-        assertEquals(listOf("range:AllDays", "choose"), calls)
+        assertEquals(listOf("range:Last7Days", "range:AllDays", "choose"), calls)
     }
 
     @Test
-    fun aCustomRangeKeepsTheLastThirtyDaysInSight() {
+    fun aCustomRangeIsSaidByItsDates() {
         show(StatisticsSamples.custom())
-        compose.onNodeWithContentDescription("Feeds. Last 7 days: 6.7 a day. Chosen dates: 7.1 a day. Last 30 days: 7.1 a day.").assertIsSelected()
+        compose.onNodeWithContentDescription("Feeds. Chosen dates: 7.1 a day.").assertIsSelected()
         compose.onNodeWithContentDescription("Chosen dates, 5 October to 18 October").assert(clickLabel("Change range"))
         compose.onNodeWithContentDescription(
             "Feeds per day, 5 October to 18 October. Highest 8 on Thursday 15 October. Lowest 6 on Wednesday 14 October.",
@@ -152,7 +165,6 @@ class StatisticsSemanticsTest {
     @Test
     fun fewLoggedDaysAreCountedAndSaid() {
         show(StatisticsSamples.firstDays())
-        compose.onNodeWithContentDescription("Last 7 days, 19 October to 25 October, 3 of 7 days logged").assert(isHeading())
         compose.onNodeWithContentDescription("Last 30 days, 26 September to 25 October, 3 of 30 days logged").assertExists()
         compose.onNodeWithContentDescription(
             "Poop per day, 26 September to 25 October. Highest 3 on Friday 23 October. Lowest 0 on Sunday 25 October. " +
@@ -207,7 +219,7 @@ class StatisticsSemanticsTest {
     @Test
     fun beforeAWholeDayTodaySoFarIsShown() {
         show(StatisticsSamples.soFar())
-        compose.onNodeWithContentDescription("Poop. Last 7 days: 2.0 a day. Last 30 days: 2.0 a day.").assertIsSelected()
+        compose.onNodeWithContentDescription("Poop. Last 30 days: 2.0 a day.").assertIsSelected()
         compose.onNodeWithText(SO_FAR_FOOTNOTE).assertExists()
     }
 

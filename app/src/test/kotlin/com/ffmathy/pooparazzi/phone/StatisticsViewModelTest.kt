@@ -51,18 +51,32 @@ class StatisticsViewModelTest : CoreTestBase() {
     )
 
     @Test
-    fun theDefaultComparesTheLastSevenDaysWithTheLastThirtyWithPoopOpen() = coreTest(seed = tenDays) { core ->
+    fun theDefaultIsTheLastThirtyDaysWithPoopOpen() = coreTest(seed = tenDays) { core ->
         val state = core.statistics().current()
         val report = checkNotNull(state.report)
 
-        assertEquals(oct(19) to oct(25), report.lastSevenDays.from to report.lastSevenDays.to)
-        assertEquals(listOf(70L, 67L, 26L, 822L), report.lastSevenDays.averages())
-        assertEquals(LocalDate.of(2026, 9, 26) to oct(25), report.comparison.from to report.comparison.to)
-        assertEquals("10 of 30 days logged", 10 to 30, report.comparison.loggedDays to report.comparison.dayCount)
-        assertEquals(listOf(70L, 68L, 26L, 822L), report.comparison.averages())
+        assertEquals(LocalDate.of(2026, 9, 26) to oct(25), report.window.from to report.window.to)
+        assertEquals("10 of 30 days logged", 10 to 30, report.window.loggedDays to report.window.dayCount)
+        assertEquals(listOf(70L, 68L, 26L, 822L), report.window.averages())
         assertEquals(StatsMetric.POOP, state.metric)
         assertEquals(StatsMetric.POOP, state.chart?.metric)
         assertEquals(StatsRange.Last30Days, report.range)
+    }
+
+    @Test
+    fun choosingTheLastSevenDaysRecounts() = coreTest(seed = tenDays) { core ->
+        val saved = SavedStateHandle()
+        val statistics = core.statistics(saved)
+        statistics.onRange(StatsRange.Last7Days)
+        runCurrent()
+        val report = statistics.report()
+
+        assertEquals(StatsRange.Last7Days, report.range)
+        assertEquals(oct(19) to oct(25), report.window.from to report.window.to)
+        assertEquals(listOf(70L, 67L, 26L, 822L), report.window.averages())
+        assertEquals(7, statistics.current().chart?.bars?.size)
+        assertEquals("LAST_7_DAYS", saved.get<String>("statistics_range"))
+        assertEquals(StatsRange.Last7Days, core.statistics(saved).report().range)
     }
 
     @Test
@@ -73,8 +87,7 @@ class StatisticsViewModelTest : CoreTestBase() {
         val report = statistics.report()
 
         assertEquals(StatsRange.Custom(oct(20), oct(22)), report.range)
-        assertEquals(listOf(67L, 70L, 27L, 825L), report.comparison.averages())
-        assertEquals("the last 30 days stay as they were", listOf(70L, 68L, 26L, 822L), report.lastThirtyDays.averages())
+        assertEquals(listOf(67L, 70L, 27L, 825L), report.window.averages())
     }
 
     @Test
@@ -86,7 +99,7 @@ class StatisticsViewModelTest : CoreTestBase() {
         val report = statistics.report()
 
         assertEquals(StatsRange.AllDays, report.range)
-        assertEquals(oct(16) to oct(25), report.comparison.from to report.comparison.to)
+        assertEquals(oct(16) to oct(25), report.window.from to report.window.to)
     }
 
     @Test
@@ -127,15 +140,13 @@ class StatisticsViewModelTest : CoreTestBase() {
     @Test
     fun anEntryLoggedElsewhereIsCountedAtOnce() = coreTest(seed = tenDays) { core ->
         val statistics = core.statistics()
-        assertEquals(26, statistics.report().lastSevenDays.average(StatsMetric.POOP)?.tenths)
-        assertEquals(26, statistics.report().lastThirtyDays.average(StatsMetric.POOP)?.tenths)
+        assertEquals(26, statistics.report().window.average(StatsMetric.POOP)?.tenths)
 
         // A poop yesterday, synced from the watch; the minute tick has not come yet.
         core.repository.add(Entry.diaper(SampleData.at(9, 0, day = SampleData.YESTERDAY) + 30_000, pee = false, poop = true, id = "late-poop"))
         runCurrent()
 
-        assertEquals(27, statistics.report().lastSevenDays.average(StatsMetric.POOP)?.tenths)
-        assertEquals(27, statistics.report().lastThirtyDays.average(StatsMetric.POOP)?.tenths)
+        assertEquals(27, statistics.report().window.average(StatsMetric.POOP)?.tenths)
     }
 
     @Test
@@ -147,8 +158,7 @@ class StatisticsViewModelTest : CoreTestBase() {
         runCurrent()
 
         val after = statistics.report()
-        assertEquals(before.lastSevenDays, after.lastSevenDays)
-        assertEquals(before.lastThirtyDays, after.lastThirtyDays)
+        assertEquals(before.window, after.window)
     }
 
     @Test
@@ -157,10 +167,10 @@ class StatisticsViewModelTest : CoreTestBase() {
         statistics.current()
 
         core.clock.set(epochMillis(SampleData.TODAY.plusDays(1), 0, 5, SampleData.ZONE))
-        statistics.onMetric(StatsMetric.POOP)
+        statistics.onRange(StatsRange.Last7Days)
         runCurrent()
 
-        val week = statistics.report().lastSevenDays
+        val week = statistics.report().window
         assertEquals(oct(20) to oct(26), week.from to week.to)
         assertEquals(listOf(64L, 63L, 23L, 775L), week.averages())
     }
@@ -177,7 +187,7 @@ class StatisticsViewModelTest : CoreTestBase() {
         // The reference scenario starts Sun 22:40, so there is no whole day yet: Sun and today so far count.
         val report = checkNotNull(core.statistics().current().report)
         assertTrue(report.soFar)
-        assertEquals(listOf(50L, 40L, 20L, 279L), report.lastSevenDays.averages())
+        assertEquals(listOf(50L, 40L, 20L, 279L), report.window.averages())
     }
 
     /**
@@ -198,13 +208,13 @@ class StatisticsViewModelTest : CoreTestBase() {
         val noa = statistics.current()
         assertTrue(noa.hasSeveralBabies)
         assertEquals(Baby.FIRST_ID, noa.baby.id)
-        assertEquals("Noa's averages alone", listOf(70L, 67L, 26L, 822L), checkNotNull(noa.report).lastSevenDays.averages())
-        assertEquals(10, noa.report!!.comparison.loggedDays)
+        assertEquals("Noa's averages alone", listOf(70L, 68L, 26L, 822L), checkNotNull(noa.report).window.averages())
+        assertEquals(10, noa.report!!.window.loggedDays)
 
         core.settings.selectBaby(SampleData.TWIN_ID)
         runCurrent()
         val ida = seen.filterNotNull().filter { it.babyId == SampleData.TWIN_ID }
         assertTrue(ida.isNotEmpty())
-        assertTrue("never Noa's log under Ida's label", ida.all { it.report?.comparison?.loggedDays == 3 })
+        assertTrue("never Noa's log under Ida's label", ida.all { it.report?.window?.loggedDays == 3 })
     }
 }
