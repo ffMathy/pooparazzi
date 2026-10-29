@@ -97,7 +97,7 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 - The ring is **never** used for progress, countdowns or idle states. The watch Undo countdown is a separate neutral bezel arc (§3.5.6).
 - No breathing. The glow is static. The ember steps once per minute with a 600 ms ease and is otherwise still.
 - The phone keeps a subtle static idle glow at night. It is the nightlight identity and gives the idle Lamp a form without a ring. Its core is L* 10 and every text pair on it passes contrast. Day uses a disc instead, because a glow on paper reads as a stain.
-- Lamp text is real text laid out over the canvas, never drawn into it. **The Lamp digits are never a tap target.**
+- Lamp text is real text laid out over the canvas, never drawn into it. **The Lamp text (label, hero and sub-line) is one tap target**, like a since-row: idle it opens the edit sheet of the last feed (a 16 dp `chevronRight` in outline after the label marks it); while a sleep runs it opens the Adjust start sheet, as the chip does. Neither writes anything until Save. Before the first feed it is not a target.
 
 ### 2.3 Lamp states
 
@@ -130,7 +130,7 @@ Under one minute: the phone hero shows "just now" (heroWord) with the sub-line "
 
 | Element | Idle | Running | Style |
 |---|---|---|---|
-| Label row: icon 20 + 8 + text | 65–85 | 39–59 | labelLarge; colours per §2.3 |
+| Label row: icon 20 + 8 + text (+ 8 + `chevronRight` 16 outline when idle with a feed) | 65–85 | 39–59 | labelLarge; colours per §2.3 |
 | Hero | 93–173 | 67–147 | heroNumeral + heroUnit in onSurface; "just now" in heroWord, centred in the 80 box |
 | Sub-line | 177–199 | 151–173 | dataMedium, onSurfaceVariant |
 | Adjust-start chip | — | visual 185–225 (target 181–229) | §3.3.1 |
@@ -341,7 +341,7 @@ Receipt rules:
 | Undo | revert; "Undone" | `Reject` |
 | Since-row | edit sheet of that latest entry | — |
 | History pill, Today grid | History | — |
-| Lamp digits | nothing (never a target) | — |
+| Lamp text | idle: edit sheet of the last feed; running sleep: Adjust start sheet | — |
 
 Input cooldowns apply (§5.9): after a sheet tile commits, Feed, Diaper and the Sleep toggle ignore taps for 600 ms after the sheet has finished closing.
 
@@ -1414,7 +1414,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 | Receipt titles are time-free | The phone receipt sheet puts the effective time on its own line under the title, following every chip tap. Exception: the watch Logged title keeps the time, since nothing else on that screen shows it |
 | Diaper stamps the time on the first tap | The picker title shows the stamp; backdate with chips (phone) or Earlier (watch) |
 | Lights-down keeps fills and positions | Muscle memory at 3 am; only the chrome and the glow dim |
-| Lamp digits are never a tap target; "Adjust start" is a separate chip / list item | Prevents accidental edits of a running sleep |
+| The Lamp text opens the edit sheet of the last feed (idle) or the Adjust start sheet (running); "Adjust start" is also a separate chip / list item | The top fact is the first thing a parent wants to correct. Both sheets write nothing until Save, so a stray tap edits nothing |
 | Watch "Woke up" = pinned Medium EdgeButton | Large and always visible, at rest and while scrolling |
 | No "Earlier" on watch Logged | It would sit where Feed / Diaper just were (double-tap hazard). Backdating on the watch goes through status cards and Today rows → Adjust |
 | Input cooldowns and the 2 s guard | A double tap must never land on a different target or toggle a sleep twice |
