@@ -37,8 +37,11 @@ class FirebaseFamilyStore(
         }
     }
 
-    override suspend fun createFamily(familyId: String, uid: String, email: String, leaving: String?) = commit {
-        leaving?.let { delete(member(it, uid)) }
+    override suspend fun createFamily(familyId: String, uid: String, email: String, leaving: String?, handOverTo: String?) = commit {
+        leaving?.let { old ->
+            handOverTo?.let { update(family(old), FIELD_CREATED_BY, it) }
+            delete(member(old, uid))
+        }
         set(family(familyId), mapOf(FIELD_CREATED_BY to uid, FIELD_CREATED_AT to FieldValue.serverTimestamp()))
         set(member(familyId, uid), mapOf(FIELD_EMAIL to email, FIELD_JOINED_AT to FieldValue.serverTimestamp()))
         set(user(uid), mapOf(FIELD_FAMILY_ID to familyId))
@@ -63,6 +66,11 @@ class FirebaseFamilyStore(
             invite.email?.let { put(FIELD_EMAIL, it) }
         }
         backup.commits.commit { inviteRef(code).set(data) }
+        Unit
+    }
+
+    override suspend fun deleteInvite(code: String) = backup.call {
+        backup.commits.commit { inviteRef(code).delete() }
         Unit
     }
 

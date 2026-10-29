@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.phone.account.AppAccounts
+import com.ffmathy.pooparazzi.phone.account.MemoryConsent
 import com.ffmathy.pooparazzi.phone.account.WelcomePrefs
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -37,7 +38,8 @@ class WelcomeAndAccountTest {
     /** Before the activity starts: the app has set up its (absent) Firebase accounts by then; replace them. */
     @get:Rule(order = 0)
     val fakeAccounts = object : ExternalResource() {
-        override fun before() = AppAccounts.install(accounts)
+        // The address the Account screen test signs in with agreed earlier; the Welcome's Google account has not.
+        override fun before() = AppAccounts.install(accounts, consent = MemoryConsent(setOf(accounts.nextUser.uid)))
     }
 
     @get:Rule(order = 1)
@@ -71,10 +73,15 @@ class WelcomeAndAccountTest {
     }
 
     @Test
-    fun signingInOnTheWelcomeOpensHome() {
+    fun signingInOnTheWelcomeAsksForTheConsentThenOpensHome() {
         compose.waitUntilAtLeastOneExists(hasText("Your log stays on this phone"), timeoutMillis = 10_000)
         compose.onNodeWithText("Continue with Google").performScrollTo().performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Back up to Google Firebase?"), timeoutMillis = 5_000)
+        compose.onNodeWithText("What is uploaded").assertExists()
+        compose.onNodeWithText("Details are in the privacy policy.").performScrollTo().assertExists()
+        compose.onNodeWithText("I agree").performScrollTo().performClick()
         compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
+        assertTrue(accounts.googleUser.uid in AppAccounts.consent.agreed.value)
         assertTrue(accounts.calls == listOf("google"))
         assertTrue(WelcomePrefs(app).seen)
     }

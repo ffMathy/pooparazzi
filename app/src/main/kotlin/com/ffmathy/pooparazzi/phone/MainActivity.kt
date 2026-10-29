@@ -49,6 +49,7 @@ class MainActivity : AppCompatActivity() {
             val invite by appViewModel.invite.collectAsStateWithLifecycle()
             val emailLink by appViewModel.emailLink.collectAsStateWithLifecycle()
             val signedIn by appViewModel.signedIn.collectAsStateWithLifecycle()
+            val consentNeeded by appViewModel.consentNeeded.collectAsStateWithLifecycle()
             inputs?.let {
                 PooparazziPhoneApp(
                     inputs = it,
@@ -58,6 +59,7 @@ class MainActivity : AppCompatActivity() {
                     onLaunchHandled = appViewModel::consume,
                     welcome = welcome,
                     onWelcomeDone = appViewModel::finishWelcome,
+                    consentNeeded = consentNeeded,
                     onLaunchedSheetClosed = ::onLaunchedSheetClosed,
                     links = AccountLinks(
                         invite = invite,

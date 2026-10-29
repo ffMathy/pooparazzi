@@ -49,7 +49,8 @@ import java.util.Locale
  * follows [user] (its family through [FamilyService]).
  *
  * @param links where the last email link went and what it is for, kept on this phone ([EmailLinkPrefs]).
- * @param deleteUserDocument deletes the account's `users/{uid}` document, before the account itself.
+ * @param deleteUserData deletes the account's remaining Firestore data ([Families.deleteAccountData]), before the
+ *   account itself.
  */
 class FirebaseAccounts(
     context: Context,
@@ -57,7 +58,7 @@ class FirebaseAccounts(
     private val webClientId: String?,
     override val hostingDomain: String?,
     private val links: EmailLinkPrefs,
-    private val deleteUserDocument: suspend (uid: String) -> Unit,
+    private val deleteUserData: suspend (uid: String) -> Unit,
     private val timeoutMillis: Long = TIMEOUT_MILLIS,
 ) : Accounts {
     private val app = context.applicationContext
@@ -67,6 +68,10 @@ class FirebaseAccounts(
     override val googleAvailable = webClientId != null
     override val user: StateFlow<AccountUser?> = current.asStateFlow()
     override val sentLink: SentLink? get() = links.sent
+
+    override fun forgetSentLink() {
+        links.sent = null
+    }
 
     init {
         // Also called when the account is deleted, or its session ends on the server (a disabled account).
@@ -94,12 +99,35 @@ class FirebaseAccounts(
         AccountInput.emailError(email)?.let { return AccountResult.Failed(it) }
         if (!isSignInLink(link)) return AccountResult.Failed(AccountError.LINK_INVALID)
         val result = attempt {
-            auth.signInWithEmailLink(email.trim(), link).await()
+            val signedIn = auth.signInWithEmailLink(email.trim(), link).await()
+            signedIn.user?.let { user -> dropForeignPassword(user, signedIn.additionalUserInfo?.isNewUser) }
             refresh()
         }
         // Used up: the next link is asked for again.
         if (result == AccountResult.Success) links.sent = null
         return result
+    }
+
+    /**
+     * Takes the email/password provider off an account that existed before this email link signed in to it.
+     *
+     * Why: the app has no passwords, but Firebase needs the Email/Password provider on for email links, so anyone can
+     * create an account for someone else's address with a password (through Firebase's public API), without being able
+     * to verify it. When the real owner then signs in with an email link, Firebase signs in to that same account and
+     * marks the address verified, and the password the other person chose would still sign in to it, now verified (the
+     * rules trust verified addresses). Unlinking the `password` provider deletes that password. An account the link
+     * just created has no such password, so it is left alone; for any other, the provider comes back without a
+     * password at the next email link. Best effort: a failure is logged, and the sign-in stands.
+     */
+    private suspend fun dropForeignPassword(user: FirebaseUser, isNewUser: Boolean?) {
+        if (!shouldDropPassword(isNewUser, user.providerData.map { it.providerId })) return
+        try {
+            withTimeoutOrNull(timeoutMillis) { user.unlink(EmailAuthProvider.PROVIDER_ID).await() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not remove a password from the account", e)
+        }
     }
 
     override suspend fun signOut() {
@@ -138,8 +166,8 @@ class FirebaseAccounts(
     override suspend fun deleteAccount(): AccountResult {
         val user = auth.currentUser ?: return AccountResult.Failed(AccountError.OTHER)
         return attempt {
-            // The pointer to the family first: once the account is gone, nobody may delete it any more.
-            deleteUserDocument(user.uid)
+            // The account's documents first: once the account is gone, nobody may delete them any more.
+            deleteUserData(user.uid)
             user.delete().await()
             refresh()
         }
@@ -273,6 +301,14 @@ internal suspend fun attemptWithin(
     Log.w("Accounts", "Account action failed", e)
     AccountResult.Failed(errorOf(e))
 }
+
+/**
+ * Whether an email-link sign-in must take the `password` provider off the account (FirebaseAccounts'
+ * dropForeignPassword): it has one, and the account was not created by this very sign-in (unknown counts as not).
+ */
+@VisibleForTesting
+internal fun shouldDropPassword(isNewUser: Boolean?, providers: List<String>): Boolean =
+    isNewUser != true && EmailAuthProvider.PROVIDER_ID in providers
 
 /** The words of a failed Firebase Authentication or Credential Manager call. */
 @VisibleForTesting

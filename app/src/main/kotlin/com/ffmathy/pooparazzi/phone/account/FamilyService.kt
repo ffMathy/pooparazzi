@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -42,6 +43,13 @@ enum class FamilyError {
 
     /** Signed out, or the account's family is not known yet: nothing to act on. */
     NOT_READY,
+
+    /**
+     * The rules refused the invite: the account is no longer in the family (removed) or its email address is not
+     * verified. "Couldn't create an invite. You may have been removed from the family, or your email address isn't
+     * verified yet."
+     */
+    INVITE_REFUSED,
 
     /** "Something went wrong. Try again." */
     OTHER,
@@ -89,7 +97,11 @@ interface Families {
     /** The family and its members. */
     suspend fun load(): FamilyResult<Family>
 
-    /** Creates an invite (single use, 7 days) and returns its link, `https://<project-id>.web.app/join/<code>`. */
+    /**
+     * Creates an invite (single use, 6 days; the rules allow up to 7) and returns its link,
+     * `https://<project-id>.web.app/join/<code>`. The code is remembered on this phone, so leaving the family or
+     * deleting the account can take back the invites still outstanding.
+     */
     suspend fun createInvite(): FamilyResult<String>
 
     /** Leaves the family for a new, empty one of your own (one batch); the phone then uploads its log there. */
@@ -114,6 +126,13 @@ interface Families {
      * account is not in its family any more).
      */
     suspend fun holdForDeletion(held: Boolean)
+
+    /**
+     * Account deletion's last Firestore steps for [uid], before the account itself: takes back its outstanding invites
+     * (best effort), deletes the backup from before families (`users/{uid}/entries`) and then `users/{uid}`. Throws
+     * [CloudException] when the backup from before families or the users document could not be deleted.
+     */
+    suspend fun deleteAccountData(uid: String)
 }
 
 /** Builds without a Firebase configuration. */
@@ -128,6 +147,7 @@ object NoFamilies : Families {
     override suspend fun join(code: String): JoinResult = JoinResult.Refused(InviteCheck.Failed(FamilyError.NOT_READY))
     override fun refresh() = Unit
     override suspend fun holdForDeletion(held: Boolean) = Unit
+    override suspend fun deleteAccountData(uid: String) = Unit
 }
 
 /** How far the backup from before families (`users/{uid}/entries`) has been moved into the family, per account. */
@@ -153,6 +173,11 @@ interface FamilyCache {
     fun setLegacy(uid: String, state: LegacyState, atMillis: Long = 0)
     fun heldForDeletion(uid: String): Boolean
     fun setHeldForDeletion(uid: String, held: Boolean)
+
+    /** The invites [uid] made on this phone and has not taken back: code to expiry (wall clock). */
+    fun invites(uid: String): Map<String, Long>
+    fun addInvite(uid: String, code: String, expiresAtMillis: Long)
+    fun removeInvite(uid: String, code: String)
 }
 
 /**
@@ -174,7 +199,17 @@ interface FamilyCache {
  * Changing family (joining, leaving, being removed) only publishes the new family id: the backup engine treats it like
  * another account, flags everything on the phone for upload and pulls the new family from its start.
  *
+ * **Consent.** Nothing is read from or written to Firestore for an account (no family is resolved, created or joined,
+ * and no family is published, so the backup uploads nothing) until it has agreed on this phone ([BackupConsent]).
+ * Signing out withdraws the consent.
+ *
+ * **Leaving.** A family's creator who leaves hands the family over to the member who joined first
+ * ([FamilyExit.successor]), in the same batch. Leaving, joining another family and deleting the account also take back
+ * the invites the account made on this phone (best effort: invites cannot be listed, and the rules refuse an invite of
+ * someone who is not a member any more anyway).
+ *
  * @param hostingDomain the project's website, for the invite links; null leaves inviting off.
+ * @param consent who agreed to the backup on this phone: nothing is done for an account before it has.
  */
 class FamilyService(
     private val store: FamilyStore,
@@ -185,8 +220,9 @@ class FamilyService(
     private val now: () -> Long = System::currentTimeMillis,
     private val randomBytes: (Int) -> ByteArray = ::secureRandomBytes,
     private val retryMillis: Long = RETRY_MILLIS,
+    private val consent: BackupConsent,
 ) : Families {
-    private val published = MutableStateFlow(user.value?.let(::cachedAccount))
+    private val published = MutableStateFlow(user.value?.takeIf(::agreed)?.let(::cachedAccount))
     override val account: StateFlow<CloudAccount?> = published.asStateFlow()
 
     /** One resolution or family change at a time. */
@@ -209,7 +245,7 @@ class FamilyService(
     }
 
     override fun refresh() {
-        val signedIn = user.value ?: return
+        val signedIn = user.value?.takeIf(::agreed) ?: return
         scope.launch { resolveQuietly(signedIn) }
     }
 
@@ -229,21 +265,31 @@ class FamilyService(
 
     override suspend fun createInvite(): FamilyResult<String> {
         val domain = hostingDomain ?: return FamilyResult.Failed(FamilyError.OTHER)
-        return act { signedIn, familyId ->
+        val result = act { signedIn, familyId ->
             val code = newCode()
             val invite = StoredInvite(familyId, signedIn.uid, now() + INVITE_LIFETIME_MILLIS, signedIn.email.ifBlank { null })
-            store.createInvite(code, invite)
+            try {
+                store.createInvite(code, invite)
+            } catch (e: CloudException) {
+                // Refused while signed in: removed from the family, or an unverified email address.
+                if (e.error == CloudError.OTHER) throw InviteRefused(e)
+                throw e
+            }
+            cache.addInvite(signedIn.uid, code, invite.expiresAtMillis)
             inviteLink(domain, code)
         }
+        return result
     }
 
     override suspend fun leave(): FamilyResult<Unit> = act(locked = true) { signedIn, familyId ->
-        val others = store.members(familyId).any { it.uid != signedIn.uid }
+        val members = store.members(familyId)
         // Alone, there is nobody to leave: the family already is the account's own.
-        if (others) {
+        if (members.any { it.uid != signedIn.uid }) {
+            val handOverTo = if (store.creatorOf(familyId) == signedIn.uid) FamilyExit.successor(signedIn.uid, members) else null
             val fresh = newFamilyId()
-            store.createFamily(fresh, signedIn.uid, signedIn.email, leaving = familyId)
+            store.createFamily(fresh, signedIn.uid, signedIn.email, leaving = familyId, handOverTo = handOverTo)
             switchTo(signedIn, fresh)
+            takeBackInvites(signedIn.uid)
         }
     }
 
@@ -256,7 +302,7 @@ class FamilyService(
 
     override suspend fun checkInvite(code: String): InviteCheck {
         if (!isInviteCode(code)) return InviteCheck.Invalid
-        val signedIn = user.value ?: return InviteCheck.Failed(FamilyError.NOT_READY)
+        val signedIn = user.value?.takeIf(::agreed) ?: return InviteCheck.Failed(FamilyError.NOT_READY)
         return try {
             mutex.withLock {
                 resolveLocked(signedIn)
@@ -272,7 +318,8 @@ class FamilyService(
 
     override suspend fun join(code: String): JoinResult {
         if (!isInviteCode(code)) return JoinResult.Refused(InviteCheck.Invalid)
-        val signedIn = user.value ?: return JoinResult.Refused(InviteCheck.Failed(FamilyError.NOT_READY))
+        // No consent, no join: joining uploads the account's email address to the family.
+        val signedIn = user.value?.takeIf(::agreed) ?: return JoinResult.Refused(InviteCheck.Failed(FamilyError.NOT_READY))
         var old: String? = null
         val result = try {
             mutex.withLock {
@@ -314,23 +361,61 @@ class FamilyService(
                 } catch (e: Exception) {
                     Log.w(TAG, "Could not leave the old family", e)
                 }
+                takeBackInvites(signedIn.uid)
             }
         }
         return result
     }
 
-    /** Follows the account: its cached family at once, then the resolved one (retried until it resolves). */
+    /**
+     * Follows the account and its consent: its cached family at once, then the resolved one (retried until it
+     * resolves). Without consent nothing is published, so the backup stays off.
+     */
     private suspend fun followUser() {
         var previous: String? = null
-        user.collectLatest { signedIn ->
-            // Signing out (or in to another account) ends any hold of the account before.
-            previous?.takeIf { it != signedIn?.uid }?.let { cache.setHeldForDeletion(it, false) }
-            previous = signedIn?.uid
-            published.value = signedIn?.let(::cachedAccount)
-            if (signedIn == null) return@collectLatest
-            hooks.await()
-            while (!resolveQuietly(signedIn)) delay(retryMillis)
+        combine(user, consent.agreed) { signedIn, agreed -> signedIn to (signedIn != null && signedIn.uid in agreed) }
+            .distinctUntilChanged()
+            .collectLatest { (signedIn, agreed) ->
+                // Signing out (or in to another account) ends any hold of the account before, and its consent.
+                previous?.takeIf { it != signedIn?.uid }?.let {
+                    cache.setHeldForDeletion(it, false)
+                    consent.withdraw(it)
+                }
+                previous = signedIn?.uid
+                published.value = signedIn?.takeIf { agreed }?.let(::cachedAccount)
+                if (signedIn == null || !agreed) return@collectLatest
+                hooks.await()
+                while (!resolveQuietly(signedIn)) delay(retryMillis)
+            }
+    }
+
+    private fun agreed(signedIn: AccountUser): Boolean = signedIn.uid in consent.agreed.value
+
+    /**
+     * Deletes the invites [uid] made on this phone that may still be outstanding, and forgets them (also those that
+     * have expired, or were used: those are gone already). Best effort: one that cannot be deleted for want of a
+     * connection is tried again next time; anything else is forgotten (it expires within 7 days regardless).
+     */
+    private suspend fun takeBackInvites(uid: String) {
+        for ((code, expiresAt) in cache.invites(uid)) {
+            if (expiresAt > now()) {
+                try {
+                    store.deleteInvite(code)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if ((e as? CloudException)?.error == CloudError.OFFLINE) continue
+                    Log.w(TAG, "Could not take back an invite", e)
+                }
+            }
+            cache.removeInvite(uid, code)
         }
+    }
+
+    override suspend fun deleteAccountData(uid: String) {
+        takeBackInvites(uid)
+        store.deleteLegacyEntries(uid)
+        store.deleteUser(uid)
     }
 
     /** The account with its family as this phone last knew it (none before its old backup was looked at). */
@@ -353,7 +438,7 @@ class FamilyService(
 
     /** Reads (or creates) the account's family and publishes it. Call with [mutex] held. */
     private suspend fun resolveLocked(signedIn: AccountUser) {
-        if (user.value?.uid != signedIn.uid) return
+        if (user.value?.uid != signedIn.uid || !agreed(signedIn)) return
         // Its backup was deleted for deleting the account: no new family until released.
         if (cache.heldForDeletion(signedIn.uid)) return
         var family = store.familyOf(signedIn.uid)
@@ -440,8 +525,8 @@ class FamilyService(
         } catch (e: Exception) {
             Log.w(TAG, "Family action failed", e)
             // Refused while signed in: most likely no longer a member (removed). Find out.
-            if (e is CloudException && e.error == CloudError.OTHER) refresh()
-            FamilyResult.Failed(e.toFamilyError())
+            if ((e is CloudException && e.error == CloudError.OTHER) || e is InviteRefused) refresh()
+            FamilyResult.Failed(if (e is InviteRefused) FamilyError.INVITE_REFUSED else e.toFamilyError())
         }
     }
 
@@ -457,10 +542,10 @@ class FamilyService(
         const val RETRY_MILLIS = 60_000L
 
         /**
-         * An invite's lifetime: 7 days, less a margin, because the rules refuse an expiry more than 7 days after the
-         * server's time, and this phone's clock may run a little ahead of it.
+         * An invite's lifetime: 6 days. The rules refuse an expiry more than 7 days after the server's time; the day
+         * between leaves room for a phone clock running ahead of the server's.
          */
-        const val INVITE_LIFETIME_MILLIS = 7 * 24 * 60 * 60 * 1000L - 10 * 60 * 1000L
+        const val INVITE_LIFETIME_MILLIS = 6 * 24 * 60 * 60 * 1000L
 
         const val INVITE_CODE_BYTES = 16
         private const val FAMILY_ID_BYTES = 15
@@ -481,6 +566,9 @@ class FamilyService(
         }
     }
 }
+
+/** The rules refused to create an invite ([FamilyError.INVITE_REFUSED]). */
+private class InviteRefused(cause: Throwable) : Exception(cause)
 
 private val secureRandom by lazy { SecureRandom() }
 
@@ -508,6 +596,20 @@ class FamilyPrefs(context: Context) : FamilyCache {
 
     override fun heldForDeletion(uid: String): Boolean = prefs.getBoolean("held.$uid", false)
     override fun setHeldForDeletion(uid: String, held: Boolean) = prefs.edit { putBoolean("held.$uid", held) }
+
+    /** Stored as "code:expiresAtMillis" strings. */
+    override fun invites(uid: String): Map<String, Long> = prefs.getStringSet("invites.$uid", null).orEmpty()
+        .mapNotNull { item ->
+            val at = item.lastIndexOf(':')
+            if (at <= 0) null else item.substring(at + 1).toLongOrNull()?.let { item.substring(0, at) to it }
+        }.toMap()
+
+    override fun addInvite(uid: String, code: String, expiresAtMillis: Long) = setInvites(uid, invites(uid) + (code to expiresAtMillis))
+    override fun removeInvite(uid: String, code: String) = setInvites(uid, invites(uid) - code)
+
+    private fun setInvites(uid: String, invites: Map<String, Long>) = prefs.edit {
+        if (invites.isEmpty()) remove("invites.$uid") else putStringSet("invites.$uid", invites.map { (code, at) -> "$code:$at" }.toSet())
+    }
 
     internal companion object {
         const val FILE = "account_family"

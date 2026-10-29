@@ -169,7 +169,7 @@ class FamilyViewModel(
     }
 }
 
-/** The text of an invite: "Join my family on Pooparazzi to share our baby log: <link> (works once, for 7 days)". */
+/** The text of an invite: "Join my family on Pooparazzi to share our baby log: <link> (works once, for 6 days)". */
 fun inviteShareText(context: Context, link: String): String = context.getString(R.string.family_invite_text, link)
 
 /** The Android share sheet with an invite [link] and its text. */

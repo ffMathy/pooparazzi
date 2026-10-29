@@ -11,6 +11,7 @@ import com.ffmathy.pooparazzi.phone.account.FamilyService
 import com.ffmathy.pooparazzi.phone.account.InviteCheck
 import com.ffmathy.pooparazzi.phone.account.JoinResult
 import com.ffmathy.pooparazzi.phone.account.LegacyState
+import com.ffmathy.pooparazzi.phone.account.MemoryConsent
 import com.ffmathy.pooparazzi.phone.account.StoredInvite
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,6 +48,7 @@ class FamilyServiceTest {
         val status: MutableStateFlow<CloudStatus>,
         val imported: MutableList<List<Entry>>,
         val clock: LongArray,
+        val consent: MemoryConsent,
     ) {
         val familyId: String? get() = service.account.value?.familyId
     }
@@ -56,6 +58,7 @@ class FamilyServiceTest {
         store: FakeFamilyStore = FakeFamilyStore(),
         cache: MemoryFamilyCache = MemoryFamilyCache(),
         start: Boolean = true,
+        consent: MemoryConsent = MemoryConsent(setOf("anna", "bo")),
         block: suspend TestScope.(Rig) -> Unit,
     ) = runTest {
         val user = MutableStateFlow(signedIn)
@@ -68,8 +71,9 @@ class FamilyServiceTest {
             now = { clock[0] },
             randomBytes = { size -> ByteArray(size) { (seed++ % 64).toByte() } },
             retryMillis = 60_000,
+            consent = consent,
         )
-        val rig = Rig(service, store, cache, user, status, imported, clock)
+        val rig = Rig(service, store, cache, user, status, imported, clock, consent)
         if (start) {
             service.start(status) { entries -> imported += entries }
             runCurrent()
@@ -140,6 +144,7 @@ class FamilyServiceTest {
         rig.user.value = null
         runCurrent()
         assertNull(rig.service.account.value)
+        assertFalse("signing out withdraws the consent", "anna" in rig.consent.agreed.value)
         rig.user.value = bo
         runCurrent()
         val bos = rig.familyId!!
@@ -176,7 +181,7 @@ class FamilyServiceTest {
     }
 
     @Test
-    fun anInviteIsA128BitCodeForSevenDaysInTheMembersName() = test { rig ->
+    fun anInviteIsA128BitCodeForSixDaysInTheMembersName() = test { rig ->
         val result = rig.service.createInvite()
         val link = (result as FamilyResult.Ok).value
         val code = link.removePrefix("https://demo-pooparazzi.web.app/join/")
@@ -185,8 +190,17 @@ class FamilyServiceTest {
         assertTrue(code, code.matches(Regex("[A-Za-z0-9_-]+")))
         val invite = rig.store.invites.getValue(code)
         assertEquals(StoredInvite(rig.familyId!!, "anna", NOW + FamilyService.INVITE_LIFETIME_MILLIS, "anna@example.com"), invite)
-        assertTrue("the rules allow at most 7 days", invite.expiresAtMillis - NOW <= 7 * DAY)
-        assertTrue(invite.expiresAtMillis - NOW > 7 * DAY - 60 * 60 * 1000)
+        assertEquals("a day short of the rules' 7, for a clock ahead of the server's", 6 * DAY, invite.expiresAtMillis - NOW)
+        assertEquals("remembered, to take it back later", mapOf(code to invite.expiresAtMillis), rig.cache.invites("anna"))
+    }
+
+    @Test
+    fun aRefusedInviteSaysWhy() = test { rig ->
+        rig.store.failWith = CloudError.OTHER
+        assertEquals(FamilyResult.Failed(FamilyError.INVITE_REFUSED), rig.service.createInvite())
+        rig.store.failWith = CloudError.OFFLINE
+        assertEquals(FamilyResult.Failed(FamilyError.NO_CONNECTION), rig.service.createInvite())
+        assertTrue(rig.cache.invites("anna").isEmpty())
     }
 
     @Test
@@ -224,8 +238,9 @@ class FamilyServiceTest {
             assertEquals("fam-bo", rig.cache.families["anna"])
             assertTrue(rig.store.calls.contains("join:$CODE:fam-bo:anna"))
             assertFalse("single use", CODE in rig.store.invites)
-            assertTrue("the old family is left (and, its last member gone, deleted)", rig.store.calls.contains("leave:fam-anna:anna"))
-            assertFalse("fam-anna" in rig.store.members)
+            assertTrue("the old family is left (its last member gone, its data deleted)", rig.store.calls.contains("leave:fam-anna:anna"))
+            assertTrue("the family document stays, as a tombstone", rig.store.members.getValue("fam-anna").isEmpty())
+            assertEquals("anna", rig.store.creators["fam-anna"])
             assertEquals(setOf("bo", "anna"), rig.store.members.getValue("fam-bo").keys)
 
             // The used invite is gone: it reads as expired or used.
@@ -257,6 +272,97 @@ class FamilyServiceTest {
             assertTrue(fresh != "fam-bo")
             assertTrue(rig.store.calls.contains("createFamily:$fresh:anna:anna@example.com:leaving=fam-bo"))
             assertEquals(setOf("bo"), rig.store.members.getValue("fam-bo").keys)
+        }
+    }
+
+    @Test
+    fun theCreatorLeavingHandsTheFamilyToTheMemberWhoJoinedFirst() {
+        val store = FakeFamilyStore().apply {
+            seedFamily("fam-anna", "anna", "cai" to "cai@example.com", "bo" to "bo@example.com")
+        }
+        test(store = store) { rig ->
+            assertEquals(FamilyResult.Ok(Unit), rig.service.leave())
+            val fresh = rig.familyId!!
+            assertTrue(rig.store.calls.contains("createFamily:$fresh:anna:anna@example.com:leaving=fam-anna:handOverTo=cai"))
+            assertEquals("cai", rig.store.creators["fam-anna"])
+            assertEquals(setOf("cai", "bo"), rig.store.members.getValue("fam-anna").keys)
+        }
+    }
+
+    @Test
+    fun leavingTakesBackTheInvitesStillOutstanding() {
+        val store = FakeFamilyStore().apply { seedFamily("fam-bo", "bo", "anna" to "anna@example.com") }
+        test(store = store) { rig ->
+            val first = (rig.service.createInvite() as FamilyResult.Ok).value.substringAfterLast('/')
+            val used = (rig.service.createInvite() as FamilyResult.Ok).value.substringAfterLast('/')
+            rig.store.invites.remove(used) // someone joined with it
+            assertEquals(FamilyResult.Ok(Unit), rig.service.leave())
+            assertTrue(rig.store.calls.contains("deleteInvite:$first"))
+            assertTrue(rig.store.invites.isEmpty())
+            assertTrue("forgotten, used or not", rig.cache.invites("anna").isEmpty())
+        }
+    }
+
+    @Test
+    fun anInviteThatCannotBeTakenBackOfflineIsTriedAgain() {
+        val store = FakeFamilyStore().apply { seedFamily("fam-bo", "bo", "anna" to "anna@example.com") }
+        test(store = store) { rig ->
+            val code = (rig.service.createInvite() as FamilyResult.Ok).value.substringAfterLast('/')
+            val expired = "ExpiredExpiredExpired0"
+            rig.cache.addInvite("anna", expired, NOW - 1)
+            rig.store.failWith = CloudError.OFFLINE
+            assertTrue("the deletion of the account fails offline", runCatching { rig.service.deleteAccountData("anna") }.isFailure)
+            rig.store.failWith = null
+            assertEquals("kept for the next try; the expired one forgotten", setOf(code), rig.cache.invites("anna").keys)
+            assertTrue(rig.store.calls.none { it == "deleteInvite:$expired" })
+        }
+    }
+
+    @Test
+    fun deletingTheAccountTakesBackInvitesAndDeletesTheOldBackupBeforeTheUsersDocument() {
+        val store = FakeFamilyStore().apply {
+            seedFamily("fam-anna", "anna")
+            legacy["anna"] = SampleData.scenario().take(2).toMutableList()
+        }
+        test(store = store, cache = MemoryFamilyCache().apply { setLegacy("anna", LegacyState.IMPORTED) }) { rig ->
+            val code = (rig.service.createInvite() as FamilyResult.Ok).value.substringAfterLast('/')
+            rig.store.calls.clear()
+            rig.service.deleteAccountData("anna")
+            assertEquals(listOf("deleteInvite:$code", "deleteLegacyEntries:anna", "deleteUser:anna"), rig.store.calls)
+            assertFalse("anna" in rig.store.legacy)
+            assertFalse("anna" in rig.store.users)
+        }
+    }
+
+    @Test
+    fun withoutConsentNothingIsReadOrWrittenAndNothingPublished() = test(consent = MemoryConsent()) { rig ->
+        assertNull(rig.service.account.value)
+        assertEquals(emptyList<String>(), rig.store.calls)
+        assertEquals(JoinResult.Refused(InviteCheck.Failed(FamilyError.NOT_READY)), rig.service.join(CODE))
+        assertEquals(InviteCheck.Failed(FamilyError.NOT_READY), rig.service.checkInvite(CODE))
+        assertEquals(FamilyResult.Failed(FamilyError.NOT_READY), rig.service.createInvite())
+        rig.service.refresh()
+        rig.service.holdForDeletion(false) // "Back up now" resolves the family too
+        runCurrent()
+        assertEquals("not even the family is looked up", emptyList<String>(), rig.store.calls)
+
+        rig.consent.agree("anna")
+        runCurrent()
+        val familyId = rig.familyId!!
+        assertTrue(rig.store.calls.contains("createFamily:$familyId:anna:anna@example.com"))
+    }
+
+    @Test
+    fun aCachedFamilyWaitsForTheConsentToo() {
+        val cache = MemoryFamilyCache().apply {
+            setFamily("anna", "fam-1")
+            setLegacy("anna", LegacyState.DONE)
+        }
+        test(cache = cache, consent = MemoryConsent(), start = false) { rig ->
+            assertNull(rig.service.account.value)
+            rig.consent.agree("anna")
+            runCurrent()
+            assertEquals("fam-1", rig.familyId)
         }
     }
 

@@ -13,7 +13,7 @@
     ],
     "headers": [
       {
-        "source": "**",
+        "regex": "^/([^_].*|_[^_].*|_)?$",
         "headers": [
           { "key": "Content-Security-Policy", "value": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" },
           { "key": "Referrer-Policy", "value": "no-referrer" },

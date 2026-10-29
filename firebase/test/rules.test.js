@@ -25,8 +25,12 @@ const OTHER_CODE = 'ZyXwVuTsRqPoNmLkJiHg-_'
 const HOUR = 60 * 60 * 1000
 const DAY = 24 * HOUR
 
-/** A Firestore client signed in as [user]. */
-const as = (user) => env.authenticatedContext(user.uid, { email: user.email }).firestore()
+/** A Firestore client signed in as [user], with a verified email address (Google, or an email link). */
+const as = (user) => env.authenticatedContext(user.uid, { email: user.email, email_verified: true }).firestore()
+/** A Firestore client signed in as [user] whose email address is not verified (a password sign-up, say). */
+const unverified = (user) => env.authenticatedContext(user.uid, { email: user.email, email_verified: false }).firestore()
+/** A Firestore client signed in as [user] whose token says nothing about verification. */
+const unstated = (user) => env.authenticatedContext(user.uid, { email: user.email }).firestore()
 const signedOut = () => env.unauthenticatedContext().firestore()
 const admin = (fn) => env.withSecurityRulesDisabled((ctx) => fn(ctx.firestore()))
 
@@ -265,6 +269,20 @@ describe('members', () => {
     await assertSucceeds(batch.commit())
   })
 
+  test('the creator leaving for a family of their own hands this one over in the same batch', async () => {
+    await seedFamily(FAMILY, ANNA, BO)
+    const anna = as(ANNA)
+    const batch = writeBatch(anna)
+    batch.update(familyDoc(anna, FAMILY), { createdBy: BO.uid })
+    batch.delete(memberDoc(anna, FAMILY, ANNA.uid))
+    batch.set(familyDoc(anna, 'fam-anna-2'), { createdBy: ANNA.uid, createdAt: serverTimestamp() })
+    batch.set(memberDoc(anna, 'fam-anna-2', ANNA.uid), member(ANNA))
+    batch.set(userDoc(anna, ANNA.uid), { familyId: 'fam-anna-2' })
+    await assertSucceeds(batch.commit())
+    await assertSucceeds(getDoc(familyDoc(as(BO), FAMILY)))
+    await assertSucceeds(deleteDoc(memberDoc(as(BO), FAMILY, BO.uid)))
+  })
+
   test('the creator removes a member; other members remove nobody but themselves', async () => {
     await seedFamily(FAMILY, ANNA, BO, CAI)
     await assertFails(deleteDoc(memberDoc(as(BO), FAMILY, CAI.uid)))
@@ -460,31 +478,207 @@ describe('the backup from before families (users/{uid}/entries)', () => {
 })
 
 describe('deleting a family', () => {
-  test("the last member deletes the family's entries, babies and family document as they leave", async () => {
+  test("the last member deletes the family's entries, babies and their member document; the family stays", async () => {
     await seedFamily(FAMILY, ANNA)
     await seedSynced(FAMILY, 'entries', 'e1')
     await seedSynced(FAMILY, 'babies', 'default')
     const db = as(ANNA)
     await assertSucceeds(deleteDoc(syncedDoc(db, FAMILY, 'entries', 'e1')))
     await assertSucceeds(deleteDoc(syncedDoc(db, FAMILY, 'babies', 'default')))
-    const batch = writeBatch(db)
-    batch.delete(familyDoc(db, FAMILY))
-    batch.delete(memberDoc(db, FAMILY, ANNA.uid))
-    await assertSucceeds(batch.commit())
+    await assertSucceeds(deleteDoc(memberDoc(db, FAMILY, ANNA.uid)))
     await assertSucceeds(deleteDoc(userDoc(db, ANNA.uid)))
+    let left = false
+    await admin(async (a) => { left = (await getDoc(familyDoc(a, FAMILY))).exists() })
+    assert.equal(left, true)
   })
 
-  test('a member who stays deletes no family, and neither does anyone outside it', async () => {
-    await seedFamily(FAMILY, ANNA)
+  test('the family document is never deleted: not by its last member, a member, its creator or anyone else', async () => {
+    await seedFamily(FAMILY, ANNA, BO)
     await seedFamily(OTHER_FAMILY, CAI)
     await assertFails(deleteDoc(familyDoc(as(ANNA), FAMILY)))
+    await assertFails(deleteDoc(familyDoc(as(BO), FAMILY)))
     await assertFails(deleteDoc(familyDoc(as(CAI), FAMILY)))
     await assertFails(deleteDoc(familyDoc(signedOut(), FAMILY)))
-    const cai = as(CAI)
-    const batch = writeBatch(cai)
-    batch.delete(familyDoc(cai, FAMILY))
-    batch.delete(memberDoc(cai, OTHER_FAMILY, CAI.uid))
+    for (const [user, fid] of [[BO, FAMILY], [CAI, OTHER_FAMILY]]) {
+      const db = as(user)
+      const batch = writeBatch(db)
+      batch.delete(familyDoc(db, fid))
+      batch.delete(memberDoc(db, fid, user.uid))
+      await assertFails(batch.commit())
+    }
+  })
+})
+
+describe('taking over a family (security review)', () => {
+  test('P1: a member cannot delete the family and create it again as its creator', async () => {
+    await seedFamily(FAMILY, ANNA, BO)
+    const db = as(BO)
+    const b = writeBatch(db)
+    b.delete(familyDoc(db, FAMILY))
+    b.delete(memberDoc(db, FAMILY, BO.uid))
+    await assertFails(b.commit())
+    // Even after leaving, the family is still there, so creating it again is an update, and refused.
+    await assertSucceeds(deleteDoc(memberDoc(db, FAMILY, BO.uid)))
+    const c = writeBatch(db)
+    c.set(familyDoc(db, FAMILY), { createdBy: BO.uid, createdAt: serverTimestamp() })
+    c.set(memberDoc(db, FAMILY, BO.uid), member(BO))
+    c.set(userDoc(db, BO.uid), { familyId: FAMILY })
+    await assertFails(c.commit())
+    await assertFails(deleteDoc(memberDoc(db, FAMILY, ANNA.uid)))
+  })
+
+  test('P1b: nobody creates a family again once everyone left it, and an outsider reads nothing of it', async () => {
+    await seedFamily(FAMILY, ANNA)
+    await seedSynced(FAMILY, 'entries', 'e1')
+    await assertSucceeds(deleteDoc(memberDoc(as(ANNA), FAMILY, ANNA.uid)))
+    for (const user of [CAI, ANNA]) {
+      const db = as(user)
+      const c = writeBatch(db)
+      c.set(familyDoc(db, FAMILY), { createdBy: user.uid, createdAt: serverTimestamp() })
+      c.set(memberDoc(db, FAMILY, user.uid), member(user))
+      await assertFails(c.commit())
+      await assertFails(getDocs(collection(db, 'families', FAMILY, 'entries')))
+    }
+  })
+
+  test('P9: a member does not make themselves creator by writing the family document again', async () => {
+    await seedFamily(FAMILY, ANNA, BO)
+    await assertFails(setDoc(familyDoc(as(BO), FAMILY), { createdBy: BO.uid, createdAt: serverTimestamp() }))
+    await assertFails(updateDoc(familyDoc(as(BO), FAMILY), { createdBy: BO.uid }))
+  })
+
+  test('the chain of the review: a removed member rejoining, taking over and removing the creator, fails', async () => {
+    await seedFamily(FAMILY, ANNA, BO)
+    await seedSynced(FAMILY, 'entries', 'e1')
+    const bo = as(BO)
+    await assertSucceeds(setDoc(inviteDoc(bo, CODE), inviteData(BO, FAMILY)))
+    await assertSucceeds(deleteDoc(memberDoc(as(ANNA), FAMILY, BO.uid)))
+    await assertFails(joinBatch(bo, BO, FAMILY, CODE).commit())
+    const c = writeBatch(bo)
+    c.set(familyDoc(bo, FAMILY), { createdBy: BO.uid, createdAt: serverTimestamp() })
+    c.set(memberDoc(bo, FAMILY, BO.uid), member(BO))
+    await assertFails(c.commit())
+    await assertFails(deleteDoc(memberDoc(bo, FAMILY, ANNA.uid)))
+    await assertFails(getDocs(collection(bo, 'families', FAMILY, 'entries')))
+  })
+})
+
+describe('handing the family over', () => {
+  test('the creator makes another member the creator, alone or as they leave in the same batch', async () => {
+    await seedFamily(FAMILY, ANNA, BO, CAI)
+    const anna = as(ANNA)
+    const batch = writeBatch(anna)
+    batch.update(familyDoc(anna, FAMILY), { createdBy: BO.uid })
+    batch.delete(memberDoc(anna, FAMILY, ANNA.uid))
+    await assertSucceeds(batch.commit())
+    // Bo is the creator now: he removes members, and hands over in turn.
+    await assertSucceeds(deleteDoc(memberDoc(as(BO), FAMILY, CAI.uid)))
+    await seedFamily('fam-two', BO, CAI)
+    await assertSucceeds(updateDoc(familyDoc(as(BO), 'fam-two'), { createdBy: CAI.uid }))
+  })
+
+  test('only the current creator, while a member, and only to a member', async () => {
+    await seedFamily(FAMILY, ANNA, BO, CAI)
+    await assertFails(updateDoc(familyDoc(as(BO), FAMILY), { createdBy: CAI.uid }))
+    await assertFails(updateDoc(familyDoc(as(BO), FAMILY), { createdBy: BO.uid }))
+    await assertFails(updateDoc(familyDoc(as(ANNA), FAMILY), { createdBy: 'zed' }))
+    await seedFamily('fam-seven', ANNA, { uid: '7', email: 'seven@example.com' })
+    await assertFails(updateDoc(familyDoc(as(ANNA), 'fam-seven'), { createdBy: 7 }))
+    await assertSucceeds(updateDoc(familyDoc(as(ANNA), 'fam-seven'), { createdBy: '7' }))
+    await assertFails(updateDoc(familyDoc(signedOut(), FAMILY), { createdBy: BO.uid }))
+    // Not to a member removed in the same batch.
+    const anna = as(ANNA)
+    const batch = writeBatch(anna)
+    batch.update(familyDoc(anna, FAMILY), { createdBy: BO.uid })
+    batch.delete(memberDoc(anna, FAMILY, BO.uid))
     await assertFails(batch.commit())
+    // A creator who left hands over nothing.
+    await admin((db) => deleteDoc(memberDoc(db, FAMILY, ANNA.uid)))
+    await assertFails(updateDoc(familyDoc(as(ANNA), FAMILY), { createdBy: BO.uid }))
+  })
+
+  test('nothing but createdBy changes', async () => {
+    await seedFamily(FAMILY, ANNA, BO)
+    const ref = familyDoc(as(ANNA), FAMILY)
+    await assertFails(updateDoc(ref, { createdBy: BO.uid, createdAt: Timestamp.fromMillis(1) }))
+    await assertFails(updateDoc(ref, { createdAt: serverTimestamp() }))
+    await assertFails(updateDoc(ref, { createdBy: BO.uid, name: 'Hansen' }))
+    await assertFails(setDoc(ref, { createdBy: BO.uid }))
+    await assertSucceeds(updateDoc(ref, { createdBy: BO.uid }))
+  })
+})
+
+describe('stale and revoked invites (security review)', () => {
+  test("P2: a removed member's own invite no longer lets them (or anyone) in", async () => {
+    await seedFamily(FAMILY, ANNA, BO)
+    const bo = as(BO)
+    await assertSucceeds(setDoc(inviteDoc(bo, CODE), inviteData(BO, FAMILY)))
+    await assertSucceeds(setDoc(inviteDoc(bo, OTHER_CODE), inviteData(BO, FAMILY)))
+    await assertSucceeds(deleteDoc(memberDoc(as(ANNA), FAMILY, BO.uid)))
+    await assertFails(joinBatch(bo, BO, FAMILY, CODE).commit())
+    await assertFails(joinBatch(as(CAI), CAI, FAMILY, OTHER_CODE).commit())
+  })
+
+  test("an invite of a member who left stops working, and works again for nobody when they're back", async () => {
+    await seedFamily(FAMILY, ANNA, BO)
+    await seedInvite(CODE, inviteData(BO, FAMILY))
+    await assertSucceeds(deleteDoc(memberDoc(as(BO), FAMILY, BO.uid)))
+    await assertFails(joinBatch(as(CAI), CAI, FAMILY, CODE).commit())
+    // An invite of a member who stays works.
+    await seedInvite(OTHER_CODE, inviteData(ANNA, FAMILY))
+    await assertSucceeds(joinBatch(as(CAI), CAI, FAMILY, OTHER_CODE).commit())
+  })
+
+  test('P3: an invite to a family whose last member left is refused', async () => {
+    await seedFamily(FAMILY, ANNA)
+    await seedInvite(CODE, inviteData(ANNA, FAMILY))
+    await assertSucceeds(deleteDoc(memberDoc(as(ANNA), FAMILY, ANNA.uid)))
+    await assertFails(joinBatch(as(BO), BO, FAMILY, CODE).commit())
+  })
+
+  test('P3b: an invite to a family document that does not exist is refused', async () => {
+    await seedFamily(FAMILY, ANNA)
+    await seedInvite(CODE, inviteData(ANNA, FAMILY))
+    await admin((db) => deleteDoc(familyDoc(db, FAMILY)))
+    await assertFails(joinBatch(as(BO), BO, FAMILY, CODE).commit())
+  })
+})
+
+describe('verified email addresses (security review)', () => {
+  test('P4: an unverified account creates no family, so it shows nobody its claimed address', async () => {
+    const pose = { uid: 'eve', email: ANNA.email }
+    for (const db of [unverified(pose), unstated(pose)]) {
+      await assertFails(createFamilyBatch(db, pose, 'fam-eve').commit())
+    }
+    await assertSucceeds(createFamilyBatch(as(pose), pose, 'fam-eve').commit())
+  })
+
+  test('a leftover member document makes no unverified account the creator of a family it never had', async () => {
+    const eve = { uid: 'eve', email: ANNA.email }
+    await admin((db) => setDoc(memberDoc(db, 'fam-eve', eve.uid), { email: eve.email, joinedAt: Timestamp.now() }))
+    const claim = { createdBy: eve.uid, createdAt: serverTimestamp() }
+    await assertFails(setDoc(familyDoc(unverified(eve), 'fam-eve'), claim))
+    const odd = env.authenticatedContext(eve.uid, { email: eve.email, email_verified: 'true' }).firestore()
+    await assertFails(setDoc(familyDoc(odd, 'fam-eve'), claim))
+    await assertSucceeds(setDoc(familyDoc(as(eve), 'fam-eve'), claim))
+  })
+
+  test('an unverified account joins no family', async () => {
+    await seedFamily(FAMILY, ANNA)
+    await seedInvite(CODE, inviteData(ANNA, FAMILY))
+    await assertFails(joinBatch(unverified(BO), BO, FAMILY, CODE).commit())
+    await assertFails(joinBatch(unstated(BO), BO, FAMILY, CODE).commit())
+    await assertSucceeds(joinBatch(as(BO), BO, FAMILY, CODE).commit())
+  })
+
+  test('the spoofed inviter of the review: an unverified member invites nobody, with or without an email', async () => {
+    await seedFamily('fam-eve', { uid: 'eve', email: 'grandma@example.com' })
+    const eve = unverified({ uid: 'eve', email: 'grandma@example.com' })
+    const eveAs = { uid: 'eve' }
+    await assertFails(setDoc(inviteDoc(eve, CODE), inviteData(eveAs, 'fam-eve', DAY, { email: 'grandma@example.com' })))
+    await assertFails(setDoc(inviteDoc(eve, CODE), inviteData(eveAs, 'fam-eve')))
+    await assertFails(setDoc(inviteDoc(unstated({ uid: 'eve', email: 'grandma@example.com' }), CODE), inviteData(eveAs, 'fam-eve')))
+    await assertSucceeds(setDoc(inviteDoc(as({ uid: 'eve', email: 'grandma@example.com' }), CODE), inviteData(eveAs, 'fam-eve')))
   })
 })
 

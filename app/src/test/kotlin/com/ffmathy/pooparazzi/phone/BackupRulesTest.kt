@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.phone
 import android.app.Application
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.phone.account.ConsentPrefs
 import com.ffmathy.pooparazzi.phone.account.EmailLinkPrefs
 import com.ffmathy.pooparazzi.phone.account.FamilyPrefs
 import com.ffmathy.pooparazzi.phone.account.LinkPurpose
@@ -65,10 +66,13 @@ class BackupRulesTest {
         assertTrue(prefsFile("${EmailLinkPrefs.FILE}.xml").exists())
         FamilyPrefs(app).setFamily("uid", "fam")
         assertTrue(prefsFile("${FamilyPrefs.FILE}.xml").exists())
+        // And the consent to the backup (BABIES_AND_BACKUP §3.6: a new phone asks again).
+        ConsentPrefs(app).agree("uid")
+        assertTrue(prefsFile("${ConsentPrefs.FILE}.xml").exists())
 
         val local = setOf(
             "${SurfacePrefs.FILE}.xml", "${PrefsWidgetMemoStore.FILE}.xml", "${WelcomePrefs.FILE}.xml",
-            "${EmailLinkPrefs.FILE}.xml", "${FamilyPrefs.FILE}.xml",
+            "${EmailLinkPrefs.FILE}.xml", "${FamilyPrefs.FILE}.xml", "${ConsentPrefs.FILE}.xml",
         )
         val rules = excludedPrefs(R.xml.data_extraction_rules)
         assertEquals(local, rules["cloud-backup"])

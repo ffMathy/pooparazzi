@@ -56,6 +56,11 @@ data class DeleteState(
     val google: Boolean,
     /** The email link is on its way: its link completes the deletion. */
     val linkSent: Boolean = false,
+    /**
+     * A deletion link opened the app while the confirmation was not open: it waits here, and "Delete" uses it. A link
+     * never deletes the account without the confirmation on screen.
+     */
+    val link: String? = null,
     val busy: Boolean = false,
     val problem: DeleteProblem? = null,
 )
@@ -241,8 +246,15 @@ class AccountViewModel(
         val sent = accounts.sentLink
         if (user != null) {
             if (sent?.purpose == LinkPurpose.DELETE_ACCOUNT && accounts.isSignInLink(link)) {
-                form.update { it.copy(delete = (it.delete ?: DeleteState(google = false)).copy(linkSent = true)) }
-                startDeletion { accounts.reauthenticateWithLink(link) }
+                val open = form.value.delete
+                if (open != null && !open.google) {
+                    // The confirmation is open and asked for this link: it completes the deletion.
+                    form.update { it.copy(delete = open.copy(linkSent = true)) }
+                    startDeletion { accounts.reauthenticateWithLink(link) }
+                } else {
+                    // Asked for earlier (the app was closed meanwhile, say): ask again before deleting anything.
+                    form.update { it.copy(delete = DeleteState(google = false, link = link)) }
+                }
             }
             return
         }
@@ -284,7 +296,12 @@ class AccountViewModel(
         form.update { it.copy(delete = DeleteState(google = user.google)) }
     }
 
-    fun onDeleteDismiss() = form.update { f -> if (f.delete?.busy == true) f else f.copy(delete = null) }
+    /** Cancels the deletion: also its email link, which must not delete the account when it opens the app later. */
+    fun onDeleteDismiss() {
+        if (form.value.delete?.busy == true) return
+        form.update { it.copy(delete = null) }
+        if (accounts.sentLink?.purpose == LinkPurpose.DELETE_ACCOUNT) accounts.forgetSentLink()
+    }
 
     /**
      * Confirms the deletion. A Google account signs in again ([activity]) and the deletion goes on; an email account
@@ -293,6 +310,11 @@ class AccountViewModel(
     fun onDeleteConfirm(activity: Activity?) {
         val dialog = form.value.delete ?: return
         if (dialog.busy) return
+        val link = dialog.link
+        if (link != null) {
+            startDeletion { accounts.reauthenticateWithLink(link) }
+            return
+        }
         if (dialog.google) {
             startDeletion {
                 if (activity != null) accounts.reauthenticateWithGoogle(activity) else AccountResult.Failed(AccountError.OTHER)
@@ -326,7 +348,7 @@ class AccountViewModel(
             when (outcome) {
                 DeleteOutcome.Done -> form.value = Form()
                 DeleteOutcome.Cancelled -> setDelete { it.copy(busy = false) }
-                is DeleteOutcome.Failed -> setDelete { it.copy(busy = false, problem = outcome.problem, linkSent = false) }
+                is DeleteOutcome.Failed -> setDelete { it.copy(busy = false, problem = outcome.problem, linkSent = false, link = null) }
             }
         }
     }

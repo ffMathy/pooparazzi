@@ -203,6 +203,23 @@
     <string name="account_delete_link_prompt">Vi sender dig et link på e-mail til at bekræfte. Åbn det på denne telefon.</string>
     <string name="account_delete_send_link">Send mig et link</string>
     <string name="account_delete_link_sent">Tjek din e-mail. Når du trykker på linket i den på denne telefon, slettes din konto.</string>
+    <string name="account_delete_link_ready">Dette link sletter din konto. Tryk på Slet for at fortsætte.</string>
+    <string name="family_error_invite_refused">Kunne ikke oprette en invitation. Du er måske blevet fjernet fra familien, eller din e-mailadresse er ikke bekræftet endnu.</string>
+
+    <!-- Samtykket før den første upload -->
+    <string name="consent_title">Tag backup i Google Firebase?</string>
+    <string name="consent_intro">Du er logget ind som %1$s. Der er ikke uploadet noget endnu. Før der bliver det, skal du sige ja til dette:</string>
+    <string name="consent_what_title">Hvad der uploades</string>
+    <string name="consent_what">Din log (måltider, bleer og søvn), dine børns navne og din e-mailadresse. En log som denne kan sige noget om dit barns helbred.</string>
+    <string name="consent_who_title">Hvem der ser det</string>
+    <string name="consent_who">Du og medlemmerne af din familie: alle i den ser familiens log, børnenes navne og medlemmernes e-mailadresser.</string>
+    <string name="consent_where_title">Hvor</string>
+    <string name="consent_where">Google Firebase. Databasen ligger i EU; Google behandler den for os og bruger den ikke til andet.</string>
+    <string name="consent_withdraw_title">Hvis du fortryder</string>
+    <string name="consent_withdraw">Log ud for ikke at uploade mere, forlad familien, eller slet din konto (Indstillinger › Konto) for at slette det gemte.</string>
+    <string name="consent_policy">Detaljerne står i %1$s.</string>
+    <string name="consent_agree">Jeg giver samtykke</string>
+    <string name="consent_decline">Ikke nu, log ud</string>
 
     <!-- Indstillinger › Familie -->
     <string name="settings_section_family">Familie</string>
@@ -211,7 +228,7 @@
     <string name="family_you_creator">Dig · Startede familien</string>
     <string name="family_alone">Kun dig indtil videre. Invitér nogen for at dele loggen og børnene.</string>
     <string name="family_invite">Invitér nogen</string>
-    <string name="family_invite_text">Bliv en del af min familie i Pooparazzi, så vi deler babyloggen: %1$s (virker én gang og i 7 dage)</string>
+    <string name="family_invite_text">Bliv en del af min familie i Pooparazzi, så vi deler babyloggen: %1$s (virker én gang og i 6 dage)</string>
     <string name="family_invite_chooser">Del invitationen</string>
     <string name="family_leave">Forlad familien</string>
     <string name="family_leave_title">Forlad familien?</string>
@@ -220,7 +237,7 @@
     <string name="family_remove">Fjern</string>
     <string name="family_remove_cd">Fjern %1$s</string>
     <string name="family_remove_title">Fjern %1$s?</string>
-    <string name="family_remove_body">De kan ikke længere se familiens log.</string>
+    <string name="family_remove_body">De kan ikke længere se familiens log fremover. Det, der allerede er på deres telefon, bliver der.</string>
     <string name="family_loading">Henter familien…</string>
     <string name="family_waiting">Sætter din familie op…</string>
     <string name="family_error">Kunne ikke hente familien. Tryk for at prøve igen.</string>

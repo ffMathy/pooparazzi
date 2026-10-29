@@ -279,6 +279,24 @@
     <string name="account_delete_link_prompt">We\'ll email you a link to confirm. Open it on this phone.</string>
     <string name="account_delete_send_link">Email me a link</string>
     <string name="account_delete_link_sent">Check your email. Tapping the link in it on this phone deletes your account.</string>
+    <string name="account_delete_link_ready">This link deletes your account. Tap Delete to go ahead.</string>
+    <string name="family_error_invite_refused">Couldn\'t create an invite. You may have been removed from the family, or your email address isn\'t verified yet.</string>
+
+    <!-- The consent before the first upload (BABIES_AND_BACKUP §3.6) -->
+    <string name="consent_title">Back up to Google Firebase?</string>
+    <string name="consent_intro">You\'re signed in as %1$s. Nothing has been uploaded yet. Before anything is, please agree to this:</string>
+    <string name="consent_what_title">What is uploaded</string>
+    <string name="consent_what">Your log (feeds, diapers and sleep), your babies\' names and your email address. A log like this can say something about your baby\'s health.</string>
+    <string name="consent_who_title">Who sees it</string>
+    <string name="consent_who">You and the members of your family: everyone in it sees the family\'s log, the babies\' names and the members\' email addresses.</string>
+    <string name="consent_where_title">Where</string>
+    <string name="consent_where">Google Firebase. The database is in the EU; Google processes it for us and uses it for nothing else.</string>
+    <string name="consent_withdraw_title">Changing your mind</string>
+    <string name="consent_withdraw">Sign out to upload nothing more, leave the family, or delete your account (Settings › Account) to delete what is stored.</string>
+    <!-- %1$s is account_privacy_link, shown as a link -->
+    <string name="consent_policy">Details are in the %1$s.</string>
+    <string name="consent_agree">I agree</string>
+    <string name="consent_decline">Not now, sign out</string>
 
     <!-- Settings › Family (BABIES_AND_BACKUP §3.4) -->
     <string name="settings_section_family">Family</string>
@@ -289,7 +307,7 @@
     <string name="family_alone">Only you so far. Invite someone to share the log and the babies.</string>
     <string name="family_invite">Invite someone</string>
     <!-- The text of the share sheet; %1$s is the invite link -->
-    <string name="family_invite_text">Join my family on Pooparazzi to share our baby log: %1$s (works once, for 7 days)</string>
+    <string name="family_invite_text">Join my family on Pooparazzi to share our baby log: %1$s (works once, for 6 days)</string>
     <string name="family_invite_chooser">Share the invite</string>
     <string name="family_leave">Leave family</string>
     <string name="family_leave_title">Leave the family?</string>
@@ -300,7 +318,7 @@
     <string name="family_remove_cd">Remove %1$s</string>
     <!-- %1$s is the member's email -->
     <string name="family_remove_title">Remove %1$s?</string>
-    <string name="family_remove_body">They\'ll stop seeing the family\'s log.</string>
+    <string name="family_remove_body">They\'ll stop seeing the family\'s log from now on. What\'s already on their phone stays there.</string>
     <string name="family_loading">Loading the family…</string>
     <string name="family_waiting">Setting up your family…</string>
     <string name="family_error">Couldn\'t load the family. Tap to try again.</string>

@@ -13,6 +13,7 @@ import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.phone.app.AppearanceInputs
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import com.ffmathy.pooparazzi.phone.ui.account.AccountRoute
+import com.ffmathy.pooparazzi.phone.ui.account.ConsentRoute
 import com.ffmathy.pooparazzi.phone.ui.account.WelcomeRoute
 import com.ffmathy.pooparazzi.phone.ui.family.JoinRoute
 import com.ffmathy.pooparazzi.phone.ui.history.HistoryRoute
@@ -74,6 +75,8 @@ data class AccountLinks(
  * @param launch a deep link from a widget or notification that Home has not handled yet; [onLaunchHandled] reports it.
  * @param welcome the first-run Welcome (BABIES_AND_BACKUP §3.1) comes before everything else; [onWelcomeDone] when it
  *   has been answered. A deep link waits behind it.
+ * @param consentNeeded the signed-in account has not agreed to the backup yet (BABIES_AND_BACKUP §3.6): the consent
+ *   screen comes next, before everything else; links wait behind it.
  * @param onLaunchedSheetClosed a sheet such a link opened has closed (see `HomeViewModel.launchedSheetClosed`).
  */
 @Composable
@@ -85,6 +88,7 @@ fun PooparazziPhoneApp(
     onLaunchHandled: (HomeLaunch) -> Unit = {},
     welcome: Boolean = false,
     onWelcomeDone: () -> Unit = {},
+    consentNeeded: Boolean = false,
     onLaunchedSheetClosed: () -> Unit = {},
     links: AccountLinks = AccountLinks(),
 ) {
@@ -93,6 +97,8 @@ fun PooparazziPhoneApp(
         LaunchedEffect(night) { onNightResolved(night) }
         if (welcome) {
             WelcomeRoute(onDone = onWelcomeDone)
+        } else if (consentNeeded) {
+            ConsentRoute()
         } else {
             PooparazziNavHost(
                 launch = launch,

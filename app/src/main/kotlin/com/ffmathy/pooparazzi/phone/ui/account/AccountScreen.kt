@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone.ui.account
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -322,11 +323,15 @@ private fun EmailField(state: AccountUiState, actions: AccountActions, imeAction
 
 /** "By continuing you agree to the privacy policy", the last words a link to it. */
 @Composable
-private fun PrivacyConsent(onOpen: () -> Unit) {
+private fun PrivacyConsent(onOpen: () -> Unit) = PolicyLinkText(R.string.account_privacy_consent, onOpen)
+
+/** The sentence [sentence] (with a `%1$s` for the words "privacy policy"), those words a link to the policy. */
+@Composable
+internal fun PolicyLinkText(@StringRes sentence: Int, onOpen: () -> Unit, modifier: Modifier = Modifier.padding(top = 4.dp)) {
     val colors = MaterialTheme.colorScheme
     val open by rememberUpdatedState(onOpen)
     val link = stringResource(R.string.account_privacy_link)
-    val sentence = stringResource(R.string.account_privacy_consent, link)
+    val sentence = stringResource(sentence, link)
     val text = remember(sentence, link, colors.onSurface) {
         buildAnnotatedString {
             val start = sentence.indexOf(link).coerceAtLeast(0)
@@ -344,7 +349,7 @@ private fun PrivacyConsent(onOpen: () -> Unit) {
         text,
         style = MaterialTheme.typography.bodySmall,
         color = colors.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp),
+        modifier = modifier,
     )
 }
 
@@ -398,7 +403,8 @@ private fun SignedIn(state: AccountUiState, email: String, actions: AccountActio
 /**
  * "Delete account?" in place of "Delete account…": what is deleted and what stays, then how it is confirmed: Google
  * accounts sign in with Google again ("Delete"); email accounts get a link ("Email me a link") that completes the
- * deletion when it opens the app. Errors in words, a partial failure as it is. Inline rather than a dialog window, so
+ * deletion when it opens the app while this is open. A deletion link that opens the app while it is not opens it
+ * with "Delete", which uses that link. Errors in words, a partial failure as it is. Inline rather than a dialog window, so
  * it sits with the rest of the screen; Back cancels it.
  */
 @Composable
@@ -423,6 +429,7 @@ private fun DeleteConfirmation(dialog: DeleteState, actions: AccountActions) {
             )
             BodyText(stringResource(R.string.account_delete_body))
             val prompt = when {
+                dialog.link != null -> R.string.account_delete_link_ready
                 dialog.google -> R.string.account_delete_google_prompt
                 dialog.linkSent -> R.string.account_delete_link_sent
                 else -> R.string.account_delete_link_prompt
@@ -430,7 +437,7 @@ private fun DeleteConfirmation(dialog: DeleteState, actions: AccountActions) {
             Text(
                 stringResource(prompt),
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (dialog.linkSent) colors.onSurface else colors.onSurfaceVariant,
+                color = if (dialog.linkSent || dialog.link != null) colors.onSurface else colors.onSurfaceVariant,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
             dialog.problem?.let { ErrorLine(stringResource(it.message())) }
@@ -439,7 +446,7 @@ private fun DeleteConfirmation(dialog: DeleteState, actions: AccountActions) {
                     Text(stringResource(CoreR.string.action_cancel), style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
                 }
                 val confirm = when {
-                    dialog.google -> stringResource(CoreR.string.action_delete)
+                    dialog.google || dialog.link != null -> stringResource(CoreR.string.action_delete)
                     dialog.linkSent -> stringResource(R.string.account_send_again)
                     else -> stringResource(R.string.account_delete_send_link)
                 }
@@ -500,7 +507,7 @@ private fun AccountField(
 
 /** A full-width 56 dp filled button (the sheets' Save colours). */
 @Composable
-private fun PrimaryButton(text: String, onClick: () -> Unit, enabled: Boolean) {
+internal fun PrimaryButton(text: String, onClick: () -> Unit, enabled: Boolean) {
     val colors = MaterialTheme.colorScheme
     val night = LocalNightLight.current.isNight
     Button(

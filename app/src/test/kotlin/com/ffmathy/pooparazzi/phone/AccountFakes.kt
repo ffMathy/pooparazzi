@@ -16,6 +16,7 @@ import com.ffmathy.pooparazzi.phone.account.Accounts
 import com.ffmathy.pooparazzi.phone.account.Families
 import com.ffmathy.pooparazzi.phone.account.Family
 import com.ffmathy.pooparazzi.phone.account.FamilyCache
+import com.ffmathy.pooparazzi.phone.account.FamilyExit
 import com.ffmathy.pooparazzi.phone.account.FamilyResult
 import com.ffmathy.pooparazzi.phone.account.FamilyStore
 import com.ffmathy.pooparazzi.phone.account.InviteCheck
@@ -45,6 +46,11 @@ class FakeAccounts(
     private val current = MutableStateFlow(signedIn)
     override val user: StateFlow<AccountUser?> = current.asStateFlow()
     override var sentLink: SentLink? = null
+
+    override fun forgetSentLink() {
+        calls += "forgetSentLink"
+        sentLink = null
+    }
 
     val calls = mutableListOf<String>()
     var nextUser = AccountUser("uid-1", "parent@example.com", google = false)
@@ -176,12 +182,17 @@ class FakeFamilies(account: CloudAccount? = null) : Families {
     override suspend fun holdForDeletion(held: Boolean) {
         holds += held
     }
+
+    override suspend fun deleteAccountData(uid: String) {
+        calls += "deleteAccountData:$uid"
+    }
 }
 
 /**
  * [FamilyStore] in memory, refusing what `firebase/firestore.rules` refuses where the app relies on it: a non-member
- * reads no member document (isMember is false), a used invite is gone, the family goes only with its last member.
- * Each call is recorded; [failWith] makes every call throw.
+ * reads no member document (isMember is false), a used invite is gone, the family document is never deleted (an empty
+ * member list is a family everyone left), only its creator hands a family over, and only to a member. Each call is
+ * recorded; [failWith] makes every call throw.
  */
 class FakeFamilyStore : FamilyStore {
     val users = mutableMapOf<String, String>()
@@ -212,9 +223,13 @@ class FakeFamilyStore : FamilyStore {
         return members[familyId]?.containsKey(uid) == true
     }
 
-    override suspend fun createFamily(familyId: String, uid: String, email: String, leaving: String?) {
-        record("createFamily:$familyId:$uid:$email" + (leaving?.let { ":leaving=$it" } ?: ""))
-        leaving?.let { members[it]?.remove(uid) }
+    override suspend fun createFamily(familyId: String, uid: String, email: String, leaving: String?, handOverTo: String?) {
+        record("createFamily:$familyId:$uid:$email" + (leaving?.let { ":leaving=$it" } ?: "") + (handOverTo?.let { ":handOverTo=$it" } ?: ""))
+        if (familyId in creators) throw CloudException(CloudError.OTHER) // a family id is used once
+        leaving?.let { old ->
+            handOverTo?.let { handOver(old, uid, it) }
+            members[old]?.remove(uid)
+        }
         creators[familyId] = uid
         members[familyId] = mutableMapOf(uid to StoredMember(uid, email, ++clock))
         users[uid] = familyId
@@ -230,6 +245,13 @@ class FakeFamilyStore : FamilyStore {
     override suspend fun createInvite(code: String, invite: StoredInvite) {
         record("createInvite:$code")
         invites[code] = invite
+    }
+
+    override suspend fun deleteInvite(code: String) {
+        record("deleteInvite:$code")
+        // The rules refuse to delete what is not there (a used invite, say), and someone else's.
+        val invite = invites[code] ?: throw CloudException(CloudError.OTHER)
+        invites.remove(code, invite)
     }
 
     override suspend fun invite(code: String): StoredInvite? = invites[code].also { record("invite:$code") }
@@ -250,12 +272,16 @@ class FakeFamilyStore : FamilyStore {
 
     override suspend fun leave(familyId: String, uid: String) {
         record("leave:$familyId:$uid")
-        val family = members[familyId] ?: return
+        val family = members[familyId]?.takeIf { uid in it } ?: return
+        val others = family.values.filter { it.uid != uid }
+        if (creators[familyId] == uid) FamilyExit.successor(uid, others)?.let { handOver(familyId, uid, it) }
         family.remove(uid)
-        if (family.isEmpty()) {
-            members.remove(familyId)
-            creators.remove(familyId)
-        }
+        // The last member's entries and babies would go too; the family document (its creator) stays.
+    }
+
+    private fun handOver(familyId: String, from: String, to: String) {
+        if (creators[familyId] != from || members[familyId]?.containsKey(to) != true) throw CloudException(CloudError.OTHER)
+        creators[familyId] = to
     }
 
     override suspend fun deleteUser(uid: String) {
@@ -294,6 +320,15 @@ class MemoryFamilyCache : FamilyCache {
     override fun heldForDeletion(uid: String): Boolean = uid in held
     override fun setHeldForDeletion(uid: String, held: Boolean) {
         if (held) this.held += uid else this.held -= uid
+    }
+
+    val invites = mutableMapOf<String, MutableMap<String, Long>>()
+    override fun invites(uid: String): Map<String, Long> = invites[uid].orEmpty().toMap()
+    override fun addInvite(uid: String, code: String, expiresAtMillis: Long) {
+        invites.getOrPut(uid) { mutableMapOf() }[code] = expiresAtMillis
+    }
+    override fun removeInvite(uid: String, code: String) {
+        invites[uid]?.remove(code)
     }
 }
 

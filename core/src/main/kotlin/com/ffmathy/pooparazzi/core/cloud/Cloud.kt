@@ -64,8 +64,10 @@ interface CloudStore {
     suspend fun babiesAfter(familyId: String, cursor: CloudCursor?, limit: Int): CloudPage<Baby>
 
     /**
-     * Takes account [uid] out of the backup before the account is deleted: removes its membership of [familyId], and
-     * when it was the family's last member deletes the family's entries, babies and the family itself.
+     * Takes account [uid] out of the backup before the account is deleted: removes its membership of [familyId] (handing
+     * the family over to the longest-standing other member when [uid] created it), and when it was the family's last
+     * member first deletes the family's entries and babies (stopping as soon as someone else joins). The family
+     * document itself stays, as a tombstone.
      */
     suspend fun deleteAll(uid: String, familyId: String)
 

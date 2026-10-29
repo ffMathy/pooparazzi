@@ -185,5 +185,6 @@ private fun FamilyConfirmDialog(confirm: FamilyConfirm, busy: Boolean, actions: 
 internal fun FamilyError.message(): Int = when (this) {
     FamilyError.NO_CONNECTION -> R.string.account_error_no_connection
     FamilyError.NOT_READY -> R.string.family_waiting
+    FamilyError.INVITE_REFUSED -> R.string.family_error_invite_refused
     FamilyError.OTHER -> R.string.account_error_other
 }

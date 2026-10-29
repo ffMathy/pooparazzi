@@ -39,11 +39,19 @@ object AppAccounts {
     private var service: FamilyService? = null
     private var backend: CloudBackend? = null
 
+    @Volatile
+    private var currentConsent: BackupConsent? = null
+
     /** The accounts: [NoAccounts] until [init] (and in builds without a configuration). */
     val accounts: Accounts get() = current ?: NoAccounts
 
     /** The signed-in account's family: [NoFamilies] until [init] (and in builds without a configuration). */
     val families: Families get() = currentFamilies ?: NoFamilies
+
+    /** Who agreed to the backup on this phone (nobody until [init], and in builds without a configuration). */
+    val consent: BackupConsent get() = currentConsent ?: noConsent
+
+    private val noConsent = MemoryConsent()
 
     /**
      * Sets up the accounts and returns the backend the backup needs, or null without a configuration. Call once, from
@@ -72,11 +80,14 @@ object AppAccounts {
                 val store = FirestoreCloudStore(firestore, auth)
                 val familyStore = FirebaseFamilyStore(firestore, store)
                 val domain = FirebaseConfig.hostingDomain(app)
+                val consent = ConsentPrefs(app)
+                lateinit var families: FamilyService
                 val accounts = FirebaseAccounts(
                     app, auth, FirebaseConfig.webClientId(app), domain, EmailLinkPrefs(app),
-                    deleteUserDocument = familyStore::deleteUser,
+                    deleteUserData = { uid -> families.deleteAccountData(uid) },
                 )
-                val families = FamilyService(familyStore, accounts.user, FamilyPrefs(app), scope, domain)
+                families = FamilyService(familyStore, accounts.user, FamilyPrefs(app), scope, domain, consent = consent)
+                currentConsent = consent
                 current = accounts
                 currentFamilies = families
                 service = families
@@ -108,15 +119,17 @@ object AppAccounts {
 
     /** Replaces the accounts (fakes) for tests. */
     @VisibleForTesting
-    fun install(accounts: Accounts, families: Families = NoFamilies) {
+    fun install(accounts: Accounts, families: Families = NoFamilies, consent: BackupConsent? = null) {
         current = accounts
         currentFamilies = families
+        currentConsent = consent
     }
 
     @VisibleForTesting
     fun reset() {
         current = null
         currentFamilies = null
+        currentConsent = null
         service = null
         backend = null
     }

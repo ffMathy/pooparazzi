@@ -64,31 +64,42 @@ class FirestoreCloudStore(
     override suspend fun deleteAll(uid: String, familyId: String) = call {
         // An upload still queued must not land after the deletion.
         commits.drain()
-        val family = firestore.collection(COLLECTION_FAMILIES).document(familyId)
-        val member = family.collection(COLLECTION_MEMBERS).document(uid)
-        // Read while still a member (the rules let members alone read): the last one out takes the family's data along.
-        val members = try {
-            family.collection(COLLECTION_MEMBERS).limit(2).get(Source.SERVER).awaitWithin()
+        FamilyExit(exits).leave(familyId, uid)
+    }
+
+    /** [FamilyExit]'s calls in Firestore: reads from the server, writes through the commit gate. */
+    internal val exits: ExitStore = object : ExitStore {
+        override suspend fun membersOrNull(familyId: String): List<StoredMember>? = try {
+            family(familyId).collection(COLLECTION_MEMBERS).get(Source.SERVER).awaitWithin().documents.map { doc ->
+                StoredMember(
+                    doc.id,
+                    doc.getString(FirebaseFamilyStore.FIELD_EMAIL).orEmpty(),
+                    doc.getTimestamp(FirebaseFamilyStore.FIELD_JOINED_AT)?.toDate()?.time ?: 0,
+                )
+            }
         } catch (e: FirebaseFirestoreException) {
-            // Refused while signed in: no longer a member (an earlier attempt got this far, or removed). Nothing to do.
-            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED && auth.currentUser != null) return@call
-            throw e
+            // Refused while signed in: no longer a member (an earlier attempt got this far, or removed).
+            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED && auth.currentUser != null) null else throw e
         }
-        if (members.documents.all { it.id == uid }) {
-            deleteCollection(family.collection(COLLECTION_ENTRIES))
-            deleteCollection(family.collection(COLLECTION_BABIES))
-            // The family goes in one batch with its last member's document, as the rules require.
+
+        override suspend fun creatorOf(familyId: String): String =
+            family(familyId).get(Source.SERVER).awaitWithin().getString(FirebaseFamilyStore.FIELD_CREATED_BY).orEmpty()
+
+        override suspend fun deletePage(familyId: String, collection: String): Int =
+            deletePage(family(familyId).collection(collection))
+
+        override suspend fun leave(familyId: String, uid: String, handOverTo: String?) {
+            val family = family(familyId)
             commits.commit {
                 firestore.batch().apply {
-                    delete(family)
-                    delete(member)
+                    handOverTo?.let { update(family, FirebaseFamilyStore.FIELD_CREATED_BY, it) }
+                    delete(family.collection(COLLECTION_MEMBERS).document(uid))
                 }.commit()
             }
-        } else {
-            commits.commit { member.delete() }
         }
-        Unit
     }
+
+    private fun family(familyId: String) = firestore.collection(COLLECTION_FAMILIES).document(familyId)
 
     private fun collection(familyId: String, name: String): CollectionReference =
         firestore.collection(COLLECTION_FAMILIES).document(familyId).collection(name)
@@ -120,13 +131,19 @@ class FirestoreCloudStore(
 
     /** Deletes every document of [collection], a page at a time. */
     internal suspend fun deleteCollection(collection: CollectionReference) {
-        while (true) {
-            val page = collection.limit(DELETE_PAGE.toLong()).get(Source.SERVER).awaitWithin()
-            if (page.isEmpty) break
-            val batch = firestore.batch()
-            page.documents.forEach { batch.delete(it.reference) }
-            commits.commit { batch.commit() }
+        while (deletePage(collection) > 0) {
+            // The next page.
         }
+    }
+
+    /** Deletes up to [DELETE_PAGE] documents of [collection] in one batch; returns how many. */
+    private suspend fun deletePage(collection: CollectionReference): Int {
+        val page = collection.limit(DELETE_PAGE.toLong()).get(Source.SERVER).awaitWithin()
+        if (page.isEmpty) return 0
+        val batch = firestore.batch()
+        page.documents.forEach { batch.delete(it.reference) }
+        commits.commit { batch.commit() }
+        return page.size()
     }
 
     private suspend fun <T> Task<T>.awaitWithin(): T = awaitWithin(timeoutMillis)

@@ -10,6 +10,7 @@
     <exclude domain="sharedpref" path="account_welcome.xml" />
     <exclude domain="sharedpref" path="account_email_link.xml" />
     <exclude domain="sharedpref" path="account_family.xml" />
+    <exclude domain="sharedpref" path="account_consent.xml" />
     <exclude domain="file" path="datastore/pooparazzi_settings.preferences_pb" />
     <exclude domain="file" path="datastore/pooparazzi_cloud.preferences_pb" />
 </full-backup-content>

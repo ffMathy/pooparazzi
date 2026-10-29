@@ -7,7 +7,7 @@ The phone app can back the log up to a small Firebase backend and share it with 
 | Accounts | Authentication: Google sign-in and **email link** (passwordless) sign-in. No passwords. | Email address (and, for Google accounts, the Google profile's name and picture link, unused) |
 | Families | Cloud Firestore, `users/{uid}`, `families/{fid}` and its `members` | Which family an account is in; each member's email and join time |
 | The shared log and babies | Cloud Firestore, `families/{fid}/entries` and `families/{fid}/babies` | Each log entry as JSON (times, kind, feed type and side, diaper details, the baby id) and each baby as JSON (id, **name**, last change), with the server time of the write |
-| Invites | Cloud Firestore, `invites/{code}` | An unused invite to a family, for at most 7 days |
+| Invites | Cloud Firestore, `invites/{code}` | An unused invite to a family, for 6 days (the rules allow at most 7) |
 | The website | Hosting, `https://<project-id>.web.app` (also served at `<project-id>.firebaseapp.com`) | The App Links file, the invite and sign-in landing pages, the privacy policy |
 
 Baby **names are uploaded** now: a family shares its babies, names included, so every member's phone shows the same babies. Only the members of the family can read them (the rules below), and the privacy policy says so. Each device's *current* baby is still its own and never uploaded.
@@ -16,7 +16,7 @@ Baby **names are uploaded** now: a family shares its babies, names included, so 
 
 ```
 users/{uid}                         { familyId }                                the account's family
-families/{fid}                      { createdBy, createdAt }                    created once, never changed
+families/{fid}                      { createdBy, createdAt }                    created once, never deleted; createdBy handed over
 families/{fid}/members/{uid}        { email, joinedAt, invite? }                who is in it
 families/{fid}/entries/{entryId}    { json, syncedAt }                          the shared log (EntryJson, ≤ 2 KB)
 families/{fid}/babies/{babyId}      { json, syncedAt }                          the shared babies: {id, name, updatedAtMillis}
@@ -25,10 +25,12 @@ users/{uid}/entries/{entryId}       { json, syncedAt }                          
 ```
 
 - **Every account is in exactly one family.** The first sign-in of an account without `users/{uid}.familyId` creates its own family in one batch: the family, the creator's member document and the users document. A family of one is simply a backup.
-- **Inviting.** A member creates an invite (expiring in 7 days, with their email so the invitee sees who asked) and shares `https://<project-id>.web.app/join/<code>`. The invitee opens it on a phone with the app (App Links, below), signs in if needed, confirms, and joins in one batch: their member document (naming the invite), their users document, and the invite deleted. An invite therefore lets exactly one account in, once.
+- **Consent first.** Nothing is written to Firestore for an account (no family created or joined, no log, babies or email) until it has tapped "I agree" on the app's consent screen on that phone (BABIES_AND_BACKUP §3.6). Signing out withdraws it there.
+- **Inviting.** A member creates an invite (expiring in 6 days, with their email so the invitee sees who asked) and shares `https://<project-id>.web.app/join/<code>`. The invitee opens it on a phone with the app (App Links, below), signs in if needed, confirms, and joins in one batch: their member document (naming the invite), their users document, and the invite deleted. An invite therefore lets exactly one account in, once.
 - **Joining merges.** The joiner's phone keeps its log and babies and uploads them into the family; the family's log and babies come down. Every phone's first baby has the id `default`, so two members' first babies become one baby (usually the same child; rename or keep apart in the app).
-- **Leaving** deletes your member document and starts a new, empty family of your own in the same batch; the phone uploads its log there. The family's **creator** may remove any member. Entries a member logged stay in the family.
-- **Deleting the account** deletes the member document and the users document; the **last member** first deletes the family's entries and babies, then the family document together with their member document.
+- **Leaving** deletes your member document and starts a new, empty family of your own in the same batch; the phone uploads its log there. The family's **creator** may remove any member; a creator who leaves (or deletes the account) while others remain hands the family over to the member who joined first, in the same batch (`createdBy` is the only thing that ever changes in a family document). Entries a member logged stay in the family, and a member who leaves or is removed keeps what is already on their phone. Leaving (and joining another family, and deleting the account) also deletes the invites the account made on that phone: invites cannot be listed, so the phone remembers their codes.
+- **The family document is never deleted.** The **last member** to leave (or delete the account) deletes the family's entries and babies, then their member document; the family document stays as a tombstone (`createdBy`, `createdAt`, nothing else), so its id can never be created again. Without that, anyone who knew the id (a removed member, say) could create the family again as its creator and take over whatever still pointed at it. Since the rules cannot count members and someone may join while the data is being deleted, the app reads the members again before every page it deletes and before its member document goes, and stops (just leaving, and handing over) as soon as anyone else is in.
+- **Deleting the account** deletes the member document (as above), the outstanding invites made on that phone, the backup from before families (`users/{uid}/entries`) if any is left, and the users document, in that order, then the account.
 - **Accounts from the first backup** (entries under `users/{uid}/entries`): the phone still has the whole log, so the app creates the family, uploads everything into it and then deletes the old documents.
 
 ## The rules
@@ -36,14 +38,17 @@ users/{uid}/entries/{entryId}       { json, syncedAt }                          
 [`firebase/firestore.rules`](../firebase/firestore.rules), without Cloud Functions:
 
 - **Membership** is the existence of `families/{fid}/members/{uid}`. Only members read the family, its members, entries and babies; only members write and delete entries and babies, and only in the shape `{ json: string ≤ 2 KB, syncedAt: the server time }`.
-- **Families** are created only together with the creator's member document (and with `createdBy` = the caller, `createdAt` = the server time), are never changed, and are deleted only by a member who leaves in the same batch (the app does this only as the last member: the rules cannot count).
-- **Member documents** are created only by the account itself, with its own sign-in email and the server time, either as the creator of a family created in the same batch, or with an unexpired invite to that family that the same batch deletes. They are never changed; a member deletes their own (leave), the creator, while a member, deletes anyone's (remove).
+- **Verified email addresses only.** Creating a family, adding a member document and creating an invite all need `request.auth.token.email_verified == true` (Google, or an email link). The member list and invites show email addresses to others; an unverified one could be anybody's, since anyone can register any address with a password through Firebase's public API (the Email/Password provider is on for email links). And when an email link signs in to an account that existed before (perhaps registered that way by someone else), the app unlinks its `password` provider, which deletes any password set on it: the address is now verified, and that password must not sign in to it.
+- **Families** are created only together with the creator's member document (and with `createdBy` = the caller, `createdAt` = the server time), only where no family document exists, and are **never deleted**, so a family id is used once. The only change is the hand-over: the current creator, while a member, sets `createdBy` (and nothing else) to someone who is a member once the batch is done.
+- **Member documents** are created only by the account itself, with its own verified sign-in email and the server time, either as the creator of a family created in the same batch, or with an unexpired invite to that family that the same batch deletes, made by someone who is still a member of a family that exists. So the invites of a member who left or was removed stop working (a removed member cannot come back with an invite they made themselves), and so do those of a family everyone left. They are never changed; a member deletes their own (leave), the creator, while a member, deletes anyone's (remove).
 - **`users/{uid}`** is read and written only by its account, holds only `familyId`, and may only name a family whose member document for that account exists after the write.
-- **Invites** are created by a member of the family, as themselves (`createdBy`, and `email` if given, must be the caller's), with `expiresAt` in the future and at most 7 days away, and a code of 22 to 64 URL-safe characters. Any signed-in account may read one by its code (the code is the secret); nobody can list them or change one. Deleted by their creator, by a member of their family, or by the invitee as they join.
+- **Invites** are created by a member of the family with a verified email, as themselves (`createdBy`, and `email` if given, must be the caller's), with `expiresAt` in the future and at most 7 days away, and a code of 22 to 64 URL-safe characters. Any signed-in account may read one by its code (the code is the secret); nobody can list them or change one. Deleted by their creator, by a member of their family, or by the invitee as they join.
 - **The old backup** (`users/{uid}/entries`) is read and deleted only by its owner, and never written.
 - Everything else is denied.
 
-What the rules cannot enforce, the app does: deleting the family only as the last member, and removing expired invites (a TTL policy, below).
+What the rules cannot enforce, the app does: deleting the family's entries and babies only as the last member (checking again before each step), handing the family over when its creator leaves, taking back its own invites, and asking for consent before anything is uploaded. Expired invites are removed by a TTL policy (below, required).
+
+Families deleted by the earlier version of these rules (before the tombstones) have no family document left; their ids are 120 random bits that nobody outside the family knew, their data was deleted with them, and their old invites no longer work (the inviter is no longer a member).
 
 ## Cost
 
@@ -90,7 +95,7 @@ The app sends the link with `ActionCodeSettings`: `url = https://<project-id>.we
 ### 3. Create the database and its rules
 
 1. Build › **Firestore Database** › Create database, in **production mode**. Choose the location **`eur3` (Europe)**: the privacy policy says the data is stored in the EU. The location cannot be changed later; if your project uses another one, change [PRIVACY.md](PRIVACY.md) and [`firebase/hosting/privacy/index.html`](../firebase/hosting/privacy/index.html).
-2. Firestore › **TTL policies** › Create policy: collection group `invites`, timestamp field `expiresAt`. Firestore then deletes unused invites after they expire (usually within a day), as the privacy policy says. Should the console not offer TTL on your plan, delete expired invites by hand now and then (Firestore › `invites`, filter `expiresAt` < today).
+2. **Required:** Firestore › **TTL policies** › Create policy: collection group `invites`, timestamp field `expiresAt`. Firestore then deletes unused invites (which hold the inviter's email address) after they expire, usually within a day, as the privacy policy promises. Invites cannot be listed by the app, and the phone that made one deletes it only when its maker leaves or deletes the account there, so nothing else removes them. Should the console not offer TTL on your plan, delete expired invites by hand at least once a day (Firestore › `invites`, filter `expiresAt` < now) or change the privacy policy.
 3. Deploy the rules and the website from this repository (next section).
 
 ### 4. Deploy the rules and the website
@@ -106,7 +111,7 @@ npm run deploy -- --project <your-project-id>
 
 That deploys the Firestore rules (and indexes) and the website in [`firebase/hosting/`](../firebase/hosting). Deploy again after changing either. Or, for the rules only, open Firestore › **Rules** in the console, paste the whole of [`firebase/firestore.rules`](../firebase/firestore.rules) and click Publish.
 
-The website ([`firebase.json`](../firebase/firebase.json) › `hosting`), served at `https://<project-id>.web.app` and `https://<project-id>.firebaseapp.com`, is a few static pages with no scripts, no cookies and no external resources (`Content-Security-Policy: default-src 'none'`, `Referrer-Policy: no-referrer`, so an invite code never leaks to Google Play through the referrer):
+The website ([`firebase.json`](../firebase/firebase.json) › `hosting`), served at `https://<project-id>.web.app` and `https://<project-id>.firebaseapp.com`, is a few static pages with no scripts, no cookies and no external resources (`Content-Security-Policy: default-src 'none'`, `Referrer-Policy: no-referrer`, so an invite code never leaks to Google Play through the referrer). Those headers apply to the site's own paths only (`firebase.json` matches every path except those starting with `/__/`), so Firebase's reserved pages under `/__/` (the email link handler `/__/auth/links`, which runs scripts) keep their own:
 
 | Path | File | What it is |
 |---|---|---|
@@ -158,15 +163,15 @@ Only the phone app uses Firebase. The watch app shares the applicationId but has
 
 Anyone with the app can create an account; a family is joined only with an invite from one of its members. That is fine for a small group: on the Spark plan nothing can cost money, and the worst a misbehaving client could do is use up the day's free quota. Firebase also limits account creation per IP address.
 
-**Removing someone** (or answering an emailed deletion request): find their user id under Authentication › Users; Firestore › `users` › that id shows their `familyId`. Delete `families/<familyId>/members/<uid>` and `users/<uid>` (and `users/<uid>/entries` if it is still there); if they were the family's only member, delete `families/<familyId>` with its `entries` and `babies`. Then delete the user under Authentication › Users. People can also delete their own account in the app.
+**Removing someone** (or answering an emailed deletion request): find their user id under Authentication › Users; Firestore › `users` › that id shows their `familyId`. Delete `families/<familyId>/members/<uid>` and `users/<uid>` (and `users/<uid>/entries` if it is still there); if they were the family's only member, delete its `entries` and `babies` but keep the `families/<familyId>` document itself (the tombstone: deleting it would let the id be created again); if they were its creator and others remain, set `createdBy` to the member who joined first. Then delete the user under Authentication › Users. People can also delete their own account in the app.
 
 ## What the app does
 
-- **Signing in** (Google, or a link sent by email) puts the account in its family (creating one the first time) and backs up everything the phone has: the whole log and the babies, including what came from the watch, merged with what the family already holds. Entries already in the backup are not uploaded again.
+- **Signing in** (Google, or a link sent by email), then **"I agree"** on the consent screen, puts the account in its family (creating one the first time) and backs up everything the phone has: the whole log and the babies, including what came from the watch, merged with what the family already holds. Entries already in the backup are not uploaded again.
 - **Restoring** is signing in on the new phone. The log and the babies, names included, come back, and the watch gets them from the phone. Each phone chooses its own current baby.
 - **Families**: Settings › Family lists the members, invites someone (the share sheet with the link), leaves the family and, for the creator, removes members. Changing family (joining or leaving) uploads the whole phone's log and babies to the new family, like signing in to another account.
-- **Signing out** keeps the log on the phone. Nothing more is backed up until someone signs in again.
-- **Deleting the account** (Settings › Account › Delete account) signs in again (Google, or a fresh email link), leaves the family (deleting the family's data if no one else is in it), deletes the users document and then the account. The log on the phone stays.
+- **Signing out** keeps the log on the phone, and withdraws the consent on that phone. Nothing more is backed up until someone signs in (and agrees) again.
+- **Deleting the account** (Settings › Account › Delete account) signs in again (Google, or a fresh email link opened while the confirmation is on screen: a cancelled confirmation forgets its link, and a deletion link that arrives without it asks again before deleting), leaves the family (deleting the family's entries and babies if no one else is in it, handing it over if others are), deletes its outstanding invites, the backup from before families and the users document, and then the account. The log on the phone stays.
 
 ## GDPR and Google Play checklist
 
@@ -176,7 +181,7 @@ Anyone with the app can create an account; a family is joined only with an invit
 - [ ] Hosting deployed, so **`https://<project-id>.web.app/privacy`** is live; the same URL in Play Console › App content › **Privacy policy** and in the store listing.
 - [ ] Play Console › App content › **Data safety**: collected and stored by the developer, encrypted in transit, deletable by the user: **email address** (account management, app functionality); **app activity / other user-generated content**: the log entries and the babies' names (app functionality), **shared with other users** of the family at the user's request (not "shared with third parties" in Play's sense, since that is a user-initiated transfer); not used for ads or analytics. Health-related? The log is feeding, diaper and sleep data about a baby: declare it as **Health info** if Play asks.
 - [ ] Data safety › Data deletion: in the app (Settings › Account › Delete account) and by email to **mathias.lorenzen@live.com** (the web address of the privacy policy explains both).
-- [ ] TTL policy on `invites.expiresAt` (or a habit of deleting expired invites).
+- [ ] **Required:** TTL policy on `invites.expiresAt` (or deleting expired invites by hand daily); the privacy policy promises it.
 - [ ] Requests to the contact address answered within one month (access: export the family's documents from the console; erasure: "Removing someone" above).
 - [ ] When the data handled changes, update [PRIVACY.md](PRIVACY.md) and the `/privacy` page together, with a new date.
 
@@ -190,6 +195,6 @@ npm install
 npm test
 ```
 
-They cover every rule: creating a family (only atomically with the creator's member document, only as yourself, never taking over another's), joining (a valid invite; refused when expired, of another family, missing, kept instead of deleted, or used before), member documents (own uid and email, server time, nothing else, never changed), leaving, the creator removing and others not, `users/{uid}` (own only, only `familyId`, only a family you are in), invites (members only, at most 7 days, own name and email, code length and characters, get but no list, who may delete), the shape of entries and babies documents, non-members and signed-out clients, the old backup (read and delete only), the last member deleting the family, and that nothing else can be stored. Every guard was checked by weakening it and seeing a test fail; keep doing that when changing the rules. The [`Firestore rules`](../.github/workflows/rules.yml) workflow runs them on every pull request that changes `firebase/`.
+They cover every rule: creating a family (only atomically with the creator's member document, only as yourself, only with a verified email, never taking over another's, never again once everyone left), joining (a valid invite; refused when expired, of another family, missing, kept instead of deleted, used before, made by someone no longer a member, of a family everyone left, or without a verified email), handing the family over (only by its current creator, only to a member, only `createdBy`), the family document never being deleted, the probes of the security review (taking over a family by deleting and creating it again, a removed member rejoining with their own invite, stale invites, unverified addresses posing as someone else), member documents (own uid and email, server time, nothing else, never changed), leaving, the creator removing and others not, `users/{uid}` (own only, only `familyId`, only a family you are in), invites (members with a verified email only, at most 7 days, own name and email, code length and characters, get but no list, who may delete), the shape of entries and babies documents, non-members and signed-out clients, the old backup (read and delete only), the last member deleting the family's data but not the family, and that nothing else can be stored. Every guard was checked by weakening it and seeing a test fail; keep doing that when changing the rules. The [`Firestore rules`](../.github/workflows/rules.yml) workflow runs them on every pull request that changes `firebase/`.
 
 To look at the website locally: `npx firebase emulators:start --only hosting --project demo-pooparazzi` and open <http://127.0.0.1:5000/privacy>.

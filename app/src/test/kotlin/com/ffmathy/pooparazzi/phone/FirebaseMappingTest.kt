@@ -12,6 +12,7 @@ import com.ffmathy.pooparazzi.phone.account.FirestoreCloudStore
 import com.ffmathy.pooparazzi.phone.account.FirestoreCloudStore.Stamp
 import com.ffmathy.pooparazzi.phone.account.FirestoreCloudStore.StoredDocument
 import com.ffmathy.pooparazzi.phone.account.attemptWithin
+import com.ffmathy.pooparazzi.phone.account.shouldDropPassword
 import com.ffmathy.pooparazzi.phone.account.toAccountError
 import com.ffmathy.pooparazzi.phone.account.toSendLinkError
 import com.google.firebase.FirebaseNetworkException
@@ -139,5 +140,16 @@ class FirebaseMappingTest {
             attemptWithin(30_000, onTimeout = {}) { throw FirebaseNetworkException("offline") },
         )
         assertEquals(1, refreshed)
+    }
+
+    @Test
+    fun anEmailLinkTakesAPasswordOffAnAccountThatExistedBefore() {
+        // An account someone created for the address with a password, before its owner signed in with a link.
+        assertEquals(true, shouldDropPassword(isNewUser = false, providers = listOf("password")))
+        assertEquals(true, shouldDropPassword(isNewUser = false, providers = listOf("google.com", "password")))
+        assertEquals("unknown counts as existing", true, shouldDropPassword(isNewUser = null, providers = listOf("password")))
+        // Created by this very link: no password anyone could know.
+        assertEquals(false, shouldDropPassword(isNewUser = true, providers = listOf("password")))
+        assertEquals(false, shouldDropPassword(isNewUser = false, providers = listOf("google.com")))
     }
 }

@@ -7,7 +7,13 @@ rules_version = '2';
 // - Only members read or write a family's data. Membership is checked by the member document's existence, so every
 //   request costs one extra document read.
 // - A family is created by its first member, in one batch with that member's document. Anyone else joins with an
-//   invite (/invites/{code}): a member makes it, the invitee joins with it within 7 days, and joining deletes it.
+//   invite (/invites/{code}): a member makes it, the invitee joins with it within 7 days while its maker is still a
+//   member, and joining deletes it.
+// - The family document is never deleted: it stays behind as a tombstone when the last member leaves (with the
+//   family's entries and babies deleted), so a family id is used once and nobody can create that family again and
+//   take over what other members (or stale invites) still point at.
+// - Every account that creates a family, joins one or invites to one has a verified email address: the member list
+//   and the invites show it to others, and an unverified one could be anybody's.
 // - The log of the first backup (/users/{uid}/entries) can only be read and deleted, to move it into the family.
 // - There are no Cloud Functions (free Spark plan), so everything the rules cannot check is the app's job. Nothing
 //   else exists, so everything else is denied.
@@ -20,6 +26,11 @@ service cloud.firestore {
 
     function signedInAs(uid) {
       return signedIn() && request.auth.uid == uid;
+    }
+
+    // The account's email address, as its sign-in token has it, has been verified (Google, or an email link).
+    function verified() {
+      return signedIn() && request.auth.token.email_verified == true;
     }
 
     function familyPath(fid) {
@@ -74,26 +85,35 @@ service cloud.firestore {
     }
 
     match /families/{fid} {
-      // Created by its first member, whose member document is created in the same batch. Never changed.
-      allow create: if signedIn()
+      // Created by its first member, whose member document is created in the same batch. A family document is never
+      // deleted (see the top), so this creates each family id once only.
+      allow create: if verified()
+        && !exists(familyPath(fid))
         && hasExactly(['createdBy', 'createdAt'])
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.createdAt == request.time
         && existsAfter(memberPath(fid, request.auth.uid));
       allow get: if isMember(fid);
-      // Deleted by the last member as they leave (deleting their member document in the same batch), after deleting
-      // the entries and babies. The rules cannot count the members: the app deletes it only when nobody else is left.
-      allow delete: if isMember(fid) && !isMemberAfter(fid);
+      // The creator hands the family over to another member (as they leave, say): only createdBy changes, and only
+      // to someone who is (still) a member once the batch is done.
+      allow update: if isMember(fid)
+        && resource.data.createdBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['createdBy'])
+        && request.resource.data.createdBy is string
+        && existsAfter(memberPath(fid, request.resource.data.createdBy));
+      // Never deleted: the last member leaves by deleting the entries, the babies and their own member document.
 
-      // Who is in the family: { email, joinedAt, invite? }. An account adds only itself, with its own email, either
-      // as the creator of a family made in the same batch, or with an unexpired invite to this family that the same
-      // batch deletes (so an invite lets one account in, once). Members are never changed. A member leaves by
-      // deleting their own document; the family's creator, while a member, may remove anyone.
+      // Who is in the family: { email, joinedAt, invite? }. An account adds only itself, with its own verified email,
+      // either as the creator of a family made in the same batch, or with an unexpired invite to this family that the
+      // same batch deletes (so an invite lets one account in, once), made by someone who is still a member (so a
+      // removed member's invites, and those of a family everyone left, stop working). Members are never changed. A
+      // member leaves by deleting their own document; the family's creator, while a member, may remove anyone.
       match /members/{uid} {
         allow read: if isMember(fid);
         allow create: if signedInAs(uid)
           && request.resource.data.keys().hasAll(['email', 'joinedAt'])
           && request.resource.data.keys().hasOnly(['email', 'joinedAt', 'invite'])
+          && verified()
           && request.resource.data.email == request.auth.token.email
           && request.resource.data.joinedAt == request.time
           && (
@@ -106,6 +126,8 @@ service cloud.firestore {
             (request.resource.data.get('invite', null) is string
               && get(invitePath(request.resource.data.invite)).data.familyId == fid
               && get(invitePath(request.resource.data.invite)).data.expiresAt > request.time
+              && exists(familyPath(fid))
+              && exists(memberPath(fid, get(invitePath(request.resource.data.invite)).data.createdBy))
               && !existsAfter(invitePath(request.resource.data.invite)))
           );
         allow delete: if signedInAs(uid)
@@ -127,12 +149,12 @@ service cloud.firestore {
 
     // An invite to a family: { familyId, createdBy, expiresAt, email? }. The code is the secret: 128 random bits,
     // URL-safe base64 (22 characters, at most 64 accepted), so any signed-in account that has the link may read it,
-    // but nobody can list them. A member makes it for their own family, valid for at most 7 days, optionally with
-    // their own email (shown to the invitee). Deleted by whoever made it, by a member of its family, or by the
+    // but nobody can list them. A member with a verified email makes it for their own family, valid for at most 7
+    // days, optionally with their own email (shown to the invitee). It works only while its maker is a member. Deleted by whoever made it, by a member of its family, or by the
     // invitee as they join (in the joining batch).
     match /invites/{code} {
       allow get: if signedIn();
-      allow create: if signedIn()
+      allow create: if verified()
         && code.size() >= 22 && code.size() <= 64
         && code.matches('[A-Za-z0-9_-]+')
         && request.resource.data.keys().hasAll(['familyId', 'createdBy', 'expiresAt'])

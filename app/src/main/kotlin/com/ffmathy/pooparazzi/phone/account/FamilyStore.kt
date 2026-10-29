@@ -29,9 +29,10 @@ interface FamilyStore {
     /**
      * One batch: `families/{familyId}` (`createdBy` = [uid], `createdAt` = server time), [uid]'s member document
      * ([email], `joinedAt` = server time) and `users/{uid}` pointing at it. With [leaving], [uid]'s member document in
-     * that family is deleted in the same batch (leaving a family for a new one of their own).
+     * that family is deleted in the same batch (leaving a family for a new one of their own), and with [handOverTo]
+     * that family's `createdBy` is set to that member (the creator leaving).
      */
-    suspend fun createFamily(familyId: String, uid: String, email: String, leaving: String? = null)
+    suspend fun createFamily(familyId: String, uid: String, email: String, leaving: String? = null, handOverTo: String? = null)
 
     /** `families/{familyId}.createdBy`. */
     suspend fun creatorOf(familyId: String): String
@@ -41,6 +42,9 @@ interface FamilyStore {
 
     /** Writes `invites/{code}`. */
     suspend fun createInvite(code: String, invite: StoredInvite)
+
+    /** Deletes `invites/{code}` (its maker taking back an invite). */
+    suspend fun deleteInvite(code: String)
 
     /** `invites/{code}`, or null when there is none (never made, used up or deleted). */
     suspend fun invite(code: String): StoredInvite?
@@ -55,9 +59,9 @@ interface FamilyStore {
     suspend fun removeMember(familyId: String, uid: String)
 
     /**
-     * Takes [uid] out of [familyId]: deletes its member document, and when it was the last member first the family's
-     * entries and babies and then, in one batch with the member document, the family itself (the rules allow the
-     * family to be deleted only that way). Nothing happens when [uid] is not a member any more.
+     * Takes [uid] out of [familyId] ([FamilyExit]): deletes its member document (handing the family over when [uid]
+     * created it and others remain), and when it was the last member first the family's entries and babies. The family
+     * document stays. Nothing happens when [uid] is not a member any more.
      */
     suspend fun leave(familyId: String, uid: String)
 
@@ -67,6 +71,6 @@ interface FamilyStore {
     /** A page of the backup from before families, `users/{uid}/entries`, after [cursor]. */
     suspend fun legacyEntries(uid: String, cursor: CloudCursor?, limit: Int): CloudPage<Entry>
 
-    /** Deletes every document of `users/{uid}/entries`. */
+    /** Deletes every document of `users/{uid}/entries` (also when deleting the account). */
     suspend fun deleteLegacyEntries(uid: String)
 }

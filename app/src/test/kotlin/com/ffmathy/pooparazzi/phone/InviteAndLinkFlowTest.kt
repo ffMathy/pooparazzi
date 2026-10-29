@@ -16,6 +16,7 @@ import com.ffmathy.pooparazzi.phone.account.AccountUser
 import com.ffmathy.pooparazzi.phone.account.AppAccounts
 import com.ffmathy.pooparazzi.phone.account.InviteCheck
 import com.ffmathy.pooparazzi.phone.account.LinkPurpose
+import com.ffmathy.pooparazzi.phone.account.MemoryConsent
 import com.ffmathy.pooparazzi.phone.account.SentLink
 import com.ffmathy.pooparazzi.phone.account.WelcomePrefs
 import com.ffmathy.pooparazzi.phone.launch.AppLink
@@ -44,6 +45,9 @@ abstract class AppLinkFlowTestBase {
     protected val families = FakeFamilies()
     protected open val welcomeSeen = false
     protected open val link: AppLink? = AppLink.Invite(CODE)
+
+    /** Who agreed to the backup on this phone already: the account signed in from the start. */
+    protected val consent by lazy { MemoryConsent(setOfNotNull(accounts.user.value?.uid)) }
     protected open fun prepare() = Unit
 
     /** Before the activity starts: the fakes, and the link that "opened" the app. */
@@ -51,7 +55,7 @@ abstract class AppLinkFlowTestBase {
     val fakes = object : ExternalResource() {
         override fun before() {
             prepare()
-            AppAccounts.install(accounts, families)
+            AppAccounts.install(accounts, families, consent)
             WelcomePrefs(ApplicationProvider.getApplicationContext<Application>()).seen = welcomeSeen
             link?.let(AppLinkInbox.shared::post)
         }
@@ -84,6 +88,11 @@ class InviteSignedOutFlowTest : AppLinkFlowTestBase() {
         compose.onNodeWithText("Your log stays on this phone").assertExists()
         compose.onNodeWithText("Continue with Google").performScrollTo().performClick()
 
+        // The consent comes first: nothing is checked or joined before it.
+        compose.waitUntilAtLeastOneExists(hasText("Back up to Google Firebase?"), timeoutMillis = 5_000)
+        assertTrue(families.calls.none { it.startsWith("check:") || it.startsWith("join:") })
+        compose.onNodeWithText("I agree").performScrollTo().performClick()
+
         compose.waitUntilAtLeastOneExists(hasText("Join partner@example.com's family?"), timeoutMillis = 5_000)
         compose.onNodeWithText(
             "Your babies and your log on this phone are added to the family's and shared with its members. You'll see theirs too.",
@@ -108,6 +117,8 @@ class InviteAccountScreenFlowTest : AppLinkFlowTestBase() {
     fun theAccountScreenSignsInFirst() {
         compose.waitUntilAtLeastOneExists(hasText("Sign in to join the family."), timeoutMillis = 10_000)
         compose.onNodeWithText("Continue with Google").performScrollTo().performClick()
+        compose.waitUntilAtLeastOneExists(hasText("I agree"), timeoutMillis = 5_000)
+        compose.onNodeWithText("I agree").performScrollTo().performClick()
         compose.waitUntilAtLeastOneExists(hasText("Join partner@example.com's family?"), timeoutMillis = 5_000)
         compose.onNodeWithText("Not now").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
@@ -154,9 +165,31 @@ class EmailLinkFlowTest : AppLinkFlowTestBase() {
     override val link: AppLink = AppLink.EmailSignIn(FakeAccounts.LINK + "abc")
 
     @Test
-    fun signsIn() {
-        compose.waitUntilAtLeastOneExists(hasText("Back up now"), timeoutMillis = 10_000)
-        compose.onNodeWithText("parent@example.com").assertExists()
+    fun signsInThenAsksForTheConsent() {
+        compose.waitUntilAtLeastOneExists(hasText("Back up to Google Firebase?"), timeoutMillis = 10_000)
+        compose.onNodeWithText("You're signed in as parent@example.com. Nothing has been uploaded yet. Before anything is, please agree to this:")
+            .assertExists()
         assertEquals(listOf("signInWithLink:parent@example.com"), accounts.calls)
+        compose.onNodeWithText("I agree").performScrollTo().performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
+        assertEquals(setOf("uid-1"), consent.agreed.value)
+    }
+}
+
+/** An invite opened by a signed-in account that has not agreed yet: the consent first, and "Not now" signs out. */
+class InviteWithoutConsentFlowTest : AppLinkFlowTestBase() {
+    override val accounts = FakeAccounts(signedIn = SIGNED_IN)
+    override val welcomeSeen = true
+    override fun prepare() {
+        consent.withdraw(SIGNED_IN.uid)
+    }
+
+    @Test
+    fun notNowSignsOutAndJoinsNothing() {
+        compose.waitUntilAtLeastOneExists(hasText("Back up to Google Firebase?"), timeoutMillis = 10_000)
+        compose.onNodeWithText("Not now, sign out").performScrollTo().performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Sign in to join the family."), timeoutMillis = 5_000)
+        assertEquals(listOf("signOut"), accounts.calls)
+        assertTrue(families.calls.none { it.startsWith("check:") || it.startsWith("join:") })
     }
 }

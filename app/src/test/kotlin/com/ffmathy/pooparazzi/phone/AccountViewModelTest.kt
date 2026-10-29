@@ -306,13 +306,62 @@ class AccountViewModelTest {
     }
 
     @Test
-    fun theDeletionLinkWorksAfterTheAppWasClosed() = test(FakeAccounts(signedIn = emailUser)) { rig ->
+    fun aDeletionLinkOpenedWithoutTheConfirmationAsksAgainBeforeDeleting() = test(FakeAccounts(signedIn = emailUser)) { rig ->
         // The link was asked for before a restart: the screen has no confirmation open.
         rig.accounts.sentLink = SentLink(emailUser.email, LinkPurpose.DELETE_ACCOUNT)
         rig.open(FakeAccounts.LINK + "fresh")
         runCurrent()
+        assertTrue("nothing deleted by the link alone", rig.accounts.calls.isEmpty())
+        assertEquals(0, rig.cloud.deletions)
+        assertEquals(FakeAccounts.LINK + "fresh", rig.state.delete?.link)
+        assertNotNull(rig.state.user)
+
+        // "Delete" uses that link.
+        rig.vm.onDeleteConfirm(activity)
+        runCurrent()
         assertEquals(listOf("reauthLink", "delete"), rig.accounts.calls)
         assertNull(rig.state.user)
+    }
+
+    @Test
+    fun aDeletionLinkOpenedWithoutTheConfirmationCanBeCancelled() = test(FakeAccounts(signedIn = emailUser)) { rig ->
+        rig.accounts.sentLink = SentLink(emailUser.email, LinkPurpose.DELETE_ACCOUNT)
+        rig.open(FakeAccounts.LINK + "fresh")
+        runCurrent()
+        rig.vm.onDeleteDismiss()
+        runCurrent()
+        assertNull(rig.state.delete)
+        assertEquals(listOf("forgetSentLink"), rig.accounts.calls)
+        assertEquals(0, rig.cloud.deletions)
+    }
+
+    @Test
+    fun cancellingTheDeletionForgetsItsLinkSoItDeletesNothingLater() = test(FakeAccounts(signedIn = emailUser)) { rig ->
+        rig.vm.onDeleteStart()
+        rig.vm.onDeleteConfirm(activity)
+        runCurrent()
+        assertEquals(LinkPurpose.DELETE_ACCOUNT, rig.accounts.sentLink?.purpose)
+        rig.vm.onDeleteDismiss()
+        runCurrent()
+        assertNull(rig.accounts.sentLink)
+
+        // The email's link, tapped later, signs nothing in again and deletes nothing.
+        rig.open(FakeAccounts.LINK + "fresh")
+        runCurrent()
+        assertEquals(listOf("sendReauthLink", "forgetSentLink"), rig.accounts.calls)
+        assertEquals(0, rig.cloud.deletions)
+        assertNull(rig.state.delete)
+        assertNotNull(rig.state.user)
+    }
+
+    @Test
+    fun cancellingKeepsASignInLinkThatIsNotTheDeletions() = test(FakeAccounts(signedIn = emailUser)) { rig ->
+        rig.accounts.sentLink = SentLink(emailUser.email, LinkPurpose.SIGN_IN)
+        rig.vm.onDeleteStart()
+        rig.vm.onDeleteDismiss()
+        runCurrent()
+        assertEquals(LinkPurpose.SIGN_IN, rig.accounts.sentLink?.purpose)
+        assertTrue(rig.accounts.calls.isEmpty())
     }
 
     @Test

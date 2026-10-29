@@ -117,7 +117,7 @@ class FamilyViewModelTest {
         val app = ApplicationProvider.getApplicationContext<Application>()
         val link = "https://demo-pooparazzi.web.app/join/AbCdEfGhIjKlMnOpQrStUv"
         assertEquals(
-            "Join my family on Pooparazzi to share our baby log: $link (works once, for 7 days)",
+            "Join my family on Pooparazzi to share our baby log: $link (works once, for 6 days)",
             inviteShareText(app, link),
         )
         val chooser = inviteShareIntent(app, link)
@@ -132,7 +132,7 @@ class FamilyViewModelTest {
             android.content.res.Configuration(app.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag("da")) },
         )
         assertEquals(
-            "Bliv en del af min familie i Pooparazzi, så vi deler babyloggen: $link (virker én gang og i 7 dage)",
+            "Bliv en del af min familie i Pooparazzi, så vi deler babyloggen: $link (virker én gang og i 6 dage)",
             inviteShareText(danish, link),
         )
     }

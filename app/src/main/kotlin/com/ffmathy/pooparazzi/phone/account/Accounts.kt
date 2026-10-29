@@ -92,8 +92,14 @@ interface Accounts {
     /** The signed-in account, or null. */
     val user: StateFlow<AccountUser?>
 
-    /** The email link asked for last on this phone, until it is used (or another is asked for). */
+    /** The email link asked for last on this phone, until it is used (or another is asked for, or forgotten). */
     val sentLink: SentLink?
+
+    /**
+     * Forgets [sentLink]: the "Delete account?" confirmation was cancelled, so its link must not delete the account
+     * when it opens the app later.
+     */
+    fun forgetSentLink()
 
     /** Signs in with a Google account chosen in the system's account picker. Creating an account is the same thing. */
     suspend fun signInWithGoogle(activity: Activity): AccountResult
@@ -120,8 +126,9 @@ interface Accounts {
     suspend fun reauthenticateWithLink(link: String): AccountResult
 
     /**
-     * Deletes the account (after signing in again); its backup must be deleted first. Deletes its `users/{uid}`
-     * document, then the account itself. Signs out on success.
+     * Deletes the account (after signing in again); its backup must be deleted first. Deletes the rest of its Firestore
+     * data ([Families.deleteAccountData]: its outstanding invites, the backup from before families and its
+     * `users/{uid}` document), then the account itself. Signs out on success.
      */
     suspend fun deleteAccount(): AccountResult
 }
@@ -135,6 +142,7 @@ object NoAccounts : Accounts {
     override val hostingDomain: String? = null
     override val user: StateFlow<AccountUser?> = nobody
     override val sentLink: SentLink? = null
+    override fun forgetSentLink() = Unit
     override suspend fun signInWithGoogle(activity: Activity): AccountResult = unavailable
     override suspend fun sendSignInLink(email: String): AccountResult = unavailable
     override fun isSignInLink(link: String): Boolean = false

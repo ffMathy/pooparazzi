@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import com.ffmathy.pooparazzi.phone.account.FamilyError
 import com.ffmathy.pooparazzi.phone.account.FamilyMember
 import com.ffmathy.pooparazzi.phone.ui.family.FamilyActions
 import com.ffmathy.pooparazzi.phone.ui.family.FamilyConfirm
@@ -93,6 +94,36 @@ class FamilySectionSemanticsTest {
         ).assertExists()
         compose.onNodeWithText("Leave").performClick()
         assertEquals(listOf("confirm"), calls)
+    }
+
+    @Test
+    fun removingSaysWhatTheRemovedMemberKeeps() {
+        val partner = FamilySamples.family.members[1]
+        compose.setContent {
+            NightLightTheme(night = false) {
+                SettingsScreen(
+                    SettingsSamples.state(), SettingsActions.None,
+                    family = FamilySamples.state().copy(confirm = FamilyConfirm.Remove(partner)), familyActions = family,
+                )
+            }
+        }
+        compose.onNodeWithText("Remove partner@example.com?").assertExists()
+        compose.onNodeWithText("They'll stop seeing the family's log from now on. What's already on their phone stays there.").assertExists()
+    }
+
+    @Test
+    fun aRefusedInviteSaysWhy() {
+        compose.setContent {
+            NightLightTheme(night = false) {
+                SettingsScreen(
+                    SettingsSamples.state(), SettingsActions.None,
+                    family = FamilySamples.state().copy(actionError = FamilyError.INVITE_REFUSED), familyActions = family,
+                )
+            }
+        }
+        compose.onNodeWithText(
+            "Couldn't create an invite. You may have been removed from the family, or your email address isn't verified yet.",
+        ).performScrollTo().assertExists()
     }
 
     @Test
