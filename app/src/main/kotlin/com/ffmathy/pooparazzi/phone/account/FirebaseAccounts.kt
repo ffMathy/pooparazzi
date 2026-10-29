@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.phone.account
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Base64
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
@@ -32,6 +33,7 @@ import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import java.security.SecureRandom
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -109,20 +111,24 @@ class FirebaseAccounts(
     }
 
     /**
-     * Takes the email/password provider off an account that existed before this email link signed in to it.
+     * Replaces any password on an account that existed before this email link signed in to it with a random one that
+     * nobody knows.
      *
      * Why: the app has no passwords, but Firebase needs the Email/Password provider on for email links, so anyone can
      * create an account for someone else's address with a password (through Firebase's public API), without being able
      * to verify it. When the real owner then signs in with an email link, Firebase signs in to that same account and
      * marks the address verified, and the password the other person chose would still sign in to it, now verified (the
-     * rules trust verified addresses). Unlinking the `password` provider deletes that password. An account the link
-     * just created has no such password, so it is left alone; for any other, the provider comes back without a
-     * password at the next email link. Best effort: a failure is logged, and the sign-in stands.
+     * rules trust verified addresses). Changing the password makes that password useless, and Firebase revokes the
+     * refresh tokens of every other session on a password change, so a session opened with it ends too. The provider
+     * stays linked: email links use the same `password` provider, so unlinking it could take the owner's own way in
+     * away. An account the link just created has no such password, so it is left alone. Best effort: a failure is
+     * logged, and the sign-in stands.
      */
     private suspend fun dropForeignPassword(user: FirebaseUser, isNewUser: Boolean?) {
         if (!shouldDropPassword(isNewUser, user.providerData.map { it.providerId })) return
         try {
-            withTimeoutOrNull(timeoutMillis) { user.unlink(EmailAuthProvider.PROVIDER_ID).await() }
+            val unknowable = Base64.encodeToString(ByteArray(32).also(SecureRandom()::nextBytes), Base64.NO_WRAP or Base64.NO_PADDING)
+            withTimeoutOrNull(timeoutMillis) { user.updatePassword(unknowable).await() }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
