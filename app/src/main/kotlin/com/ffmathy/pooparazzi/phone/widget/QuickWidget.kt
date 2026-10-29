@@ -2,8 +2,6 @@ package com.ffmathy.pooparazzi.phone.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -44,15 +42,7 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 class QuickWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(QuickLayout.Sizes)
 
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val source = WidgetSource.from(context)
-        val initial = source.current()
-        val snapshots = source.snapshots()
-        provideContent {
-            val snapshot by snapshots.collectAsState(initial)
-            QuickWidgetContent(snapshot)
-        }
-    }
+    override suspend fun provideGlance(context: Context, id: GlanceId) = provideSnapshots(context) { QuickWidgetContent(it) }
 
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
         provideContent { QuickWidgetContent(WidgetSamples.idle(night = true)) }

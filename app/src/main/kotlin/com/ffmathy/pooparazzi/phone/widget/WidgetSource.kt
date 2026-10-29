@@ -1,6 +1,11 @@
 package com.ffmathy.pooparazzi.phone.widget
 
 import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.provideContent
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.CoreGraph
 import com.ffmathy.pooparazzi.core.data.CurrentLog
@@ -45,5 +50,16 @@ internal class WidgetSource(
     companion object {
         fun from(context: Context): WidgetSource =
             WidgetSource(context.applicationContext, Core.ensureInitialized(context), PrefsWidgetMemoStore.get(context))
+    }
+}
+
+/** Every widget's [GlanceAppWidget.provideGlance]: [content] for the current snapshot, recomposed as it changes. */
+internal suspend fun GlanceAppWidget.provideSnapshots(context: Context, content: @Composable (WidgetSnapshot) -> Unit): Nothing {
+    val source = WidgetSource.from(context)
+    val initial = source.current()
+    val snapshots = source.snapshots()
+    provideContent {
+        val snapshot by snapshots.collectAsState(initial)
+        content(snapshot)
     }
 }
