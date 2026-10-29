@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.view.Display
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -47,10 +48,23 @@ class MainActivity : AppCompatActivity() {
                     onNightResolved = ::applyNight,
                     launch = launch,
                     onLaunchHandled = appViewModel::consume,
+                    onLaunchedSheetClosed = ::onLaunchedSheetClosed,
                 )
             }
         }
     }
+
+    /**
+     * A sheet a widget opened has closed. On a Samsung flip's cover screen (a display other than the main one) the
+     * app has no room for Home, so it goes back to the widget there; on the main screen Home stays, with its undo card.
+     */
+    private fun onLaunchedSheetClosed() {
+        if (onCoverScreen()) finish()
+    }
+
+    /** The window's display, as the view sees it (null before attach, which counts as the main screen). */
+    private fun onCoverScreen(): Boolean =
+        (window?.decorView?.display?.displayId ?: Display.DEFAULT_DISPLAY) != Display.DEFAULT_DISPLAY
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
