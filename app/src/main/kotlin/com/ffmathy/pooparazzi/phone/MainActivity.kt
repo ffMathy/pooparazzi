@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 /**
  * The single activity. An [AppCompatActivity] so the in-app language works on API < 33 (V1_ADDITIONS §5).
  * Draws edge to edge; the system bar icons follow the app's own Night/Day, not the system theme. Deep links from the
- * widgets and notifications (`pooparazzi://home/…`) open Home with a sheet or an undo card; the website's App Links
+ * widgets and notifications (`pooparazzi://home/…`) open Home with a sheet or a receipt; the website's App Links
  * (BABIES_AND_BACKUP §3.3, §3.5) open the join confirmation or complete an email sign-in.
  */
 class MainActivity : AppCompatActivity() {

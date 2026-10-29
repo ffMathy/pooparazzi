@@ -3,7 +3,6 @@
 <resources>
     <string name="cd_back">Tilbage</string>
     <string name="cd_close">Luk</string>
-    <string name="cd_edit_start_time">Ret starttidspunkt</string>
     <string name="cd_woke_up_end_sleep">Vågnede, afslut søvn</string>
 
     <string name="lamp_no_feed">Ingen måltider endnu</string>

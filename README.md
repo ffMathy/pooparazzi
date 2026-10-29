@@ -15,9 +15,9 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 - **Sleep**: one button starts a sleep and the same button ("Woke up") ends it. The running sleep is shown as a ring with its length; the start can be adjusted while it runs.
 - **Feeds**: Breast, Formula or Food, or **just the time**. Log it now or a few minutes ago (−5m / −10m / −15m).
 - **Breast feeds with side order**: a breast feed is logged like any feed, at one time (no timer, no duration). After Breast, tick **Left** and/or **Right**: the order you tick is the order recorded ("Right → Left"). The side is optional; "Log feed" (watch: "Save") with nothing ticked records just the time. Wherever the last feed is shown (phone Home, the widget, the watch), its order is shown too ("Left → Right", or "L → R" where space is tight), so you know which side to start on next.
-- **Formula with an amount**: after Formula (on the phone), an optional slider sets how much was given, in **ml** (10 ml steps up to 300 ml), or in **fl oz** (½ oz steps up to 10 oz) where the region measures in ounces (the US, Liberia, Myanmar). Leaving it at "No amount" records just the time. The amount shows on the undo card, in History ("12:22 · 120 ml"), on the watch's Today list, and can be changed in the edit sheet.
+- **Formula with an amount**: after Formula (on the phone), an optional slider sets how much was given, in **ml** (10 ml steps up to 300 ml), or in **fl oz** (½ oz steps up to 10 oz) where the region measures in ounces (the US, Liberia, Myanmar). Leaving it at "No amount" records just the time. The amount shows on the receipt, in History ("12:22 · 120 ml"), on the watch's Today list, and can be changed in the edit sheet.
 - **Diapers**: Pee and Poop are independent checkboxes, both optional (nothing ticked is a plain change). With Poop on, pick an optional **colour** (yellow, green, brown, black, red, pale) and **texture** (watery, seedy, mushy, formed, hard); red, black and pale show a gentle "talk to your doctor" hint.
-- **History, edit and undo**: a day view with a 24-hour ribbon and day totals; tap any entry to edit its times, type, side, formula amount or diaper details, or delete it; add a past entry; every log shows an **Undo** card (phone) or button (watch), with "Earlier?" chips to move it back.
+- **History, edit and undo**: a day view with a 24-hour ribbon and day totals; tap any entry to edit its times, type, side, formula amount or diaper details, or delete it; add a past entry; every log shows an **Undo** receipt: on the phone a sheet with the logged time, Undo, chips to move it by a few minutes, Edit and Done (no timeout); on the watch a Logged screen with Undo.
 - **Statistics**: from History's chart button, average feeds, pee, poop and sleep per day for the last 7 days next to the last 30 days (or 90 days, all days, or dates you choose), with a bar chart that marks the last 7 days. Only whole days up to yesterday count (until the first whole day, today so far, so a single entry already shows), and days when nothing was logged are left out instead of counting as zero. With several babies it shows the current baby's.
 - **Several babies** (twins, siblings): add and rename them in Settings › Babies, and switch the baby you log for from Home's top bar or the watch's baby button. Each device has its own current baby; a sleep runs per baby, and every sleeping baby keeps its notification.
 - **Phone ↔ watch sync** over the Wearable **Data Layer**. Both apps log offline and merge by last-writer-wins; the babies' names and the language follow the phone. The sync state is a small icon, not text: a watch (and, while signed in, a cloud for the backup) under the name on the phone, a phone on the watch, each marked with a tick, "…", a slash or "!" (tap "!" to retry); TalkBack reads the full status.
@@ -38,11 +38,11 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Home, Night | Home, Day | Asleep at night | Breast feed logged |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-home-night.png" width="200" alt="Home, Night theme"> | <img src="docs/screenshots/en/phone-home-day.png" width="200" alt="Home, Day theme"> | <img src="docs/screenshots/en/phone-home-asleep.png" width="200" alt="Home while asleep"> | <img src="docs/screenshots/en/phone-home-breast-logged.png" width="200" alt="Home after logging a breast feed, with its side order on the undo card"> |
+| <img src="docs/screenshots/en/phone-home-night.png" width="200" alt="Home, Night theme"> | <img src="docs/screenshots/en/phone-home-day.png" width="200" alt="Home, Day theme"> | <img src="docs/screenshots/en/phone-home-asleep.png" width="200" alt="Home while asleep"> | <img src="docs/screenshots/en/phone-home-breast-logged.png" width="200" alt="The receipt after logging a breast feed, with its side order and the −15m it was backdated by"> |
 
-| Undo card | Feed sheet | Breast: side order | Diaper sheet |
+| Receipt | Feed sheet | Breast: side order | Diaper sheet |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-home-undo.png" width="200" alt="Undo card after logging"> | <img src="docs/screenshots/en/phone-feed-sheet.png" width="200" alt="Feed sheet: Breast, Formula, Food, Just the time"> | <img src="docs/screenshots/en/phone-breast-sheet.png" width="200" alt="Feed sheet after Breast, with Right then Left ticked"> | <img src="docs/screenshots/en/phone-diaper-sheet.png" width="200" alt="Diaper sheet with poop colour and texture"> |
+| <img src="docs/screenshots/en/phone-home-receipt.png" width="200" alt="Receipt after logging: Formula logged · 14:32 with Undo, offset chips, Edit and Done"> | <img src="docs/screenshots/en/phone-feed-sheet.png" width="200" alt="Feed sheet: Breast, Formula, Food, Just the time"> | <img src="docs/screenshots/en/phone-breast-sheet.png" width="200" alt="Feed sheet after Breast, with Right then Left ticked"> | <img src="docs/screenshots/en/phone-diaper-sheet.png" width="200" alt="Diaper sheet with poop colour and texture"> |
 
 | Formula: amount | Edit formula feed |
 |:---:|:---:|
@@ -55,6 +55,10 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 | Add past entry | Settings | Widget 4×2 | Widget 3×1 |
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-add-past-entry.png" width="200" alt="Add a past entry"> | <img src="docs/screenshots/en/phone-settings.png" width="200" alt="Settings: Account, Baby with Add a baby, Appearance and Language"> | <img src="docs/screenshots/en/phone-widget-4x2.png" width="200" alt="4x2 log widget in its states"> | <img src="docs/screenshots/en/phone-widget-3x1.png" width="200" alt="3x1 quick widget in its sizes"> |
+
+| Adjust start |
+|:---:|
+| <img src="docs/screenshots/en/phone-adjust-start.png" width="200" alt="Adjust start sheet for the running sleep"> |
 
 | Cover screen (Samsung flip) | Sleep notifications | Statistics | Statistics, Night |
 |:---:|:---:|:---:|:---:|

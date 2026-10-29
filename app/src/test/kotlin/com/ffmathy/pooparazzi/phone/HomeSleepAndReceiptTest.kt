@@ -7,10 +7,9 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.sample.SampleData
-import com.ffmathy.pooparazzi.phone.ui.home.CardAction
-import com.ffmathy.pooparazzi.phone.ui.home.CardRow
-import com.ffmathy.pooparazzi.phone.ui.home.CardVariant
 import com.ffmathy.pooparazzi.phone.ui.home.GuardKind
+import com.ffmathy.pooparazzi.phone.ui.home.NoticeVariant
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
 import com.ffmathy.pooparazzi.phone.ui.home.HomeHaptic
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import com.ffmathy.pooparazzi.phone.ui.home.OffsetChipUi
@@ -23,18 +22,22 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The Sleep toggle, its 2 s guard and 60 s discard, the undo card's offsets and timing, Adjust start and cooldowns. */
+/**
+ * The Sleep toggle, its 2 s guard and 60 s discard, the receipt sheet (offsets, Undo, End sleep, Edit, no timeout),
+ * the notices, Adjust start and cooldowns.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], application = Application::class)
-class HomeSleepAndCardTest : HomeViewModelTestBase() {
+class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
 
     @Test
-    fun startSleepRunsASleepAndShowsTheCard() = homeTest { home ->
+    fun startSleepRunsASleepAndShowsTheReceipt() = homeTest { home ->
         home.tapSleepToggle()
         val state = home.settle()
         val sleep = state.runningSleep!!
         assertEquals(SampleData.NOW_1432, sleep.startMillis)
-        assertEquals(CardVariant.SleepStarted, state.card!!.variant)
+        assertEquals(ReceiptVariant.SleepStarted, state.receipt.variant)
+        assertEquals(SampleData.NOW_1432, state.receipt.time)
         assertTrue(state.lamp is LampState.SleepRunning)
         assertEquals(listOf(HomeHaptic.TOGGLE_ON), home.haptics)
     }
@@ -43,33 +46,34 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
     fun aSecondToggleWithinTwoSecondsIsGuarded() = homeTest { home ->
         home.tapSleepToggle()
         home.settle()
-        home.scope.testScheduler.advanceTimeBy(1_500)
-        home.clock.advanceBy(1_500)
+        home.closeReceipt()
+        home.clock.advanceBy(700)
         home.tapSleepToggle()
         var state = home.settle()
         assertTrue("still asleep", state.sleepRunning)
-        assertEquals(CardRow.Guard(GuardKind.ASLEEP, SampleData.NOW_1432), state.card!!.row)
-        assertEquals(CardVariant.SleepStarted, state.card!!.variant)
+        assertNull("no new receipt", state.sheet)
+        assertEquals(NoticeVariant.Guard(GuardKind.ASLEEP, SampleData.NOW_1432), state.card!!.variant)
         assertEquals(listOf(HomeHaptic.TOGGLE_ON, HomeHaptic.REJECT), home.haptics)
 
         home.scope.testScheduler.advanceTimeBy(2_100)
         state = home.settle()
-        assertTrue("the guard line lasts 2 s", state.card!!.row is CardRow.Earlier)
+        assertNull("the notice lasts 2 s", state.card)
     }
 
     @Test
-    fun wokeUpEndsTheSleepAndOffsetsMoveTheEnd() = homeTest { home ->
+    fun wokeUpEndsTheSleepAndOffsetsMoveTheEndAtOnce() = homeTest { home ->
         val sleep = home.repository.startSleep(SampleData.at(13, 25)).getOrThrow()
         home.tapSleepToggle()
         var state = home.settle()
         assertEquals(SampleData.NOW_1432, home.repository.get(sleep.id)!!.endMillis)
-        assertEquals(CardVariant.WokeUp(67 * MINUTE), state.card!!.variant)
+        assertEquals(ReceiptVariant.WokeUp(67 * MINUTE), state.receipt.variant)
         assertEquals(HomeHaptic.TOGGLE_OFF, home.haptics.last())
 
-        home.viewModel.onCardOffset(-10)
+        home.viewModel.onSheetOffset(-10)
         state = home.settle()
         assertEquals(SampleData.at(14, 22), home.repository.get(sleep.id)!!.endMillis)
-        assertEquals(CardVariant.WokeUp(57 * MINUTE), state.card!!.variant)
+        assertEquals(ReceiptVariant.WokeUp(57 * MINUTE), state.receipt.variant)
+        assertEquals(SampleData.at(14, 22), state.receipt.time)
         assertEquals(HomeHaptic.SEGMENT_TICK, home.haptics.last())
     }
 
@@ -77,13 +81,12 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
     fun endOffsetsBeforeTheStartAreDisabled() = homeTest { home ->
         home.repository.startSleep(SampleData.at(14, 24)).getOrThrow()
         home.tapSleepToggle()
-        val row = home.settle().card!!.row as CardRow.Earlier
         assertEquals(
-            listOf(OffsetChipUi(-5, false, true), OffsetChipUi(-10, false, false), OffsetChipUi(-15, false, false)),
-            row.chips,
+            listOf(OffsetChipUi(-15, false, false), OffsetChipUi(-10, false, false), OffsetChipUi(-5, false, true), OffsetChipUi(5, false, false)),
+            home.settle().receipt.chips,
         )
-        home.viewModel.onCardOffset(-10)
-        home.settle()
+        home.viewModel.onSheetOffset(-10)
+        assertEquals(0, home.settle().receipt.offsetMinutes)
         assertEquals(HomeHaptic.REJECT, home.haptics.last())
     }
 
@@ -91,19 +94,20 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
     fun aSleepStoppedWithinAMinuteIsCancelledAndUndoResumesIt() = homeTest { home ->
         home.tapSleepToggle()
         home.settle()
+        home.closeReceipt()
         home.scope.testScheduler.advanceTimeBy(2_100)
         home.clock.advanceBy(40_000)
         home.tapSleepToggle()
         var state = home.settle()
-        assertEquals(CardVariant.SleepCancelled, state.card!!.variant)
-        assertEquals(CardRow.None, state.card!!.row)
+        assertEquals(ReceiptVariant.SleepCancelled, state.receipt.variant)
+        assertTrue("nothing to move", state.receipt.chips.isEmpty())
         assertFalse(state.sleepRunning)
         assertTrue(home.entries().none { it.isSleep })
 
         home.viewModel.onUndo()
         state = home.settle()
-        assertEquals(CardVariant.Undone, state.card!!.variant)
-        assertEquals(CardAction.NONE, state.card!!.action)
+        assertNull(state.sheet)
+        assertEquals(NoticeVariant.Undone, state.card!!.variant)
         assertTrue(state.runningSleep!!.isRunning)
         assertEquals(SampleData.NOW_1432, state.runningSleep!!.startMillis)
     }
@@ -119,7 +123,8 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
         home.viewModel.onUndo()
         var state = home.settle()
         assertTrue(home.entries().isEmpty())
-        assertEquals(CardVariant.Undone, state.card!!.variant)
+        assertNull(state.sheet)
+        assertEquals(NoticeVariant.Undone, state.card!!.variant)
         assertEquals(HomeHaptic.REJECT, home.haptics.last())
 
         home.scope.testScheduler.advanceTimeBy(2_100)
@@ -134,31 +139,55 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
         home.settle()
         suspend fun feedTime() = home.entries().single().startMillis
 
-        home.viewModel.onCardOffset(-5)
+        home.viewModel.onSheetOffset(-5)
         home.settle()
         assertEquals(SampleData.NOW_1432 - 5 * MINUTE, feedTime())
-        home.viewModel.onCardOffset(-15)
+        home.viewModel.onSheetOffset(-15)
         home.settle()
         assertEquals("never cumulative", SampleData.NOW_1432 - 15 * MINUTE, feedTime())
-        home.viewModel.onCardOffset(-15)
+        home.viewModel.onSheetOffset(-15)
         val state = home.settle()
         assertEquals("re-tapping the selected chip returns to 0", SampleData.NOW_1432, feedTime())
-        assertTrue((state.card!!.row as CardRow.Earlier).chips.none { it.selected })
+        assertTrue(state.receipt.chips.none { it.selected })
     }
 
     @Test
-    fun theCardExpiresAfterTenSecondsAndChipTapsRestartTheWindow() = homeTest { home ->
-        home.tapSleepToggle()
-        var state = home.settle()
-        val windowKey = state.card!!.windowKey
-        home.scope.testScheduler.advanceTimeBy(8_000)
-        home.viewModel.onCardOffset(-5)
-        state = home.settle()
-        assertEquals(windowKey + 1, state.card!!.windowKey)
-        home.scope.testScheduler.advanceTimeBy(8_000)
-        assertTrue("restarted by the chip tap", home.settle().card != null)
-        home.scope.testScheduler.advanceTimeBy(2_100)
-        assertNull(home.settle().card)
+    fun theReceiptHasNoTimeoutAndDoneKeepsTheLog() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFeedType(FeedType.FOOD)
+        home.settle()
+        home.viewModel.onSheetOffset(-10)
+        home.scope.testScheduler.advanceTimeBy(10 * MINUTE)
+        assertEquals("still open", ReceiptVariant.FeedLogged(FeedType.FOOD), home.settle().receipt.variant)
+
+        home.viewModel.onReceiptDone()
+        val state = home.settle()
+        assertNull(state.sheet)
+        assertNull("no card after a receipt", state.card)
+        assertEquals(SampleData.NOW_1432 - 10 * MINUTE, home.entries().single().startMillis)
+    }
+
+    @Test
+    fun dismissingTheReceiptKeepsTheLogAsShown() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFeedType(FeedType.FOOD)
+        home.viewModel.onSheetOffset(-5)
+        home.viewModel.onSheetDismiss()
+        home.settle()
+        assertNull(home.settle().sheet)
+        assertEquals(SampleData.NOW_1432 - 5 * MINUTE, home.entries().single().startMillis)
+    }
+
+    @Test
+    fun editInTheReceiptClosesItAndOpensTheEditor() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFeedType(FeedType.FOOD)
+        val receipt = home.settle().receipt
+        var editorOpened = false
+        home.viewModel.onSheetEdit(receipt.editEntryId!!) { editorOpened = true }
+        home.settle()
+        assertTrue(editorOpened)
+        assertNull(home.settle().sheet)
     }
 
     @Test
@@ -169,66 +198,94 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
         home.viewModel.onDiaperPoop(true)
         home.viewModel.onDiaperSave()
         var state = home.settle()
-        val row = state.card!!.row as CardRow.RunningSleep
-        assertTrue(row.endSleepEnabled)
-        assertEquals(listOf(OffsetChipUi(-5, true, true), OffsetChipUi(-10, false, true)), row.chips)
+        assertEquals(true, state.receipt.endSleep)
 
-        home.viewModel.onCardEndSleep()
+        home.viewModel.onEndSleep()
         state = home.settle()
         assertEquals(SampleData.at(14, 27), home.repository.get(sleep.id)!!.endMillis)
-        assertEquals(CardVariant.WokeUp(87 * MINUTE), state.card!!.variant)
-        assertTrue(state.card!!.row is CardRow.Earlier)
+        assertEquals(ReceiptVariant.WokeUp(87 * MINUTE), state.receipt.variant)
+        assertNull("End sleep is done", state.receipt.endSleep)
+        assertTrue(state.receipt.chips.isNotEmpty())
     }
 
     @Test
-    fun adjustStartMovesTheRunningStartAndPlusFiveNeedsRoom() = homeTest { home ->
+    fun adjustStartMovesTheRunningStartOnSaveAndPlusFiveNeedsRoom() = homeTest { home ->
         val sleep = home.repository.startSleep(SampleData.at(14, 30)).getOrThrow()
         home.viewModel.onAdjustStart()
         var state = home.settle()
-        assertEquals(CardVariant.AdjustStart, state.card!!.variant)
-        assertEquals(CardAction.DONE, state.card!!.action)
-        val row = state.card!!.row as CardRow.Adjust
-        assertEquals(sleep.id, row.editEntryId)
+        val sheet = state.sheet as HomeSheetUi.Adjust
+        assertEquals(sleep.id, sheet.entryId)
         assertEquals(
-            listOf(OffsetChipUi(-15, false, true), OffsetChipUi(-5, false, true), OffsetChipUi(5, false, false)),
-            row.chips,
+            listOf(OffsetChipUi(-15, false, true), OffsetChipUi(-10, false, true), OffsetChipUi(-5, false, true), OffsetChipUi(5, false, false)),
+            sheet.chips,
         )
 
-        home.viewModel.onCardOffset(-15)
+        home.viewModel.onSheetOffset(-15)
+        home.scope.testScheduler.advanceTimeBy(60_000)
         state = home.settle()
+        assertEquals("nothing moves before Save", SampleData.at(14, 30), state.runningSleep!!.startMillis)
+        assertEquals(SampleData.at(14, 15), state.sheet!!.time)
+        home.viewModel.onAdjustSave()
+        state = home.settle()
+        assertNull(state.sheet)
         assertEquals(SampleData.at(14, 15), state.runningSleep!!.startMillis)
         assertTrue("the timer keeps running", state.runningSleep!!.isRunning)
+        assertEquals(HomeHaptic.CONFIRM, home.haptics.last())
+    }
 
-        home.viewModel.onCardDone()
-        assertNull(home.settle().card)
+    @Test
+    fun cancellingAdjustStartMovesNothing() = homeTest { home ->
+        home.repository.startSleep(SampleData.at(14, 0)).getOrThrow()
+        home.viewModel.onAdjustStart()
+        home.viewModel.onSheetOffset(-10)
+        home.viewModel.onSheetDismiss()
+        val state = home.settle()
+        assertNull(state.sheet)
+        assertEquals(SampleData.at(14, 0), state.runningSleep!!.startMillis)
+    }
+
+    @Test
+    fun editInAdjustStartSavesTheOffsetFirst() = homeTest { home ->
+        val sleep = home.repository.startSleep(SampleData.at(14, 0)).getOrThrow()
+        home.viewModel.onAdjustStart()
+        home.viewModel.onSheetOffset(-5)
+        var editorOpened = false
+        home.viewModel.onSheetEdit(sleep.id) { editorOpened = true }
+        home.settle()
+        assertTrue(editorOpened)
+        assertNull(home.settle().sheet)
+        assertEquals(SampleData.at(13, 55), home.repository.get(sleep.id)!!.startMillis)
     }
 
     @Test
     fun adjustStartTargetsTheRunningSleepNeverABreastFeed() = homeTest { home ->
         val sleep = home.repository.startSleep(SampleData.at(13, 0)).getOrThrow()
-        home.repository.logFeed(com.ffmathy.pooparazzi.core.model.FeedType.BREAST, SampleData.at(14, 20))
+        home.repository.logFeed(FeedType.BREAST, SampleData.at(14, 20))
         home.viewModel.onAdjustStart()
-        val card = home.settle().card!!
-        assertEquals(CardVariant.AdjustStart, card.variant)
-        assertEquals(sleep.id, (card.row as CardRow.Adjust).editEntryId)
+        assertEquals(sleep.id, (home.settle().sheet as HomeSheetUi.Adjust).entryId)
     }
 
     @Test
     fun adjustStartDoesNothingWithoutARunningSleep() = homeTest { home ->
-        home.repository.logFeed(com.ffmathy.pooparazzi.core.model.FeedType.BREAST, SampleData.at(14, 20))
+        home.repository.logFeed(FeedType.BREAST, SampleData.at(14, 20))
         home.viewModel.onAdjustStart()
-        assertNull(home.settle().card)
+        assertNull(home.settle().sheet)
     }
 
     @Test
-    fun homeIgnoresTapsForSixHundredMillisAfterACommittedSheetCloses() = homeTest { home ->
+    fun homeIgnoresTapsWhileAReceiptIsOpenAndForSixHundredMillisAfterDone() = homeTest { home ->
         home.viewModel.onDiaper()
         home.viewModel.onDiaperPee(true)
         home.viewModel.onDiaperSave()
         home.settle()
         home.viewModel.onSheetClosed()
-        home.settle()
+        home.tapSleepToggle()
+        assertFalse("Sleep toggle ignored under the receipt", home.settle().sleepRunning)
 
+        home.viewModel.onReceiptDone()
+        home.settle()
+        home.viewModel.onSheetClosed()
+        home.settle()
         home.scope.testScheduler.advanceTimeBy(300)
         home.viewModel.onDiaper()
         home.tapSleepToggle()
@@ -249,20 +306,6 @@ class HomeSleepAndCardTest : HomeViewModelTestBase() {
         home.viewModel.onSheetClosed()
         home.tapFeed()
         assertTrue(home.settle().sheet is HomeSheetUi.Feed)
-    }
-
-    @Test
-    fun aGuardWithoutACardShowsANotice() = homeTest { home ->
-        home.tapSleepToggle()
-        home.settle()
-        home.viewModel.onCardDone() // not an Adjust card: Done is not offered, but a dismissed card is the same case
-        home.settle()
-        home.scope.testScheduler.advanceTimeBy(500)
-        home.tapSleepToggle()
-        val card = home.settle().card!!
-        assertEquals(CardVariant.Notice(GuardKind.ASLEEP), card.variant)
-        assertEquals(CardRow.Guard(GuardKind.ASLEEP, SampleData.NOW_1432), card.row)
-        assertEquals(CardAction.NONE, card.action)
     }
 
     @Test

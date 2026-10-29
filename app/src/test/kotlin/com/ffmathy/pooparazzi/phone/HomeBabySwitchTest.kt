@@ -8,7 +8,7 @@ import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import com.ffmathy.pooparazzi.phone.launch.ReceiptKind
-import com.ffmathy.pooparazzi.phone.ui.home.CardVariant
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
 import com.ffmathy.pooparazzi.phone.ui.home.HomeHaptic
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
@@ -95,15 +95,18 @@ class HomeBabySwitchTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun switchingClosesTheCard() = homeTest { home ->
+    fun aReceiptBlocksSwitchingUntilItIsDone() = homeTest { home ->
         home.addTwin()
         home.tapSleepToggle()
-        assertEquals(CardVariant.SleepStarted, home.settle().card!!.variant)
+        assertEquals(ReceiptVariant.SleepStarted, home.settle().receipt.variant)
+        home.viewModel.onSwitchBaby()
+        assertFalse("the receipt's Undo belongs to Noa", home.settle().switchingBaby)
 
+        home.closeReceipt()
         home.viewModel.onSwitchBaby()
         home.viewModel.onSelectBaby(SampleData.TWIN_ID)
         val state = home.settle()
-        assertNull("the card's Undo belongs to Noa", state.card)
+        assertNull(state.sheet)
         assertNull("Ida is awake", state.runningSleep)
         assertTrue("Noa sleeps on", home.repository.observeAllEntries().first().any { it.isSleep && it.isRunning && it.babyId == Baby.FIRST_ID })
     }
@@ -138,6 +141,7 @@ class HomeBabySwitchTest : HomeViewModelTestBase() {
         home.addTwin()
         home.tapSleepToggle()
         home.settle()
+        home.closeReceipt()
         home.viewModel.onSwitchBaby()
         home.viewModel.onSelectBaby(SampleData.TWIN_ID)
         home.settle()
@@ -145,22 +149,22 @@ class HomeBabySwitchTest : HomeViewModelTestBase() {
         home.scope.testScheduler.advanceTimeBy(500)
         home.tapSleepToggle()
         val state = home.settle()
-        assertEquals(CardVariant.SleepStarted, state.card!!.variant)
+        assertEquals(ReceiptVariant.SleepStarted, state.receipt.variant)
         assertEquals(SampleData.TWIN_ID, state.runningSleep!!.babyId)
         val running = home.repository.observeAllEntries().first().filter { it.isSleep && it.isRunning }
         assertEquals(setOf(Baby.FIRST_ID, SampleData.TWIN_ID), running.map { it.babyId }.toSet())
     }
 
     @Test
-    fun aWidgetReceiptForAnotherBabyShowsNoCard() = homeTest { home ->
+    fun aWidgetReceiptForAnotherBabyShowsNothing() = homeTest { home ->
         home.addTwin()
         val sleep = home.repository.startSleep(SampleData.NOW_1432).getOrThrow()
         home.settings.selectBaby(SampleData.TWIN_ID)
         home.viewModel.onLaunch(HomeLaunch.Receipt(ReceiptKind.SLEEP_STARTED, sleep.id))
-        assertNull(home.settle().card)
+        assertNull(home.settle().sheet)
 
         home.settings.selectBaby(Baby.FIRST_ID)
         home.viewModel.onLaunch(HomeLaunch.Receipt(ReceiptKind.SLEEP_STARTED, sleep.id))
-        assertEquals(CardVariant.SleepStarted, home.settle().card!!.variant)
+        assertEquals(ReceiptVariant.SleepStarted, home.settle().receipt.variant)
     }
 }

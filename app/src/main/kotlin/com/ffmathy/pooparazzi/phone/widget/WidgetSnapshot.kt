@@ -44,7 +44,7 @@ data class WidgetSnapshot(
     /** The current baby, the one the widgets log for. */
     val baby: Baby get() = babies.firstOrNull { it.id == babyId } ?: babies.first()
 
-    /** What a tap on the widget background opens: Home with the undo card for the receipt, or Home. */
+    /** What a tap on the widget background opens: Home with the receipt sheet, or Home. */
     val backgroundLaunch: HomeLaunch
         get() = receipt?.let { HomeLaunch.Receipt(it.kind, it.entryId) } ?: HomeLaunch.Home
 

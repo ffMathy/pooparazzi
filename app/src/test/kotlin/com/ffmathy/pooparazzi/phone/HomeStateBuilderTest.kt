@@ -6,8 +6,7 @@ import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.sample.SampleData
-import com.ffmathy.pooparazzi.phone.ui.home.CardRow
-import com.ffmathy.pooparazzi.phone.ui.home.CardVariant
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import com.ffmathy.pooparazzi.phone.ui.home.SinceRow
 import com.ffmathy.pooparazzi.phone.ui.preview.HomeSamples
@@ -61,13 +60,32 @@ class HomeStateBuilderTest {
         assertEquals(FeedType.BREAST, lamp.lastFeed!!.feedType)
         assertTrue(state.row1 is SinceRow.Awake)
         assertFalse(state.anythingRunning)
-        assertEquals(CardVariant.FeedLogged(FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT), state.card!!.variant)
+        assertEquals(ReceiptVariant.FeedLogged(FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT), state.receipt.variant)
+        assertEquals("the logged time, 14:47 − 15m", SampleData.at(14, 32), state.receipt.time)
     }
 
     @Test
-    fun justLoggedHasTheEarlierRow() {
-        val card = HomeSamples.justLogged().card!!
-        assertEquals(listOf(-5, -10, -15), (card.row as CardRow.Earlier).chips.map { it.minutes })
+    fun aJustLoggedReceiptCannotMoveIntoTheFuture() {
+        val state = HomeSamples.justLogged()
+        assertNull("receipts are a sheet, not a card", state.card)
+        val receipt = state.receipt
+        assertTrue(receipt.undoable)
+        assertEquals(HomeSamples.formula1432.id, receipt.editEntryId)
+        assertNull(receipt.endSleep)
+        assertEquals(listOf(-15, -10, -5, 5), receipt.chips.map { it.minutes })
+        assertEquals(listOf(true, true, true, false), receipt.chips.map { it.enabled })
+    }
+
+    @Test
+    fun aDiaperDuringASleepOffersEndSleep() {
+        assertEquals(true, HomeSamples.loggedDuringSleep().receipt.endSleep)
+    }
+
+    @Test
+    fun adjustingStartShowsTheChosenStart() {
+        val sheet = HomeSamples.adjustingStart().sheet as HomeSheetUi.Adjust
+        assertEquals(SampleData.at(1, 50), sheet.time)
+        assertEquals(-15, sheet.chips.single { it.selected }.minutes)
     }
 
     @Test

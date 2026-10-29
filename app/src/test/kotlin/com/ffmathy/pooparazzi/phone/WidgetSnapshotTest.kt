@@ -103,6 +103,6 @@ class WidgetSnapshotTest {
         assertEquals("an unknown sheet opens Home", HomeLaunch.Home, DeepLinks.parse(Uri.parse("pooparazzi://home/nothing")))
         assertTrue(HomeLaunch.Feed.opensSheet)
         assertEquals("the old End feed link opens Home", HomeLaunch.Home, DeepLinks.parse(Uri.parse("pooparazzi://home/side")))
-        assertFalse(HomeLaunch.Receipt(ReceiptKind.LOGGED, "x").opensSheet)
+        assertTrue("a receipt is a sheet too", HomeLaunch.Receipt(ReceiptKind.LOGGED, "x").opensSheet)
     }
 }

@@ -22,8 +22,8 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 internal data class BabySwitcherUi(val babies: List<Baby>, val currentId: String)
 
 /**
- * Home's logging sheets and the Switch baby sheet: at most one is open; each logging sheet animates closed before
- * Home's cooldown starts.
+ * Home's logging sheets, the receipt, Adjust start and the Switch baby sheet: at most one is open; each logging sheet
+ * and receipt animates closed before Home's cooldown starts.
  */
 @Composable
 internal fun HomeSheets(
@@ -73,6 +73,39 @@ internal fun HomeSheets(
         windowInsets = windowInsets,
     ) { diaper ->
         DiaperSheetContent(diaper, zone, formatters, diaperCallbacks)
+    }
+    val adjustCallbacks = remember(actions) {
+        AdjustSheetCallbacks(
+            onOffset = actions::onSheetOffset,
+            onEdit = actions::onSheetEdit,
+            onSave = actions::onAdjustSave,
+            onCancel = actions::onSheetDismiss,
+        )
+    }
+    XModalSheet(
+        value = sheet as? HomeSheetUi.Adjust,
+        onDismissRequest = actions::onSheetDismiss,
+        onClosed = actions::onSheetClosed,
+        windowInsets = windowInsets,
+    ) { adjust ->
+        AdjustSheetContent(adjust, zone, formatters, adjustCallbacks)
+    }
+    val receiptCallbacks = remember(actions) {
+        ReceiptSheetCallbacks(
+            onUndo = actions::onUndo,
+            onOffset = actions::onSheetOffset,
+            onEndSleep = actions::onEndSleep,
+            onEdit = actions::onSheetEdit,
+            onDone = actions::onReceiptDone,
+        )
+    }
+    XModalSheet(
+        value = sheet as? HomeSheetUi.Receipt,
+        onDismissRequest = actions::onSheetDismiss,
+        onClosed = actions::onSheetClosed,
+        windowInsets = windowInsets,
+    ) { receipt ->
+        ReceiptSheetContent(receipt, zone, formatters, receiptCallbacks)
     }
     XModalSheet(
         value = switcher,
