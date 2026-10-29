@@ -71,6 +71,13 @@ interface SettingsRepository {
      */
     suspend fun ensureBabies(ids: Collection<String>): Settings
 
+    /**
+     * Merges the babies of an import ("Import data", [com.ffmathy.pooparazzi.core.export.LogExport]) one by one, as
+     * [Settings.withMergedBabies]: unknown babies are appended and a version that wins over the stored one replaces it.
+     * A synced change when something changed, flagged for the family's backup like a rename here.
+     */
+    suspend fun importBabies(babies: Collection<Baby>): Settings
+
     suspend fun setAppearance(appearance: Appearance): Settings
 
     suspend fun setLanguage(language: AppLanguage): Settings
@@ -145,6 +152,9 @@ class DataStoreSettingsRepository(
 
     override suspend fun ensureBabies(ids: Collection<String>): Settings =
         updateLocal(flagBabies = false) { current, _ -> current.withBabies(ids) }
+
+    override suspend fun importBabies(babies: Collection<Baby>): Settings =
+        updateLocal { current, _ -> current.withMergedBabies(babies) }
 
     override suspend fun setAppearance(appearance: Appearance): Settings =
         updateLocal { current, _ -> current.copy(appearance = appearance) }

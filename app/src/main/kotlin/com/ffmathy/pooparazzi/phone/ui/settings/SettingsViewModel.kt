@@ -45,6 +45,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.InputStream
 import java.io.OutputStream
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
@@ -126,8 +127,11 @@ interface SettingsActions {
     /** Settings › About › Privacy policy: opens it in the browser. */
     fun onOpenPrivacy() {}
 
-    /** Settings › About › "Download my data": asks where to save the file, then writes it ([SettingsViewModel.export]). */
+    /** Settings › About › "Download my data": asks where to save the ZIP file, then writes it ([SettingsViewModel.export]). */
     fun onExport() {}
+
+    /** Settings › About › "Import data": asks for an export, then merges it into the log ([SettingsViewModel.importData]). */
+    fun onImport() {}
 
     /** Settings › Notifications: the system setting for Live Updates or notifications. */
     fun onOpenNotificationSettings() {}
@@ -280,17 +284,30 @@ class SettingsViewModel(
     }
 
     /**
-     * "Download my data" (GDPR art. 15, 20): writes the whole log and the babies with their names ([LogExport]) to [out],
-     * with the names as typed (also one not saved yet). Returns how many entries were written.
+     * "Download my data" (GDPR art. 15, 20): writes the whole log and the babies with their names to [out] as one ZIP
+     * file ([LogExport.write]), with the names as typed (also one not saved yet). Returns how many entries were written.
      */
     suspend fun export(out: OutputStream): Int {
         val repository = checkNotNull(entries) { "No log to export" }
         val drafts = nameDrafts.value
         val babies = settings.settings.first().babies.map { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby }
         val log = repository.observeAllEntries().first()
-        val text = LogExport.encode(babies, log, clock.now())
-        withContext(Dispatchers.IO) { out.bufferedWriter(Charsets.UTF_8).use { it.write(text) } }
+        withContext(Dispatchers.IO) { out.buffered().use { LogExport.write(it, babies, log, clock.now()) } }
         return log.size
+    }
+
+    /**
+     * "Import data": reads an export from [input] (the ZIP file of [export], or the JSON file of an earlier version,
+     * [LogExport.read]) and merges it into the log: babies one by one and entries by last-writer-wins, so what is
+     * newer on this phone stays. Returns how many entries were stored.
+     *
+     * @throws java.io.IOException when [input] is not a Pooparazzi export.
+     */
+    suspend fun importData(input: InputStream): Int {
+        val repository = checkNotNull(entries) { "No log to import into" }
+        val export = withContext(Dispatchers.IO) { input.use { LogExport.read(it) } }
+        if (export.babies.isNotEmpty()) settings.importBabies(export.babies)
+        return repository.importEntries(export.entries)
     }
 
     /** Writes the latest typed name of baby [id], one write at a time (an older name never lands after a newer one). */

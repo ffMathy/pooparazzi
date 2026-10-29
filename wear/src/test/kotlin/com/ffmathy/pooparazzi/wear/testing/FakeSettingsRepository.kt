@@ -30,6 +30,8 @@ class FakeSettingsRepository(initial: Settings = Settings()) : SettingsRepositor
 
     override suspend fun ensureBabies(ids: Collection<String>) = state.updateAndGet { it.withBabies(ids) }
 
+    override suspend fun importBabies(babies: Collection<Baby>) = state.updateAndGet { it.withMergedBabies(babies) }
+
     override suspend fun setAppearance(appearance: Appearance) = state.updateAndGet { it.copy(appearance = appearance) }
 
     override suspend fun setLanguage(language: AppLanguage) = state.updateAndGet { it.copy(language = language) }

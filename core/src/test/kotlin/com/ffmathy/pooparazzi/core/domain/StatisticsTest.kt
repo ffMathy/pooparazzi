@@ -22,6 +22,10 @@ private fun at(day: LocalDate, h: Int, m: Int = 0) = epochMillis(day, h, m, ZONE
 private fun report(entries: List<Entry> = SampleData.history(), range: StatsRange = StatsRange.Last30Days, now: Long = NOW_1432) =
     checkNotNull(statsReport(entries, now, ZONE, range)) { "no report" }
 
+private fun week(entries: List<Entry> = SampleData.history(), now: Long = NOW_1432) = report(entries, StatsRange.Last7Days, now).window
+
+private fun month(entries: List<Entry> = SampleData.history(), now: Long = NOW_1432) = report(entries, StatsRange.Last30Days, now).window
+
 /** Tenths of feeds, pee and poop, and minutes of sleep: the four averages as shown. */
 private fun StatsWindow.averages(): List<Long?> = listOf(
     average(StatsMetric.FEEDS)?.tenths?.toLong(),
@@ -50,7 +54,7 @@ private val F1 = listOf(
 class StatisticsWindowsTest {
     @Test
     fun lastSevenDaysAreTheSevenWholeDaysBeforeToday() {
-        val week = report().lastSevenDays
+        val week = week()
         assertEquals(oct(19) to oct(25), week.from to week.to)
         assertEquals(7, week.dayCount)
         assertEquals(oct(25), report().lastDay)
@@ -58,15 +62,15 @@ class StatisticsWindowsTest {
 
     @Test
     fun lastThirtyDaysEndYesterday() {
-        val month = report().lastThirtyDays
+        val month = month()
         assertEquals(sep(26) to oct(25), month.from to month.to)
         assertEquals(30, month.dayCount)
-        assertEquals("the default comparison is the last 30 days", month, report().comparison)
+        assertEquals("the default comparison is the last 30 days", month, report().window)
     }
 
     @Test
     fun lastNinetyDaysKeepTheirDatesBeforeLogging() {
-        val quarter = report(range = StatsRange.Last90Days).comparison
+        val quarter = report(range = StatsRange.Last90Days).window
         assertEquals(LocalDate.of(2026, 7, 28) to oct(25), quarter.from to quarter.to)
         assertEquals(90, quarter.dayCount)
         assertEquals(33, quarter.loggedDays)
@@ -76,7 +80,7 @@ class StatisticsWindowsTest {
     fun allDaysStartTheDayAfterTheFirstEntry() {
         val all = report(range = StatsRange.AllDays)
         assertEquals("history() starts on Tue 22 Sep, a partial day", sep(23), all.firstDay)
-        assertEquals(sep(23) to oct(25), all.comparison.from to all.comparison.to)
+        assertEquals(sep(23) to oct(25), all.window.from to all.window.to)
     }
 
     @Test
@@ -88,6 +92,7 @@ class StatisticsWindowsTest {
 
     @Test
     fun aConfirmedRangeEqualToAPresetBecomesThePreset() {
+        assertEquals(StatsRange.Last7Days, StatsRange.Custom(oct(19), oct(25)).normalised(sep(23), oct(25)))
         assertEquals(StatsRange.Last30Days, StatsRange.Custom(sep(26), oct(25)).normalised(sep(23), oct(25)))
         assertEquals(StatsRange.AllDays, StatsRange.Custom(sep(1), oct(25)).normalised(sep(23), oct(25)))
         assertEquals(StatsRange.Custom(oct(1), oct(10)), StatsRange.Custom(oct(1), oct(10)).normalised(sep(23), oct(25)))
@@ -107,26 +112,26 @@ class StatisticsWindowsTest {
 class StatisticsAveragesTest {
     @Test
     fun theWeekAverages6point7Feeds7point9Pee0point7Poop14h01mSleep() {
-        val week = report().lastSevenDays
+        val week = week()
         assertEquals(listOf(67, 79, 7, 841L), week.averages())
         assertEquals(7, week.loggedDays)
     }
 
     @Test
     fun theMonthAverages7point1Feeds7point6Pee1point8Poop14h07mSleep() {
-        assertEquals(listOf(71, 76, 18, 847L), report().lastThirtyDays.averages())
+        assertEquals(listOf(71, 76, 18, 847L), month().averages())
     }
 
     @Test
     fun ninetyAndAllDaysAverageTheSame33Days() {
-        assertEquals(listOf(72, 76, 18, 840L), report(range = StatsRange.Last90Days).comparison.averages())
-        assertEquals(listOf(72, 76, 18, 840L), report(range = StatsRange.AllDays).comparison.averages())
+        assertEquals(listOf(72, 76, 18, 840L), report(range = StatsRange.Last90Days).window.averages())
+        assertEquals(listOf(72, 76, 18, 840L), report(range = StatsRange.AllDays).window.averages())
     }
 
     @Test
     fun aFortnightRoundsSleepHalfUp() {
         // 12 033 minutes over 14 days is 859.5.
-        assertEquals(listOf(71, 75, 17, 860L), report(range = StatsRange.Custom(oct(5), oct(18))).comparison.averages())
+        assertEquals(listOf(71, 75, 17, 860L), report(range = StatsRange.Custom(oct(5), oct(18))).window.averages())
     }
 
     @Test
@@ -141,7 +146,7 @@ class StatisticsAveragesTest {
 
     @Test
     fun twoForgottenDaysLeaveTwentyEightOfThirty() {
-        val month = report(SampleData.historyWithGaps()).lastThirtyDays
+        val month = month(SampleData.historyWithGaps())
         assertEquals(listOf(71, 77, 18, 846L), month.averages())
         assertEquals(28, month.loggedDays)
         val byDate = month.days.associateBy { it.date }
@@ -156,16 +161,15 @@ class StatisticsAveragesTest {
 class StatisticsDaysTest {
     @Test
     fun forgottenKindsAreLeftOutPerKind() {
-        val f1 = report(F1)
-        assertEquals(listOf(15, 3, 3, 105L), f1.lastThirtyDays.averages())
-        assertEquals(3, f1.lastThirtyDays.loggedDays)
-        assertEquals(listOf(10, 0, 0, 120L), f1.lastSevenDays.averages())
-        assertEquals(1, f1.lastSevenDays.loggedDays)
+        assertEquals(listOf(15, 3, 3, 105L), month(F1).averages())
+        assertEquals(3, month(F1).loggedDays)
+        assertEquals(listOf(10, 0, 0, 120L), week(F1).averages())
+        assertEquals(1, week(F1).loggedDays)
     }
 
     @Test
     fun aPlainChangeIsARealZeroForPeeAndPoop() {
-        val tuesday = report(F1).lastSevenDays.days.single { it.date == oct(20) }
+        val tuesday = week(F1).days.single { it.date == oct(20) }
         assertTrue(tuesday.counted(StatsMetric.PEE))
         assertTrue(tuesday.counted(StatsMetric.POOP))
         assertEquals(0L, tuesday.value(StatsMetric.PEE))
@@ -174,7 +178,7 @@ class StatisticsDaysTest {
 
     @Test
     fun theFirstLoggedDayIsBeforeLogging() {
-        val days = report(F1).lastThirtyDays.days.associateBy { it.date }
+        val days = month(F1).days.associateBy { it.date }
         assertEquals(DayStatus.BEFORE_LOGGING, days.getValue(oct(16)).status)
         assertEquals(DayStatus.COUNTED, days.getValue(oct(17)).status)
         assertEquals(DayStatus.NOTHING_LOGGED, days.getValue(oct(19)).status)
@@ -188,7 +192,7 @@ class StatisticsDaysTest {
             Entry.feed(null, at(oct(21), 10), id = "wed"),
             Entry.sleep(at(oct(19), 22), at(oct(20), 6), id = "night"),
         )
-        val week = report(entries).lastSevenDays
+        val week = week(entries)
         val tuesday = week.days.single { it.date == oct(20) }
         assertEquals(DayStatus.NOTHING_LOGGED, tuesday.status)
         assertEquals(360L, tuesday.counts.sleepMinutes)
@@ -203,10 +207,10 @@ class StatisticsDaysTest {
             Entry.feed(null, at(oct(17), 10), id = "sat"),
             Entry.sleep(at(oct(17), 20), id = "forgotten"),
         )
-        val week = report(entries).lastSevenDays
+        val week = week(entries)
         assertEquals(listOf(null, null, null, null), week.averages())
         assertEquals(0, week.loggedDays)
-        assertEquals(listOf(10, null, null, 240L), report(entries).lastThirtyDays.averages())
+        assertEquals(listOf(10, null, null, 240L), month(entries).averages())
     }
 
     @Test
@@ -217,7 +221,7 @@ class StatisticsDaysTest {
             Entry.sleep(at(oct(25), 22), id = "running"),
         )
         listOf(NOW_0312, NOW_1432).forEach { now ->
-            assertEquals(listOf(10, null, null, 120L), report(entries, now = now).lastSevenDays.averages())
+            assertEquals(listOf(10, null, null, 120L), week(entries, now = now).averages())
         }
     }
 
@@ -230,7 +234,7 @@ class StatisticsDaysTest {
             Entry.sleep(at(oct(22), 13), at(oct(22), 14), id = "nap"),
         )
         // Wed 120 + Thu (360 + 60), over the 2 days a sleep starts on.
-        assertEquals(270L, report(entries).lastSevenDays.average(StatsMetric.SLEEP)?.minutes)
+        assertEquals(270L, week(entries).average(StatsMetric.SLEEP)?.minutes)
     }
 
     @Test
@@ -240,7 +244,7 @@ class StatisticsDaysTest {
             Entry.feed(null, at(TODAY, 15), id = "future")
         val withExtras = report(entries)
         assertEquals(sep(23), withExtras.firstDay)
-        assertEquals(report().lastThirtyDays, withExtras.lastThirtyDays)
+        assertEquals(month(), withExtras.window)
     }
 }
 
@@ -253,7 +257,7 @@ class StatisticsDstTest {
             Entry.sleep(at(oct(24), 23), at(oct(25), 5), id = "night"),
             Entry.sleep(at(oct(25), 13), at(oct(25), 14), id = "nap"),
         )
-        val week = report(entries).lastSevenDays
+        val week = week(entries)
         assertEquals(listOf(60L, 420L), week.days.filter { it.counted(StatsMetric.SLEEP) }.map { it.counts.sleepMinutes })
         assertEquals(240L, week.average(StatsMetric.SLEEP)?.minutes)
     }
@@ -266,7 +270,7 @@ class StatisticsDstTest {
             Entry.sleep(at(march(28), 23), at(march(29), 5), id = "night"),
             Entry.sleep(at(march(29), 13), at(march(29), 14), id = "nap"),
         )
-        val week = report(entries, now = at(march(31), 12)).lastSevenDays
+        val week = week(entries, now = at(march(31), 12))
         val days = week.days.associateBy { it.date }
         assertEquals(60L, days.getValue(march(28)).counts.sleepMinutes)
         assertEquals(300L, days.getValue(march(29)).counts.sleepMinutes)
@@ -275,18 +279,16 @@ class StatisticsDstTest {
     }
 }
 
-/** The bars, band, lines and scale of the chart. */
+/** The bars, line and scale of the chart. */
 class StatisticsChartTest {
     @Test
-    fun theDefaultPoopChartIsThirtyDaysWithTheLastSevenOnTheBand() {
+    fun theDefaultPoopChartIsThirtyDays() {
         val chart = report().chart(StatsMetric.POOP)
         assertEquals(1, chart.binDays)
         assertEquals(
             listOf(3, 3, 4, 4, 3, 2, 2, 3, 0, 2, 1, 5, 2, 2, 1, 0, 3, 2, 1, 2, 1, 2, 0, 0, 1, 0, 1, 0, 2, 1).map { it.toDouble() },
             chart.bars.map { it.value },
         )
-        assertEquals(23..29, chart.bandBars)
-        assertEquals(0.7, chart.weekLine)
         assertEquals(1.8, chart.rangeLine)
         assertEquals(5.0, chart.top, 0.0)
         assertEquals(oct(7), chart.highest?.from)
@@ -298,7 +300,6 @@ class StatisticsChartTest {
     @Test
     fun sleepIsInMinutesAndTheScaleEndsOnAnHour() {
         val chart = report().chart(StatsMetric.SLEEP)
-        assertEquals(841.0, chart.weekLine)
         assertEquals(847.0, chart.rangeLine)
         assertEquals(960.0, chart.top, 0.0)
         assertEquals(oct(2), chart.highest?.from)
@@ -317,7 +318,6 @@ class StatisticsChartTest {
         assertEquals(6, chart.gapDays)
         assertEquals(21, chart.daysBeforeLogging)
         assertEquals(1.0, chart.top, 0.0)
-        assertEquals(0.0, chart.weekLine)
         assertEquals(0.3, chart.rangeLine)
         assertEquals(oct(18), chart.highest?.from)
         assertEquals(oct(20), chart.lowest?.from)
@@ -335,8 +335,6 @@ class StatisticsChartTest {
         assertEquals(26, chart.bars.size)
         assertEquals(StatsBar(LocalDate.of(2026, 4, 29), LocalDate.of(2026, 5, 3), total = 15, countedDays = 5), chart.bars.first())
         assertEquals(StatsBar(oct(19), oct(25), total = 13, countedDays = 7), chart.bars.last())
-        assertEquals(25..25, chart.bandBars)
-        assertNull(chart.weekLine)
         assertEquals(2.2, chart.rangeLine)
         assertEquals(4.0, chart.top, 0.0)
         assertEquals(StatsBar(LocalDate.of(2026, 5, 11), LocalDate.of(2026, 5, 17), total = 23, countedDays = 7), chart.highest)
@@ -351,20 +349,17 @@ class StatisticsChartTest {
         assertEquals(List(8) { 0 }, chart.bars.take(8).map { it.countedDays })
         assertEquals(StatsBar(sep(21), sep(27), total = 14, countedDays = 5), chart.bars[8])
         assertEquals(StatsBar(oct(19), oct(25), total = 5, countedDays = 7), chart.bars[12])
-        assertEquals(12..12, chart.bandBars)
         assertEquals(0, chart.gapDays)
         assertEquals(57, chart.daysBeforeLogging)
     }
 
     @Test
-    fun theBandNeedsAWindowLongerThanSevenDaysEndingYesterday() {
-        val early = report(range = StatsRange.Custom(oct(10), oct(22))).chart(StatsMetric.POOP)
-        assertEquals(13, early.bars.size)
-        assertNull(early.bandBars)
-        assertNull(early.weekLine)
-        assertEquals(1.1, early.rangeLine)
-        assertNull(report(range = StatsRange.Custom(oct(19), oct(25))).chart(StatsMetric.POOP).bandBars)
-        assertNull(report(SampleData.history(days = 3), StatsRange.AllDays).chart(StatsMetric.POOP).bandBars)
+    fun lastSevenDaysAreSevenDailyBars() {
+        val chart = report(range = StatsRange.Last7Days).chart(StatsMetric.POOP)
+        assertEquals(1, chart.binDays)
+        assertEquals(listOf(0, 1, 0, 1, 0, 2, 1).map { it.toDouble() }, chart.bars.map { it.value })
+        assertEquals(0.7, chart.rangeLine)
+        assertEquals(oct(19) to oct(25), chart.from to chart.to)
     }
 }
 
@@ -382,11 +377,12 @@ class StatisticsEdgeTest {
         assertTrue(soFar.soFar)
         assertEquals(oct(25), soFar.firstDay)
         assertEquals(TODAY, soFar.lastDay)
-        assertEquals(oct(20) to TODAY, soFar.lastSevenDays.from to soFar.lastSevenDays.to)
-        assertEquals(2, soFar.lastSevenDays.loggedDays)
+        val week = week(SampleData.scenario())
+        assertEquals(oct(20) to TODAY, week.from to week.to)
+        assertEquals(2, week.loggedDays)
         // Feeds and diapers only today; sleep Sun 80 and Mon 477 minutes, 278.5 rounded up.
-        assertEquals(listOf(50L, 40L, 20L, 279L), soFar.lastSevenDays.averages())
-        assertEquals(soFar.lastSevenDays.averages(), soFar.lastThirtyDays.averages())
+        assertEquals(listOf(50L, 40L, 20L, 279L), week.averages())
+        assertEquals(week.averages(), soFar.window.averages())
     }
 
     @Test
@@ -394,8 +390,8 @@ class StatisticsEdgeTest {
         val single = report(listOf(Entry.diaper(at(TODAY, 9), pee = false, poop = true, id = "first")))
         assertTrue(single.soFar)
         assertEquals(TODAY to TODAY, single.firstDay to single.lastDay)
-        assertEquals(listOf(null, 0L, 10L, null), single.lastSevenDays.averages())
-        assertEquals(1, single.lastSevenDays.loggedDays)
+        assertEquals(listOf(null, 0L, 10L, null), single.window.averages())
+        assertEquals(1, single.window.loggedDays)
         assertEquals(StatsBar(TODAY, TODAY, total = 1, countedDays = 1), single.chart(StatsMetric.POOP).bars.last())
     }
 
@@ -410,8 +406,8 @@ class StatisticsEdgeTest {
         val only = report(listOf(Entry.feed(null, at(oct(24), 15), id = "sat")))
         assertEquals(oct(25), only.firstDay)
         assertEquals(oct(25), only.lastDay)
-        assertEquals(listOf(null, null, null, null), only.lastSevenDays.averages())
-        assertEquals(0, only.lastSevenDays.loggedDays)
+        assertEquals(listOf(null, null, null, null), only.window.averages())
+        assertEquals(0, only.window.loggedDays)
         assertTrue(only.chart(StatsMetric.POOP).isEmpty)
     }
 

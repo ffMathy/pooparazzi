@@ -23,7 +23,7 @@ The backend stores health data (feeds, sleep, diapers) about children, together 
 - **Optional.** The app works fully without an account; the Welcome screen says the log then stays on the phone.
 - **Consent first.** A separate consent screen names the data (the log, the babies' names, the email), who sees it, where it is kept and how to withdraw, with an explicit "I agree". Nothing is uploaded before it; signing in again asks again.
 - **Minimisation.** Only what a restore and the sharing need. A deleted entry keeps only what the family's other phones need to learn of the deletion.
-- **Rights built in.** Download my data (JSON), edit and delete entries, rename babies, leave the family, delete the account; email for the rest.
+- **Rights built in.** Download my data (a ZIP file of JSON files, which Import data reads back), edit and delete entries, rename babies, leave the family, delete the account; email for the rest.
 - **Storage limitation.** Delete account and leave family in the app; the weekly retention job; TTL on invites.
 
 ## Risks and measures
