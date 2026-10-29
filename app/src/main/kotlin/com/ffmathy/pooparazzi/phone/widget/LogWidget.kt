@@ -161,7 +161,7 @@ private fun RowScope.StatusFacts(snapshot: WidgetSnapshot, strings: WidgetString
         // Narrow: the toggle row has no room for "Asleep since 02:05", so it moves up here (DESIGN_SPEC §10.11).
         sleepStart != null && !layout.wide -> Fact(XDrawables.sleepRunning, colors.sleep.strong, strings.asleepSince(sleepStart), colors)
         else -> {
-            val feedText = lastFeed?.let { strings.fedAt(it.startMillis) } ?: strings.noFeeds()
+            val feedText = lastFeed?.let { strings.fedAt(it) } ?: strings.noFeeds()
             Fact(XDrawables.forFeedType(lastFeed?.feedType), colors.feed.strong, feedText, colors)
             val diaper = snapshot.lastDiaper
             val kind = diaper?.let { DiaperKind.of(it.pee, it.poop) }

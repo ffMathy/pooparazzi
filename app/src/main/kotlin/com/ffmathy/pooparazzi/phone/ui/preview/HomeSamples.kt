@@ -30,7 +30,7 @@ object HomeSamples {
     /** 14:32, idle: "Last fed 2h 10m ago · 12:22 · Formula", Awake 1h 05m, Pee 48m ago, Today 5 · 4 · 2 · 7h 57m. */
     fun idle(): HomeUiState = build(SampleData.scenario(zone), SampleData.NOW_1432)
 
-    /** 03:12, asleep 1h 07m since 02:05; last fed 1h 32m ago · 01:40 · Breast. */
+    /** 03:12, asleep 1h 07m since 02:05; last fed 1h 32m ago · 01:40 · L → R. */
     fun asleep(): HomeUiState =
         build(SampleData.scenarioAt0312(zone), SampleData.NOW_0312, sync = SyncStatus.Synced(SampleData.SYNCED_0311))
 
@@ -46,7 +46,7 @@ object HomeSamples {
 
     /**
      * 14:50, a breast feed (Left → Right) just logged for 14:32 with the −15m chip from the Feed sheet opened at 14:47:
-     * "Last fed 18m ago · 14:32 · Breast" and the undo card "Breast logged · Left → Right".
+     * "Last fed 18m ago · 14:32 · Left → Right" and the undo card "Breast logged · Left → Right".
      */
     fun breastLogged(): HomeUiState {
         val feed = SampleData.recentBreastfeed(zone)

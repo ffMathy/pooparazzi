@@ -93,6 +93,9 @@ class AccessibilityTest {
     fun afterABreastFeedMainStaysIdle() {
         show { MainScreen(WearSamples.mainAfterBreastfeed(), MainActions()) }
         compose.onNodeWithContentDescription("Start sleep").assertIsEnabled()
+        // The breast order of the last feed, shown and read.
+        compose.onNodeWithText("Fed at 14:32 · L\u00A0→\u00A0R", useUnmergedTree = true).assertExists()
+        compose.onNode(hasContentDescription("Last feed, breast, left then right, 18 minutes ago, at 14:32")).assertExists()
         compose.onAllNodes(hasContentDescription("End feed")).fetchSemanticsNodes().let { assert(it.isEmpty()) { "no End feed" } }
     }
 

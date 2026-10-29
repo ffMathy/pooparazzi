@@ -87,6 +87,12 @@ data class Entry(
   - "Cancel" (or a scrim tap) closes the sheet and logs nothing.
 - **Running sleep and a feed:** logging any feed (a breast feed included) while a sleep runs shows the running-sleep card variant with the "End sleep" chip (unchanged). The sleep keeps the Lamp.
 - **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line: "ago · 12:22 · Formula". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, formula, 2 hours 10 minutes ago, at 12:22". A feed with no type shows the generic `feed` icon and no type word ("ago · 12:22"; TalkBack "Last feed, 2 hours 10 minutes ago, at 12:22").
+- **Breast order on every last-feed line.** A breastfeed with a recorded side shows the order instead of the word "Breast", because it is what the next feed starts from:
+  - Lamp sub-line "ago · 14:32 · Left → Right". When that would exceed the chord it shortens to "ago · 14:32 · L → R", then "14:32 · L → R".
+  - Since-row 1 while asleep "Last fed 1h 32m ago · 01:40 · L → R" (short, so the row stays on one line).
+  - Widget "Fed at 01:40 · L → R".
+  - Watch status block "Fed at 12:22 · L → R" and the asleep status card "1h 32m ago · 01:40 · L → R".
+  - TalkBack reads "Last feed, breast, left then right, …". Danish uses "Venstre → Højre" and "V → H".
 - **No running feed anywhere:** there is no "End feed", no Side-at-end sheet, no Adjust start for feeds and no ongoing notification or Live Update for feeds (the sleep keeps its own). The widgets' Feed button always opens the Feed sheet.
 
 ### 2.2 Watch
@@ -283,9 +289,9 @@ Baby **Noa**, 7 months. Today is **Mon 26 Oct 2026** and now is **14:32**, in ti
 - Pee 48m ago · 13:44.
 - Today: 5 feeds · 4 pee · 2 poop · 7h 57m sleep.
 
-**Night snapshot at 03:12:** asleep 1h 07m since 02:05. Last fed 1h 32m ago · 01:40 · Breast.
+**Night snapshot at 03:12:** asleep 1h 07m since 02:05. Last fed 1h 32m ago · 01:40 · L → R.
 
-**Afternoon snapshot at 14:50:** a breast feed (Left → Right) logged at 14:32, so the Lamp shows "Last fed 18m ago · 14:32 · Breast". Nothing runs.
+**Afternoon snapshot at 14:50:** a breast feed (Left → Right) logged at 14:32, so the Lamp shows "Last fed 18m ago · 14:32 · Left → Right". Nothing runs.
 
 ---
 

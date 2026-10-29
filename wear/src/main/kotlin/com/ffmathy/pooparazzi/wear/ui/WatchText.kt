@@ -16,6 +16,7 @@ import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
 import com.ffmathy.pooparazzi.core.model.diaperKind
+import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.wear.R
 import java.time.Instant
 import java.time.LocalDate
@@ -42,12 +43,25 @@ fun feedTypeLabel(entry: Entry, compact: Boolean = false): String =
     stringResource(Labels.feedType(entry.feedType, compact))
 
 /**
- * The feed type for a spoken sentence, or null for a feed logged without one, so TalkBack reads
- * "Last feed, 2 hours ago" rather than "Last feed, feed, 2 hours ago" (as the phone does).
+ * The feed type for a spoken sentence, with the breast order when one was recorded ("Breast, left then right"), or
+ * null for a feed logged without a type, so TalkBack reads "Last feed, 2 hours ago" rather than "Last feed, feed,
+ * 2 hours ago" (as the phone does).
  */
 @Composable
 @ReadOnlyComposable
-fun spokenFeedType(entry: Entry): String? = entry.feedType?.let { stringResource(Labels.feedType(it)) }
+fun spokenFeedType(entry: Entry): String? {
+    val type = entry.feedType?.let { stringResource(Labels.feedType(it)) } ?: return null
+    val side = feedSide(entry) ?: return type
+    return stringResource(R.string.spoken_pair, type, stringResource(SpokenLabels.side(side)))
+}
+
+/** The breast order of a breastfeed, or null (none recorded, or not a breastfeed). */
+fun feedSide(entry: Entry): BreastSide? = entry.breastSide?.takeIf { entry.isBreastfeed }
+
+/** " · L → R" after a last-feed line when a breast order was recorded; empty otherwise. */
+@Composable
+@ReadOnlyComposable
+fun feedSideSuffix(entry: Entry): String = feedSide(entry)?.let { DOT_SEPARATOR + stringResource(Labels.sideShort(it)) } ?: ""
 
 /** Receipts and History: "Pee", "Poop", "Pee + poop", "Diaper" (a plain change). */
 @Composable

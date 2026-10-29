@@ -76,11 +76,25 @@ class HomeSemanticsTest {
     fun theLampAndSinceRowsHaveSpokenForms() {
         show(HomeSamples.asleep())
         compose.onNodeWithContentDescription("Asleep, 1 hour 7 minutes, since 02:05").assertExists()
-        compose.onNodeWithContentDescription("Last feed, breast, 1 hour 32 minutes ago, at 01:40")
+        compose.onNodeWithContentDescription("Last feed, breast, left then right, 1 hour 32 minutes ago, at 01:40")
             .assert(SemanticsMatcher("click label Edit") { it.config[SemanticsActions.OnClick].label == "Edit" })
             .performClick()
         compose.onNodeWithContentDescription("Last diaper, pee, 1 hour 20 minutes ago, at 01:52").assertExists()
         assertEquals(listOf("edit:sample-breast-0140"), calls)
+    }
+
+    @Test
+    fun theLastFeedShowsTheBreastOrder() {
+        // Asleep: since-row 1 carries the order after the time.
+        show(HomeSamples.asleep())
+        compose.onNodeWithText("01:40 · L\u00A0→\u00A0R", substring = true, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun theLampShowsTheBreastOrderOfTheLastFeed() {
+        show(HomeSamples.breastLogged())
+        compose.onNodeWithText("ago · 14:32 · Left → Right", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("Last feed, breast, left then right, 18 minutes ago, at 14:32").assertExists()
     }
 
     @Test

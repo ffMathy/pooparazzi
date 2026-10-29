@@ -35,7 +35,10 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.ffmathy.pooparazzi.core.format.ClockFormatter
 import com.ffmathy.pooparazzi.core.format.LabelFormatter
+import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
 import com.ffmathy.pooparazzi.core.model.DiaperKind
+import com.ffmathy.pooparazzi.core.model.Entry
+import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
 import com.ffmathy.pooparazzi.core.ui.tokens.EventColors
 import com.ffmathy.pooparazzi.core.ui.tokens.XPalette
@@ -96,7 +99,9 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     private fun since(label: String, millis: Long): String =
         string(R.string.join_space, label, string(CoreR.string.rel_since_format, time(millis)))
 
-    fun fedAt(millis: Long): String = atTime(string(CoreR.string.status_fed), millis)
+    /** "Fed at 12:22", plus the breast order " · L → R" when one was recorded. */
+    fun fedAt(feed: Entry): String = atTime(string(CoreR.string.status_fed), feed.startMillis) +
+        (feed.breastSide?.takeIf { feed.isBreastfeed }?.let { DOT_SEPARATOR + labels.sideShort(it) } ?: "")
     fun diaperAt(kind: DiaperKind, millis: Long): String = atTime(labels.diaperKindStatus(kind), millis)
     fun noFeeds(): String = string(R.string.lamp_no_feed)
     fun asleepSince(millis: Long): String = since(string(CoreR.string.status_asleep), millis)
