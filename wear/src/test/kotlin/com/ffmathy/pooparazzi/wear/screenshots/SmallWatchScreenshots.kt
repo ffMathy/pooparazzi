@@ -65,6 +65,9 @@ abstract class SmallWatchScreenshots(private val lang: String) {
     fun s19_mainIdleSmall() = capture("19-main-idle-small", SampleData.NOW_1432, WearSamples.mainIdle())
 
     @Test
+    fun s19b_mainAfterBreastSmall() = capture("19b-main-after-breast-small", SampleData.NOW_1450, WearSamples.mainAfterBreastfeed())
+
+    @Test
     fun s20_mainAsleepSmall() = capture("20-main-asleep-small", SampleData.NOW_0312, WearSamples.mainAsleep())
 
     /** Side on a 192 dp watch: Right sits partly behind "Save" at rest, and scrolls clear of it. */

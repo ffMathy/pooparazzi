@@ -12,6 +12,9 @@ import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.diaperKind
+import com.ffmathy.pooparazzi.core.model.isBreastfeed
+import com.ffmathy.pooparazzi.phone.ui.history.spokenSide
+import java.util.Locale
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.icons.rememberBothIcon
 import com.ffmathy.pooparazzi.core.ui.tokens.EventPalette
@@ -44,6 +47,26 @@ fun entryIcon(entry: Entry, events: EventPalette): TintedIcon = when (entry.kind
 @Composable
 @ReadOnlyComposable
 fun feedTypeLabel(type: FeedType?, compact: Boolean = false): String = stringResource(Labels.feedType(type, compact))
+
+/**
+ * What a feed was, for the last-feed status lines: the breast order when one was recorded ("Left → Right", or "L → R"
+ * where [short]), else the type word ("Formula"); null for a feed logged with just its time.
+ */
+@Composable
+@ReadOnlyComposable
+fun feedDetail(feed: Entry, short: Boolean = false): String? =
+    feed.breastSide?.takeIf { feed.isBreastfeed }?.let { stringResource(if (short) Labels.sideShort(it) else Labels.side(it)) }
+        ?: feed.feedType?.let { feedTypeLabel(it) }
+
+/** [feedDetail] for TalkBack, in lower case: "breast, left then right", "formula"; null with no type. */
+@Composable
+@ReadOnlyComposable
+fun spokenFeedDetail(feed: Entry, locale: Locale): String? {
+    val type = feed.feedType ?: return null
+    val side = feed.breastSide?.takeIf { feed.isBreastfeed }
+    val words = if (side == null) feedTypeLabel(type) else stringResource(R.string.spoken_pair, feedTypeLabel(type), spokenSide(side))
+    return words.lowercase(locale)
+}
 
 /** "Pee", "Poop", "Pee + poop", "Diaper" (receipts). */
 @Composable

@@ -19,6 +19,8 @@
     <string name="side_right">Højre</string>
     <string name="side_left_then_right">Venstre → Højre</string>
     <string name="side_right_then_left">Højre → Venstre</string>
+    <string name="side_short_left_then_right">V → H</string>
+    <string name="side_short_right_then_left">H → V</string>
     <string name="side_letter_left">V</string>
     <string name="side_letter_right">H</string>
     <string name="side_question">Hvilken side?</string>

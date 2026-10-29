@@ -176,6 +176,12 @@ abstract class WatchScreenshots(private val lang: String) {
     fun s16_mainIdleLargeFont() =
         capture("16-main-idle-large-font", SampleData.NOW_1432) { MainScreen(WearSamples.mainIdle(), MainActions()) }
 
+    /** The breast order of the last feed at 130 %: the label steps down inside the round edge. */
+    @Test
+    @Config(fontScale = 1.3f)
+    fun s16c_mainAfterBreastLargeFont() =
+        capture("16c-main-after-breast-large-font", SampleData.NOW_1450) { MainScreen(WearSamples.mainAfterBreastfeed(), MainActions()) }
+
     /** At 200 % the labels no longer fit side by side, so Feed and Diaper stack (and the hero scrolls). */
     @Test
     @Config(fontScale = 2.0f)

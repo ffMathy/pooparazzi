@@ -98,6 +98,7 @@ import com.ffmathy.pooparazzi.wear.ui.diaperStatusLabel
 import com.ffmathy.pooparazzi.wear.ui.durationAndSince
 import com.ffmathy.pooparazzi.wear.ui.eventButtonColors
 import com.ffmathy.pooparazzi.wear.ui.events
+import com.ffmathy.pooparazzi.wear.ui.feedSideSuffix
 import com.ffmathy.pooparazzi.wear.ui.spokenFeedType
 import com.ffmathy.pooparazzi.wear.ui.isSmallWatch
 import com.ffmathy.pooparazzi.wear.ui.labelAtTime
@@ -245,7 +246,8 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
     val feed = events().feed
     val lastFeed = state.lastFeed
     val textColor = if (ambient) WatchAmbient.content else feed.text
-    val label = if (lastFeed != null) labelAtTime(stringResource(CoreR.string.status_fed), lastFeed.startMillis, f)
+    // "Fed at 12:22 · L → R": the breast order is what the next feed starts from.
+    val label = if (lastFeed != null) labelAtTime(stringResource(CoreR.string.status_fed), lastFeed.startMillis, f) + feedSideSuffix(lastFeed)
     else stringResource(R.string.status_no_feed_yet)
     val spoken = if (lastFeed != null) {
         f.spokenAgo(stringResource(CoreR.string.spoken_last_feed), spokenFeedType(lastFeed), lastFeed.startMillis, state.now)
@@ -265,7 +267,7 @@ private fun StatusBlock(state: MainUiState, f: Formatters, small: Boolean) {
             )
             Spacer(Modifier.width(4.dp))
             // Steps down rather than running past the round edge at very large font scales.
-            AutoSizeLine(label, MaterialTheme.typography.titleSmall, textColor, minSize = 8, modifier = Modifier.widthIn(max = STATUS_LABEL_MAX_WIDTH))
+            AutoSizeLine(label, MaterialTheme.typography.titleSmall, textColor, minSize = 8, modifier = Modifier.widthIn(max = if (small) STATUS_LABEL_MAX_WIDTH_SMALL else STATUS_LABEL_MAX_WIDTH))
         }
         if (lastFeed != null) {
             val since = clockDurationMillis(lastFeed.startMillis, state.now)
@@ -344,8 +346,14 @@ private fun FeedDiaperGroup(actions: MainActions, small: Boolean, modifier: Modi
  */
 private val TIME_TEXT_GROWTH_PER_SCALE = 8.dp
 
-/** The status label's room at y 30–46 on the reference screen (the chord there, less the 20 dp icon). */
-private val STATUS_LABEL_MAX_WIDTH = 164.dp
+/**
+ * The status label's room at y 30–46 on the reference screen (the chord there, less the 20 dp icon). A long label
+ * such as "Fed at 14:32 · L → R" steps down to fit it.
+ */
+private val STATUS_LABEL_MAX_WIDTH = 140.dp
+
+/** [STATUS_LABEL_MAX_WIDTH] on a small (192 dp) watch, whose label sits at y 20–36. */
+private val STATUS_LABEL_MAX_WIDTH_SMALL = 108.dp
 
 /** Whether [text] fits on one line of [width] in [style] at the current font scale. */
 @Composable
@@ -669,7 +677,7 @@ private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
         state.lastFeed?.let { feed ->
             cards += CardModel(
                 "last-feed", feed, TimeField.START, XIcons.forFeedType(feed.feedType), events.feed.strong,
-                lastFedWord, f.agoAndClock(feed.startMillis, now),
+                lastFedWord, f.agoAndClock(feed.startMillis, now) + feedSideSuffix(feed),
                 f.spokenAgo(lastFeedSpoken, spokenFeedType(feed), feed.startMillis, now),
             )
         }

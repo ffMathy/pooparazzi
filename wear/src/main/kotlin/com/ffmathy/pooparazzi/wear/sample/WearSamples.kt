@@ -42,7 +42,7 @@ object WearSamples {
     fun mainAsleep(): MainUiState =
         MainUiState.from(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, zone), guard = null, sync = synced0311)
 
-    /** 14:50, 18 minutes after the 14:32 breast feed (Left → Right): idle, "Last fed 18m · Breast". */
+    /** 14:50, 18 minutes after the 14:32 breast feed (Left → Right): idle, "Fed at 14:32 · L → R". */
     fun mainAfterBreastfeed(): MainUiState =
         MainUiState.from(summarize(SampleData.scenarioWithRecentFeed(), SampleData.NOW_1450, zone), guard = null, sync = synced1431)
 

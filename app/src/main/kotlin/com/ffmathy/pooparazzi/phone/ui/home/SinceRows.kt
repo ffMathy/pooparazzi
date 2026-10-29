@@ -34,6 +34,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.ffmathy.pooparazzi.core.format.Labels
+import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
@@ -131,11 +133,15 @@ private fun sinceRowText(row: SinceRow, zone: ZoneId, formatters: Formatters): S
         )
         is SinceRow.LastFed -> {
             val type = row.feed.feedType
+            // The breast order rides after the time ("· 01:40 · L → R"), short so the row stays on one line: it is what
+            // the next feed starts from.
+            val side = row.feed.breastSide?.takeIf { type == FeedType.BREAST }?.let { stringResource(Labels.sideShort(it)) }
+            val spokenDetail = spokenFeedDetail(row.feed, clock.locale)
             SinceRowText(
                 icon = TintedIcon(XIcons.forFeedType(type), events.feed.strong),
                 lead = stringResource(R.string.join_space, stringResource(CoreR.string.status_last_fed), relative.ago(row.elapsedMillis)),
-                meta = dotted(clock.format(row.feed.startMillis, zone)),
-                spoken = if (type == null) {
+                meta = dotted(clock.format(row.feed.startMillis, zone)) + (side?.let(::dotted) ?: ""),
+                spoken = if (spokenDetail == null) {
                     stringResource(
                         R.string.spoken_running,
                         stringResource(CoreR.string.spoken_last_feed),
@@ -146,7 +152,7 @@ private fun sinceRowText(row: SinceRow, zone: ZoneId, formatters: Formatters): S
                     stringResource(
                         R.string.spoken_last_entry,
                         stringResource(CoreR.string.spoken_last_feed),
-                        feedTypeLabel(type).lowercase(clock.locale),
+                        spokenDetail,
                         relative.agoSpoken(row.elapsedMillis),
                         relative.at(row.feed.startMillis, zone),
                     )

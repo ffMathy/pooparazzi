@@ -64,6 +64,14 @@ object Labels {
         BreastSide.RIGHT_THEN_LEFT -> R.string.side_right_then_left
     }
 
+    /** [side] for tight places: "Left", "Right", "L → R", "R → L" (Danish "V → H"). */
+    @StringRes fun sideShort(side: BreastSide): Int = when (side) {
+        BreastSide.LEFT -> R.string.side_left
+        BreastSide.RIGHT -> R.string.side_right
+        BreastSide.LEFT_THEN_RIGHT -> R.string.side_short_left_then_right
+        BreastSide.RIGHT_THEN_LEFT -> R.string.side_short_right_then_left
+    }
+
     @StringRes fun poopColor(color: PoopColor): Int = when (color) {
         PoopColor.YELLOW -> R.string.poop_colour_yellow
         PoopColor.GREEN -> R.string.poop_colour_green
@@ -124,6 +132,9 @@ class LabelFormatter(private val strings: StringResolver) {
     fun feedType(type: FeedType?, compact: Boolean = false): String = strings.string(Labels.feedType(type, compact))
 
     fun side(side: BreastSide): String = strings.string(Labels.side(side))
+
+    /** "Left", "Right", "L → R", "R → L". */
+    fun sideShort(side: BreastSide): String = strings.string(Labels.sideShort(side))
 
     /** The side, or "No side" when none was recorded. */
     fun sideOrNone(side: BreastSide?): String = side?.let(::side) ?: strings.string(R.string.side_none)

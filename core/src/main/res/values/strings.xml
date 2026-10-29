@@ -28,6 +28,9 @@
     <string name="side_right">Right</string>
     <string name="side_left_then_right">Left → Right</string>
     <string name="side_right_then_left">Right → Left</string>
+    <!-- The order in tight places (last feed on the watch, the widget). No-break spaces keep it on one line. -->
+    <string name="side_short_left_then_right">L → R</string>
+    <string name="side_short_right_then_left">R → L</string>
     <string name="side_letter_left">L</string>
     <string name="side_letter_right">R</string>
     <string name="side_question">Which side?</string>

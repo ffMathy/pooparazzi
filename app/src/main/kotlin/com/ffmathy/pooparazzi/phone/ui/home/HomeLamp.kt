@@ -192,19 +192,31 @@ private fun lampTexts(lamp: LampState, zone: ZoneId, size: Dp, formatters: Forma
                 LampTexts(XIcons.feed, label, null, stringResource(R.string.lamp_no_feed_hero), none, stringResource(R.string.spoken_pair, label, none))
             } else {
                 val type = feed.feedType
-                val typeLabel = type?.let { feedTypeLabel(it) }
+                val detail = feedDetail(feed)
+                val shortDetail = feedDetail(feed, short = true)
+                val spokenDetail = spokenFeedDetail(feed, clock.locale)
                 val time = clock.format(feed.startMillis, zone)
                 val under = DurationFormatter.isUnderAMinute(since)
                 val sub = if (under) {
                     relative.at(feed.startMillis, zone)
                 } else {
-                    // "ago · 12:22 · Formula"; the type word is dropped when it would exceed the Lamp chord, and a feed
-                    // logged with just its time has none.
+                    // "ago · 12:22 · Formula", or the breast order "ago · 12:22 · Left → Right". When that would exceed
+                    // the Lamp chord the order shortens to "L → R", then drops "ago" (the order is what the next feed
+                    // starts from); a type word is simply dropped. A feed logged with just its time has neither.
                     val base = relative.agoWord + DOT_SEPARATOR + time
-                    if (typeLabel == null) {
+                    if (detail == null) {
                         base
                     } else {
-                        fitOrFallback(base + DOT_SEPARATOR + typeLabel, base, PhoneType.dataMedium, size * HomeLampDefaults.SUB_CHORD)
+                        fitFirst(
+                            listOfNotNull(
+                                base + DOT_SEPARATOR + detail,
+                                shortDetail?.let { base + DOT_SEPARATOR + it },
+                                shortDetail?.let { time + DOT_SEPARATOR + it },
+                                base,
+                            ),
+                            PhoneType.dataMedium,
+                            size * HomeLampDefaults.SUB_CHORD,
+                        )
                     }
                 }
                 LampTexts(
@@ -213,7 +225,7 @@ private fun lampTexts(lamp: LampState, zone: ZoneId, size: Dp, formatters: Forma
                     heroParts = if (under) null else duration.parts(since),
                     heroWord = if (under) justNow else null,
                     sub = sub,
-                    spoken = if (typeLabel == null) {
+                    spoken = if (spokenDetail == null) {
                         stringResource(
                             R.string.spoken_running,
                             stringResource(CoreR.string.spoken_last_feed),
@@ -224,7 +236,7 @@ private fun lampTexts(lamp: LampState, zone: ZoneId, size: Dp, formatters: Forma
                         stringResource(
                             R.string.spoken_last_entry,
                             stringResource(CoreR.string.spoken_last_feed),
-                            typeLabel.lowercase(clock.locale),
+                            spokenDetail,
                             relative.agoSpoken(since),
                             relative.at(feed.startMillis, zone),
                         )
@@ -264,15 +276,15 @@ private fun runningTexts(
     )
 }
 
-/** [preferred] when it fits in [maxWidth] at [style], otherwise [fallback]. */
+/** The first of [candidates] that fits on one line in [maxWidth] at [style], else the last. */
 @Composable
-private fun fitOrFallback(preferred: String, fallback: String, style: TextStyle, maxWidth: Dp): String {
+private fun fitFirst(candidates: List<String>, style: TextStyle, maxWidth: Dp): String {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val fits = remember(preferred, style, maxWidth, density) {
-        measurer.measure(preferred, style, maxLines = 1).size.width <= with(density) { maxWidth.toPx() }
+    return remember(candidates, style, maxWidth, density) {
+        val max = with(density) { maxWidth.toPx() }
+        candidates.firstOrNull { measurer.measure(it, style, maxLines = 1).size.width <= max } ?: candidates.last()
     }
-    return if (fits) preferred else fallback
 }
 
 /**
