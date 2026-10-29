@@ -461,3 +461,35 @@ The column width is `(content width − 2 × 16 − 12) / 2`: 153 dp at 390 dp, 
 ### 8.6 Known limit
 
 A partly logged day (the afternoon forgotten) cannot be told apart from a quiet day: it counts, and shows as a low bar and as the lowest value in the TalkBack summary.
+
+## 9. Forecast: what comes next
+
+Home's buttons say what the last week expects next, as a small second line under each label (labelLarge, the
+button's onContainer at 78 %, one line that shrinks to fit rather than wrap):
+
+| Button | Second line | TalkBack |
+|---|---|---|
+| Feed | "in 1h 05m" / "om 1t 05m" | "next feed in about 1 hour 5 minutes, around 15:35" |
+| Diaper | "poop in 3h 10m" / "bæ om 3t 10m" (poop only; pee is not predicted) | "next poop in about …, around …" |
+| Start sleep | "in 55m" / "om 55m" | "sleeps again in about 55 minutes, around 15:23" |
+| Woke up (a sleep runs) | "in 2h 15m" / "om 2t 15m": the expected wake-up | "wakes up in about 2 hours 15 minutes, around 05:27" |
+
+Times are rounded up to 5 minutes (an estimate, not a promise); under 5 minutes, or past every comparable stretch, the
+line reads "soon" / "snart" ("poop soon" / "bæ snart"). A button the week cannot predict has no second line.
+
+**The estimate** (`forecast` in `:core`, `domain/Forecast.kt`). There is no validated model for predicting one baby's
+sleep or feeds (wake-window charts are rules of thumb, and babies differ widely), so the app only looks at this baby's
+own last 7 days, which is recent enough to follow a growing baby:
+
+1. Stretches of the same kind: sleep lengths (asleep), wake windows from a sleep's end to the next sleep (awake), gaps
+   between feeds, gaps between poops. Gaps under 10 minutes (one feed logged per side) and feed or wake gaps over
+   12 hours (a forgotten log) are dropped.
+2. Same time of day: night sleeps run longer than naps and evening feeds cluster, so only stretches that began within
+   2 hours of the current one's start count, widened to 4 hours, then the whole day, until there are 5 from at least
+   3 different days. Poop follows no clock, so all poop gaps count.
+3. Too few (under 5, or from fewer than 3 days), too spread out (interquartile range over 1.5 × the median), or
+   the current stretch already twice the longest of them (logging has stopped): no forecast.
+4. The median of the stretches that lasted **longer than the current one has so far**, added to its start. So a long
+   nap pushes the expected wake-up later instead of leaving it in the past; when none lasted longer, it is "soon".
+
+In the sample week (§6 history) poop comes about once a day at random hours, so Diaper shows no forecast.

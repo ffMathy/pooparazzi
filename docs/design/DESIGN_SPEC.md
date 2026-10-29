@@ -259,7 +259,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 - Measured worst cases: row 1 "Last fed 10h 45m ago · 01:40" = 257.9 dp; row 2 "Poop 10h 45m ago · 03:47" = 231.5 dp.
 - Tap → the edit sheet for that row's latest entry (row 1: the last sleep, or the last feed while asleep; row 2: the last diaper). This is the one-tap correction path.
 
-**Whisper slot: Today grid** (default). The whole block is a link to History (r 20, padding 14 16). Header "Today" labelMedium onSurfaceVariant + `chevronRight` 16 outline. Below it, a 4-column equal grid (gap 8): number titleMedium onSurface over caption labelMedium onSurfaceVariant. 14:32: "5" feeds, "4" pee, "2" poop, "7h 57m" sleep. 03:12: "1" feed, "1" pee, "0" poop, "2h 42m" sleep (the caption is singular "feed" for 1). In lights-down the numbers are onSurfaceVariant.
+**Whisper slot: Today grid** (default). The whole block is a link to History (r 20, padding 14 16). Header "Today" labelMedium onSurfaceVariant + `chevronRight` 16 outline. Below it, a 4-column equal grid (gap 8): number titleMedium onSurface over caption labelMedium onSurfaceVariant; the numbers share one baseline across the row, and so do the captions. 14:32: "5" feeds, "4" pee, "2" poop, "7h 57m" sleep. 03:12: "1" feed, "1" pee, "0" poop, "2h 42m" sleep (the caption is singular "feed" for 1). In lights-down the numbers are onSurfaceVariant.
 
 **Whisper slot: notice card** (replaces the grid, same slot, for 2 s). Card 350 × ≥120, r 28, surfaceContainerHighest, no border or shadow. Polite live region. Fades in over 150 ms with no slide. Row 1 (48): icon 20 + 8 + title titleMedium onSurface; for a guard, row 2 is the guard line in dataMedium SLEEP text. No buttons and no drain line.
 
@@ -303,6 +303,8 @@ Receipt rules:
 - Single-select chips expose a selected state.
 
 **Feed and Diaper buttons**: 169 × 96, full pill r 48 (pressed r 16). Fill FEED / DIAPER container. Content row: icon 32 (event strong) + 12 + headlineSmall "Feed" / "Diaper" (event onContainer). **Unchanged in lights-down.**
+
+**Forecast line**: under the label of Feed, Diaper and the Sleep toggle, what the last 7 days expect next ("in 1h 05m"; Diaper "poop in 3h"; Woke up the expected wake-up). See V1_ADDITIONS §9.
 
 **Sleep toggle**: 350 × 96, a button whose name changes with its state (it exposes no separate on/off state; §9.4).
 - Unchecked: r 48, SLEEP container, `sleep` 32 SLEEP strong + 12 + "Start sleep" headlineSmall SLEEP onContainer.
