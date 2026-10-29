@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.phone.ui.history
 
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.domain.localDate
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.Baby
@@ -21,6 +22,7 @@ internal object HistoryStateBuilder {
         receipt: DeletedReceipt? = null,
         babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),
         babyId: String = babies.first().id,
+        cloud: CloudStatus = CloudStatus.Off,
     ): HistoryUiState {
         val summary = summarize(entries, now, zone)
         val today = summary.todayDate
@@ -31,6 +33,7 @@ internal object HistoryStateBuilder {
             day = shown,
             today = today,
             sync = sync,
+            cloud = cloud,
             canGoBack = shown > earliestDay(entries, now, zone, today),
             canGoForward = shown < today,
             ribbon = summary.ribbon(shown),

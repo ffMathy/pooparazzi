@@ -17,6 +17,9 @@ interface HomeActions {
     fun onOpenSettings() {}
     fun onRetrySync() {}
 
+    /** The cloud icon in "Couldn't back up": backs up again (BABIES_AND_BACKUP §3.2). */
+    fun onRetryBackup() {}
+
     /** The name with two or more babies: opens the Switch baby sheet (BABIES_AND_BACKUP §2.4). */
     fun onSwitchBaby() {}
 

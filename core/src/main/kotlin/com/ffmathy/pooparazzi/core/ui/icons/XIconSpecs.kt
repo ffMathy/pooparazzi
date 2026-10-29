@@ -159,17 +159,52 @@ object XIconSpecs {
     /** Chart: three uneven bars on a baseline (History's button to Statistics). */
     val chart = icon("chart", "M3.5 20.5h17", "M7 17v-5", "M12 17V6", "M17 17v-8")
 
+    // ---- Sync status (DESIGN_SPEC §4.5): the other device or the backup, with its state drawn inside ---------------
+
+    /** Watch (the phone's top bars): the face holds a tick (synced), "…" (syncing), a slash (offline) or "!" (error). */
+    val watchSynced = icon("watchSynced", WATCH_BODY, WATCH_STRAP_TOP, WATCH_STRAP_BOTTOM, "M9.25 12.25 11 14l3.75-3.75")
+    val watchPending = icon("watchPending", WATCH_BODY, WATCH_STRAP_TOP, WATCH_STRAP_BOTTOM, "M9 12h.01", "M12 12h.01", "M15 12h.01")
+    val watchOffline = icon(
+        "watchOffline",
+        "M10 5.5h5.5a2 2 0 0 1 2 2v6",
+        "M14 18.5H8.5a2 2 0 0 1-2-2v-6",
+        WATCH_STRAP_TOP,
+        WATCH_STRAP_BOTTOM,
+        "M4 4l16 16",
+    )
+    val watchError = icon("watchError", WATCH_BODY, WATCH_STRAP_TOP, WATCH_STRAP_BOTTOM, "M12 9v3", "M12 15.5h.01")
+
+    /** Phone (the watch's footer): [phone] with a tick, "…" or a slash on its screen. The watch shows no error. */
+    val phoneSynced = icon("phoneSynced", PHONE_BODY, PHONE_HOME, "M9.25 10.75 11 12.5l3.75-3.75")
+    val phonePending = icon("phonePending", PHONE_BODY, PHONE_HOME, "M9 10.5h.01", "M12 10.5h.01", "M15 10.5h.01")
+    val phoneOffline = icon(
+        "phoneOffline",
+        "M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v9.5",
+        "M16 21.5H8A1.5 1.5 0 0 1 6.5 20v-9.5",
+        PHONE_HOME,
+        "M3 3l18 18",
+    )
+
+    /** The backup failed: the cloud of [synced] with "!" (its other states are [synced], [pending] and [offline]). */
+    val cloudError = icon("cloudError", CLOUD, "M12 10v3", "M12 16h.01")
+
     /** Every icon, in the order of DESIGN_SPEC §6.2 followed by the v1 additions. */
     val all: List<XIconSpec> = listOf(
         sleep, wake, feed, diaper, pee, poop, both, history, edit, undo, delete, profile, settings, phone, synced, pending,
         offline, check, plus, back, chevronLeft, chevronRight, chevronDown, close, clock, lamp, awake, sleepRunning,
         breast, food, sideLeft, sideRight, sideLeftRight, sideRightLeft, checkbox, checkboxChecked, info, chart,
+        watchSynced, watchPending, watchOffline, watchError, phoneSynced, phonePending, phoneOffline, cloudError,
     )
 
     internal const val BOTH_PEE = "M7.5 3C5.6 5.6 4 7.6 4 9.9a3.5 3.5 0 0 0 7 0C11 7.6 9.4 5.6 7.5 3z"
     internal const val BOTH_POOP =
         "M13 20.5h6a2 2 0 0 0 0-4h-.2A2.8 2.8 0 0 0 16.6 13c0-.9-.4-1.7-1.2-2.3l-.4 2.3a2.8 2.8 0 0 0-1.8 3.5H13a2 2 0 0 0 0 4z"
     private const val CLOUD = "M7 19h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6 10.1 4.5 4.5 0 0 0 7 19z"
+    private const val WATCH_BODY = "M8.5 5.5h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z"
+    private const val WATCH_STRAP_TOP = "M9.5 5.5 10 3h4l.5 2.5"
+    private const val WATCH_STRAP_BOTTOM = "M9.5 18.5l.5 2.5h4l.5-2.5"
+    private const val PHONE_BODY = "M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5z"
+    private const val PHONE_HOME = "M10.5 18.5h3"
     private const val SIDE_LEFT_CENTRE = "M6.5 16a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5z"
     private const val SIDE_RIGHT_CENTRE = "M17.5 16a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5z"
     private const val SIDE_LEFT_LOW = "M6.5 19.5a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5z"

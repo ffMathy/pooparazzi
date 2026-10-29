@@ -15,6 +15,8 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
+import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.phone.ui.edit.EditActions
 import com.ffmathy.pooparazzi.phone.ui.edit.EditSheet
 import com.ffmathy.pooparazzi.phone.ui.edit.EditTags
@@ -88,6 +90,16 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
     @Test fun editValidation() = sheet("edit-validation", night = true, EditSamples.sleepEndBeforeStart(), tour = false)
 
     @Test fun historyYesterday() = screen("history-yesterday", night = false, tour = false) { History(HistorySamples.yesterday()) }
+
+    /** The status icons (DESIGN_SPEC §4.5): the watch saved on the phone, the backup running. */
+    @Test fun historySyncStates() = screen("36-history-sync-offline", night = false) {
+        History(HistorySamples.syncStates(SyncStatus.Offline, CloudStatus.Syncing))
+    }
+
+    /** Both in their error state: two 48 dp retry targets under the title (written under build/ for review). */
+    @Test fun historySyncErrors() = screen("history-sync-errors", night = true, tour = false) {
+        History(HistorySamples.syncStates(SyncStatus.Error, CloudStatus.Error))
+    }
 
     /** 200 % font scale (DESIGN_SPEC §9.3): labels wrap, nothing clips. Written under build/ for review. */
     @Test fun largeFontHistory() {

@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.phone.ui.preview
 
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -36,7 +37,7 @@ object HomeSamples {
         build(SampleData.scenarioAt0312(zone), SampleData.NOW_0312, sync = SyncStatus.Synced(SampleData.SYNCED_0311))
 
     /**
-     * A first day without a paired watch (no sync line): only a sleep running since 12:48, at 14:32 (no feeds or
+     * A first day without a paired watch (no status icons): only a sleep running since 12:48, at 14:32 (no feeds or
      * diapers yet): Today 0 · 0 · 0 · 1h 44m.
      */
     fun firstSleep(): HomeUiState = build(
@@ -137,9 +138,16 @@ object HomeSamples {
         sheet = SheetModel.Diaper(stamp = SampleData.NOW_1432, poop = true, color = PoopColor.PALE),
     )
 
-    /** Twins (Noa and Ida), Noa current, at 14:32: the name is the switcher (BABIES_AND_BACKUP §2.4). */
-    fun twins(sync: SyncStatus = synced1431): HomeUiState =
-        build(SampleData.scenario(zone), SampleData.NOW_1432, sync = sync, settings = SampleData.twinSettings)
+    /**
+     * Twins (Noa and Ida), Noa current, at 14:32: the name is the switcher (BABIES_AND_BACKUP §2.4). Signed in and backed
+     * up at 14:31, so the watch and the cloud icon both show under the name.
+     */
+    fun twins(sync: SyncStatus = synced1431, cloud: CloudStatus = CloudStatus.Synced(SampleData.SYNCED_1431)): HomeUiState =
+        build(SampleData.scenario(zone), SampleData.NOW_1432, sync = sync, settings = SampleData.twinSettings, cloud = cloud)
+
+    /** [idle] with the watch sync and the backup in the given states (the status icons, DESIGN_SPEC §4.5). */
+    fun syncStates(sync: SyncStatus, cloud: CloudStatus): HomeUiState =
+        build(SampleData.scenario(zone), SampleData.NOW_1432, sync = sync, cloud = cloud)
 
     /** [twins] with the Switch baby sheet open. */
     fun twinsSwitching(): HomeUiState =
@@ -153,6 +161,7 @@ object HomeSamples {
         sheet: SheetModel? = null,
         settings: Settings = SampleData.settings,
         switchingBaby: Boolean = false,
+        cloud: CloudStatus = CloudStatus.Off,
     ): HomeUiState = HomeStateBuilder.build(
         entries = entries,
         babyName = settings.babyName,
@@ -164,5 +173,6 @@ object HomeSamples {
         babies = settings.babies,
         babyId = settings.selectedBaby.id,
         switchingBaby = switchingBaby,
+        cloud = cloud,
     )
 }
