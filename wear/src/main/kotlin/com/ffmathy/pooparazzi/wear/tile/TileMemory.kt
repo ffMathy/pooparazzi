@@ -55,6 +55,7 @@ class PreferencesTileMemory(private val prefs: SharedPreferences) : TileMemory {
                 atMillis = prefs.getLong(KEY_FEEDBACK_AT, 0L),
                 diaperKind = prefs.getString(KEY_FEEDBACK_DIAPER, null)?.let { name -> DiaperKind.entries.firstOrNull { it.name == name } },
                 untilMillis = prefs.getLong(KEY_FEEDBACK_UNTIL, 0L),
+                babyId = prefs.getString(KEY_FEEDBACK_BABY, null),
             )
         }
         set(value) = prefs.edit {
@@ -64,12 +65,14 @@ class PreferencesTileMemory(private val prefs: SharedPreferences) : TileMemory {
                 remove(KEY_FEEDBACK_AT)
                 remove(KEY_FEEDBACK_DIAPER)
                 remove(KEY_FEEDBACK_UNTIL)
+                remove(KEY_FEEDBACK_BABY)
             } else {
                 putString(KEY_FEEDBACK_KIND, value.kind.name)
                 putString(KEY_FEEDBACK_ENTRY, value.entryId)
                 putLong(KEY_FEEDBACK_AT, value.atMillis)
                 putString(KEY_FEEDBACK_DIAPER, value.diaperKind?.name)
                 putLong(KEY_FEEDBACK_UNTIL, value.untilMillis)
+                putString(KEY_FEEDBACK_BABY, value.babyId)
             }
         }
 
@@ -103,6 +106,7 @@ class PreferencesTileMemory(private val prefs: SharedPreferences) : TileMemory {
         private const val KEY_FEEDBACK_AT = "feedback_at"
         private const val KEY_FEEDBACK_DIAPER = "feedback_diaper"
         private const val KEY_FEEDBACK_UNTIL = "feedback_until"
+        private const val KEY_FEEDBACK_BABY = "feedback_baby"
         private const val KEY_GUARD_KIND = "guard_kind"
         private const val KEY_GUARD_UNTIL = "guard_until"
         private const val KEY_LAST_SLEEP_TOGGLE = "last_sleep_toggle"

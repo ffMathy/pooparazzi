@@ -11,11 +11,15 @@ import androidx.wear.protolayout.ProtoLayoutScope
 import androidx.wear.protolayout.expression.VersionBuilders.VersionInfo
 import androidx.wear.protolayout.material3.materialScopeWithResources
 import com.ffmathy.pooparazzi.core.domain.summarize
+import com.ffmathy.pooparazzi.core.format.LabelFormatter
+import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.wear.MainActivity
 import com.ffmathy.pooparazzi.wear.sample.WearSamples
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.surface.SurfaceText
+import com.ffmathy.pooparazzi.core.settings.Settings as CoreSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -193,6 +197,45 @@ class TileLayoutTest {
         // Still discarded (not among the entries): it stands.
         val other = feedback.copy(entryId = "discarded")
         assertEquals(other, TileUiState.from(summary, SampleData.BABY_NAME, other, guard = null).feedback)
+    }
+
+    // ---- Babies (BABIES_AND_BACKUP §2.5) --------------------------------------------------------
+
+    @Test
+    fun withTwoUnnamedBabiesTheIdleTitleIsTheCurrentBabysLabel() {
+        val labels = LabelFormatter(context)
+        val twins = CoreSettings(babies = listOf(Baby(Baby.FIRST_ID), Baby(SampleData.TWIN_ID)))
+        assertEquals("Baby 1", TileUiState.titleName(twins, labels))
+        val second = twins.withSelectedBaby(SampleData.TWIN_ID)
+        assertEquals("Baby 2", TileUiState.titleName(second, labels))
+        val state = WearSamples.tileIdle(babyName = TileUiState.titleName(second, labels))
+        assertEquals(TileTitle.Name("Baby 2"), state.title)
+        assertTrue(build(state).has("Baby 2"))
+        // The usual priorities still hold: a running sleep wins over the label.
+        assertTrue(WearSamples.tileAsleep().copy(babyName = "Baby 2").title is TileTitle.Asleep)
+    }
+
+    @Test
+    fun withOneBabyTheTitleIsAsBefore() {
+        val labels = LabelFormatter(context)
+        // Unnamed: no "Baby" title, the last diaper as before.
+        assertEquals("", TileUiState.titleName(CoreSettings(), labels))
+        assertTrue(WearSamples.tileIdle(babyName = TileUiState.titleName(CoreSettings(), labels)).title is TileTitle.LastDiaper)
+        assertEquals(SampleData.BABY_NAME, TileUiState.titleName(SampleData.settings, labels))
+        // Two babies, the named one current: its name.
+        assertEquals(SampleData.BABY_NAME, TileUiState.titleName(SampleData.twinSettings, labels))
+    }
+
+    @Test
+    fun aConfirmationForAnotherBabyIsDroppedAfterASwitch() {
+        val logged = WearSamples.tileJustLogged()
+        val feedback = checkNotNull(logged.feedback).copy(babyId = Baby.FIRST_ID)
+        val summary = summarize(SampleData.scenario() + Entry.diaper(SampleData.NOW_1432, pee = true, poop = true, id = feedback.entryId), SampleData.NOW_1432, SampleData.ZONE)
+        assertEquals(feedback, TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null, babyId = Baby.FIRST_ID).feedback)
+        // A "Sleep cancelled" is not among the entries either way: only its baby tells it apart.
+        val cancelled = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, "discarded", summary.now, null, summary.now + TILE_FEEDBACK_MILLIS, Baby.FIRST_ID)
+        assertNull(TileUiState.from(summarize(emptyList(), SampleData.NOW_1432, SampleData.ZONE), "Ida", cancelled, guard = null, babyId = SampleData.TWIN_ID).feedback)
+        assertEquals(cancelled, TileUiState.from(summary, SampleData.BABY_NAME, cancelled, guard = null, babyId = Baby.FIRST_ID).feedback)
     }
 
     @Test

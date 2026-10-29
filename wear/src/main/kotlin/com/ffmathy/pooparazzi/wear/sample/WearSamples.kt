@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.wear.sample
 
 import com.ffmathy.pooparazzi.core.domain.summarize
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -45,6 +46,14 @@ object WearSamples {
     /** 14:50, 18 minutes after the 14:32 breast feed (Left → Right): idle, "Fed at 14:32 · L → R". */
     fun mainAfterBreastfeed(): MainUiState =
         MainUiState.from(summarize(SampleData.scenarioWithRecentFeed(), SampleData.NOW_1450, zone), guard = null, sync = synced1431)
+
+    /** Twins (Noa, the current baby, and Ida) at 14:32: "Noa · 14:32" and the baby button below the hero. */
+    fun mainIdleTwins(): MainUiState = mainIdle().copy(babies = SampleData.twinSettings.babies, babyId = Baby.FIRST_ID)
+
+    /** Twins with Ida current (her log is empty in the samples): "Ida · 14:32", "No feeds yet". */
+    fun mainIdleTwinsIda(): MainUiState =
+        MainUiState.from(summarize(emptyList(), SampleData.NOW_1432, zone), guard = null, sync = synced1431)
+            .copy(babies = SampleData.twinSettings.babies, babyId = SampleData.TWIN_ID)
 
     fun feedDraft(): FeedDraft = FeedDraft(stamp = SampleData.NOW_1432, zone = zone)
 

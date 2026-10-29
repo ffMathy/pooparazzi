@@ -22,6 +22,9 @@ import com.ffmathy.pooparazzi.wear.theme.AmbientSupport
 import com.ffmathy.pooparazzi.wear.theme.WearableAmbientModeManager
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
 import com.ffmathy.pooparazzi.wear.ui.XTimeText
+import com.ffmathy.pooparazzi.wear.ui.LocalBabyTimeText
+import com.ffmathy.pooparazzi.wear.ui.babyLabelOrNull
+import com.ffmathy.pooparazzi.wear.ui.rememberBabyTimeText
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
@@ -58,15 +61,19 @@ class MainActivity : ComponentActivity() {
             }
             CompositionLocalProvider(LocalAmbientModeManager provides ambient) {
                 XWearTheme {
-                    AppScaffold(timeText = { XTimeText() }) {
-                        WearNavHost(
-                            viewModel = viewModel,
-                            phoneLink = phoneLink,
-                            deepLinks = deepLinks,
-                            onDeepLinkHandled = { deepLinks.value = null },
-                        )
-                    }
                     val main by viewModel.main.collectAsStateWithLifecycle()
+                    // Every screen names the current baby in the time text when there are two or more (Main sets its own).
+                    val babyTime = rememberBabyTimeText(babyLabelOrNull(main.babies, main.babyId))
+                    CompositionLocalProvider(LocalBabyTimeText provides babyTime) {
+                        AppScaffold(timeText = { XTimeText() }) {
+                            WearNavHost(
+                                viewModel = viewModel,
+                                phoneLink = phoneLink,
+                                deepLinks = deepLinks,
+                                onDeepLinkHandled = { deepLinks.value = null },
+                            )
+                        }
+                    }
                     NotificationPermissionRequest(timerRunning = main.mode != MainMode.IDLE)
                 }
             }

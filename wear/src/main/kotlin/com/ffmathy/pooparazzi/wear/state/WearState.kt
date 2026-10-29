@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.wear.state
 
 import androidx.compose.runtime.Immutable
 import com.ffmathy.pooparazzi.core.domain.Summary
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -31,6 +32,8 @@ data class Guard(val kind: GuardKind, val target: GuardTarget, val untilMillis: 
  *
  * @property now minute-resolution "now" used for every duration on the screen.
  * @property lastSleep the most recent completed sleep ("Awake … since 13:27").
+ * @property babies the babies, in order (from the phone's settings); the screens label them (`LabelFormatter.baby`).
+ * @property babyId the watch's current baby, the one the entries above are for and every tap logs for.
  */
 @Immutable
 data class MainUiState(
@@ -43,6 +46,8 @@ data class MainUiState(
     val lastSleep: Entry?,
     val guard: Guard?,
     val sync: SyncStatus,
+    val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),
+    val babyId: String = Baby.FIRST_ID,
 ) {
     val mode: MainMode
         get() = if (runningSleep != null) MainMode.ASLEEP else MainMode.IDLE
@@ -50,8 +55,17 @@ data class MainUiState(
     /** The guard on the sleep toggle, if one is showing. */
     val sleepGuard: GuardKind? get() = guard?.takeIf { it.target == GuardTarget.SLEEP_TOGGLE }?.kind
 
+    /** The current baby: the one with [babyId], else the first (as `Settings.selectedBaby`). */
+    val baby: Baby get() = babies.firstOrNull { it.id == babyId } ?: babies.firstOrNull() ?: Baby(Baby.FIRST_ID)
+
+    /**
+     * Two or more babies: every screen names the current one in its time text and Main offers the baby picker
+     * (BABIES_AND_BACKUP §2.5). With one baby the watch looks exactly as before.
+     */
+    val hasSeveralBabies: Boolean get() = babies.size > 1
+
     companion object {
-        fun from(summary: Summary, guard: Guard?, sync: SyncStatus) = MainUiState(
+        fun from(summary: Summary, guard: Guard?, sync: SyncStatus, babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)), babyId: String = Baby.FIRST_ID) = MainUiState(
             now = summary.now,
             zone = summary.zone,
             loaded = true,
@@ -61,6 +75,8 @@ data class MainUiState(
             lastSleep = summary.lastSleep,
             guard = guard?.takeIf { it.untilMillis > summary.now },
             sync = sync,
+            babies = babies,
+            babyId = babyId,
         )
 
         /** Before the first database read. */

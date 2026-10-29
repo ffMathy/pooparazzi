@@ -1,8 +1,10 @@
 package com.ffmathy.pooparazzi.wear.tile
 
 import com.ffmathy.pooparazzi.core.domain.Summary
+import com.ffmathy.pooparazzi.core.format.LabelFormatter
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
+import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import java.time.ZoneId
 
@@ -30,6 +32,8 @@ enum class TileFeedbackKind {
  *
  * @property atMillis the logged time shown in the title ("Pee 14:32").
  * @property untilMillis when the title goes back to its normal content.
+ * @property babyId the baby the log was for (null: unknown, from before several babies). The confirmation belongs to
+ *   that baby and is dropped once the watch switches to another.
  */
 data class TileFeedback(
     val kind: TileFeedbackKind,
@@ -37,6 +41,7 @@ data class TileFeedback(
     val atMillis: Long,
     val diaperKind: DiaperKind?,
     val untilMillis: Long,
+    val babyId: String? = null,
 ) {
     /**
      * Whether the background tap can open Logged with Undo for this log: always, including "Sleep cancelled"
@@ -59,7 +64,10 @@ sealed interface TileTitle {
     /** A sleep runs: "Asleep 1h 07m". */
     data class Asleep(val sleep: Entry) : TileTitle
 
-    /** The baby's name, synced from the phone's settings. */
+    /**
+     * The baby's name, synced from the phone's settings. With two or more babies, the current baby's label, so an
+     * unnamed one shows too ("Baby 2", see [TileUiState.titleName]).
+     */
     data class Name(val name: String) : TileTitle
 
     /** No name set: the last diaper, kind first ("Pee 48m ago"), as the approved mockup shows. */
@@ -123,15 +131,29 @@ data class TileUiState(
             }
         }
 
-        fun from(summary: Summary, babyName: String, feedback: TileFeedback?, guard: TileGuard?) = TileUiState(
+        /**
+         * The tile for [summary] (the current baby's entries). [babyId] is the current baby: a confirmation of a log
+         * for another baby (made before a switch) is dropped.
+         */
+        fun from(summary: Summary, babyName: String, feedback: TileFeedback?, guard: TileGuard?, babyId: String? = null) = TileUiState(
             now = summary.now,
             zone = summary.zone,
             babyName = babyName.trim(),
             lastFeed = summary.lastFeed,
             lastDiaper = summary.lastDiaper,
             runningSleep = summary.runningSleep,
-            feedback = feedback?.takeIf { it.untilMillis > summary.now && it.stillStands(summary) },
+            feedback = feedback?.takeIf { it.untilMillis > summary.now && it.forBaby(babyId) && it.stillStands(summary) },
             guard = guard?.takeIf { it.untilMillis > summary.now },
         )
+
+        private fun TileFeedback.forBaby(current: String?): Boolean = babyId == null || current == null || babyId == current
+
+        /**
+         * What the idle title names (BABIES_AND_BACKUP §2.5): the baby's name with one baby (empty when unnamed, so
+         * the title falls back to the last diaper as before); with two or more, the current baby's label, named or not
+         * ("Noa", "Baby 2").
+         */
+        fun titleName(settings: Settings, labels: LabelFormatter): String =
+            if (settings.hasSeveralBabies) labels.currentBaby(settings) else settings.babyName
     }
 }

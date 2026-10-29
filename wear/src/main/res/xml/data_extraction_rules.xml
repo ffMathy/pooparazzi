@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Nothing is backed up or transferred: the log lives on the phone too and returns through sync, and a restored
-    database next to the synced one would only produce duplicates.
+    database next to the synced one would only produce duplicates. The settings file is named as well, so it stays out
+    even if a domain is ever let back in: it holds the babies' names, which never go to the cloud (BABIES_AND_BACKUP
+    §1), and the watch's current baby, which is this watch's own.
 -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="root" />
         <exclude domain="file" />
+        <exclude domain="file" path="datastore/pooparazzi_settings.preferences_pb" />
         <exclude domain="database" />
         <exclude domain="sharedpref" />
         <exclude domain="external" />
@@ -14,6 +17,7 @@
     <device-transfer>
         <exclude domain="root" />
         <exclude domain="file" />
+        <exclude domain="file" path="datastore/pooparazzi_settings.preferences_pb" />
         <exclude domain="database" />
         <exclude domain="sharedpref" />
         <exclude domain="external" />

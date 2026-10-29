@@ -11,6 +11,7 @@ import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
 import com.ffmathy.pooparazzi.core.data.PooparazziDatabase
 import com.ffmathy.pooparazzi.core.domain.epochMillis
 import com.ffmathy.pooparazzi.core.domain.summarize
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -21,6 +22,7 @@ import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
 import com.ffmathy.pooparazzi.wear.state.GuardKind
+import com.ffmathy.pooparazzi.wear.testing.FakeSettingsRepository
 import com.ffmathy.pooparazzi.wear.state.GuardTarget
 import com.ffmathy.pooparazzi.wear.state.MainMode
 import com.ffmathy.pooparazzi.wear.state.MainUiState
@@ -37,6 +39,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -69,6 +72,7 @@ class MainViewModelTest {
     private lateinit var db: PooparazziDatabase
     private lateinit var clock: FixedClock
     private lateinit var repo: RoomEntryRepository
+    private lateinit var settings: FakeSettingsRepository
     private lateinit var vm: MainViewModel
     private val store = ViewModelStore()
     private val events: MutableList<WearEvent> = Collections.synchronizedList(mutableListOf())
@@ -87,8 +91,9 @@ class MainViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         db = PooparazziDatabase.inMemory(ApplicationProvider.getApplicationContext())
         clock = FixedClock(SampleData.NOW_1432)
-        repo = RoomEntryRepository(db, clock)
-        val factory = viewModelFactory { initializer { MainViewModel(repo, NoopEntrySync, clock, zone = { zone }, ticks = flowOf(Unit)) } }
+        settings = FakeSettingsRepository()
+        repo = RoomEntryRepository(db, clock, selectedBaby = settings.state.map { it.selectedBaby.id })
+        val factory = viewModelFactory { initializer { MainViewModel(repo, settings, NoopEntrySync, clock, zone = { zone }, ticks = flowOf(Unit)) } }
         vm = ViewModelProvider.create(store, factory)[MainViewModel::class]
         collector = CoroutineScope(Dispatchers.Unconfined).launch { vm.events.collect { events += it } }
     }
@@ -702,13 +707,108 @@ class MainViewModelTest {
         assertEquals(XHaptic.REJECT, haptics().last())
     }
 
+    // ---- Babies (BABIES_AND_BACKUP §2.5) --------------------------------------------------------
+
+    @Test
+    fun withOneBabyMainHasNoBabyChoice() = test {
+        seed(SampleData.scenario())
+        val state = awaitMain { it.loaded }
+        assertFalse(state.hasSeveralBabies)
+        assertEquals(listOf(Baby(Baby.FIRST_ID)), state.babies)
+        assertEquals(Baby.FIRST_ID, state.babyId)
+    }
+
+    @Test
+    fun selectingABabySwitchesTheEntriesAndReturnsToMain() = test {
+        settings.state.value = SampleData.twinSettings
+        seed(SampleData.scenario())
+        assertEquals(Baby.FIRST_ID, awaitMain { it.hasSeveralBabies }.babyId)
+
+        vm.selectBaby(SampleData.TWIN_ID).join()
+        val ida = awaitMain { it.babyId == SampleData.TWIN_ID && it.lastFeed == null }
+        assertNull("Ida's log is empty", ida.lastDiaper)
+        assertEquals(SampleData.TWIN_NAME, ida.baby.name)
+        assertEquals(SampleData.TWIN_ID, settings.state.value.selectedBabyId)
+        awaitEvent(WearEvent.BackToMain)
+        assertEquals(listOf(XHaptic.CONFIRM), haptics())
+
+        // A tap now logs for Ida; Noa's log is untouched.
+        vm.beginDiaper()
+        vm.setPee(true)
+        vm.saveDiaper().join()
+        assertEquals(SampleData.TWIN_ID, vm.receipt.value?.entry?.babyId)
+        assertEquals(1, stored().size)
+
+        vm.selectBaby(Baby.FIRST_ID).join()
+        assertEquals("sample-pee-1344", awaitMain { it.babyId == Baby.FIRST_ID && it.lastDiaper?.id == "sample-pee-1344" }.lastDiaper?.id)
+    }
+
+    @Test
+    fun switchingBabiesDropsWhatWasOpenForThePreviousOne() = test {
+        settings.state.value = SampleData.twinSettings
+        seed(SampleData.scenario())
+        vm.beginFeed()
+        vm.beginDiaper()
+        vm.beginAdjust("sample-pee-1344", listOf(TimeField.START), allowSetTime = true)
+        vm.beginSetTime(TimeField.START)
+        await(vm.setTime) { it != null }
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.FORMULA).join()
+        assertNotNull(vm.receipt.value)
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BREAST).join()
+        assertNotNull(vm.sideDraft.value)
+
+        vm.selectBaby(SampleData.TWIN_ID).join()
+        assertNull(vm.feedDraft.value)
+        assertNull(vm.sideDraft.value)
+        assertNull(vm.diaperDraft.value)
+        assertNull("Undo belonged to Noa's formula", vm.receipt.value)
+        assertNull(await(vm.adjust) { it == null })
+        assertNull(await(vm.setTime) { it == null })
+        // Undo now has nothing to revert.
+        vm.undo().join()
+        assertEquals(SampleData.scenario().size + 1, repo.observeAllEntries().first().size)
+    }
+
+    @Test
+    fun switchingBabiesResetsTheDoubleToggleGuard() = test {
+        settings.state.value = SampleData.twinSettings
+        awaitMain { it.hasSeveralBabies }
+        vm.toggleSleep(shownSleepId = null).join()
+        assertNotNull(awaitMain { it.runningSleep != null }.runningSleep)
+
+        // Within 2 s of Noa's toggle, but Ida's sleep is another toggle: it starts at once.
+        vm.selectBaby(SampleData.TWIN_ID).join()
+        awaitMain { it.babyId == SampleData.TWIN_ID && it.runningSleep == null }
+        vm.toggleSleep(shownSleepId = null).join()
+        val ida = awaitMain { it.babyId == SampleData.TWIN_ID && it.runningSleep != null }
+        assertEquals(SampleData.TWIN_ID, ida.runningSleep?.babyId)
+        assertNull(ida.guard)
+        assertEquals(2, repo.observeAllEntries().first().count { it.isRunning })
+
+        // Ida's own toggle still has its guard.
+        vm.toggleSleep(ida.runningSleep?.id).join()
+        assertEquals(GuardKind.ALREADY_ASLEEP, awaitMain { it.guard != null }.sleepGuard)
+    }
+
+    @Test
+    fun selectingTheCurrentBabyKeepsWhatIsOpen() = test {
+        settings.state.value = SampleData.twinSettings
+        awaitMain { it.hasSeveralBabies }
+        vm.beginDiaper()
+        vm.selectBaby(Baby.FIRST_ID).join()
+        assertNotNull(vm.diaperDraft.value)
+        awaitEvent(WearEvent.BackToMain)
+    }
+
     // ---- Time zone -----------------------------------------------------------------------------
 
     @Test
     fun aNewTimeZoneAppliesWithoutANewViewModel() = test {
         var system: ZoneId = SampleData.ZONE
         val zoneStore = ViewModelStore()
-        val factory = viewModelFactory { initializer { MainViewModel(repo, NoopEntrySync, clock, zone = { system }, ticks = flowOf(Unit)) } }
+        val factory = viewModelFactory { initializer { MainViewModel(repo, settings, NoopEntrySync, clock, zone = { system }, ticks = flowOf(Unit)) } }
         val travelling = ViewModelProvider.create(zoneStore, factory)[MainViewModel::class]
         try {
             assertEquals(SampleData.ZONE, await(travelling.main) { it.loaded }.zone)

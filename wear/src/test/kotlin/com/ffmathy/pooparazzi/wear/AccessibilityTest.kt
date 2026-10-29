@@ -73,6 +73,24 @@ class AccessibilityTest {
     }
 
     @Test
+    fun theBabyButtonNamesTheBabyAndWhatItDoes() {
+        show { MainScreen(WearSamples.mainIdleTwins(), MainActions()) }
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Noa. Switch baby")
+            .assert(hasRole(Role.Button))
+            .assertIsEnabled()
+    }
+
+    @Test
+    fun withOneBabyThereIsNoBabyButton() {
+        show { MainScreen(WearSamples.mainIdle(), MainActions()) }
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+        compose.waitForIdle()
+        compose.onNode(hasContentDescription("Switch baby", substring = true)).assertDoesNotExist()
+    }
+
+    @Test
     fun anUntypedFeedIsNotReadAsLastFeedFeed() {
         // As the phone: "Last feed, 2 hours 10 minutes ago, at 12:22", not "Last feed, feed, …".
         val idle = WearSamples.mainIdle()
