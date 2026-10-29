@@ -426,7 +426,7 @@ Only whole days count: every window ends **yesterday**, and the **first logged d
 | Open row | adds its chart; the card grows with `animateContentSize` (left out with reduced motion) |
 | Footnote | "Averages count whole days up to yesterday. …" bodySmall onSurfaceVariant |
 
-The column width is `(content width − 2 × 16 − 12) / 2`: 153 dp at 390 dp, 138 dp at 360 dp. Everything scrolls in one column (the menu and the dialog are popups). At large font sizes labels, dates and the chip label wrap and the numbers shrink.
+The column width is `(content width − 2 × 16 − 12) / 2`: 153 dp at 390 dp, 138 dp at 360 dp. Everything scrolls in one column (the menu and the dialog are popups). At large font sizes labels and dates wrap; the numbers and the range chip's label stay on one line and shrink.
 
 ### 8.4 Chart
 
