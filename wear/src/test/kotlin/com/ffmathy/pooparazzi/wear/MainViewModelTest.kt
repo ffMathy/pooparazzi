@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.data.EndResult
 import com.ffmathy.pooparazzi.core.data.FixedClock
@@ -88,8 +89,14 @@ class MainViewModelTest {
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
-        db = PooparazziDatabase.inMemory(ApplicationProvider.getApplicationContext())
+        val main = UnconfinedTestDispatcher()
+        Dispatchers.setMain(main)
+        // Room runs on the test's Main dispatcher, as in the app's test rigs: with its own executor threads, a query
+        // resuming the view model could read Dispatchers.Main while tearDown resets it ("used concurrently").
+        db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), PooparazziDatabase::class.java)
+            .allowMainThreadQueries()
+            .setQueryCoroutineContext(main)
+            .build()
         clock = FixedClock(SampleData.NOW_1432)
         settings = FakeSettingsRepository()
         repo = RoomEntryRepository(db, clock, selectedBaby = settings.state.map { it.selectedBaby.id })
