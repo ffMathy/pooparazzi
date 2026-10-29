@@ -173,6 +173,25 @@ Anyone with the app can create an account; a family is joined only with an invit
 - **Signing out** keeps the log on the phone, and withdraws the consent on that phone. Nothing more is backed up until someone signs in (and agrees) again.
 - **Deleting the account** (Settings › Account › Delete account) signs in again (Google, or a fresh email link opened while the confirmation is on screen: a cancelled confirmation forgets its link, and a deletion link that arrives without it asks again before deleting), leaves the family (deleting the family's entries and babies if no one else is in it, handing it over if others are), deletes its outstanding invites, the backup from before families and the users document, and then the account. The log on the phone stays.
 
+## Retention
+
+[`firebase/retention/`](../firebase/retention) deletes what the privacy policy (§6) says is not kept, and the [`Retention`](../.github/workflows/retention.yml) workflow runs it every Monday:
+
+- **Accounts unused for 2 years** (no sign-in and no token refresh, that is, the app not opened): each leaves its family exactly as "Delete account" does in the app (`FamilyExit`): with others left only its member document goes, and the family is handed over to the member who joined first if it was the creator; as the last member, the family's entries and babies go first and the family document stays as a tombstone. Then its invites, `users/{uid}` with the old backup under it, and the account itself.
+- **Data of accounts that no longer exist** (deleted under Authentication › Users, say): the same, without the account.
+- **Expired invites**: a backstop for the TTL policy (§3), which remains required, since the policy promises "usually within a day".
+
+The privacy, compliance and breach documents are in [privacy/](privacy): the records of processing (art. 30), the impact assessment and the breach plan with its log.
+
+One-time setup:
+
+1. Google Cloud console of the Firebase project › IAM & Admin › Service accounts › Create service account `retention`, with the roles **Cloud Datastore User** and **Firebase Authentication Admin**. Keys › Add key › JSON.
+2. Add the whole key file's content as the repository secret **`FIREBASE_SERVICE_ACCOUNT`**, then delete the file. Without the secret the workflow does nothing and says so.
+3. Run the workflow by hand (Actions › Retention › Run workflow) with **dry run** on, and check the list it prints.
+4. Once, after the first release that uploads deleted entries as tombstones without their content, run it with **dry run** off and **clear deleted entries** on: it rewrites the deleted entries that older versions backed up in full (in every family and in the old per-account backups). It reads every entry, so on the Spark plan keep it to a day with read quota to spare.
+
+Run it locally with `GOOGLE_APPLICATION_CREDENTIALS=key.json FIREBASE_PROJECT_ID=<id> npm run retention -- --dry-run` in `firebase/`.
+
 ## GDPR and Google Play checklist
 
 - [ ] Firestore location **`eur3`** (or the privacy policy changed to say where).
@@ -183,11 +202,12 @@ Anyone with the app can create an account; a family is joined only with an invit
 - [ ] Data safety › Data deletion: in the app (Settings › Account › Delete account) and by email to **mathias.lorenzen@live.com** (the web address of the privacy policy explains both).
 - [ ] **Required:** TTL policy on `invites.expiresAt` (or deleting expired invites by hand daily); the privacy policy promises it.
 - [ ] Requests to the contact address answered within one month (access: export the family's documents from the console; erasure: "Removing someone" above).
-- [ ] When the data handled changes, update [PRIVACY.md](PRIVACY.md) and the `/privacy` page together, with a new date.
+- [ ] **Retention**: the `FIREBASE_SERVICE_ACCOUNT` secret added and a dry run of the Retention workflow checked (Retention, above); the privacy policy promises the 2-year deletion.
+- [ ] When the data handled changes, update [PRIVACY.md](PRIVACY.md) and the `/privacy` page together, with a new date, and the records in [privacy/](privacy).
 
 ## Testing the rules
 
-The rules have tests that run on the Firestore emulator (Node.js 22 and Java 21 needed):
+The rules have tests that run on the Firestore emulator, and the retention job on the Firestore and Authentication emulators (Node.js 22 and Java 21 needed):
 
 ```sh
 cd firebase
@@ -195,6 +215,6 @@ npm install
 npm test
 ```
 
-They cover every rule: creating a family (only atomically with the creator's member document, only as yourself, only with a verified email, never taking over another's, never again once everyone left), joining (a valid invite; refused when expired, of another family, missing, kept instead of deleted, used before, made by someone no longer a member, of a family everyone left, or without a verified email), handing the family over (only by its current creator, only to a member, only `createdBy`), the family document never being deleted, the probes of the security review (taking over a family by deleting and creating it again, a removed member rejoining with their own invite, stale invites, unverified addresses posing as someone else), member documents (own uid and email, server time, nothing else, never changed), leaving, the creator removing and others not, `users/{uid}` (own only, only `familyId`, only a family you are in), invites (members with a verified email only, at most 7 days, own name and email, code length and characters, get but no list, who may delete), the shape of entries and babies documents, non-members and signed-out clients, the old backup (read and delete only), the last member deleting the family's data but not the family, and that nothing else can be stored. Every guard was checked by weakening it and seeing a test fail; keep doing that when changing the rules. The [`Firestore rules`](../.github/workflows/rules.yml) workflow runs them on every pull request that changes `firebase/`.
+They cover every rule: creating a family (only atomically with the creator's member document, only as yourself, only with a verified email, never taking over another's, never again once everyone left), joining (a valid invite; refused when expired, of another family, missing, kept instead of deleted, used before, made by someone no longer a member, of a family everyone left, or without a verified email), handing the family over (only by its current creator, only to a member, only `createdBy`), the family document never being deleted, the probes of the security review (taking over a family by deleting and creating it again, a removed member rejoining with their own invite, stale invites, unverified addresses posing as someone else), member documents (own uid and email, server time, nothing else, never changed), leaving, the creator removing and others not, `users/{uid}` (own only, only `familyId`, only a family you are in), invites (members with a verified email only, at most 7 days, own name and email, code length and characters, get but no list, who may delete), the shape of entries and babies documents, non-members and signed-out clients, the old backup (read and delete only), the last member deleting the family's data but not the family, and that nothing else can be stored. Every guard was checked by weakening it and seeing a test fail; keep doing that when changing the rules. The retention tests (`test/retention.test.js`) check that an unused account leaves a shared family as the app does (handing it over) and wipes a family it was alone in, that the data of accounts deleted in the console and expired invites go, that a dry run deletes nothing, and that old tombstones lose their content. The [`Firestore rules`](../.github/workflows/rules.yml) workflow runs them on every pull request that changes `firebase/`.
 
 To look at the website locally: `npx firebase emulators:start --only hosting --project demo-pooparazzi` and open <http://127.0.0.1:5000/privacy>.

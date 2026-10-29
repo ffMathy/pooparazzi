@@ -424,7 +424,7 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 - **Night dimmer**: re-offer and level (default 10 %, adjustable 5–30 %).
 - Link to the system promoted-notifications setting (§10.5).
 - "Day starts at" (default 00:00; pending open question 4).
-- With the optional account (BABIES_AND_BACKUP §3): Account first, then **Family** while signed in (the members, "Invite someone", "Leave family", "Remove" for the family's creator; §3.4), and a **Privacy policy** row in About.
+- With the optional account (BABIES_AND_BACKUP §3): Account first, then **Family** while signed in (the members, "Invite someone", "Leave family", "Remove" for the family's creator; §3.4), and a **Privacy policy** row and a **Download my data** row (the log and the babies' names as JSON, BABIES_AND_BACKUP §3.2) in About.
 - After signing in, a full-screen **consent** ("Back up to Google Firebase?": what is uploaded, who sees it, where, how to change your mind; "I agree" filled, "Not now, sign out" as text; BABIES_AND_BACKUP §3.6) comes before anything else until the account has agreed on the phone; it is laid out like the Welcome.
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
