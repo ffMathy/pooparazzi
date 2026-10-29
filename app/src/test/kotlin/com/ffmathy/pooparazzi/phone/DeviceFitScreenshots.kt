@@ -22,8 +22,11 @@ import com.ffmathy.pooparazzi.phone.ui.preview.EditSamples
 import com.ffmathy.pooparazzi.phone.ui.preview.HistorySamples
 import com.ffmathy.pooparazzi.phone.ui.preview.HomeSamples
 import com.ffmathy.pooparazzi.phone.ui.preview.SettingsSamples
+import com.ffmathy.pooparazzi.phone.ui.preview.StatisticsSamples
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsActions
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsScreen
+import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsActions
+import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsScreen
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -38,10 +41,11 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Home, its sheets, the edit sheet, History and Settings on real-phone configurations rather than the 390 dp reference:
- * a narrow 360 dp phone at 100 % and 130 % font, and a 411 dp phone at 115 % font (a larger "display size" and font
- * size, as set on many phones). Checks that nothing clips or overflows: offset chips share one row, cards grow to fit
- * and labels wrap or shrink. Written under `build/outputs/roborazzi/fit/<config>/` for review, not part of the tour.
+ * Home, its sheets, the edit sheet, History, Settings and Statistics on real-phone configurations rather than the
+ * 390 dp reference: a narrow 360 dp phone at 100 % and 130 % font, and a 411 dp phone at 115 % font (a larger "display
+ * size" and font size, as set on many phones). Checks that nothing clips or overflows: offset chips share one row,
+ * cards grow to fit and labels wrap or shrink. Written under `build/outputs/roborazzi/fit/<config>/` for review, not
+ * part of the tour.
  */
 abstract class DeviceFitScreenshots(private val config: String, private val fontScale: Float) {
     @get:Rule
@@ -85,6 +89,11 @@ abstract class DeviceFitScreenshots(private val config: String, private val font
     @Test fun addPastEntry() = editSheet("14-add-past-entry", EditSamples.addPastEntry())
 
     @Test fun settings() = screen("15-settings") { SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = Insets) }
+
+    /** Statistics: the columns shrink to 138 dp at 360 dp, the numbers autosize, the chip label may wrap. */
+    @Test fun statistics() = screen("16-statistics") {
+        StatisticsScreen(StatisticsSamples.lastThirtyDays(), StatisticsActions.None, windowInsets = Insets)
+    }
 
     private fun home(name: String, night: Boolean, state: HomeUiState) {
         compose.setContent { NightLightTheme(night = night) { HomeScreen(state, HomeActions.None, windowInsets = Insets) } }

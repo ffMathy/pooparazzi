@@ -17,6 +17,7 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 - **Breast feeds with side order**: a breast feed is logged like any feed, at one time (no timer, no duration). After Breast, tick **Left** and/or **Right**: the order you tick is the order recorded ("Right → Left"). The side is optional; "Log feed" (watch: "Save") with nothing ticked records just the time. Wherever the last feed is shown (phone Home, the widget, the watch), its order is shown too ("Left → Right", or "L → R" where space is tight), so you know which side to start on next.
 - **Diapers**: Pee and Poop are independent checkboxes, both optional (nothing ticked is a plain change). With Poop on, pick an optional **colour** (yellow, green, brown, black, red, pale) and **texture** (watery, seedy, mushy, formed, hard); red, black and pale show a gentle "talk to your doctor" hint.
 - **History, edit and undo**: a day view with a 24-hour ribbon and day totals; tap any entry to edit its times, type, side or diaper details, or delete it; add a past entry; every log shows an **Undo** card (phone) or button (watch), with "Earlier?" chips to move it back.
+- **Statistics**: from History's chart button, average feeds, pee, poop and sleep per day for the last 7 days next to the last 30 days (or 90 days, all days, or dates you choose), with a bar chart that marks the last 7 days. Only whole days up to yesterday count, and days when nothing was logged are left out instead of counting as zero.
 - **Phone ↔ watch sync** over the Wearable **Data Layer**. Both apps log offline and merge by last-writer-wins; the baby's name and the language follow the phone.
 - **Glanceable surfaces**:
   - Phone: two **Glance widgets** (a 4×2 log widget and a 2×1 quick widget) and an **ongoing notification** for a running sleep (promoted to a Live Update where Android supports it).
@@ -77,7 +78,7 @@ Every image above also exists in the other language: swap `en` and `da` in the p
 | Module | What it holds |
 |---|---|
 | [`core/`](core) | Android library shared by both apps: the `Entry` model and validation, the Room database and repository, the Data Layer sync (`sync/`), settings, summaries and the Lamp state (`domain/`), text formatting, the design tokens, type and icons, and the sample data used by previews and screenshots. |
-| [`app/`](app) | The phone app (Compose, Material 3): Home, the Feed (with its Breast step) / Diaper sheets, History, Edit, Settings, the Glance widgets (`widget/`) and the running-sleep notification (`notify/`). |
+| [`app/`](app) | The phone app (Compose, Material 3): Home, the Feed (with its Breast step) / Diaper sheets, History, Statistics, Edit, Settings, the Glance widgets (`widget/`) and the running-sleep notification (`notify/`). |
 | [`wear/`](wear) | The Wear OS app (Compose for Wear OS, Material 3): Main, Feed type, Side, Diaper, Logged, Today and Adjust, plus the Tile (`tile/`), complications (`complication/`) and the Ongoing Activity (`ongoing/`). |
 | [`docs/design/`](docs/design) | The design: [`DESIGN_SPEC.md`](docs/design/DESIGN_SPEC.md) (the "Night Light" direction: screens, tokens, icons, accessibility) and [`V1_ADDITIONS.md`](docs/design/V1_ADDITIONS.md) (feed types, tick-ordered sides, optional diaper details, English + Danish), which wins where they differ. |
 | [`scripts/`](scripts) | `readme_screenshots.py`, which builds the README images. |
@@ -116,7 +117,7 @@ Open the phone app once and set the baby's name; the watch picks it up (and the 
 ./gradlew :core:testDebugUnitTest :app:testDebugUnitTest :wear:testDebugUnitTest
 ```
 
-Everything runs on the JVM with Robolectric (no emulator needed): view models, the repository and sync merge, formatting in both languages, TalkBack descriptions, navigation, widgets, the Tile layout and complications, and smoke tests of the apps' entry points.
+Everything runs on the JVM with Robolectric (no emulator needed): view models, the repository and sync merge, formatting in both languages, TalkBack descriptions, navigation, widgets, the Tile layout and complications, and smoke tests of the apps' entry points. Statistics has plain JUnit tests of its rules in `core` (which days count, rounding, ranges, DST days and chart bins), plus view-model, TalkBack (English and Danish), navigation and screenshot tests in `app`.
 
 ## Screenshots
 

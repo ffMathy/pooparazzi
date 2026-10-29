@@ -166,6 +166,7 @@ Home ──Diaper──────────────▶ Diaper sheet ─�
  │ ├─since-row 1 / 2──────▶ Edit sheet (latest entry of that row)
  │ ├─Adjust start (Lamp)──▶ Adjust card in the whisper slot ──Edit chip──▶ Edit sheet (running sleep)
  │ ├─History pill / Today grid ──▶ History ──row──▶ Edit sheet
+ │ │                                        ├─Statistics icon──▶ Statistics (P8) ──range chip──▶ menu / date range dialog
  │ │                                        └─"Add entry" FAB──▶ Edit sheet ("Add past entry" mode)
  │ └─Settings ──────────────▶ Settings (not designed; Appendix B)
 Widget buttons ──▶ log in place (no app launch) · Widget background ──▶ Home with the undo card for the last widget log
@@ -201,6 +202,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | P5 | Phone | Home-screen widgets 4×2, 2×1 | One-tap logging, including the phone's one-tap Pee / Poop / Both |
 | P6 | Phone | Live Update (running sleep) | Status chip and an ongoing notification with "Woke up" |
 | P7 | Phone | Splash | System splash, dark at night and light by day |
+| P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day: the last 7 days next to a chosen range (default the last 30 days), with a bar chart of one kind |
 | W1 | Watch | Main, idle | Status block, Feed / Diaper, "Start sleep"; scroll list below |
 | W2 | Watch | Main, asleep | Lamp, "Woke up"; scroll list with Adjust start |
 | W3 | Watch | Diaper picker | Pee / Poop / Both; Earlier |
@@ -364,7 +366,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 
 | Band (reference y) | Content |
 |---|---|
-| Top bar 24–88 | Back icon button (`back` 24, "Back"); "History" titleLarge. Nothing at the end |
+| Top bar 24–88 | Back icon button (`back` 24, "Back"); "History" titleLarge; at the end the `chart` icon button (24, "Statistics"), its glyph 20 from the screen edge, mirroring Back. It opens Statistics (P8, V1_ADDITIONS §8) |
 | Day switcher 96–144 | `chevronLeft` icon button ("Previous day"); "Today · Mon 26 Oct" titleMedium centred; `chevronRight` icon button ("Next day"), disabled on today (icon outlineVariant) |
 | Ribbon card 152–252 | 350 × 100, r 20, surfaceContainer. Decorative, not tappable |
 | Stats 264–312 | 4 columns: numbers titleLarge onSurface ("5", "4", "2", "7h 57m"), captions labelSmall onSurfaceVariant ("feeds", "pee", "poop", "sleep") |
@@ -1023,8 +1025,9 @@ Each quoted string is one path. All are stroked unless noted.
 | `lamp` | table lamp (brand glyph, splash, tile header) | `M8.5 3.5h7l3.5 8h-14z` `M12 11.5v6.5` `M8.5 20.5h7` |
 | `awake` | sun with 8 rays | `M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z` `M12 2.5v2` `M12 19.5v2` `M2.5 12h2` `M19.5 12h2` `M5.3 5.3l1.4 1.4` `M17.3 17.3l1.4 1.4` `M5.3 18.7l1.4-1.4` `M17.3 6.7l1.4-1.4` |
 | `sleepRunning` | ring + filled crescent = "a sleep is running" on glance surfaces (widget, tile, complication, notification small icon). Static, no ember, so it cannot go stale | ring (stroked): `M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19z` + crescent (**filled**, no stroke): `M16 13.3A4.25 4.25 0 1 1 10.7 8a3.5 3.5 0 0 0 5.3 5.3z` |
+| `chart` | a baseline and three uneven bars (History's button to Statistics, P8) | `M3.5 20.5h17` `M7 17v-5` `M12 17V6` `M17 17v-8` |
 
-28 icons. All were render-checked legible at 18 dp and up; `sleepRunning` at 16, 24 and 56 dp on black.
+29 icons (`chart` was added with Statistics). All were render-checked legible at 18 dp and up; `sleepRunning` at 16, 24 and 56 dp on black.
 
 ### 6.3 Shape-coded avatars (lists)
 
