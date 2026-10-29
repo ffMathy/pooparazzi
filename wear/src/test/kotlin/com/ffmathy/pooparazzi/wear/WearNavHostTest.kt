@@ -2,6 +2,8 @@ package com.ffmathy.pooparazzi.wear
 
 import android.content.Context
 import android.provider.Settings
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasContentDescription
@@ -30,10 +32,12 @@ import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
 import com.ffmathy.pooparazzi.wear.logged.LOGGED_INERT_MILLIS
 import com.ffmathy.pooparazzi.wear.logged.UNDONE_MILLIS
 import com.ffmathy.pooparazzi.wear.phone.PhoneLink
+import com.ffmathy.pooparazzi.wear.testing.FakeSettingsRepository
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -58,6 +62,7 @@ class WearNavHostTest {
     private lateinit var vm: MainViewModel
     private val store = ViewModelStore()
     private val phone = FakePhoneLink()
+    private val settings = FakeSettingsRepository()
 
     /** A phone that is not reachable unless a test says so, and that cannot open History unless told it can. */
     private class FakePhoneLink : PhoneLink {
@@ -77,9 +82,9 @@ class WearNavHostTest {
         Settings.System.putString(context.contentResolver, Settings.System.TIME_12_24, "24")
         db = PooparazziDatabase.inMemory(context)
         clock = FixedClock(SampleData.NOW_1432)
-        repo = RoomEntryRepository(db, clock)
+        repo = RoomEntryRepository(db, clock, selectedBaby = settings.state.map { it.selectedBaby.id })
         val factory = viewModelFactory {
-            initializer { MainViewModel(repo, NoopEntrySync, clock, zone = { SampleData.ZONE }, ticks = flowOf(Unit)) }
+            initializer { MainViewModel(repo, settings, NoopEntrySync, clock, zone = { SampleData.ZONE }, ticks = flowOf(Unit)) }
         }
         vm = ViewModelProvider.create(store, factory)[MainViewModel::class]
         compose.mainClock.autoAdvance = false
@@ -271,4 +276,50 @@ class WearNavHostTest {
         waitForDescription("Couldn't open on phone")
         assertEquals(1, phone.requests)
     }
+
+    // ---- Babies (BABIES_AND_BACKUP §2.5) --------------------------------------------------------
+
+    @Test
+    fun withOneBabyMainHasNoBabyButton() {
+        runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
+        waitForDescription("Last feed, formula")
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+        settle()
+        assertTrue(compose.onAllNodes(hasContentDescription("Switch baby", substring = true)).fetchSemanticsNodes().isEmpty())
+        assertTrue(compose.onAllNodes(hasText("Noa")).fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun theBabyPickerSwitchesTheBabyAndReturnsToMain() {
+        settings.state.value = SampleData.twinSettings
+        runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
+        waitForDescription("Last feed, formula")
+        // The baby button comes right after the hero.
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+        waitForDescription("Noa. Switch baby").performClick()
+
+        waitFor("Switch baby")
+        settle(600) // Past the picker cooldown.
+        // The current baby is marked.
+        compose.onNode(hasText("Noa") and isSelected(true)).assertExists()
+        compose.onNode(hasText("Ida") and isSelected(false)).assertExists()
+        compose.onNodeWithText("Ida").performClick()
+
+        // Back on Main, now for Ida, whose log is empty.
+        waitForDescription("No feeds yet")
+        assertEquals(SampleData.TWIN_ID, settings.state.value.selectedBabyId)
+        settle(1_000) // The picker has slid away once the transition is over.
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+        waitForDescription("Ida. Switch baby")
+        // The diaper is Ida's.
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(0)
+        waitFor("Diaper").performClick()
+        waitFor("Diaper · 14:32")
+        settle(600)
+        compose.onNodeWithText("Save").performClick()
+        waitFor("Diaper at 14:32")
+        assertEquals(SampleData.TWIN_ID, entries().single().babyId)
+    }
+
+    private fun isSelected(selected: Boolean): SemanticsMatcher = SemanticsMatcher.expectValue(SemanticsProperties.Selected, selected)
 }

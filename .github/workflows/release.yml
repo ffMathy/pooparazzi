@@ -100,6 +100,18 @@ jobs:
       - name: Unit tests
         run: ./gradlew --console=plain :core:testDebugUnitTest :app:testDebugUnitTest :wear:testDebugUnitTest
 
+      # The phone app's Firebase configuration (docs/BACKEND.md). Without it the release builds with accounts and the
+      # backup turned off, as on pull requests.
+      - name: Write the Firebase configuration
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          elif [ ! -f app/google-services.json ]; then
+            echo "::warning::GOOGLE_SERVICES_JSON is not set: this release has no accounts or backup (see docs/BACKEND.md)"
+          fi
+
       - name: Decode the upload keystore
         if: steps.secrets.outputs.upload_key == 'true'
         env:

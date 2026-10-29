@@ -42,7 +42,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * History, the edit sheet and Settings on the reference phone (390 × 844 dp, xxhdpi) with the reference scenario and a
- * fixed clock (V1_ADDITIONS §6), in English and Danish: `app/screenshots/<lang>/10-…16-*.png`, continuing Home's tour.
+ * fixed clock (V1_ADDITIONS §6), in English and Danish: `app/screenshots/<lang>/10-…16-*.png`, continuing Home's tour,
+ * and `22-…23-*.png` and `29-*.png` for several babies.
  * The status and navigation bars are left empty (24 dp insets, as on the reference device).
  */
 abstract class HistoryEditSettingsScreenshots(private val language: String) {
@@ -69,6 +70,18 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
 
     @Test fun settings() = screen("16-settings", night = true) {
         SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets)
+    }
+
+    /** Several babies (BABIES_AND_BACKUP §2): History's baby label, and Settings › Babies with twins and an unnamed third. */
+    @Test fun historyTwins() = screen("25-history-twins", night = true) { History(HistorySamples.twins()) }
+
+    @Test fun settingsBabies() = screen("26-settings-babies", night = false) {
+        SettingsScreen(SettingsSamples.babies(), SettingsActions.None, windowInsets = ReferenceInsets)
+    }
+
+    /** A paired watch from before several babies: "Add a baby" disabled, and why (BABIES_AND_BACKUP §2.4). */
+    @Test fun settingsBabiesWatchUpdate() = screen("32-settings-babies-watch-update", night = false) {
+        SettingsScreen(SettingsSamples.state().copy(watchNeedsUpdate = true), SettingsActions.None, windowInsets = ReferenceInsets)
     }
 
     /** Not part of the tour (written under build/): the blocking validation line, and a past day. */

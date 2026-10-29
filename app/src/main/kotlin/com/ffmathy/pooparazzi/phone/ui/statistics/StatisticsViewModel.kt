@@ -10,9 +10,11 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EntryRepository
+import com.ffmathy.pooparazzi.core.data.observeCurrentLog
 import com.ffmathy.pooparazzi.core.domain.StatsMetric
 import com.ffmathy.pooparazzi.core.domain.StatsRange
 import com.ffmathy.pooparazzi.core.domain.normalised
+import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.phone.app.launchMinuteTicker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,10 +29,12 @@ import java.time.ZoneId
 
 /**
  * Statistics' state (P8, V1_ADDITIONS §8): the open row and the comparison range, both kept across process death, over
- * the whole log. A new visit starts at the last 30 days with Poop open. Actions run one at a time, in tap order.
+ * the whole log of the current baby ([settings]; BABIES_AND_BACKUP §2.4). A new visit starts at the last 30 days with
+ * Poop open. Actions run one at a time, in tap order.
  */
 class StatisticsViewModel(
     private val repository: EntryRepository,
+    private val settings: SettingsRepository,
     private val clock: Clock,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val savedState: SavedStateHandle = SavedStateHandle(),
@@ -41,11 +45,15 @@ class StatisticsViewModel(
     private val range = MutableStateFlow(restoredRange())
     private val actions = Mutex()
 
-    /** Null until the entries have loaded. */
-    val state: StateFlow<StatisticsUiState?> = combine(repository.observeEntries(), now, metric, range) { entries, _, m, r ->
+    /**
+     * Null until the entries have loaded. The settings and the baby's entries come as one ([observeCurrentLog]), so a
+     * switch of baby never counts the previous baby's log under the new baby's label.
+     */
+    val state: StateFlow<StatisticsUiState?> = combine(repository.observeCurrentLog(settings.settings), now, metric, range) { log, _, m, r ->
         // [now] only re-runs this each minute (so the windows move at midnight); the time is read fresh, so an entry
         // logged elsewhere is counted at once.
-        StatisticsStateBuilder.build(entries, clock.now(), zone, m, r)
+        val s = log.settings
+        StatisticsStateBuilder.build(log.entries, clock.now(), zone, m, r, babies = s.babies, babyId = s.selectedBaby.id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
@@ -118,7 +126,7 @@ class StatisticsViewModel(
         private const val RANGE_CUSTOM = "CUSTOM"
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer { StatisticsViewModel(Core.repository, Core.clock, savedState = createSavedStateHandle()) }
+            initializer { StatisticsViewModel(Core.repository, Core.settings, Core.clock, savedState = createSavedStateHandle()) }
         }
     }
 }

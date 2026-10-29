@@ -5,6 +5,13 @@ plugins {
     alias(libs.plugins.roborazzi)
 }
 
+// The optional backup (docs/BACKEND.md): the Google services plugin turns app/google-services.json into resources
+// (google_app_id, default_web_client_id …). Without the file the plugin stays off and the app builds and runs with
+// accounts turned off; the code looks those resources up by name, so it compiles either way.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     // R class namespace (V1_ADDITIONS §7); the applicationId stays shared with the watch for the Data Layer.
     namespace = "com.ffmathy.pooparazzi.phone"
@@ -55,7 +62,12 @@ android {
     // The font licences shown in Settings › About › Font licences, packaged from the single copy in third_party/
     // (assets/fonts/*-OFL.txt).
     sourceSets.getByName("main").assets.directories.add(rootProject.file("third_party").path)
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        // Hermetic unit tests: Firebase never starts in them, even on a machine with app/google-services.json
+        // (AppAccounts). Tests that need accounts install a fake.
+        unitTests.all { it.systemProperty("pooparazzi.accounts.disabled", "true") }
+    }
 }
 
 dependencies {
@@ -74,6 +86,13 @@ dependencies {
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)
     implementation(libs.compose.ui.tooling.preview)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.kotlinx.coroutines.play.services)
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)

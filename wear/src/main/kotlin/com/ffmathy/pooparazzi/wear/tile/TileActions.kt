@@ -119,13 +119,13 @@ class TileActions(
             is EndResult.Ended -> {
                 memory.lastSleepToggleAt = now
                 memory.guard = null
-                memory.feedback = TileFeedback(TileFeedbackKind.WOKE_UP, result.entry.id, now, now + TILE_FEEDBACK_MILLIS)
+                memory.feedback = TileFeedback(TileFeedbackKind.WOKE_UP, result.entry.id, now, now + TILE_FEEDBACK_MILLIS, result.entry.babyId)
                 XHaptic.TOGGLE_OFF
             }
             is EndResult.Discarded -> {
                 memory.lastSleepToggleAt = now
                 memory.guard = null
-                memory.feedback = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, result.entry.id, now, now + TILE_FEEDBACK_MILLIS)
+                memory.feedback = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, result.entry.id, now, now + TILE_FEEDBACK_MILLIS, result.entry.babyId)
                 XHaptic.TOGGLE_OFF
             }
             is EndResult.NotRunning -> guard(GuardKind.ALREADY_AWAKE, now)

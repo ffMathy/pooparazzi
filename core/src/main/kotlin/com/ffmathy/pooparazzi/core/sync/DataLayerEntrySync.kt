@@ -109,8 +109,13 @@ class DataLayerEntrySync internal constructor(
                     val entry = EntryJson.decodeOrNull(text)
                     if (entry == null || entry.id != entryId) Log.w(TAG, "Ignoring malformed item at ${item.path}") else entries += entry
                 }
-                item.path == SyncPaths.SETTINGS ->
-                    if (SettingsJson.decodeOrNull(text)?.let { safe { sink.applyRemoteSettings(it) } } == true) applied++
+                item.path == SyncPaths.SETTINGS -> {
+                    val remote = SettingsJson.decodeRemoteOrNull(text)
+                    val stored = remote?.let {
+                        safe { if (it.legacy) sink.applyRemoteLegacySettings(it.settings) else sink.applyRemoteSettings(it.settings) }
+                    }
+                    if (stored == true) applied++
+                }
             }
         }
         if (entries.isNotEmpty()) {

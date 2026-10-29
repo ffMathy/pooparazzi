@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.core.sample
 
 import com.ffmathy.pooparazzi.core.domain.epochMillis
 import com.ffmathy.pooparazzi.core.domain.localDate
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -39,7 +40,14 @@ object SampleData {
     val SYNCED_1431: Long = epochMillis(TODAY, 14, 31, ZONE)
     val SYNCED_0311: Long = epochMillis(TODAY, 3, 11, ZONE)
 
-    val settings: Settings = Settings(babyName = BABY_NAME, updatedAtMillis = epochMillis(YESTERDAY, 9, 0, ZONE))
+    val settings: Settings = Settings(babies = listOf(Baby(Baby.FIRST_ID, BABY_NAME)), updatedAtMillis = epochMillis(YESTERDAY, 9, 0, ZONE))
+
+    /** The second baby of the twin samples. */
+    const val TWIN_NAME = "Ida"
+    const val TWIN_ID = "sample-baby-ida"
+
+    /** Twins: Noa (the current baby, the one of [scenario]) and [TWIN_NAME]. */
+    val twinSettings: Settings = settings.copy(babies = settings.babies + Baby(TWIN_ID, TWIN_NAME))
 
     /** Epoch ms of [hour]:[minute] today (or on [day]) in [zone]. */
     fun at(hour: Int, minute: Int, day: LocalDate = TODAY, zone: ZoneId = ZONE): Long = epochMillis(day, hour, minute, zone)

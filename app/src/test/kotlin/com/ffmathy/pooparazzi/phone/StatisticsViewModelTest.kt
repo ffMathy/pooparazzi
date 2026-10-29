@@ -7,6 +7,7 @@ import com.ffmathy.pooparazzi.core.domain.StatsRange
 import com.ffmathy.pooparazzi.core.domain.StatsReport
 import com.ffmathy.pooparazzi.core.domain.StatsWindow
 import com.ffmathy.pooparazzi.core.domain.epochMillis
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsUiState
@@ -33,7 +34,7 @@ class StatisticsViewModelTest : CoreTestBase() {
     private val tenDays = SampleData.history(days = 10)
 
     private fun CoreTestRig.statistics(saved: SavedStateHandle = SavedStateHandle()): StatisticsViewModel =
-        StatisticsViewModel(repository, clock, SampleData.ZONE, saved).also { collect(it.state) }
+        StatisticsViewModel(repository, settings, clock, SampleData.ZONE, saved).also { collect(it.state) }
 
     private fun StatisticsViewModel.current(): StatisticsUiState = checkNotNull(state.value) { "Statistics has not loaded" }
 
@@ -175,5 +176,33 @@ class StatisticsViewModelTest : CoreTestBase() {
     fun beforeTheFirstFullDayItIsEmpty() = coreTest { core ->
         // The reference scenario starts Sun 22:40, so its first full day would be today.
         assertNull(core.statistics().current().report)
+    }
+
+    /**
+     * Only the current baby's log counts (BABIES_AND_BACKUP §2.4): Ida's three days never mix into Noa's statistics,
+     * the label follows the baby, and a switch never counts Noa's log under Ida's label.
+     */
+    @Test
+    fun onlyTheCurrentBabysLogCounts() = coreTest(seed = tenDays) { core ->
+        core.settings.ensureBabies(listOf(SampleData.TWIN_ID))
+        core.settings.selectBaby(SampleData.TWIN_ID)
+        core.seed(SampleData.history(days = 3).map { it.copy(id = "ida-${it.id}") })
+        core.settings.selectBaby(Baby.FIRST_ID)
+        runCurrent()
+
+        val statistics = core.statistics()
+        val seen = core.collect(statistics.state)
+        runCurrent()
+        val noa = statistics.current()
+        assertTrue(noa.hasSeveralBabies)
+        assertEquals(Baby.FIRST_ID, noa.baby.id)
+        assertEquals("Noa's averages alone", listOf(70L, 67L, 26L, 822L), checkNotNull(noa.report).lastSevenDays.averages())
+        assertEquals(10, noa.report!!.comparison.loggedDays)
+
+        core.settings.selectBaby(SampleData.TWIN_ID)
+        runCurrent()
+        val ida = seen.filterNotNull().filter { it.babyId == SampleData.TWIN_ID }
+        assertTrue(ida.isNotEmpty())
+        assertTrue("never Noa's log under Ida's label", ida.all { it.report?.comparison?.loggedDays == 3 })
     }
 }

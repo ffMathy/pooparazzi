@@ -10,7 +10,9 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EntryRepository
+import com.ffmathy.pooparazzi.core.data.observeCurrentLog
 import com.ffmathy.pooparazzi.core.model.Entry
+import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.EntrySync
 import com.ffmathy.pooparazzi.phone.app.launchMinuteTicker
 import kotlinx.coroutines.CancellationException
@@ -29,10 +31,12 @@ import java.time.ZoneId
 
 /**
  * History's state (DESIGN_SPEC §3.3.3): the day shown (kept across process death), its ribbon, counts and entries,
- * soft deletes with an Undo receipt. Writes go through [repository]; actions run one at a time, in tap order.
+ * soft deletes with an Undo receipt, and whose log it is ([settings]' current baby). Writes go through [repository];
+ * actions run one at a time, in tap order.
  */
 class HistoryViewModel(
     private val repository: EntryRepository,
+    private val settings: SettingsRepository,
     private val sync: EntrySync,
     private val clock: Clock,
     private val zone: ZoneId = ZoneId.systemDefault(),
@@ -45,11 +49,20 @@ class HistoryViewModel(
     private var nextReceiptKey = 0L
     private val actions = Mutex()
 
-    /** Null until the entries have loaded. */
-    val state: StateFlow<HistoryUiState?> = combine(repository.observeEntries(), sync.status, now, day, receipt) { entries, status, _, d, r ->
+    /**
+     * Null until the entries have loaded. The settings and the baby's entries come as one ([observeCurrentLog]), so a
+     * switch of baby never lists the previous baby's log under the new baby's label.
+     */
+    val state: StateFlow<HistoryUiState?> = combine(
+        repository.observeCurrentLog(settings.settings),
+        sync.status,
+        now,
+        combine(day, receipt) { d, r -> d to r },
+    ) { log, status, _, (d, r) ->
+        val s = log.settings
         // [now] only re-runs this each minute; the time is read fresh, so an entry logged elsewhere within the current
         // minute (the watch, a widget) is listed at once.
-        HistoryStateBuilder.build(entries, status, clock.now(), zone, d, r)
+        HistoryStateBuilder.build(log.entries, status, clock.now(), zone, d, r, babies = s.babies, babyId = s.selectedBaby.id)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
@@ -108,8 +121,13 @@ class HistoryViewModel(
     }
 
     private suspend fun currentState(): HistoryUiState? = state.value ?: run {
-        val entries = repository.observeEntries().first()
-        HistoryStateBuilder.build(entries, sync.status.value, clock.now(), zone, day.value, receipt.value)
+        val log = repository.observeCurrentLog(settings.settings).first()
+        val s = log.settings
+        HistoryStateBuilder.build(
+            log.entries, sync.status.value, clock.now(), zone, day.value, receipt.value,
+            babies = s.babies,
+            babyId = s.selectedBaby.id,
+        )
     }
 
     private fun act(block: suspend () -> Unit) {
@@ -135,7 +153,7 @@ class HistoryViewModel(
         private const val ADD_DEFAULT_OFFSET_MILLIS = 15 * 60_000L
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer { HistoryViewModel(Core.repository, Core.sync, Core.clock, savedState = createSavedStateHandle()) }
+            initializer { HistoryViewModel(Core.repository, Core.settings, Core.sync, Core.clock, savedState = createSavedStateHandle()) }
         }
     }
 }

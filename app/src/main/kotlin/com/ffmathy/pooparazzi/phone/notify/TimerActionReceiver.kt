@@ -8,6 +8,7 @@ import android.util.Log
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.CoreGraph
 import com.ffmathy.pooparazzi.core.data.EndResult
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
@@ -28,7 +29,7 @@ class TimerActionReceiver : BroadcastReceiver() {
             ACTION_REFRESH -> async(context) { refresh(context) }
             ACTION_WOKE_UP -> {
                 val entryId = intent.getStringExtra(EXTRA_ENTRY_ID) ?: return
-                async(context) { endSleep(context, entryId) }
+                async(context) { endSleep(context, entryId, intent.getStringExtra(EXTRA_BABY_ID)) }
             }
             ACTION_EARLIER -> {
                 val entryId = intent.getStringExtra(EXTRA_ENTRY_ID) ?: return
@@ -63,17 +64,19 @@ class TimerActionReceiver : BroadcastReceiver() {
         const val ACTION_DISMISSED = "com.ffmathy.pooparazzi.phone.action.TIMER_DISMISSED"
         const val ACTION_REFRESH = "com.ffmathy.pooparazzi.phone.action.TIMER_REFRESH"
         const val EXTRA_ENTRY_ID = "entry_id"
+        const val EXTRA_BABY_ID = "baby_id"
         private const val EXTRA_BASE = "base_millis"
         private const val EXTRA_MINUTES = "offset_minutes"
         private const val EXTRA_CURRENT = "current_offset_minutes"
         private const val MINUTE_MILLIS = 60_000L
 
         /**
-         * Ends the running sleep [entryId] now and posts the woke-up notification with its Earlier offsets. A sleep that
+         * Ends the running sleep [entryId] now, whichever baby is the current one, cancels that baby's notification
+         * ([babyId], else the entry's) and posts their woke-up notification with its Earlier offsets. A sleep that
          * already ended (on the watch, in the app) is left alone; one stopped within 60 s is discarded by the repository
          * like any mis-tap.
          */
-        suspend fun endSleep(context: Context, entryId: String): EndResult? {
+        suspend fun endSleep(context: Context, entryId: String, babyId: String? = null): EndResult? {
             val graph = Core.ensureInitialized(context)
             val sleep = graph.repository.get(entryId)
             val result = if (sleep != null && sleep.isSleep && sleep.isRunning) {
@@ -84,7 +87,7 @@ class TimerActionReceiver : BroadcastReceiver() {
                 null
             }
             val notifications = TimerNotifications(context)
-            notifications.cancelSleep()
+            notifications.cancelSleep(babyId ?: sleep?.babyId ?: Baby.FIRST_ID)
             if (result is EndResult.Ended) {
                 val end = result.entry.endMillis ?: graph.clock.now()
                 notifications.renderWokeUp(state(graph), result.entry, baseMillis = end, offsetMinutes = 0)
@@ -100,9 +103,10 @@ class TimerActionReceiver : BroadcastReceiver() {
         suspend fun moveWakeUp(context: Context, entryId: String, baseMillis: Long, minutes: Int, current: Int): Entry? {
             val graph = Core.ensureInitialized(context)
             val notifications = TimerNotifications(context)
-            val sleep = graph.repository.get(entryId)?.takeUnless { it.deleted || it.isRunning || !it.isSleep }
+            val stored = graph.repository.get(entryId)
+            val sleep = stored?.takeUnless { it.deleted || it.isRunning || !it.isSleep }
             if (sleep == null) {
-                notifications.cancelWokeUp()
+                notifications.cancelWokeUp(stored?.babyId ?: Baby.FIRST_ID)
                 return null
             }
             val next = if (minutes == current) 0 else minutes
@@ -124,14 +128,16 @@ class TimerActionReceiver : BroadcastReceiver() {
             TimerNotifications(context).render(state(graph))
         }
 
+        /** Every baby's state: each baby who is asleep keeps their notification (BABIES_AND_BACKUP §2.3). */
         private suspend fun state(graph: CoreGraph): TimerState = TimerState.of(
-            graph.repository.observeEntries().first(),
+            graph.repository.observeAllEntries().first(),
             graph.settings.settings.first(),
             graph.clock.now(),
             ZoneId.systemDefault(),
         )
 
-        fun wokeUpIntent(context: Context, entryId: String): PendingIntent = broadcast(context, ACTION_WOKE_UP, entryId)
+        fun wokeUpIntent(context: Context, entryId: String, babyId: String): PendingIntent =
+            broadcast(context, ACTION_WOKE_UP, entryId, babyId)
 
         fun dismissedIntent(context: Context, entryId: String): PendingIntent = broadcast(context, ACTION_DISMISSED, entryId)
 
@@ -158,10 +164,11 @@ class TimerActionReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-        private fun broadcast(context: Context, action: String, entryId: String): PendingIntent {
+        private fun broadcast(context: Context, action: String, entryId: String, babyId: String? = null): PendingIntent {
             val intent = Intent(context, TimerActionReceiver::class.java)
                 .setAction(action)
                 .putExtra(EXTRA_ENTRY_ID, entryId)
+                .apply { if (babyId != null) putExtra(EXTRA_BABY_ID, babyId) }
             return PendingIntent.getBroadcast(
                 context,
                 entryId.hashCode(),

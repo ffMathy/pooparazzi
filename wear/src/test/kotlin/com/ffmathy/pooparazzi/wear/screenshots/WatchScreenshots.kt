@@ -19,7 +19,6 @@ import com.ffmathy.pooparazzi.wear.adjust.AdjustActions
 import com.ffmathy.pooparazzi.wear.adjust.AdjustScreen
 import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
-import com.ffmathy.pooparazzi.wear.diaper.PoopOptionScreen
 import com.ffmathy.pooparazzi.wear.diaper.colourOptions
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeActions
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeScreen
@@ -35,7 +34,11 @@ import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.state.GuardTarget
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
 import com.ffmathy.pooparazzi.wear.today.TodayScreen
+import com.ffmathy.pooparazzi.wear.ui.LocalBabyTimeText
 import com.ffmathy.pooparazzi.wear.ui.LocalFixedTimeText
+import com.ffmathy.pooparazzi.wear.ui.rememberBabyTimeText
+import com.ffmathy.pooparazzi.wear.ui.Option
+import com.ffmathy.pooparazzi.wear.ui.OptionScreen
 import com.ffmathy.pooparazzi.wear.ui.XTimeText
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -66,7 +69,14 @@ abstract class WatchScreenshots(private val lang: String) {
         Settings.System.putString(context.contentResolver, Settings.System.TIME_12_24, "24")
     }
 
-    private fun capture(name: String, now: Long, timeText: Boolean = true, after: () -> Unit = {}, content: @Composable () -> Unit) {
+    private fun capture(
+        name: String,
+        now: Long,
+        timeText: Boolean = true,
+        babyLabel: String? = null,
+        after: () -> Unit = {},
+        content: @Composable () -> Unit,
+    ) {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val time = ClockFormatter.from(context).format(now, WearSamples.zone)
         // Drive the clock by hand, so timed UI (the Logged drain arc) is captured mid-way, not run to its end.
@@ -74,7 +84,9 @@ abstract class WatchScreenshots(private val lang: String) {
         compose.setContent {
             CompositionLocalProvider(LocalFixedTimeText provides time) {
                 XWearTheme {
-                    AppScaffold(timeText = { if (timeText) XTimeText() }) { content() }
+                    CompositionLocalProvider(LocalBabyTimeText provides rememberBabyTimeText(babyLabel)) {
+                        AppScaffold(timeText = { if (timeText) XTimeText() }) { content() }
+                    }
                 }
             }
         }
@@ -131,7 +143,7 @@ abstract class WatchScreenshots(private val lang: String) {
 
     @Test
     fun s08_diaperColourList() = capture("08-diaper-colour-list", SampleData.NOW_1432) {
-        PoopOptionScreen(stringResource(CoreR.string.poop_colour), colourOptions(PoopColor.YELLOW), onSelect = {})
+        OptionScreen(stringResource(CoreR.string.poop_colour), colourOptions(PoopColor.YELLOW), onSelect = {})
     }
 
     @Test
@@ -162,6 +174,47 @@ abstract class WatchScreenshots(private val lang: String) {
     fun s14b_mainGuard() = capture("14b-main-asleep-guard", SampleData.NOW_0312) {
         val asleep = WearSamples.mainAsleep()
         MainScreen(asleep.copy(guard = Guard(GuardKind.ALREADY_ASLEEP, GuardTarget.SLEEP_TOGGLE, asleep.now + 2_000)), MainActions())
+    }
+
+    // ---- Twins (BABIES_AND_BACKUP §2.5) --------------------------------------------------------
+
+    /** Two babies: "Noa · 14:32" in the time text; otherwise Main is as with one. */
+    @Test
+    fun s22_mainTwins() = capture("22-main-twins", SampleData.NOW_1432) { MainScreen(WearSamples.mainIdleTwins(), MainActions()) }
+
+    /** The baby button right after the hero. */
+    @Test
+    fun s22b_mainTwinsBabyButton() = capture(
+        "22b-main-twins-baby-button",
+        SampleData.NOW_1432,
+        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1) },
+    ) { MainScreen(WearSamples.mainIdleTwins(), MainActions()) }
+
+    /** A long name at 200 %: cut with an ellipsis before the time, which stays whole; the button cuts it too. */
+    @Test
+    @Config(fontScale = 2.0f)
+    fun s22c_mainTwinsLongNameHugeFont() = capture(
+        "22c-main-twins-long-name-font-200",
+        SampleData.NOW_1432,
+        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1) },
+    ) { MainScreen(WearSamples.mainIdleTwins().withFirstName(LONG_NAME), MainActions()) }
+
+    /** Every other screen names the baby too, its title clear of the longer line. */
+    @Test
+    @Config(fontScale = 1.3f)
+    fun s22g_feedTypeTwinsLargeFont() = capture("22g-feed-type-twins-large-font", SampleData.NOW_1432, babyLabel = SampleData.TWIN_NAME) {
+        FeedTypeScreen(WearSamples.feedDraft(), FeedTypeActions())
+    }
+
+    /** The picker: one button per baby, the current one marked; the other screens name the baby too. */
+    @Test
+    fun s23_babyPicker() = capture("23-baby-picker", SampleData.NOW_1432, babyLabel = SampleData.BABY_NAME) {
+        val twins = SampleData.twinSettings
+        OptionScreen(
+            stringResource(CoreR.string.baby_switch),
+            twins.babies.map { Option(it.id, it.name, null, it.id == twins.selectedBaby.id) },
+            onSelect = {},
+        )
     }
 
     @Test
@@ -201,6 +254,12 @@ abstract class WatchScreenshots(private val lang: String) {
 }
 
 private const val FRAME = 16L
+
+/** A name as long as the phone lets the parent type (40 characters). */
+internal const val LONG_NAME = "Christian Frederik Valdemar Oldenborg"
+
+internal fun com.ffmathy.pooparazzi.wear.state.MainUiState.withFirstName(name: String) =
+    copy(babies = babies.map { if (it.id == babies.first().id) it.copy(name = name) else it })
 
 /** Screenshots of a round watch are round: the corners a round screen never shows are cropped away. */
 internal val RoundWatch = RoborazziOptions(recordOptions = RoborazziOptions.RecordOptions(applyDeviceCrop = true))

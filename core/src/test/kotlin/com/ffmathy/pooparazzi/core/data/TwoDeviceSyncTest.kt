@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.core.data
 
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.domain.summarize
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -46,6 +47,7 @@ class TwoDeviceSyncTest {
     private val minute = 60_000L
     private val phone = Device("phone")
     private val watch = Device("watch")
+    private val TWIN = "baby-2"
 
     @After
     fun tearDown() {
@@ -56,10 +58,14 @@ class TwoDeviceSyncTest {
     private inner class Device(val name: String) {
         val db = PooparazziDatabase.inMemory(ApplicationProvider.getApplicationContext())
         val node = NodeSync()
-        val repo = RoomEntryRepository(db, clock, node)
+
+        /** This device's current baby. */
+        val baby = MutableStateFlow(Baby.FIRST_ID)
+        val repo = RoomEntryRepository(db, clock, node, selectedBaby = baby)
 
         suspend fun running(): List<String> = repo.observeEntries().first().filter { it.isRunning }.map { it.id }
         suspend fun visible(): List<Entry> = repo.observeEntries().first()
+        suspend fun allRunning(): List<String> = repo.observeAllEntries().first().filter { it.isRunning }.map { it.id }
         fun close() = db.close()
     }
 
@@ -212,6 +218,51 @@ class TwoDeviceSyncTest {
         settle()
         assertEquals(5, phone.visible().size)
         assertConverged()
+    }
+
+    // ---- Twins (BABIES_AND_BACKUP §2.3: the rules apply per baby) --------------------------------
+
+    @Test
+    fun twinsChangedOnBothDevicesWithinSecondsAreTwoEntriesEach() = runBlocking {
+        clock.set(SampleData.NOW_1432)
+        watch.baby.value = TWIN
+        phone.repo.logDiaper(clock.now(), pee = true, poop = false)
+        watch.repo.logDiaper(clock.now() + 2_000, pee = true, poop = false)
+        phone.repo.logFeed(FeedType.FORMULA, clock.now() - 3_000)
+        watch.repo.logFeed(FeedType.FORMULA, clock.now())
+        // The same diaper for the first baby, logged on the watch too, is still one entry.
+        watch.baby.value = Baby.FIRST_ID
+        watch.repo.logDiaper(clock.now() + 1_000, pee = true, poop = false)
+        clock.advanceBy(10_000)
+        settle()
+
+        val all = phone.repo.observeAllEntries().first()
+        assertEquals(mapOf(Baby.FIRST_ID to 2, TWIN to 2), all.groupingBy { it.babyId }.eachCount())
+        assertEquals(all, watch.repo.observeAllEntries().first())
+        assertEquals(1, summarize(phone.visible(), clock.now(), SampleData.ZONE).today.pee)
+    }
+
+    @Test
+    fun twinsAsleepAtOnceStayAsleepOnBothDevices() = runBlocking {
+        // While apart: the phone starts the first baby's sleep, the watch the same baby's (a little later) and the twin's.
+        clock.set(SampleData.at(10, 0))
+        val first = phone.repo.startSleep(clock.now()).getOrThrow()
+        clock.set(SampleData.at(10, 2))
+        val again = watch.repo.startSleep(clock.now()).getOrThrow()
+        watch.baby.value = TWIN
+        clock.set(SampleData.at(10, 3))
+        val twin = watch.repo.startSleep(clock.now()).getOrThrow()
+        clock.set(SampleData.at(10, 30))
+        settle()
+
+        // One running sleep per baby: the first baby's earliest, and the twin's.
+        assertEquals(listOf(first.id, twin.id), phone.allRunning())
+        assertEquals(listOf(first.id, twin.id), watch.allRunning())
+        assertTrue(watch.repo.get(again.id)!!.deleted)
+        // Each device shows its own current baby.
+        assertEquals(listOf(first.id), phone.running())
+        assertEquals(listOf(twin.id), watch.running())
+        assertEquals(phone.repo.observeAllEntries().first(), watch.repo.observeAllEntries().first())
     }
 
     // ---- Purge (finding: forget() left a late device diverged) -----------------------------------

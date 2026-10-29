@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Auto Backup on API 30 (data_extraction_rules.xml applies from API 31): the same device-local exclusions. -->
+<!--
+    Auto Backup on API 30 (data_extraction_rules.xml applies from API 31): the same device-local exclusions. This format
+    cannot tell the cloud from a device transfer, so the settings (the babies' names, never in the cloud) are left out
+    of both, with the backup's bookkeeping.
+-->
 <full-backup-content>
     <exclude domain="sharedpref" path="system_surfaces.xml" />
     <exclude domain="sharedpref" path="widget_memo.xml" />
+    <exclude domain="sharedpref" path="account_welcome.xml" />
+    <exclude domain="file" path="datastore/pooparazzi_settings.preferences_pb" />
+    <exclude domain="file" path="datastore/pooparazzi_cloud.preferences_pb" />
 </full-backup-content>

@@ -2,6 +2,8 @@
 
 Design: "Night Light" (final) · Spec date: Mon 26 Oct 2026 · Status: **approved**; later changes are in [`V1_ADDITIONS.md`](V1_ADDITIONS.md)
 
+> **Several babies and the backup:** [`BABIES_AND_BACKUP.md`](BABIES_AND_BACKUP.md) adds several babies (a current baby per device) and an optional account that backs the log up; it wins where it differs from this document (one baby, "phone ↔ watch only").
+
 This document defines the product as designed in the approved mockups. It is written for the developers who will build:
 
 - the **Android phone app** (Jetpack Compose, Material 3 Expressive), its **Glance home-screen widgets** and its **Live Update** notification;

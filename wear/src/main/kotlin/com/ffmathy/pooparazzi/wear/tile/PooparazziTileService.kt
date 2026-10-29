@@ -13,6 +13,7 @@ import androidx.wear.tiles.RequestBuilders.TileRequest
 import androidx.wear.tiles.TileBuilders.Tile
 import androidx.wear.tiles.TileService
 import com.ffmathy.pooparazzi.core.Core
+import com.ffmathy.pooparazzi.core.format.LabelFormatter
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.wear.surface.SurfaceHaptics
 import com.ffmathy.pooparazzi.wear.surface.SurfaceText
@@ -42,7 +43,8 @@ class PooparazziTileService : Material3TileService(allowDynamicTheme = false, de
         val now = graph.clock.now()
         val summary = summarize(graph.repository.observeEntries().first(), now, zone)
         val settings = graph.settings.current()
-        val state = TileUiState.from(summary, settings.babyName, memory.feedback, memory.guard)
+        val name = TileUiState.titleName(settings, LabelFormatter(this@PooparazziTileService))
+        val state = TileUiState.from(summary, name, memory.feedback, memory.guard, settings.selectedBaby.id)
         val dynamic = deviceConfiguration.rendererSchemaVersion.supportsDynamicText()
         return tile(state, SurfaceText.from(this@PooparazziTileService, zone), memory.nextToken(), dynamic)
     }

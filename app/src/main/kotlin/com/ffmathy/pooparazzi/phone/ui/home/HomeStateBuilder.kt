@@ -4,6 +4,7 @@ import com.ffmathy.pooparazzi.core.domain.LampState
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.lampState
 import com.ffmathy.pooparazzi.core.domain.summarize
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
@@ -33,6 +34,9 @@ internal object HomeStateBuilder {
         card: CardModel? = null,
         sheet: SheetModel? = null,
         timings: HomeTimings = HomeTimings(),
+        babies: List<Baby> = listOf(Baby(Baby.FIRST_ID, babyName)),
+        babyId: String = babies.first().id,
+        switchingBaby: Boolean = false,
     ): HomeUiState {
         val summary = summarize(entries, now, zone)
         val lamp = lampState(summary)
@@ -48,6 +52,9 @@ internal object HomeStateBuilder {
             runningSleep = summary.runningSleep,
             card = card?.let { cardUi(it, entries, summary, timings) },
             sheet = sheet?.let { sheetUi(it) },
+            babies = babies,
+            babyId = babyId,
+            switchingBaby = switchingBaby && babies.size > 1,
         )
     }
 

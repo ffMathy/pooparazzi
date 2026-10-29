@@ -17,6 +17,15 @@ interface HomeActions {
     fun onOpenSettings() {}
     fun onRetrySync() {}
 
+    /** The name with two or more babies: opens the Switch baby sheet (BABIES_AND_BACKUP §2.4). */
+    fun onSwitchBaby() {}
+
+    /** Switch baby sheet: makes [babyId] the current baby and closes the sheet. */
+    fun onSelectBaby(babyId: String) {}
+
+    /** Switch baby sheet: Cancel, a scrim tap, back or a swipe. */
+    fun onSwitchBabyDismiss() {}
+
     /** A since-row or the Adjust card's Edit chip: the edit sheet for [entryId]. */
     fun onEditEntry(entryId: String) {}
 

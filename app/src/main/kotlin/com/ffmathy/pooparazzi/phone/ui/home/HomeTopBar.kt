@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -34,6 +37,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.SyncPeer
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
@@ -45,6 +49,9 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 /**
  * Home's top bar (DESIGN_SPEC §3.3.1): the baby's name, the sync line (a retry button in the error state), the History
  * pill and Settings. In lights-down the text and icons use onSurfaceVariant and the pill loses its fill.
+ *
+ * With two or more [babies] (BABIES_AND_BACKUP §2.4) the name is the current baby's label on a 48 dp button with a
+ * chevron that opens the Switch baby sheet; the sync line's retry target then sits under it instead of over the name.
  */
 @Composable
 internal fun HomeTopBar(
@@ -55,9 +62,12 @@ internal fun HomeTopBar(
     formatters: Formatters,
     actions: HomeActions,
     modifier: Modifier = Modifier,
+    babies: List<Baby> = listOf(Baby(Baby.FIRST_ID, babyName)),
+    babyId: String = babies.first().id,
 ) {
     val colors = MaterialTheme.colorScheme
     val chrome = if (lightsDown) colors.onSurfaceVariant else colors.onSurface
+    val several = babies.size > 1
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val pill = historyPillStyle(formatters.labels.syncLine(sync, SyncPeer.WATCH, formatters.clock, zone), maxWidth)
         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -68,19 +78,32 @@ internal fun HomeTopBar(
                     .heightIn(min = 64.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                Column(Modifier.padding(start = 20.dp, end = TopBarGap, top = 6.dp, bottom = 4.dp)) {
-                    val name = babyName.ifBlank { stringResource(CoreR.string.baby_name_hint) }
-                    Text(
-                        name,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = if (babyName.isBlank()) colors.onSurfaceVariant else chrome,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.semantics { heading() },
+                if (several) {
+                    val baby = babies.firstOrNull { it.id == babyId } ?: babies.first()
+                    SwitcherColumn(
+                        label = formatters.labels.baby(baby, babies),
+                        named = baby.name.isNotBlank(),
+                        chrome = chrome,
+                        sync = sync,
+                        zone = zone,
+                        formatters = formatters,
+                        actions = actions,
                     )
-                    SyncLine(sync, zone, formatters)
+                } else {
+                    Column(Modifier.padding(start = 20.dp, end = TopBarGap, top = 6.dp, bottom = 4.dp)) {
+                        val name = babyName.ifBlank { stringResource(CoreR.string.baby_name_hint) }
+                        Text(
+                            name,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = if (babyName.isBlank()) colors.onSurfaceVariant else chrome,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.semantics { heading() },
+                        )
+                        SyncLine(sync, zone, formatters)
+                    }
                 }
-                if (sync is SyncStatus.Error) {
+                if (sync is SyncStatus.Error && !several) {
                     // "Couldn't save · Tap to retry" is a 48 dp button over the sync line; it overlaps only the name.
                     val label = formatters.labels.syncLine(sync, SyncPeer.WATCH, formatters.clock, zone).orEmpty()
                     Box(
@@ -109,6 +132,67 @@ internal fun HomeTopBar(
 }
 
 private val TopBarGap = 4.dp
+
+/**
+ * The name as the switcher (two or more babies): the [label] and a 16 dp chevron on a 48 dp button
+ * ("Noa. Switch baby"), then the sync line. In the error state the sync line is its own 48 dp retry row under the
+ * button, so the two targets never overlap.
+ */
+@Composable
+private fun SwitcherColumn(
+    label: String,
+    named: Boolean,
+    chrome: Color,
+    sync: SyncStatus,
+    zone: ZoneId,
+    formatters: Formatters,
+    actions: HomeActions,
+) {
+    val color = if (named) chrome else MaterialTheme.colorScheme.onSurfaceVariant
+    val spoken = stringResource(CoreR.string.cd_baby_switch, label)
+    Column(Modifier.padding(start = 12.dp, end = TopBarGap, bottom = 4.dp)) {
+        Row(
+            Modifier
+                .height(48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(role = Role.Button, onClick = actions::onSwitchBaby)
+                .semantics {
+                    contentDescription = spoken
+                    heading()
+                }
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.titleLarge,
+                color = color,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .clearAndSetSemantics {},
+            )
+            Spacer(Modifier.width(4.dp))
+            XIcon(XIcons.chevronDown, contentDescription = null, tint = color, size = 16.dp)
+        }
+        if (sync is SyncStatus.Error) {
+            val retry = formatters.labels.syncLine(sync, SyncPeer.WATCH, formatters.clock, zone).orEmpty()
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(role = Role.Button, onClick = actions::onRetrySync)
+                    .semantics { contentDescription = retry }
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) { SyncLine(sync, zone, formatters, Modifier.clearAndSetSemantics {}) }
+        } else {
+            SyncLine(sync, zone, formatters, Modifier.padding(horizontal = 8.dp))
+        }
+    }
+}
 
 /** How much of the History pill fits beside the sync line. */
 private enum class PillStyle { FULL, TEXT, ICON }

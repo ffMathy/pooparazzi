@@ -1,11 +1,12 @@
 # Releasing Pooparazzi
 
-Two GitHub Actions workflows build and ship the apps:
+Three GitHub Actions workflows build, ship and check the apps:
 
 | Workflow | When | What it does |
 |---|---|---|
 | [`ci.yml`](../.github/workflows/ci.yml) | Every pull request (and by hand) | Unit tests of `:core`, `:app` and `:wear`, and debug builds of both apps. Needs no secrets. |
 | [`release.yml`](../.github/workflows/release.yml) | Every push to `main` (a merged pull request), and by hand | Unit tests, signed release **app bundles** (AAB) and **APKs** of the phone and the watch app, a **GitHub Release** with both APKs for side-loading, and an upload of both bundles to Google Play. The bundles and R8 mapping files are also kept as a workflow artifact. |
+| [`rules.yml`](../.github/workflows/rules.yml) | Pull requests that change `firebase/` (and by hand) | The Firestore security rules' tests on the Firestore emulator ([BACKEND.md](BACKEND.md#testing-the-rules)). Needs no secrets. |
 
 The phone app and the Wear OS app are one Play listing: both use the applicationId **`com.ffmathy.pooparazzi`** (the Wearable Data Layer only pairs apps with the same applicationId and signing key). The phone bundle goes to the phone track (`internal` by default) and the watch bundle to the matching **Wear OS form-factor track** (`wear:internal`), which is where Play expects Wear OS releases.
 
@@ -54,7 +55,7 @@ base64 -w0 pooparazzi-upload.jks > pooparazzi-upload.jks.b64      # macOS: base6
 
 Repository › Settings › Secrets and variables › Actions.
 
-**Secrets** (the four `UPLOAD_*` secrets go together: with only some of them the run stops early with a list of the missing ones; with none of them the run falls back to the [public side-load key](#without-the-upload-key)):
+**Secrets** (the four `UPLOAD_*` secrets go together: with only some of them the run stops early with a list of the missing ones; with none of them the run falls back to the [public side-load key](#without-the-upload-key); `GOOGLE_SERVICES_JSON` is optional on its own):
 
 | Secret | Value |
 |---|---|
@@ -63,6 +64,7 @@ Repository › Settings › Secrets and variables › Actions.
 | `UPLOAD_KEYSTORE_PASSWORD` | The keystore password |
 | `UPLOAD_KEY_ALIAS` | The key alias (`upload` above) |
 | `UPLOAD_KEY_PASSWORD` | The key password (the same as the keystore password if `keytool` did not ask for a separate one) |
+| `GOOGLE_SERVICES_JSON` | Optional: the whole `google-services.json` of the Firebase backend ([BACKEND.md](BACKEND.md#4-connect-the-app)). Without it the release builds with accounts and the backup turned off, and the run warns |
 
 **Variables** (all optional):
 
@@ -127,3 +129,4 @@ Until the four `UPLOAD_*` secrets are set, `release.yml` signs the APKs (and the
 - [ ] First phone and watch bundles uploaded by hand (step 4)
 - [ ] Service account invited in Play Console with release permissions (step 5)
 - [ ] `PLAY_RELEASE_STATUS=draft` while the app is still a draft; optional `PLAY_TRACK`
+- [ ] Optional backup: Firebase project set up and `GOOGLE_SERVICES_JSON` added ([BACKEND.md](BACKEND.md)); Play Console › App content › Data safety declares the account email and names a way to request account deletion

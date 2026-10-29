@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.phone.ui.history
 
 import com.ffmathy.pooparazzi.core.domain.localDate
 import com.ffmathy.pooparazzi.core.domain.summarize
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import java.time.LocalDate
@@ -18,6 +19,8 @@ internal object HistoryStateBuilder {
         zone: ZoneId,
         day: LocalDate?,
         receipt: DeletedReceipt? = null,
+        babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),
+        babyId: String = babies.first().id,
     ): HistoryUiState {
         val summary = summarize(entries, now, zone)
         val today = summary.todayDate
@@ -34,6 +37,8 @@ internal object HistoryStateBuilder {
             counts = summary.dayCounts(shown),
             entries = summary.dayEntries(shown),
             receipt = receipt,
+            babies = babies,
+            babyId = babyId,
         )
     }
 

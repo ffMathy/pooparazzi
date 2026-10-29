@@ -57,13 +57,24 @@ sealed interface LogResult {
  * The single source of truth for entries on this device. Every local write bumps [Entry.updatedAtMillis],
  * is validated (V1_ADDITIONS §1) and is pushed to the other device through sync.
  *
+ * The log is kept per baby (BABIES_AND_BACKUP §2.3). The device's *current* baby is the one [observeEntries] shows
+ * and the one-tap logs, [startSleep] and [add] write for; the rules (one running sleep, the dedupe window) apply
+ * within one baby. Functions that take an id work on the entry of any baby, and an edit never moves an entry to
+ * another baby.
+ *
  * Invalid writes throw [InvalidEntryException] (or return it as a failure for the `Result` functions);
  * a second running sleep is rejected with [AlreadyRunningException].
  * Local times may not lie in the future (beyond [EntryRules.FUTURE_TOLERANCE_MILLIS]).
  */
 interface EntryRepository {
-    /** Non-deleted entries, oldest first. */
+    /** The current baby's non-deleted entries, oldest first. Follows a change of the current baby. */
     fun observeEntries(): Flow<List<Entry>>
+
+    /**
+     * Non-deleted entries of every baby, oldest first: for what must not lose sight of a baby that is not the current
+     * one (the running-sleep notification, Auto appearance).
+     */
+    fun observeAllEntries(): Flow<List<Entry>>
 
     /** The stored entry with [id], including deleted ones, or null. */
     suspend fun get(id: String): Entry?
@@ -78,7 +89,7 @@ interface EntryRepository {
     /** As [logFeed], but tells a new entry apart from a duplicate. */
     suspend fun logFeedChecked(type: FeedType?, at: Long, side: BreastSide? = null): LogResult
 
-    /** Starts a sleep at [at]. Fails with [AlreadyRunningException] while one runs. */
+    /** Starts a sleep at [at]. Fails with [AlreadyRunningException] while one of the current baby's runs. */
     suspend fun startSleep(at: Long): Result<Entry>
 
     /** Ends the running sleep [id] at [at]: [EndResult.Ended], or [EndResult.Discarded] under 60 s. */
@@ -105,16 +116,22 @@ interface EntryRepository {
         texture: PoopTexture? = null,
     ): LogResult
 
-    /** Adds a complete entry (History "Add past entry"). Its id must be new. Returns it with a fresh [Entry.updatedAtMillis]. */
+    /**
+     * Adds a complete entry (History "Add past entry") for the current baby, whatever its [Entry.babyId]. Its id must
+     * be new. Returns it with a fresh [Entry.updatedAtMillis].
+     */
     suspend fun add(entry: Entry): Entry
 
-    /** Replaces an existing entry after validation; bumps [Entry.updatedAtMillis]. Throws [NoSuchElementException] for an unknown id. */
+    /**
+     * Replaces an existing entry after validation; bumps [Entry.updatedAtMillis]. The entry stays with its baby
+     * (the stored [Entry.babyId] is kept). Throws [NoSuchElementException] for an unknown id.
+     */
     suspend fun update(entry: Entry): Entry
 
     /** Soft-deletes [id]. Returns the snapshot before deletion (for Undo via [restore]), or null for an unknown id. */
     suspend fun delete(id: String): Entry?
 
-    /** Undo: writes [previous] back (re-inserting it when needed) with a new [Entry.updatedAtMillis]. */
+    /** Undo: writes [previous] back (re-inserting it when needed, for its own baby) with a new [Entry.updatedAtMillis]. */
     suspend fun restore(previous: Entry): Entry
 
     /** Merges an entry from the other device (last-writer-wins). Never echoes it back to sync. Returns true when stored. */
@@ -122,14 +139,14 @@ interface EntryRepository {
 
     /**
      * Merges a batch from the other device as one unit: applied oldest write first, with cross-device conflicts
-     * (two running sleeps, the same log within the dedupe window) resolved once after the batch.
-     * Returns how many entries were stored.
+     * (two running sleeps of one baby, the same log of one baby within the dedupe window) resolved once after the
+     * batch. Returns how many entries were stored.
      */
     suspend fun applyRemoteAll(entries: List<Entry>): Int = entries.count { applyRemote(it) }
 
     /**
      * Removes soft-deleted entries whose deletion is older than [EntryRules.SOFT_DELETE_RETENTION_MILLIS] and has
-     * reached sync. Their Data Layer items are kept (as `deleted = true`), so a device that was away the whole
+     * reached sync (and the backend, where there is one). Their Data Layer items are kept (as `deleted = true`), so a device that was away the whole
      * time still learns of the deletion. Returns how many were purged.
      */
     suspend fun purgeDeleted(): Int

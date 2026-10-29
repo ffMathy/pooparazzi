@@ -41,6 +41,7 @@ import com.ffmathy.pooparazzi.phone.ui.edit.EditSheet
 import com.ffmathy.pooparazzi.phone.ui.edit.EditViewModel
 import com.ffmathy.pooparazzi.phone.ui.edit.rememberEditEffects
 import com.ffmathy.pooparazzi.phone.ui.preview.HomeSamples
+import com.ffmathy.pooparazzi.phone.ui.sheets.BabySwitcherUi
 import com.ffmathy.pooparazzi.phone.ui.sheets.HomeSheets
 import com.ffmathy.pooparazzi.phone.ui.theme.LocalNightLight
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
@@ -214,7 +215,11 @@ fun HomeScreen(
                         maxLampSize = lampSize,
                         top = {
                             Column {
-                                HomeTopBar(state.babyName, state.sync, state.zone, lightsDown, formatters, actions)
+                                HomeTopBar(
+                                    state.babyName, state.sync, state.zone, lightsDown, formatters, actions,
+                                    babies = state.babies,
+                                    babyId = state.babyId,
+                                )
                                 Spacer(Modifier.height(8.dp))
                             }
                         },
@@ -269,6 +274,7 @@ fun HomeScreen(
     }
     HomeSheets(
         sheet = state.sheet,
+        switcher = if (state.switchingBaby) BabySwitcherUi(state.babies, state.babyId) else null,
         zone = state.zone,
         formatters = formatters,
         actions = actions,

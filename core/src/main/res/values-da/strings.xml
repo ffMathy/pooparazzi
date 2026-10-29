@@ -105,6 +105,11 @@
     <string name="appearance_day">Dag</string>
     <string name="language_system">Systemstandard</string>
 
+    <!-- Babies -->
+    <string name="baby_name_numbered">Baby %1$d</string>
+    <string name="baby_switch">Skift barn</string>
+    <string name="cd_baby_switch">%1$s. Skift barn</string>
+
     <!-- Today counts -->
     <plurals name="count_feeds">
         <item quantity="one">måltid</item>

@@ -16,9 +16,11 @@ import com.ffmathy.pooparazzi.core.domain.localTime
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.format.ClockFormatter
 import com.ffmathy.pooparazzi.core.format.DurationFormatter
+import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.LabelFormatter
 import com.ffmathy.pooparazzi.core.format.RelativeFormatter
 import com.ffmathy.pooparazzi.core.format.RelativePhrases
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
@@ -39,35 +41,53 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 /** A running sleep as its notification shows it: which entry, and since when. */
 data class RunningTimer(val entryId: String, val startMillis: Long)
 
+/** A baby's day as the notifications show it under the first line: the last feed and diaper, and today's counts. */
+data class BabyDay(val lastFeed: Entry? = null, val lastDiaper: Entry? = null, val today: DayCounts? = null)
+
+/** A baby who is asleep: [sleep] is their running sleep. */
+data class SleepingBaby(val baby: Baby, val sleep: RunningTimer)
+
 /**
- * What the ongoing notification shows (DESIGN_SPEC §3.3.7, §10.5): the running sleep and how long it has run at [now]
- * (whole minutes), the last feed and diaper, today's counts, and the name and language the text uses. Equal states
- * post nothing new; [now] moves once a minute, so the "1h 25m" in the text follows the clock. Feeds are instants
+ * What the ongoing notifications show (DESIGN_SPEC §3.3.7, §10.5; BABIES_AND_BACKUP §2.3): one per baby who is asleep,
+ * whichever baby is the current one, how long each sleep has run at [now] (whole minutes), each baby's [days] (the last
+ * feed and diaper, today's counts), and the babies (for their labels) and language the text uses. Equal states post
+ * nothing new; [now] moves once a minute, so the "1h 25m" in the text follows the clock. Feeds are instants
  * (breastfeeds too), so nothing else ever runs.
  */
 data class TimerState(
-    val sleep: RunningTimer?,
-    val now: Long,
-    val babyName: String,
+    val sleeping: List<SleepingBaby>,
+    val babies: List<Baby>,
     val language: AppLanguage,
     val zone: ZoneId,
-    val lastFeed: Entry? = null,
-    val lastDiaper: Entry? = null,
-    val today: DayCounts? = null,
+    val now: Long = 0L,
+    val days: Map<String, BabyDay> = emptyMap(),
 ) {
+    /** Baby [babyId]'s day; empty for a baby with nothing logged. */
+    fun dayOf(babyId: String): BabyDay = days[babyId] ?: BabyDay()
+
     companion object {
+        /**
+         * The state for [entries] of every baby (`observeAllEntries`), in the order of [settings]' babies; a baby whose
+         * entries arrived before the phone adopted it is listed after them, unnamed.
+         */
         fun of(entries: List<Entry>, settings: Settings, now: Long, zone: ZoneId): TimerState {
+            val byBaby = entries.groupBy { it.babyId }
+            val babies = settings.babies + byBaby.keys.filter { id -> settings.babies.none { it.id == id } }.map { Baby(it) }
             // Summarized at the real time (a sleep started seconds ago is not in the future), shown in whole minutes.
-            val summary = summarize(entries, now, zone)
+            val summaries = babies.associate { it.id to summarize(byBaby[it.id].orEmpty(), now, zone) }
+            val sleeping = babies.mapNotNull { baby ->
+                val sleep = summaries.getValue(baby.id).runningSleep ?: return@mapNotNull null
+                SleepingBaby(baby, RunningTimer(sleep.id, sleep.startMillis))
+            }
             return TimerState(
-                sleep = summary.runningSleep?.let { RunningTimer(it.id, it.startMillis) },
-                now = now - now.mod(MINUTE_MILLIS),
-                babyName = settings.babyName,
+                sleeping = sleeping,
+                babies = babies,
                 language = settings.language,
                 zone = zone,
-                lastFeed = summary.lastFeed,
-                lastDiaper = summary.lastDiaper,
-                today = summary.today,
+                now = now - now.mod(MINUTE_MILLIS),
+                days = summaries
+                    .filterKeys { id -> byBaby.containsKey(id) }
+                    .mapValues { (_, summary) -> BabyDay(summary.lastFeed, summary.lastDiaper, summary.today) },
             )
         }
     }
@@ -78,6 +98,10 @@ data class TimerState(
  * asleep" / "1h 07m · since 02:05" with a "Woke up" action that works from the lock screen. Expanded, it adds the last
  * feed (with its breast order), the last diaper and today's counts. It asks to be promoted to a Live Update where the
  * system allows it, and is a normal ongoing notification otherwise.
+ *
+ * Every baby who is asleep has their own notification ("Noa is asleep", "Ida is asleep", BABIES_AND_BACKUP §2.3), told
+ * apart by a tag per baby ([tagFor]) on [SLEEP_ID]; each "Woke up" ends that baby's sleep, and that baby's woke-up
+ * notification (tagged the same on [WOKE_UP_ID]) follows.
  *
  * "Woke up" tapped on the notification leaves a "Noa woke up at 03:12" notification with the Earlier offsets
  * (−5m / −10m / −15m) that move the wake-up time, as the undo card in the app does.
@@ -91,31 +115,30 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
     private val context = context.applicationContext
     private val manager = context.getSystemService(NotificationManager::class.java)
 
-    /** Posts, updates or cancels the notification so it matches [state]. */
+    /** Posts, updates or cancels the notifications so they match [state]. */
     fun render(state: TimerState) {
         // Forget dismissals of sleeps that have ended, so the next sleep gets its notification again.
-        val running = setOfNotNull(state.sleep?.entryId)
+        val running = state.sleeping.mapTo(mutableSetOf()) { it.sleep.entryId }
         val dismissed = prefs.dismissedTimers
         if (!running.containsAll(dismissed)) prefs.dismissedTimers = dismissed intersect running
 
-        val shown = show(SLEEP_ID, state, state.sleep, dismissed) { buildSleep(state, it) }
-        scheduleMinuteRefresh(shown)
-        // A new sleep (or the woke-up undone in the app) makes the woke-up notification's offsets meaningless.
-        if (state.sleep != null) manager.cancel(WOKE_UP_ID)
+        // Babies who are awake now: their notifications go (the first baby's untagged one is always checked).
+        val wanted = state.sleeping.mapTo(mutableSetOf()) { tagFor(it.baby.id) }
+        (postedTags(SLEEP_ID) + null).filter { it !in wanted }.forEach { manager.cancel(it, SLEEP_ID) }
+        val shown = state.sleeping.map { sleeping ->
+            val tag = tagFor(sleeping.baby.id)
+            // A new sleep (or the woke-up undone in the app) makes that baby's woke-up offsets meaningless.
+            manager.cancel(tag, WOKE_UP_ID)
+            sleeping.sleep.entryId !in dismissed && post(tag, SLEEP_ID, state) { buildSleep(state, sleeping) }
+        }
+        scheduleMinuteRefresh(shown.any { it })
         // A breastfeed notification posted by an older version (when breastfeeds were timed) is never wanted now.
         manager.cancel(LEGACY_FEED_ID)
     }
 
-    /** Whether the notification is showing afterwards. */
-    private fun show(id: Int, state: TimerState, timer: RunningTimer?, dismissed: Set<String>, build: (RunningTimer) -> Notification): Boolean =
-        when {
-            timer == null -> {
-                manager.cancel(id)
-                false
-            }
-            timer.entryId in dismissed -> false
-            else -> post(id, state) { build(timer) }
-        }
+    /** The tags of the notifications with [id] showing now. */
+    private fun postedTags(id: Int): Set<String?> =
+        runCatching { manager.activeNotifications.filter { it.id == id }.mapTo(mutableSetOf()) { it.tag } }.getOrDefault(emptySet())
 
     /**
      * The woke-up notification of [sleep], ended from the notification: its wake-up time moved [offsetMinutes] from
@@ -123,17 +146,17 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
      */
     fun renderWokeUp(state: TimerState, sleep: Entry, baseMillis: Long, offsetMinutes: Int) {
         if (sleep.endMillis == null || sleep.deleted) {
-            manager.cancel(WOKE_UP_ID)
+            manager.cancel(tagFor(sleep.babyId), WOKE_UP_ID)
             return
         }
-        post(WOKE_UP_ID, state) { buildWokeUp(state, sleep, baseMillis, offsetMinutes) }
+        post(tagFor(sleep.babyId), WOKE_UP_ID, state) { buildWokeUp(state, sleep, baseMillis, offsetMinutes) }
     }
 
-    private fun post(id: Int, state: TimerState, build: () -> Notification): Boolean {
+    private fun post(tag: String?, id: Int, state: TimerState, build: () -> Notification): Boolean {
         if (!canPost()) return false
         return try {
             ensureChannel(context.inAppLanguage(state.language))
-            manager.notify(id, build())
+            manager.notify(tag, id, build())
             true
         } catch (e: SecurityException) {
             // The permission was revoked between the check and the post.
@@ -142,10 +165,24 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
         }
     }
 
-    /** Cancels the sleep notification at once (its "Woke up" action), before the entries flow catches up. */
-    fun cancelSleep() = manager.cancel(SLEEP_ID)
+    /**
+     * Cancels baby [babyId]'s sleep notification at once (its "Woke up" action), before the entries flow catches up.
+     * Other babies' notifications stay.
+     */
+    fun cancelSleep(babyId: String) = manager.cancel(tagFor(babyId), SLEEP_ID)
 
-    fun cancelWokeUp() = manager.cancel(WOKE_UP_ID)
+    /** Cancels baby [babyId]'s woke-up notification; other babies' stay. */
+    fun cancelWokeUp(babyId: String) = manager.cancel(tagFor(babyId), WOKE_UP_ID)
+
+    /**
+     * The name in a notification's title: none for one unnamed baby (it reads "Asleep", as before several babies),
+     * otherwise the baby's label ("Noa", "Baby 2").
+     */
+    private fun titleName(strings: Context, state: TimerState, baby: Baby): String? =
+        if (state.babies.size < 2 && baby.name.isBlank()) null else Formatters.from(strings, state.zone).labels.baby(baby, state.babies)
+
+    /** The baby with [babyId], unnamed when the state does not know it. */
+    private fun babyOf(state: TimerState, babyId: String): Baby = state.babies.firstOrNull { it.id == babyId } ?: Baby(babyId)
 
     private fun canPost(): Boolean =
         context.hasNotificationPermission() && NotificationManagerCompat.from(context).areNotificationsEnabled()
@@ -179,23 +216,25 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
     }
 
     @VisibleForTesting
-    internal fun buildSleep(state: TimerState, sleep: RunningTimer): Notification {
+    internal fun buildSleep(state: TimerState, sleeping: SleepingBaby): Notification {
+        val sleep = sleeping.sleep
+        val day = state.dayOf(sleeping.baby.id)
         val strings = context.inAppLanguage(state.language)
         val text = NotificationText(strings, state.zone)
         val status = strings.getString(CoreR.string.status_asleep)
-        val title = state.babyName.takeIf { it.isNotBlank() }?.let { strings.getString(R.string.notification_asleep_title, it) } ?: status
+        val title = titleName(strings, state, sleeping.baby)?.let { strings.getString(R.string.notification_asleep_title, it) } ?: status
         val asleepFor = text.asleepFor(sleep.startMillis, state.now)
         val wokeUp = action(
             icon = XDrawables.wake,
             title = strings.getString(CoreR.string.action_woke_up),
-            intent = TimerActionReceiver.wokeUpIntent(context, sleep.entryId),
+            intent = TimerActionReceiver.wokeUpIntent(context, sleep.entryId, sleeping.baby.id),
         )
         val builder = base(title, asleepFor, smallIcon = XDrawables.sleepRunning)
             .setOngoing(true)
             .setCategory(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Notification.CATEGORY_STOPWATCH else Notification.CATEGORY_STATUS)
             .addAction(wokeUp)
             .setDeleteIntent(TimerActionReceiver.dismissedIntent(context, sleep.entryId))
-            .setStyle(Notification.BigTextStyle().bigText(text.lines(asleepFor, state)))
+            .setStyle(Notification.BigTextStyle().bigText(text.lines(asleepFor, day, state.now)))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
             // The status chip: a word, never a ticking value (DESIGN_SPEC §3.3.7).
             builder.setShortCriticalText(status)
@@ -204,7 +243,7 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
                 builder.setRequestPromotedOngoing(true)
             }
         }
-        return builder.withMetrics(strings, text, state, sleep.startMillis).build()
+        return builder.withMetrics(strings, text, state.zone, day, sleep.startMillis).build()
     }
 
     @VisibleForTesting
@@ -212,14 +251,14 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
         val strings = context.inAppLanguage(state.language)
         val text = NotificationText(strings, state.zone)
         val end = requireNotNull(sleep.endMillis)
-        val title = state.babyName.takeIf { it.isNotBlank() }
+        val title = titleName(strings, state, babyOf(state, sleep.babyId))
             ?.let { strings.getString(R.string.notification_woke_up_title, it, text.time(end)) }
             ?: strings.getString(CoreR.string.receipt_at_time, strings.getString(CoreR.string.action_woke_up), text.time(end))
         val slept = text.slept(sleep.startMillis, end)
         val builder = base(title, slept, smallIcon = XDrawables.wake)
             .setCategory(Notification.CATEGORY_STATUS)
             .setTimeoutAfter(WOKE_UP_TIMEOUT_MILLIS)
-            .setStyle(Notification.BigTextStyle().bigText(text.lines(slept, state)))
+            .setStyle(Notification.BigTextStyle().bigText(text.lines(slept, state.dayOf(sleep.babyId), state.now)))
         // The Earlier offsets of the undo card (DESIGN_SPEC §3.3.2): relative to the tap, never cumulative; the
         // selected one reads "✓ −10m" and a second tap returns to the tapped time. Impossible ones are left out.
         val now = state.now + MINUTE_MILLIS - 1
@@ -262,7 +301,7 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
      * breast order ("Last fed · L → R"). The two durations are the system's own minute-precision TimeDifference, so
      * they stay current on the lock screen without a re-render.
      */
-    private fun Notification.Builder.withMetrics(strings: Context, text: NotificationText, state: TimerState, since: Long): Notification.Builder {
+    private fun Notification.Builder.withMetrics(strings: Context, text: NotificationText, zone: ZoneId, day: BabyDay, since: Long): Notification.Builder {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) return this
         val adaptive = Notification.Metric.TimeDifference.FORMAT_ADAPTIVE
         val style = Notification.MetricStyle()
@@ -272,8 +311,8 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
                     strings.getString(R.string.notification_metric_asleep_for),
                 ),
             )
-            .addMetric(Notification.Metric(Notification.Metric.FixedTime(localTime(since, state.zone)), strings.getString(R.string.notification_metric_since)))
-        state.lastFeed?.let { feed ->
+            .addMetric(Notification.Metric(Notification.Metric.FixedTime(localTime(since, zone)), strings.getString(R.string.notification_metric_since)))
+        day.lastFeed?.let { feed ->
             style.addMetric(
                 Notification.Metric(
                     Notification.Metric.TimeDifference.forStopwatch(Instant.ofEpochMilli(feed.startMillis), adaptive),
@@ -291,6 +330,13 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
         private const val TAG = "TimerNotifications"
         const val CHANNEL_ID = "running_timers"
         const val SLEEP_ID = 1001
+
+        /**
+         * The tag of baby [babyId]'s sleep and woke-up notifications: none for the first baby (as before several
+         * babies, so an update keeps managing a notification that is already showing), its id for the others.
+         */
+        fun tagFor(babyId: String): String? = if (babyId == Baby.FIRST_ID) null else "sleep:$babyId"
+
         /** The running-breastfeed notification of older versions; cancelled if it is still showing. */
         const val LEGACY_FEED_ID = 1002
         /** "Noa woke up at 03:12", with the Earlier offsets. */
@@ -328,11 +374,11 @@ private class NotificationText(private val strings: Context, private val zone: Z
         listOfNotNull(strings.getString(CoreR.string.status_last_fed), feedDetail(feed)).joinToString(DOT)
 
     /** [first], then the last feed, the last diaper and today's counts, one per line. */
-    fun lines(first: String, state: TimerState): String = listOfNotNull(
+    fun lines(first: String, day: BabyDay, now: Long): String = listOfNotNull(
         first,
-        state.lastFeed?.let { fed(it, state.now) },
-        state.lastDiaper?.let { diaper(it, state.now) },
-        state.today?.let(::today),
+        day.lastFeed?.let { fed(it, now) },
+        day.lastDiaper?.let { diaper(it, now) },
+        day.today?.let(::today),
     ).joinToString("\n")
 
     /** "Fed 1h 32m ago · 01:40 · L → R"; "Formula" in place of the order for other feeds. */

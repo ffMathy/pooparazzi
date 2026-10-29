@@ -8,13 +8,21 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ffmathy.pooparazzi.core.Core
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
+import com.ffmathy.pooparazzi.core.cloud.CloudSync
+import com.ffmathy.pooparazzi.core.cloud.NoopCloudSync
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
 import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.EntrySync
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
+import com.ffmathy.pooparazzi.core.sync.WatchVersionCheck
 import com.ffmathy.pooparazzi.phone.BuildConfig
+import com.ffmathy.pooparazzi.phone.account.Accounts
+import com.ffmathy.pooparazzi.phone.account.AppAccounts
+import com.ffmathy.pooparazzi.phone.account.NoAccounts
 import com.ffmathy.pooparazzi.phone.app.AppLocales
 import com.ffmathy.pooparazzi.phone.app.LocaleApplier
 import kotlinx.coroutines.CoroutineScope
@@ -25,38 +33,69 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.ZoneId
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.ConcurrentHashMap
+
+/** What Settings › Account says (BABIES_AND_BACKUP §3.2). */
+@Immutable
+sealed interface AccountSummary {
+    /** The build has no Firebase configuration: "Backup isn't set up in this build", not tappable. */
+    data object Unavailable : AccountSummary
+
+    /** "Not signed in · Your log is only on this phone. Sign in to back it up." */
+    data object SignedOut : AccountSummary
+
+    /** The address and the backup status line. */
+    data class SignedIn(val email: String, val status: CloudStatus) : AccountSummary
+}
 
 /**
- * Settings (DESIGN_SPEC §3.3.5, V1_ADDITIONS §5) as data.
+ * Settings (DESIGN_SPEC §3.3.5, V1_ADDITIONS §5, BABIES_AND_BACKUP §2.4) as data.
  *
- * @property babyName what the name field shows: the parent's typing, or the stored name.
+ * @property babies the babies in their order, each with what its name field shows: the parent's typing, or the
+ *   stored name.
+ * @property account what Settings › Account says (BABIES_AND_BACKUP §3.2).
+ * @property canAddBaby false at [Settings.MAX_BABIES] (the "Add a baby" pill is hidden then).
+ * @property watchNeedsUpdate the paired watch runs a version from before several babies: "Add a baby" is disabled, with
+ *   "Update Pooparazzi on your watch first." under it.
  */
 @Immutable
 data class SettingsUiState(
-    val babyName: String,
+    val babies: List<Baby>,
     val appearance: Appearance,
     val language: AppLanguage,
     val sync: SyncStatus,
     val zone: ZoneId,
     val versionName: String,
+    val account: AccountSummary = AccountSummary.Unavailable,
+    val canAddBaby: Boolean = babies.size < Settings.MAX_BABIES,
+    val watchNeedsUpdate: Boolean = false,
 )
 
 /** Everything the parent can do in Settings. Defaults do nothing, so previews and screenshots can pass [None]. */
 @Stable
 interface SettingsActions {
     fun onBack() {}
-    fun onBabyNameChange(name: String) {}
+    fun onBabyNameChange(id: String, name: String) {}
 
-    /** The keyboard's Done: saves the name at once. */
-    fun onBabyNameDone() {}
+    /** The keyboard's Done in baby [id]'s field: saves its name at once. */
+    fun onBabyNameDone(id: String) {}
+
+    /** "Add a baby": appends an unnamed baby (the current baby stays). */
+    fun onAddBaby() {}
     fun onAppearance(appearance: Appearance) {}
     fun onLanguage(language: AppLanguage) {}
     fun onRetrySync() {}
+
+    /** Settings › Account: opens the Account screen. */
+    fun onOpenAccount() {}
+
+    /** The account row in "Couldn't back up · Tap to retry": backs up again. */
+    fun onRetryBackup() {}
     fun onOpenLicences() {}
 
     /** Settings › Notifications: the system setting for Live Updates or notifications. */
@@ -66,55 +105,88 @@ interface SettingsActions {
 }
 
 /**
- * Settings' state: the baby's name (saved 500 ms after the last keystroke, or at once on Done, and never lost when the
- * screen closes mid-typing), Appearance, and the language, which is persisted in [settings] (so it syncs to the
- * watch) and applied through [locales].
+ * Settings' state: the babies' names (each saved 500 ms after the last keystroke in its field, or at once on Done, and
+ * never lost when the screen closes mid-typing), adding a baby, Appearance, and the language, which is persisted in
+ * [settings] (so it syncs to the watch) and applied through [locales].
  *
  * @param writeScope outlives this view model, so a pending name write still lands after the screen closed.
+ * @param watchNeedsUpdate whether the paired watch runs a version from before several babies
+ *   ([com.ffmathy.pooparazzi.core.sync.WatchVersionCheck]); asked once, when Settings opens.
  */
 class SettingsViewModel(
     private val settings: SettingsRepository,
     private val sync: EntrySync,
     private val locales: LocaleApplier,
     private val writeScope: CoroutineScope,
+    private val accounts: Accounts = NoAccounts,
+    private val cloud: CloudSync = NoopCloudSync,
     private val versionName: String = BuildConfig.VERSION_NAME,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val nameDebounceMillis: Long = NAME_DEBOUNCE_MILLIS,
+    private val watchNeedsUpdate: suspend () -> Boolean = { false },
 ) : ViewModel(), SettingsActions {
 
-    private val nameDraft = MutableStateFlow<String?>(null)
+    /** An old watch would resolve conflicts across babies: no second baby until it is updated. */
+    private val oldWatch = MutableStateFlow(false)
 
-    /** The typed name not written yet; taken atomically by the write, so no keystroke is lost or written twice. */
-    private val pendingName = AtomicReference<String?>(null)
+    /** What each touched field shows, by baby id. */
+    private val nameDrafts = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    /**
+     * The typed names not written yet, by baby id; a write takes its baby's name atomically, so no keystroke is lost or
+     * written twice.
+     */
+    private val pendingNames = ConcurrentHashMap<String, String>()
+
+    /** One name write at a time, for every baby: an older name never lands after a newer one. */
     private val nameWrites = Mutex()
-    private var nameJob: Job? = null
+    private val nameJobs = mutableMapOf<String, Job>()
 
     /** Null until the settings have loaded. */
-    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, nameDraft) { s, status, draft ->
+    private val account = combine(accounts.user, cloud.status) { user, status ->
+        when {
+            !accounts.available -> AccountSummary.Unavailable
+            user == null -> AccountSummary.SignedOut
+            else -> AccountSummary.SignedIn(user.email, status)
+        }
+    }
+
+    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, nameDrafts, account, oldWatch) { s, status, drafts, account, old ->
         SettingsUiState(
-            babyName = draft ?: s.babyName,
+            babies = s.babies.map { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
             appearance = s.appearance,
             language = s.language,
             sync = status,
             zone = zone,
             versionName = versionName,
+            account = account,
+            watchNeedsUpdate = old,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    override fun onBabyNameChange(name: String) {
+    init {
+        viewModelScope.launch { oldWatch.value = watchNeedsUpdate() }
+    }
+
+    override fun onBabyNameChange(id: String, name: String) {
         val limited = name.take(Settings.MAX_BABY_NAME_LENGTH)
-        nameDraft.value = limited
-        pendingName.set(limited)
-        nameJob?.cancel()
-        nameJob = writeScope.launch {
+        nameDrafts.update { it + (id to limited) }
+        pendingNames[id] = limited
+        nameJobs.remove(id)?.cancel()
+        nameJobs[id] = writeScope.launch {
             delay(nameDebounceMillis)
-            flushName()
+            flushName(id)
         }
     }
 
-    override fun onBabyNameDone() {
-        nameJob?.cancel()
-        nameJob = writeScope.launch { flushName() }
+    override fun onBabyNameDone(id: String) {
+        nameJobs.remove(id)?.cancel()
+        nameJobs[id] = writeScope.launch { flushName(id) }
+    }
+
+    override fun onAddBaby() {
+        if (oldWatch.value) return
+        viewModelScope.launch { settings.addBaby() }
     }
 
     override fun onAppearance(appearance: Appearance) {
@@ -133,21 +205,33 @@ class SettingsViewModel(
         viewModelScope.launch { sync.retry() }
     }
 
-    override fun onCleared() {
-        if (pendingName.get() != null) writeScope.launch { flushName() }
+    override fun onRetryBackup() {
+        // In the app's scope: the Account screen opens over Settings while it runs.
+        writeScope.launch { cloud.syncNow() }
     }
 
-    /** Writes the latest typed name, one write at a time (an older name never lands after a newer one). */
-    private suspend fun flushName() = nameWrites.withLock {
-        val name = pendingName.getAndSet(null) ?: return@withLock
-        settings.setBabyName(name)
+    override fun onCleared() {
+        pendingNames.keys.toList().forEach { id -> writeScope.launch { flushName(id) } }
+    }
+
+    /** Writes the latest typed name of baby [id], one write at a time (an older name never lands after a newer one). */
+    private suspend fun flushName(id: String) = nameWrites.withLock {
+        val name = pendingNames.remove(id) ?: return@withLock
+        settings.renameBaby(id, name)
     }
 
     companion object {
         const val NAME_DEBOUNCE_MILLIS = 500L
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer { SettingsViewModel(Core.settings, Core.sync, AppLocales, Core.graph.scope) }
+            initializer {
+                val app = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
+                val watch = WatchVersionCheck.create(app)
+                SettingsViewModel(
+                    Core.settings, Core.sync, AppLocales, Core.graph.scope, AppAccounts.accounts, Core.cloud,
+                    watchNeedsUpdate = watch::needsUpdate,
+                )
+            }
         }
     }
 }

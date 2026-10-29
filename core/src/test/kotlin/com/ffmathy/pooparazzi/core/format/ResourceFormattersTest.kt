@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.core.format
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.R
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -15,6 +16,7 @@ import com.ffmathy.pooparazzi.core.sample.SampleData.TODAY
 import com.ffmathy.pooparazzi.core.sample.SampleData.ZONE
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
+import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -124,6 +126,27 @@ class EnglishResourceFormattersTest {
     }
 
     @Test
+    fun babyLabels() {
+        val l = f.labels
+        val first = Baby(Baby.FIRST_ID)
+        // One baby: its name, or "Baby" as before.
+        assertEquals("Baby", l.baby(first, listOf(first)))
+        assertEquals("Noa", l.baby(first.copy(name = " Noa "), listOf(first)))
+        assertEquals("Noa", l.currentBaby(SampleData.settings))
+        assertEquals("Baby", l.currentBaby(Settings()))
+        // Several: an unnamed baby is numbered by its position.
+        val babies = listOf(Baby(Baby.FIRST_ID, "Noa"), Baby("b2"), Baby("b3"))
+        assertEquals("Noa", l.baby(babies[0], babies))
+        assertEquals("Baby 2", l.baby(babies[1], babies))
+        assertEquals("Baby 3", l.baby(babies[2], babies))
+        assertEquals("Baby 2", l.currentBaby(Settings(babies, selectedBabyId = "b2")))
+        assertEquals("Ida", l.currentBaby(SampleData.twinSettings.copy(selectedBabyId = SampleData.TWIN_ID)))
+        assertEquals("not one of them", "Baby", l.baby(Baby("elsewhere"), babies))
+        assertEquals("Switch baby", context.getString(R.string.baby_switch))
+        assertEquals("Noa. Switch baby", context.getString(R.string.cd_baby_switch, "Noa"))
+    }
+
+    @Test
     fun syncLines() {
         val l = f.labels
         assertEquals("Synced with watch · 14:31", l.syncLine(SyncStatus.Synced(SampleData.SYNCED_1431), SyncPeer.WATCH, f.clock, ZONE))
@@ -199,6 +222,18 @@ class DanishResourceFormattersTest {
         assertEquals("Ret start", res.getString(R.string.action_adjust_start))
         assertEquals("Tidligere?", res.getString(R.string.action_earlier_question))
         assertEquals("Indstillinger", res.getString(R.string.nav_settings))
+    }
+
+    @Test
+    fun babyLabels() {
+        val l = f.labels
+        val babies = listOf(Baby(Baby.FIRST_ID), Baby("b2", "Ida"), Baby("b3"))
+        assertEquals("Baby", l.baby(babies[0], babies.take(1)))
+        assertEquals("Baby 1", l.baby(babies[0], babies))
+        assertEquals("Ida", l.baby(babies[1], babies))
+        assertEquals("Baby 3", l.currentBaby(Settings(babies, selectedBabyId = "b3")))
+        assertEquals("Skift barn", context.getString(R.string.baby_switch))
+        assertEquals("Ida. Skift barn", context.getString(R.string.cd_baby_switch, "Ida"))
     }
 
     @Test

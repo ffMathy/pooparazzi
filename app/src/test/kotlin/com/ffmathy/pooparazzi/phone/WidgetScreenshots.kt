@@ -45,7 +45,8 @@ import org.robolectric.annotation.GraphicsMode
  * The real Glance widgets, rendered the way a launcher shows them: each widget is composed by Glance into
  * [RemoteViews] at a fixed size, applied to a view and captured (Robolectric native graphics). Each state sits on a
  * panel in its theme's wallpaper tone, as in the mockup. Written to `app/screenshots/<lang>/17-widget-4x2.png` and
- * `18-widget-3x1.png` and `19-widget-cover.png`. The canvas is the phone's width but taller (960 dp), to hold four 4×2 states.
+ * `18-widget-3x1.png`, `19-widget-cover.png` and
+ * `30-widget-twins.png`. The canvas is the phone's width but taller (960 dp), to hold four 4×2 states.
  */
 abstract class WidgetScreenshots(private val language: String) {
     @get:Rule
@@ -133,6 +134,23 @@ abstract class WidgetScreenshots(private val language: String) {
             }
         }
         compose.onNodeWithTag(TAG).captureRoboImage("build/outputs/roborazzi/widget-breakpoints-$language.png")
+    }
+
+    /** Twins: the 4×2 status row starting with "Noa" (Night and Day) and the 3×1. */
+    @Test
+    fun widgetTwins() {
+        val size = DpSize(358.dp, 208.dp)
+        val states = listOf(WidgetSamples.twins(night = true), WidgetSamples.twins(night = false))
+        val views = states.map { render(size) { LogWidgetContent(it) } }
+        val quick = render(DpSize(260.dp, 100.dp)) { QuickWidgetContent(states.first()) }
+        compose.setContent {
+            // The night backdrop fills the canvas beside the narrower 3×1, so no blank strip shows.
+            Column(Modifier.testTag(TAG).background(NightBackdrop)) {
+                states.zip(views).forEach { (state, view) -> Panel(state, size, view) }
+                Panel(states.first(), DpSize(260.dp, 100.dp), quick)
+            }
+        }
+        compose.onNodeWithTag(TAG).captureRoboImage("screenshots/$language/30-widget-twins.png")
     }
 
     /**

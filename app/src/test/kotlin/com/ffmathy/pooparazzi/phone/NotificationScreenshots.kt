@@ -22,8 +22,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
+import com.ffmathy.pooparazzi.phone.notify.RunningTimer
+import com.ffmathy.pooparazzi.phone.notify.SleepingBaby
 import com.ffmathy.pooparazzi.phone.notify.TimerNotifications
 import com.ffmathy.pooparazzi.phone.notify.TimerState
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -40,6 +43,9 @@ import org.robolectric.annotation.GraphicsMode
  * expanded (its duration, the last feed and diaper, today's counts and Woke up), then the woke-up notification after
  * "−10m" (its offsets). Built by [TimerNotifications], turned into the template's [RemoteViews] and captured.
  * Written to `app/screenshots/<lang>/20-notifications.png`.
+ *
+ * Then the per-baby sleep notifications (BABIES_AND_BACKUP §2.3): twins both asleep, so "Noa is asleep" and "Ida is
+ * asleep" each with their "Woke up", in `31-notification-twins.png`.
  */
 abstract class NotificationScreenshots(private val language: AppLanguage) {
     @get:Rule
@@ -59,9 +65,9 @@ abstract class NotificationScreenshots(private val language: AppLanguage) {
         val settings = SampleData.settings.copy(language = language)
         val notifications = TimerNotifications(context)
         val asleep = TimerState.of(entries, settings, SampleData.NOW_0312, zone)
-        val running = notifications.buildSleep(asleep, asleep.sleep!!)
+        val running = notifications.buildSleep(asleep, asleep.sleeping.single())
 
-        val sleep = entries.single { it.id == asleep.sleep!!.entryId }.copy(endMillis = SampleData.at(3, 2))
+        val sleep = entries.single { it.id == asleep.sleeping.single().sleep.entryId }.copy(endMillis = SampleData.at(3, 2))
         val awake = TimerState.of(entries.map { if (it.id == sleep.id) sleep else it }, settings, SampleData.NOW_0312, zone)
         val wokeUp = notifications.buildWokeUp(awake, sleep, baseMillis = SampleData.NOW_0312, offsetMinutes = -10)
 
@@ -72,6 +78,30 @@ abstract class NotificationScreenshots(private val language: AppLanguage) {
             }
         }
         compose.onNodeWithTag(TAG).captureRoboImage("screenshots/${language.tag}/20-notifications.png")
+    }
+
+    @Test
+    fun sleepNotificationsForTwins() {
+        val noa = Baby(Baby.FIRST_ID, SampleData.BABY_NAME)
+        val ida = Baby(SampleData.TWIN_ID, SampleData.TWIN_NAME)
+        val state = TimerState(
+            sleeping = listOf(
+                SleepingBaby(noa, RunningTimer("sleep-noa", SampleData.at(13, 5))),
+                SleepingBaby(ida, RunningTimer("sleep-ida", SampleData.at(13, 20))),
+            ),
+            babies = listOf(noa, ida),
+            language = language,
+            zone = SampleData.ZONE,
+            now = SampleData.NOW_1432,
+        )
+        val notifications = TimerNotifications(context)
+        val views = state.sleeping.map { expanded(notifications.buildSleep(state, it)) }
+        compose.setContent {
+            Column(Modifier.testTag(TAG).background(Backdrop).padding(16.dp)) {
+                views.forEach { Card(it) }
+            }
+        }
+        compose.onNodeWithTag(TAG).captureRoboImage("screenshots/${language.tag}/31-notification-twins.png")
     }
 
     private fun expanded(notification: Notification): RemoteViews =

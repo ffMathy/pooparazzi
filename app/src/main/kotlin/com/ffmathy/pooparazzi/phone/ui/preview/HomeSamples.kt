@@ -7,6 +7,7 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 import com.ffmathy.pooparazzi.core.sample.SampleData
+import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.phone.ui.home.CardModel
 import com.ffmathy.pooparazzi.phone.ui.home.CardSpec
@@ -136,19 +137,32 @@ object HomeSamples {
         sheet = SheetModel.Diaper(stamp = SampleData.NOW_1432, poop = true, color = PoopColor.PALE),
     )
 
+    /** Twins (Noa and Ida), Noa current, at 14:32: the name is the switcher (BABIES_AND_BACKUP §2.4). */
+    fun twins(sync: SyncStatus = synced1431): HomeUiState =
+        build(SampleData.scenario(zone), SampleData.NOW_1432, sync = sync, settings = SampleData.twinSettings)
+
+    /** [twins] with the Switch baby sheet open. */
+    fun twinsSwitching(): HomeUiState =
+        build(SampleData.scenario(zone), SampleData.NOW_1432, settings = SampleData.twinSettings, switchingBaby = true)
+
     private fun build(
         entries: List<Entry>,
         now: Long,
         sync: SyncStatus = synced1431,
         card: CardModel? = null,
         sheet: SheetModel? = null,
+        settings: Settings = SampleData.settings,
+        switchingBaby: Boolean = false,
     ): HomeUiState = HomeStateBuilder.build(
         entries = entries,
-        babyName = SampleData.BABY_NAME,
+        babyName = settings.babyName,
         sync = sync,
         now = now,
         zone = zone,
         card = card,
         sheet = sheet,
+        babies = settings.babies,
+        babyId = settings.selectedBaby.id,
+        switchingBaby = switchingBaby,
     )
 }

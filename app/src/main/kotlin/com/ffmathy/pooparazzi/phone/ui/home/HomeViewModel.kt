@@ -11,6 +11,7 @@ import com.ffmathy.pooparazzi.core.data.EndResult
 import com.ffmathy.pooparazzi.core.data.EntryRepository
 import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.LogResult
+import com.ffmathy.pooparazzi.core.data.observeCurrentLog
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
@@ -72,6 +73,9 @@ class HomeViewModel(
     private val now = MutableStateFlow(clock.now())
     private val card = MutableStateFlow<CardModel?>(null)
     private val sheet = MutableStateFlow<SheetModel?>(null)
+
+    /** The Switch baby sheet is open (BABIES_AND_BACKUP §2.4). Not a [SheetModel]: it logs nothing. */
+    private val switchingBaby = MutableStateFlow(false)
     private val haptics = Channel<HomeHaptic>(Channel.BUFFERED)
     private val timerStarts = Channel<Unit>(Channel.CONFLATED)
     private val launchedSheetCloses = Channel<Unit>(Channel.CONFLATED)
@@ -94,17 +98,27 @@ class HomeViewModel(
      */
     val launchedSheetClosed: Flow<Unit> = launchedSheetCloses.receiveAsFlow()
 
-    /** Null until the entries and settings have loaded, so Home never flashes an empty "No feeds yet" state. */
+    /**
+     * Null until the entries and settings have loaded, so Home never flashes an empty "No feeds yet" state. The settings
+     * and the baby's entries come as one ([observeCurrentLog]), so a switch of baby never shows the previous baby's log
+     * under the new baby's name.
+     */
     val state: StateFlow<HomeUiState?> = combine(
-        repository.observeEntries(),
-        settings.settings,
+        repository.observeCurrentLog(settings.settings),
         sync.status,
         now,
-        combine(card, sheet) { c, s -> c to s },
-    ) { entries, s, syncStatus, _, (c, sh) ->
+        combine(card, sheet, switchingBaby) { c, s, sw -> Triple(c, s, sw) },
+    ) { log, syncStatus, _, (c, sh, sw) ->
+        val entries = log.entries
+        val s = log.settings
         // [now] only re-runs this each minute; the time itself is read fresh, so an entry written elsewhere within the
         // current minute (the watch, a widget, the lock-screen notification) shows at once instead of at the next tick.
-        HomeStateBuilder.build(entries, s.babyName, syncStatus, clock.now(), zone, c, sh, timings)
+        HomeStateBuilder.build(
+            entries, s.babyName, syncStatus, clock.now(), zone, c, sh, timings,
+            babies = s.babies,
+            babyId = s.selectedBaby.id,
+            switchingBaby = sw,
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -136,6 +150,38 @@ class HomeViewModel(
 
     override fun onRetrySync() {
         viewModelScope.launch { sync.retry() }
+    }
+
+    // ---- Switch baby (BABIES_AND_BACKUP §2.4) --------------------------------------------------
+
+    override fun onSwitchBaby() = act {
+        if (homeBlocked()) return@act
+        if (!settings.current().hasSeveralBabies) return@act
+        switchingBaby.value = true
+    }
+
+    /**
+     * Makes [babyId] the current baby. Switching closes the card (its Undo belongs to the other baby) and any logging
+     * sheet, and resets the double-toggle guard, which compares taps on one baby's sleep.
+     */
+    override fun onSelectBaby(babyId: String) = act {
+        if (!switchingBaby.value) return@act
+        switchingBaby.value = false
+        val current = settings.current()
+        if (current.babies.none { it.id == babyId }) return@act
+        haptic(HomeHaptic.SEGMENT_TICK)
+        if (current.selectedBaby.id == babyId) return@act
+        attempt { settings.selectBaby(babyId) }
+            .onSuccess {
+                clearCard()
+                sheet.value = null
+                cooldownPending = false
+                lastToggleAt = null
+            }
+    }
+
+    override fun onSwitchBabyDismiss() = act {
+        switchingBaby.value = false
     }
 
     // ---- Big buttons --------------------------------------------------------------------------
@@ -426,19 +472,29 @@ class HomeViewModel(
             HomeLaunch.Home, HomeLaunch.History -> Unit
             HomeLaunch.Feed -> {
                 sheetFromLaunch = true
-                sheet.value = SheetModel.Feed(clock.now())
+                openSheet(SheetModel.Feed(clock.now()))
             }
             HomeLaunch.Diaper -> {
                 sheetFromLaunch = true
-                sheet.value = SheetModel.Diaper(stamp = clock.now())
+                openSheet(SheetModel.Diaper(stamp = clock.now()))
             }
             is HomeLaunch.Receipt -> showReceipt(launch)
         }
     }
 
-    /** The undo card for a log made on the widget, as if it had been made here (DESIGN_SPEC §3.3.6). */
+    /** A sheet a deep link asked for: it replaces the open one, and the Switch baby sheet closes. */
+    private fun openSheet(model: SheetModel) {
+        switchingBaby.value = false
+        sheet.value = model
+    }
+
+    /**
+     * The undo card for a log made on the widget, as if it had been made here (DESIGN_SPEC §3.3.6). A log for another
+     * baby than the current one shows nothing: its Undo would act on a log Home does not show.
+     */
     private suspend fun showReceipt(receipt: HomeLaunch.Receipt) {
         val entry = repository.get(receipt.entryId) ?: return
+        if (entry.babyId != settings.current().selectedBaby.id) return
         when (receipt.kind) {
             ReceiptKind.LOGGED -> {
                 if (entry.deleted) return
@@ -566,8 +622,11 @@ class HomeViewModel(
         }
     }
 
-    /** Feed, Diaper and the toggle ignore taps while a sheet is open and briefly after a committed one closed. */
-    private fun homeBlocked(): Boolean = sheet.value != null || elapsedRealtime() < homeReadyAt
+    /**
+     * Feed, Diaper, the toggle and the switcher ignore taps while a sheet (or the Switch baby sheet) is open and briefly
+     * after a committed one closed.
+     */
+    private fun homeBlocked(): Boolean = sheet.value != null || switchingBaby.value || elapsedRealtime() < homeReadyAt
 
     private suspend fun summary(): Summary = summarize(repository.observeEntries().first(), clock.now(), zone)
 

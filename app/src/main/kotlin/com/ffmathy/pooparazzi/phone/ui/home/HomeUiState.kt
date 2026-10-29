@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.phone.ui.home
 import androidx.compose.runtime.Immutable
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.domain.LampState
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
@@ -23,6 +24,9 @@ import java.time.ZoneId
  * @property row2 since-row 2: the last diaper, kind first.
  * @property card the undo card in the whisper slot; null shows the Today grid.
  * @property sheet the open logging sheet, if any.
+ * @property babies all babies, in order (BABIES_AND_BACKUP §2.1); with two or more the name is the switcher.
+ * @property babyId the current baby's id, the one [babyName] belongs to.
+ * @property switchingBaby the Switch baby sheet is open.
  */
 @Immutable
 data class HomeUiState(
@@ -37,7 +41,16 @@ data class HomeUiState(
     val runningSleep: Entry?,
     val card: UndoCardUi? = null,
     val sheet: HomeSheetUi? = null,
+    val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID, babyName)),
+    val babyId: String = babies.first().id,
+    val switchingBaby: Boolean = false,
 ) {
+    /** Two or more babies: the switcher and the extra name lines appear (BABIES_AND_BACKUP §2.2). */
+    val hasSeveralBabies: Boolean get() = babies.size > 1
+
+    /** The current baby (the first when [babyId] is not one of [babies]). */
+    val baby: Baby get() = babies.firstOrNull { it.id == babyId } ?: babies.first()
+
     val sleepRunning: Boolean get() = runningSleep != null
 
     /** Something runs (only a sleep can): at night this is lights-down (DESIGN_SPEC §8.2). */

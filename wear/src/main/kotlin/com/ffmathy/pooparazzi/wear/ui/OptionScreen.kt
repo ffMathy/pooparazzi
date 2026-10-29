@@ -1,10 +1,10 @@
-package com.ffmathy.pooparazzi.wear.diaper
+package com.ffmathy.pooparazzi.wear.ui
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.MaterialTheme
@@ -15,41 +15,22 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
-import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
-import com.ffmathy.pooparazzi.core.format.Labels
-import com.ffmathy.pooparazzi.core.model.PoopColor
-import com.ffmathy.pooparazzi.core.model.PoopTexture
-import com.ffmathy.pooparazzi.core.ui.tokens.PoopSwatches
 import com.ffmathy.pooparazzi.wear.theme.WatchAmbient
-import com.ffmathy.pooparazzi.wear.theme.XWearTheme
 import com.ffmathy.pooparazzi.wear.theme.isAmbient
-import com.ffmathy.pooparazzi.wear.ui.ScreenTitle
-import com.ffmathy.pooparazzi.wear.ui.Swatch
-import com.ffmathy.pooparazzi.wear.ui.WatchShapes
-import com.ffmathy.pooparazzi.wear.ui.rememberCooldown
-import com.ffmathy.pooparazzi.core.R as CoreR
-
-/** One choice of an option list: its label, an optional swatch colour, and whether it is the current value. */
-data class PoopOption<T>(val value: T?, val label: String, val swatch: Color?, val selected: Boolean)
-
-/** The six colours (each with its swatch dot), then "None" (V1_ADDITIONS §3.2). */
-@Composable
-fun colourOptions(selected: PoopColor?): List<PoopOption<PoopColor>> =
-    PoopColor.entries.map { PoopOption(it, stringResource(Labels.poopColor(it)), PoopSwatches.color(it), it == selected) } +
-        PoopOption(null, stringResource(CoreR.string.none), null, selected == null)
-
-/** The five textures, then "None". */
-@Composable
-fun textureOptions(selected: PoopTexture?): List<PoopOption<PoopTexture>> =
-    PoopTexture.entries.map { PoopOption(it, stringResource(Labels.poopTexture(it)), null, it == selected) } +
-        PoopOption(null, stringResource(CoreR.string.none), null, selected == null)
 
 /**
- * A single-select option list for the poop colour or texture: radio buttons, the current value selected. One tap
- * sets the value and returns to the Diaper screen. 500 ms tap cooldown.
+ * One choice of an option list: its [value] (null for "None"), label, an optional swatch colour, and whether it is the
+ * current value.
+ */
+data class Option<T>(val value: T?, val label: String, val swatch: Color?, val selected: Boolean)
+
+/**
+ * A single-select option list under a [title]: radio buttons, the current value selected. One tap chooses; the caller
+ * returns to the screen that opened it. 500 ms tap cooldown. The poop colour and texture lists use it, and so does
+ * the baby picker (no swatches there).
  */
 @Composable
-fun <T> PoopOptionScreen(title: String, options: List<PoopOption<T>>, onSelect: (T?) -> Unit, modifier: Modifier = Modifier) {
+fun <T> OptionScreen(title: String, options: List<Option<T>>, onSelect: (T?) -> Unit, modifier: Modifier = Modifier) {
     val listState = rememberTransformingLazyColumnState()
     val spec = rememberTransformationSpec()
     val cooldown = rememberCooldown()
@@ -77,22 +58,10 @@ fun <T> PoopOptionScreen(title: String, options: List<PoopOption<T>>, onSelect: 
                         ),
                         transformation = SurfaceTransformation(spec),
                         icon = option.swatch?.let { swatch -> { Swatch(swatch) } },
-                        label = { Text(option.label, style = MaterialTheme.typography.labelMedium, maxLines = 2) },
+                        label = { Text(option.label, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                     )
                 }
             }
         }
     }
-}
-
-@WearPreviewDevices
-@Composable
-private fun ColourListPreview() = XWearTheme {
-    PoopOptionScreen(stringResource(CoreR.string.poop_colour), colourOptions(PoopColor.YELLOW), onSelect = {})
-}
-
-@WearPreviewDevices
-@Composable
-private fun TextureListPreview() = XWearTheme {
-    PoopOptionScreen(stringResource(CoreR.string.poop_texture), textureOptions(PoopTexture.SEEDY), onSelect = {})
 }

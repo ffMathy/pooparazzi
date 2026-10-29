@@ -6,7 +6,8 @@ import kotlinx.serialization.json.Json
  * The JSON form of an [Entry] used on the Wearable Data Layer (`/entries/<id>`).
  * Lenient on input: unknown keys are ignored and unknown values of optional enums become null,
  * so an older app can read entries written by a newer one. Decoded entries are [normalized], so a timed breastfeed
- * from an older app reads as an instant.
+ * from an older app reads as an instant, and an entry from before several babies (no `babyId`) belongs to the first
+ * baby. The backend stores the same JSON.
  */
 object EntryJson {
     val json: Json = Json {

@@ -19,6 +19,10 @@ import androidx.wear.protolayout.ProtoLayoutScope
 import androidx.wear.protolayout.expression.VersionBuilders.VersionInfo
 import androidx.wear.protolayout.material3.materialScopeWithResources
 import androidx.wear.tiles.renderer.TileRenderer
+import com.ffmathy.pooparazzi.core.format.LabelFormatter
+import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.sample.SampleData
+import com.ffmathy.pooparazzi.core.settings.Settings as CoreSettings
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
 import com.ffmathy.pooparazzi.core.ui.tokens.XTokens
 import com.ffmathy.pooparazzi.wear.sample.WearSamples
@@ -76,6 +80,13 @@ abstract class TileScreenshots(private val lang: String) {
     /** No baby name set: the title is the last diaper, as in the approved mockup. */
     @Test
     fun s12e_tileNoName() = capture("12e-tile-no-name", WearSamples.tileIdle(babyName = ""))
+
+    /** Twins, both unnamed, the second current: the idle title is its label, "Baby 2" (BABIES_AND_BACKUP §2.5). */
+    @Test
+    fun s12j_tileSecondBaby() {
+        val twins = CoreSettings(babies = listOf(Baby(Baby.FIRST_ID), Baby(SampleData.TWIN_ID)), selectedBabyId = SampleData.TWIN_ID)
+        capture("12j-tile-second-baby", WearSamples.tileIdle(babyName = TileUiState.titleName(twins, LabelFormatter(context))))
+    }
 
     @Test
     fun s12f_tileGuard() = capture("12f-tile-guard", WearSamples.tileGuard())

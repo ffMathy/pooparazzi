@@ -29,9 +29,9 @@ import java.time.LocalDate
 
 /**
  * Statistics (P8) on the reference phone (390 × 844 dp, xxhdpi) with the sample history and a fixed clock (V1_ADDITIONS
- * §6, §8), in English and Danish: `app/screenshots/<lang>/21-…22-*.png`, continuing the tour after the notifications. The
- * other states are written under `build/outputs/roborazzi/` for review. The status and navigation bars are left empty
- * (24 dp insets, as on the reference device).
+ * §6, §8), in English and Danish: `app/screenshots/<lang>/21-…22-*.png`, continuing the tour after the notifications, and
+ * `34-statistics-twins.png` with two babies. The other states are written under `build/outputs/roborazzi/` for review.
+ * The status and navigation bars are left empty (24 dp insets, as on the reference device).
  */
 abstract class StatisticsScreenshots(private val language: String) {
     @get:Rule
@@ -45,6 +45,9 @@ abstract class StatisticsScreenshots(private val language: String) {
     @Test fun statisticsDay() = screen("21-statistics", night = false) { Statistics(StatisticsSamples.lastThirtyDays()) }
 
     @Test fun statisticsNight() = screen("22-statistics-night", night = true) { Statistics(StatisticsSamples.night()) }
+
+    /** Two babies: Noa's statistics, labelled under the title (BABIES_AND_BACKUP §2.4). */
+    @Test fun statisticsTwins() = screen("34-statistics-twins", night = false) { Statistics(StatisticsSamples.twins()) }
 
     /** Not part of the tour (written under build/): the other rows, ranges and amounts of logging. */
     @Test fun statisticsSleep() = screen("statistics-sleep", night = false, tour = false) { Statistics(StatisticsSamples.sleep()) }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.domain.Ribbon
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import java.time.LocalDate
@@ -21,6 +22,8 @@ import java.time.ZoneId
  * @property counts feeds · pee · poop · sleep for [day].
  * @property entries the day's entries, newest first, including running ones.
  * @property receipt the last delete, offered for Undo in a snackbar.
+ * @property babies all babies, in order; with two or more the current baby's label shows under the title.
+ * @property babyId the current baby, whose log this is.
  */
 @Immutable
 data class HistoryUiState(
@@ -35,8 +38,16 @@ data class HistoryUiState(
     val counts: DayCounts,
     val entries: List<Entry>,
     val receipt: DeletedReceipt? = null,
+    val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),
+    val babyId: String = babies.first().id,
 ) {
     val isToday: Boolean get() = day == today
+
+    /** Two or more babies: the title shows whose log this is (BABIES_AND_BACKUP §2.4). */
+    val hasSeveralBabies: Boolean get() = babies.size > 1
+
+    /** The current baby (the first when [babyId] is not one of [babies]). */
+    val baby: Baby get() = babies.firstOrNull { it.id == babyId } ?: babies.first()
 }
 
 /** A soft delete that can be undone; [key] tells two deletes of the same entry apart. */

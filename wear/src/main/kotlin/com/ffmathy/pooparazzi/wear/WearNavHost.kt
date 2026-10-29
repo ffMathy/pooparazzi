@@ -26,12 +26,12 @@ import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.wear.adjust.AdjustActions
 import com.ffmathy.pooparazzi.wear.adjust.AdjustScreen
 import com.ffmathy.pooparazzi.wear.adjust.SetTimeScreen
 import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
-import com.ffmathy.pooparazzi.wear.diaper.PoopOptionScreen
 import com.ffmathy.pooparazzi.wear.diaper.colourOptions
 import com.ffmathy.pooparazzi.wear.diaper.textureOptions
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeActions
@@ -47,6 +47,8 @@ import com.ffmathy.pooparazzi.wear.state.WearEvent
 import com.ffmathy.pooparazzi.wear.state.XHaptic
 import com.ffmathy.pooparazzi.wear.state.adjustableFields
 import com.ffmathy.pooparazzi.wear.today.TodayScreen
+import com.ffmathy.pooparazzi.wear.ui.Option
+import com.ffmathy.pooparazzi.wear.ui.OptionScreen
 import com.ffmathy.pooparazzi.wear.ui.perform
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -66,6 +68,9 @@ object WearRoutes {
     const val ADJUST = "adjust"
     const val SET_TIME = "adjust/time"
     const val TODAY = "today"
+
+    /** The baby picker (two or more babies, BABIES_AND_BACKUP §2.5). */
+    const val BABY = "baby"
 }
 
 /** Where an external entry point (Tile, complication, notification) asks the app to open. */
@@ -184,7 +189,19 @@ fun WearNavHost(
                         go(WearRoutes.ADJUST)
                     },
                     onHistory = gate.tap { go(WearRoutes.TODAY) },
+                    onBaby = gate.tap { go(WearRoutes.BABY) },
                 ),
+            )
+        }
+        composable(WearRoutes.BABY) { backStackEntry ->
+            val gate = rememberTopGate(navController, backStackEntry)
+            val state by viewModel.main.collectAsStateWithLifecycle()
+            val labels = rememberFormatters(state.zone).labels
+            OptionScreen(
+                title = stringResource(CoreR.string.baby_switch),
+                options = state.babies.map { baby -> Option(baby.id, labels.baby(baby, state.babies), null, baby.id == state.baby.id) },
+                // Selecting returns to Main (BackToMain) with a confirmation haptic.
+                onSelect = gate.tapWith { id -> if (id != null) viewModel.selectBaby(id) },
             )
         }
         composable(WearRoutes.FEED_TYPE) { backStackEntry ->
@@ -234,7 +251,7 @@ fun WearNavHost(
         composable(WearRoutes.DIAPER_COLOUR) { backStackEntry ->
             val gate = rememberTopGate(navController, backStackEntry)
             val draft by viewModel.diaperDraft.collectAsStateWithLifecycle()
-            PoopOptionScreen(
+            OptionScreen(
                 title = stringResource(CoreR.string.poop_colour),
                 options = colourOptions(draft?.color),
                 onSelect = gate.tapWith { color ->
@@ -247,7 +264,7 @@ fun WearNavHost(
         composable(WearRoutes.DIAPER_TEXTURE) { backStackEntry ->
             val gate = rememberTopGate(navController, backStackEntry)
             val draft by viewModel.diaperDraft.collectAsStateWithLifecycle()
-            PoopOptionScreen(
+            OptionScreen(
                 title = stringResource(CoreR.string.poop_texture),
                 options = textureOptions(draft?.texture),
                 onSelect = gate.tapWith { texture ->

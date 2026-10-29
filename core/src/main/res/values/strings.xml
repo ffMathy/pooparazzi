@@ -2,7 +2,8 @@
 <!--
     Shared words for the phone and watch apps (V1_ADDITIONS §5.1 glossary).
     Naming: <group>_<name>. Groups: kind, feed_type, side, diaper, poop_colour, poop_texture, status, action,
-    receipt, guard, nav, settings, appearance, language, count, unit, rel, spoken, sync, pattern.
+    receipt, guard, nav, settings, baby, appearance, language, count, unit, rel, spoken, sync, pattern, and cd for
+    content descriptions (TalkBack).
     Apps keep their own strings in their own modules and must not redefine these names.
     Every translatable string here has a Danish twin in values-da/strings.xml (checked by a unit test).
 -->
@@ -128,6 +129,13 @@
     <!-- Language names are written in their own language. -->
     <string name="language_english" translatable="false">English</string>
     <string name="language_danish" translatable="false">Dansk</string>
+
+    <!-- Babies (BABIES_AND_BACKUP §2.2). An unnamed baby when there are several; %1$d is its position: "Baby 2" -->
+    <string name="baby_name_numbered">Baby %1$d</string>
+    <!-- Title of the phone's switcher sheet and the watch's picker -->
+    <string name="baby_switch">Switch baby</string>
+    <!-- TalkBack of the switcher button; %1$s is the current baby's label: "Noa. Switch baby" -->
+    <string name="cd_baby_switch">%1$s. Switch baby</string>
 
     <!-- Today counts (captions under the numbers) -->
     <plurals name="count_feeds">

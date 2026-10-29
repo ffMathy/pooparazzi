@@ -19,8 +19,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,18 +26,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -47,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,18 +56,23 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
+import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.notify.NotificationLink
+import com.ffmathy.pooparazzi.phone.ui.account.backupStatusText
 import com.ffmathy.pooparazzi.phone.notify.openNotificationSettings
 import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
+import com.ffmathy.pooparazzi.phone.ui.components.GroupRow
+import com.ffmathy.pooparazzi.phone.ui.components.RadioGroup
 import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
 import com.ffmathy.pooparazzi.phone.ui.components.syncIcon
 import com.ffmathy.pooparazzi.phone.ui.components.syncLineText
@@ -78,12 +84,13 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Settings wired to its view model and navigation. */
 @Composable
-fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit) {
+fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount: () -> Unit = {}) {
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
     // Only while this screen is resumed: a second tap during a transition must not pop Home or stack Licences twice.
     val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
     val licences by rememberUpdatedState(dropUnlessResumed(block = onOpenLicences))
+    val account by rememberUpdatedState(dropUnlessResumed(block = onOpenAccount))
     val context = LocalContext.current
     // The permission and the system switch can change in system settings: re-read them whenever Settings resumes.
     var notifications by remember { mutableStateOf(NotificationLink.current(context)) }
@@ -96,6 +103,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit) {
         object : SettingsActions by viewModel {
             override fun onBack() = back()
             override fun onOpenLicences() = licences()
+            override fun onOpenAccount() = account()
             override fun onOpenNotificationSettings() = context.openNotificationSettings(link)
         }
     }
@@ -108,7 +116,8 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit) {
 }
 
 /**
- * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the baby's name, Appearance
+ * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the account and backup
+ * (BABIES_AND_BACKUP §3.2), the babies, Appearance
  * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry, Notifications (the link
  * to the system's Live Update setting, §10.5) and About (version, font licences). Section headings are labelMedium;
  * grouped rows use the History list's r 20 / r 6 corners.
@@ -146,7 +155,9 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp + bottomInset),
         ) {
-            Section(stringResource(R.string.settings_section_baby)) { NameField(state.babyName, actions) }
+            Section(stringResource(R.string.settings_section_account)) { AccountRow(state, actions) }
+            val babiesTitle = if (state.babies.size > 1) R.string.settings_section_babies else R.string.settings_section_baby
+            Section(stringResource(babiesTitle)) { BabiesGroup(state, actions) }
             Section(stringResource(CoreR.string.settings_appearance)) {
                 ConnectedChoiceGroup(
                     options = Appearance.entries,
@@ -184,23 +195,89 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
     Column(content = content)
 }
 
-/** The baby's name (shown in the top bar and notifications); empty shows the "Baby" hint. Done saves at once. */
+/**
+ * Settings › Babies (BABIES_AND_BACKUP §2.4): one name field per baby (its label as the placeholder), "Add a baby"
+ * (hidden at [Settings.MAX_BABIES]; the new baby's field takes the focus; disabled, with a line saying why, while the
+ * paired watch runs a version from before several babies) and the hint that names stay on the parent's devices.
+ */
 @Composable
-private fun NameField(name: String, actions: SettingsActions) {
+private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
+    val labels = rememberFormatters(state.zone).labels
+    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    var focusAdded by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        state.babies.forEach { baby ->
+            key(baby.id) {
+                val requester = focusRequesters.getOrPut(baby.id) { FocusRequester() }
+                NameField(
+                    name = baby.name,
+                    // The label an empty name shows: "Baby", or "Baby 2" … with several.
+                    placeholder = labels.baby(baby.copy(name = ""), state.babies),
+                    onChange = { actions.onBabyNameChange(baby.id, it) },
+                    onDone = { actions.onBabyNameDone(baby.id) },
+                    modifier = Modifier.focusRequester(requester),
+                )
+            }
+        }
+    }
+    val newest = state.babies.last().id
+    LaunchedEffect(newest) {
+        if (focusAdded) {
+            focusAdded = false
+            focusRequesters[newest]?.requestFocus()
+        }
+    }
+    if (state.canAddBaby) {
+        OutlinePill(
+            stringResource(R.string.settings_add_baby),
+            onClick = {
+                focusAdded = true
+                actions.onAddBaby()
+            },
+            icon = XIcons.plus,
+            modifier = Modifier.padding(top = 4.dp),
+            enabled = !state.watchNeedsUpdate,
+        )
+        if (state.watchNeedsUpdate) {
+            Text(
+                stringResource(R.string.settings_add_baby_watch_update),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
+            )
+        }
+    }
+    Text(
+        stringResource(R.string.settings_babies_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
+    )
+}
+
+/** A baby's name (shown in the top bar and notifications); empty shows its [placeholder] label. Done saves at once. */
+@Composable
+private fun NameField(
+    name: String,
+    placeholder: String,
+    onChange: (String) -> Unit,
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = MaterialTheme.colorScheme
     val focus = LocalFocusManager.current
     OutlinedTextField(
         value = name,
-        onValueChange = actions::onBabyNameChange,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(CoreR.string.settings_baby_name)) },
-        placeholder = { Text(stringResource(CoreR.string.baby_name_hint)) },
+        onValueChange = onChange,
+        modifier = modifier.fillMaxWidth(),
+        label = { Text(stringResource(R.string.settings_baby_field)) },
+        placeholder = { Text(placeholder) },
         singleLine = true,
         textStyle = MaterialTheme.typography.titleMedium,
         shape = RoundedCornerShape(16.dp),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = {
-            actions.onBabyNameDone()
+            onDone()
             focus.clearFocus()
         }),
         colors = OutlinedTextFieldDefaults.colors(
@@ -213,41 +290,55 @@ private fun NameField(name: String, actions: SettingsActions) {
     )
 }
 
-/** System default · English · Dansk as radio rows (language names in their own language). */
+/**
+ * Settings › Account (BABIES_AND_BACKUP §3.2): one row that opens the Account screen, saying where the log is. In
+ * "Couldn't back up · Tap to retry" a tap also backs up again. Builds without a Firebase configuration say so, and the
+ * row does nothing.
+ */
 @Composable
-private fun LanguageGroup(selected: AppLanguage, onSelect: (AppLanguage) -> Unit) {
-    val options = AppLanguage.entries
-    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
-        options.forEachIndexed { index, language ->
-            GroupRow(first = index == 0, last = index == options.lastIndex) {
-                val isSelected = language == selected
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 56.dp)
-                        .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(language) })
-                        .padding(start = 16.dp, end = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(Labels.language(language)),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                    )
-                    RadioButton(
-                        selected = isSelected,
-                        onClick = null,
-                        colors = RadioButtonDefaults.colors(
-                            selectedColor = MaterialTheme.colorScheme.onSurface,
-                            unselectedColor = MaterialTheme.colorScheme.outline,
-                        ),
-                        modifier = Modifier.padding(12.dp),
-                    )
-                }
+private fun AccountRow(state: SettingsUiState, actions: SettingsActions) {
+    val colors = MaterialTheme.colorScheme
+    when (val account = state.account) {
+        AccountSummary.Unavailable -> GroupRow(first = true, last = true) {
+            Text(
+                stringResource(R.string.account_unavailable),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+            )
+        }
+        AccountSummary.SignedOut -> GroupRow(first = true, last = true) {
+            LinkRow(
+                stringResource(R.string.account_not_signed_in),
+                stringResource(R.string.account_not_signed_in_summary),
+                actions::onOpenAccount,
+            )
+        }
+        is AccountSummary.SignedIn -> {
+            val clock = rememberFormatters(state.zone).clock
+            val failed = account.status == CloudStatus.Error
+            GroupRow(first = true, last = true) {
+                LinkRow(
+                    account.email,
+                    backupStatusText(account.status, clock, state.zone),
+                    onClick = {
+                        if (failed) actions.onRetryBackup()
+                        actions.onOpenAccount()
+                    },
+                    // "Backup deleted": nothing is backed up, but only "Back up now" on the Account screen starts again.
+                    summaryColor = if (failed || account.status == CloudStatus.Deleted) colors.error else colors.onSurfaceVariant,
+                    // "Backed up · 14:31" has digits: Google Sans Flex with tabular figures (the digit rule).
+                    summaryStyle = PhoneType.dataSmall,
+                )
             }
         }
     }
+}
+
+/** System default · English · Dansk as radio rows (language names in their own language). */
+@Composable
+private fun LanguageGroup(selected: AppLanguage, onSelect: (AppLanguage) -> Unit) {
+    RadioGroup(AppLanguage.entries, selected, onSelect, label = { stringResource(Labels.language(it)) })
 }
 
 /** The sync line with "Sync now"; without a watch: "No watch connected. Everything is saved on this phone." */
@@ -298,7 +389,13 @@ private fun NotificationsRow(link: NotificationLink, onOpen: () -> Unit) {
 
 /** A tappable row: title and summary with a chevron (opens another screen). */
 @Composable
-private fun LinkRow(title: String, summary: String, onClick: () -> Unit) {
+private fun LinkRow(
+    title: String,
+    summary: String,
+    onClick: () -> Unit,
+    summaryColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    summaryStyle: TextStyle = MaterialTheme.typography.bodySmall,
+) {
     val colors = MaterialTheme.colorScheme
     Row(
         Modifier
@@ -310,7 +407,7 @@ private fun LinkRow(title: String, summary: String, onClick: () -> Unit) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
-            Text(summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(summary, style = summaryStyle, color = summaryColor)
         }
         Spacer(Modifier.width(12.dp))
         XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
@@ -339,17 +436,6 @@ private fun AboutGroup(versionName: String, onOpenLicences: () -> Unit) {
             LinkRow(stringResource(R.string.settings_font_licences), stringResource(R.string.settings_font_licences_summary), onOpenLicences)
         }
     }
-}
-
-/** A row of a grouped list: surfaceContainer, outer corners r 20, inner r 6 (as the History list). */
-@Composable
-private fun GroupRow(first: Boolean, last: Boolean, content: @Composable () -> Unit) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .clip(HistoryRowDefaults.shape(first, last))
-            .background(MaterialTheme.colorScheme.surfaceContainer),
-    ) { content() }
 }
 
 @Preview(name = "Night", widthDp = 390, heightDp = 1000)

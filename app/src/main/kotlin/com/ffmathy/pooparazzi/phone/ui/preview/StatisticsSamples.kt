@@ -26,6 +26,10 @@ object StatisticsSamples {
     /** The same at 03:12: the numbers do not move during the day. */
     fun night(): StatisticsUiState = build(SampleData.history(zone = zone), SampleData.NOW_0312, StatsMetric.POOP, StatsRange.Last30Days)
 
+    /** Two babies: the same log as Noa's, labelled "Noa" under the title (BABIES_AND_BACKUP §2.4). */
+    fun twins(): StatisticsUiState =
+        lastThirtyDays().copy(babies = SampleData.twinSettings.babies, babyId = SampleData.twinSettings.selectedBaby.id)
+
     /**
      * Sleep open: lines at 14h 01m and 14h 07m, scale "16h 00m"; highest Fri 2 Oct (15h 27m), lowest Sat 26 Sep
      * (11h 24m).

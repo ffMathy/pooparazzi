@@ -6,6 +6,7 @@ import com.ffmathy.pooparazzi.core.domain.StatsChart
 import com.ffmathy.pooparazzi.core.domain.StatsMetric
 import com.ffmathy.pooparazzi.core.domain.StatsRange
 import com.ffmathy.pooparazzi.core.domain.StatsReport
+import com.ffmathy.pooparazzi.core.model.Baby
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -19,6 +20,9 @@ import java.time.ZoneId
  * @property report the last 7 days, the last 30 days and the comparison range; null until a whole day has been
  * logged (the empty state).
  * @property chart [report]'s chart of [metric].
+ * @property babies all babies, in order; with two or more the current baby's label shows under the title, as on
+ * History (BABIES_AND_BACKUP §2.4).
+ * @property babyId the current baby, whose log this is.
  */
 @Immutable
 data class StatisticsUiState(
@@ -27,8 +31,16 @@ data class StatisticsUiState(
     val metric: StatsMetric,
     val report: StatsReport?,
     val chart: StatsChart?,
+    val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),
+    val babyId: String = babies.first().id,
 ) {
     val isEmpty: Boolean get() = report == null
+
+    /** Two or more babies: the title shows whose log this is (BABIES_AND_BACKUP §2.4). */
+    val hasSeveralBabies: Boolean get() = babies.size > 1
+
+    /** The current baby (the first when [babyId] is not one of [babies]). */
+    val baby: Baby get() = babies.firstOrNull { it.id == babyId } ?: babies.first()
 }
 
 /** Everything the parent can do on Statistics. Defaults do nothing, so previews and screenshots can pass [None]. */
