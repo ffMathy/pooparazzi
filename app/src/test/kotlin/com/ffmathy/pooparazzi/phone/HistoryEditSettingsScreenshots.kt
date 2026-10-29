@@ -78,13 +78,13 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
         SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets)
     }
 
-    /** Settings › About scrolled into view: the privacy policy and "Download my data" (BABIES_AND_BACKUP §3.2). */
+    /** Settings › About scrolled into view: the privacy policy, "Download my data" and "Import data" (BABIES_AND_BACKUP §3.2). */
     @Test fun settingsAbout() {
         compose.setContent {
             NightLightTheme(night = false) { SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets) }
         }
-        val export = ApplicationProvider.getApplicationContext<Application>().getString(R.string.settings_export)
-        compose.onNodeWithText(export).performScrollTo()
+        val importRow = ApplicationProvider.getApplicationContext<Application>().getString(R.string.settings_import)
+        compose.onNodeWithText(importRow).performScrollTo()
         compose.onRoot().captureRoboImage(path("43-settings-about", tour = true))
     }
 
