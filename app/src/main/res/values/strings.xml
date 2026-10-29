@@ -118,11 +118,14 @@
 
     <!-- Ongoing notification of a running sleep (P6, DESIGN_SPEC §3.3.7). %1$s is the baby's name. -->
     <string name="notification_channel_timers">Sleep in progress</string>
-    <string name="notification_channel_timers_description">Shows a running sleep, with Woke up</string>
+    <string name="notification_channel_timers_description">Shows a running sleep with Woke up, then lets you move the wake-up time</string>
     <string name="notification_asleep_title">%1$s is asleep</string>
-    <!-- "Since 02:05". %1$s is a clock time. -->
-    <string name="notification_since">Since %1$s</string>
-    <!-- Metric label (Android 17), followed by a clock time -->
+    <!-- After Woke up on the notification: "Noa woke up at 03:12". %1$s is the baby's name, %2$s a clock time. -->
+    <string name="notification_woke_up_title">%1$s woke up at %2$s</string>
+    <!-- The selected Earlier offset on the woke-up notification: "✓ −10m" -->
+    <string name="notification_offset_selected" translatable="false">✓ %1$s</string>
+    <!-- Metric labels (Android 17): followed by a duration ("1h 07m"), a clock time -->
+    <string name="notification_metric_asleep_for">Asleep for</string>
     <string name="notification_metric_since">Since</string>
     <!-- Settings › Notifications (DESIGN_SPEC §10.5) -->
     <string name="settings_section_notifications">Notifications</string>

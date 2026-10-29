@@ -445,9 +445,19 @@ Breakpoints: §10.11.
 | Element | Content |
 |---|---|
 | Status chip | small icon `sleepRunning` + "Asleep" (no ticking value) |
-| Title / text | "Noa is asleep" / "Since 02:05" |
+| Title / text | "Noa is asleep" / "1h 07m · since 02:05" (whole minutes, re-rendered each minute) |
+| Expanded | the text, then "Fed 1h 32m ago · 01:40 · L → R", "Pee 20m ago · 02:52", "Today · 1 feed · 1 pee · 0 poop · 2h 42m sleep" (lines without data are left out) |
 | Action | "Woke up" (works from the lock screen) |
-| Metrics (Android 17 `MetricStyle`) | "Since" 02:05, "Last fed" 01:40 (both fixed times) |
+| Metrics (Android 17 `MetricStyle`) | "Asleep for" 1h 07m (system TimeDifference), "Since" 02:05 (fixed time), "Last fed · L → R" 1h 32m (system TimeDifference) |
+
+**Woke-up notification.** "Woke up" on the notification ends the sleep and posts a silent, dismissable notification on the same channel, so the wake-up time can be moved without opening the app, as the undo card's Earlier row does:
+
+| Element | Content |
+|---|---|
+| Title / text | "Noa woke up at 03:12" (no name: "Woke up at 03:12") / "Slept 1h 07m · 02:05 – 03:12" |
+| Expanded | the text, then the feed, diaper and Today lines above |
+| Actions | "−5m" "−10m" "−15m" (lock screen too). Relative to the tap, never cumulative; the selected one reads "✓ −10m" and a second tap returns to the tap time. An offset that would end the sleep before its start is left out |
+| Lifetime | 30 minutes (`setTimeoutAfter`); cancelled when a sleep runs again (a new sleep, or the wake undone in the app) |
 
 Feed and diaper are never Live Updates. API details: §10.5.
 
@@ -1073,7 +1083,7 @@ One grammar everywhere the app renders text, including the tile and complication
 **Counts**: "1 feed" / "5 feeds"; "pee", "poop" and "sleep" do not change.
 
 **No ticking durations.** No seconds, no chronometer anywhere:
-- Phone Live Update chip: "Asleep" (no chronometer).
+- Phone Live Update chip: "Asleep" (no chronometer). Its text shows whole minutes ("1h 07m · since 02:05"), re-rendered once a minute, and its Android 17 metrics use the system's TimeDifference.
 - Wear Ongoing Activity / Live Update: "Asleep since 02:05".
 - Tile and complications format their own dynamic text in this grammar.
 - **The only exemption**: the pre-Wear OS 4 complication fallback `TimeDifferenceComplicationText` with `SHORT_DUAL_UNIT` (system format "1h 5m").
@@ -1259,12 +1269,14 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 - Manifest `POST_PROMOTED_NOTIFICATIONS`. Check `NotificationManager.canPostPromotedNotifications()` and fall back to a normal ongoing notification. Link to `ACTION_MANAGE_APP_PROMOTED_NOTIFICATIONS` from Settings.
 - Builder settings:
   - `setOngoing(true)`, `setRequestPromotedOngoing(true)`.
-  - Title "Noa is asleep", text "Since 02:05" (absolute; never a self-updating duration string).
+  - Title "Noa is asleep", text "1h 07m · since 02:05" (whole minutes and the absolute start; no seconds). A non-waking `AlarmManager.RTC` alarm at each minute boundary re-renders it while the notification shows, so a phone that wakes up shows the current value; it is cancelled with the notification.
+  - `BigTextStyle` (below Android 17) adds the last feed, the last diaper and Today's counts.
   - `setShortCriticalText("Asleep")` for the status chip (small icon `sleepRunning`), `setShowWhen(false)`, and **no** `setUsesChronometer`.
   - Action "Woke up" with `setAuthenticationRequired(false)`.
   - `VISIBILITY_PUBLIC`; channel `IMPORTANCE_LOW`; `setSilent(true)`; `setOnlyAlertOnce(true)`.
 - Detect dismissal with `setDeleteIntent` and do not repost.
-- Android 17 `MetricStyle`: "Since" 02:05 (FixedTime), "Last fed" 01:40 (FixedTime). No TimeDifference metric: its system format would break the grammar.
+- Android 17 `MetricStyle`: "Asleep for" (`TimeDifference.forStopwatch(start, FORMAT_ADAPTIVE)`), "Since" 02:05 (FixedTime), "Last fed · L → R" (`TimeDifference.forStopwatch(feed, FORMAT_ADAPTIVE)`). The durations are the system's, so they stay current on the lock screen without a re-render; the parent should not have to subtract times at 3am.
+- "Woke up" posts the woke-up notification (§3.3.7) with three Earlier actions (`setAuthenticationRequired(false)`); each action's broadcast carries the tap time and the offset applied when it was posted, and the receiver updates the sleep's end and re-posts.
 - Ask for `POST_NOTIFICATIONS` in context on the first Start sleep.
 
 ### 10.6 Wear running sleep, ambient, gestures
