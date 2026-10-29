@@ -111,26 +111,6 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|
 | <img src="docs/screenshots/en/watch-main-twins.png" width="170" alt="Watch main with two babies: Noa in the time text"> | <img src="docs/screenshots/en/watch-baby-picker.png" width="170" alt="Watch Switch baby picker with Noa selected and Ida"> | <img src="docs/screenshots/en/watch-tile-second-baby.png" width="170" alt="Watch tile for the second, unnamed baby: Baby 2"> |
 
-### På dansk (Danish)
-
-| Hjem, nat | Hjem, dag | Amning | Ble | Historik | Statistik | Indstillinger |
-|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/da/phone-home-night.png" width="150" alt="Hjem, nat"> | <img src="docs/screenshots/da/phone-home-day.png" width="150" alt="Hjem, dag"> | <img src="docs/screenshots/da/phone-breast-sheet.png" width="150" alt="Amning: siderækkefølge"> | <img src="docs/screenshots/da/phone-diaper-sheet.png" width="150" alt="Ble"> | <img src="docs/screenshots/da/phone-history.png" width="150" alt="Historik"> | <img src="docs/screenshots/da/phone-statistics.png" width="150" alt="Statistik"> | <img src="docs/screenshots/da/phone-settings.png" width="150" alt="Indstillinger"> |
-
-| Ur: hoved | Måltid | Hvilken side? | Ble | Registreret | Flise |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/da/watch-main-idle.png" width="130" alt="Ur, hovedskærm"> | <img src="docs/screenshots/da/watch-feed-type.png" width="130" alt="Måltid"> | <img src="docs/screenshots/da/watch-side.png" width="130" alt="Hvilken side?"> | <img src="docs/screenshots/da/watch-diaper.png" width="130" alt="Ble"> | <img src="docs/screenshots/da/watch-logged.png" width="130" alt="Registreret med Fortryd"> | <img src="docs/screenshots/da/watch-tile.png" width="130" alt="Flise"> |
-
-| Velkommen | Konto | Familie | Bliv medlem | Ur: to børn | Ur: skift barn |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/da/phone-welcome.png" width="150" alt="Velkommen: Din log bliver på denne telefon"> | <img src="docs/screenshots/da/phone-account.png" width="150" alt="Konto: Fortsæt med Google eller brug e-mail"> | <img src="docs/screenshots/da/phone-settings-family.png" width="150" alt="Indstillinger, Familie: medlemmerne, Invitér nogen og Forlad familien"> | <img src="docs/screenshots/da/phone-join-family.png" width="150" alt="Bliv medlem af familien hos partner@example.com?"> | <img src="docs/screenshots/da/watch-main-twins.png" width="130" alt="Ur, hovedskærm med Noa i tiden"> | <img src="docs/screenshots/da/watch-baby-picker.png" width="130" alt="Ur: Skift barn"> |
-
-| Samtykke | Fjern et medlem | Indstillinger, Om |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/da/phone-consent.png" width="150" alt="Tag backup i Google Firebase? Hvad der uploades, hvem der ser det, hvor, og hvis du fortryder; Jeg giver samtykke og Ikke nu, log ud"> | <img src="docs/screenshots/da/phone-family-remove.png" width="150" alt="Fjern partner@example.com? Det, der allerede er på deres telefon, bliver der"> | <img src="docs/screenshots/da/phone-settings-about.png" width="150" alt="Indstillinger, Om: Privatlivspolitik og Download mine data"> |
-
-Every image above also exists in the other language: swap `en` and `da` in the path ([`docs/screenshots/`](docs/screenshots)).
-
 ## Project structure
 
 | Module | What it holds |

@@ -7,8 +7,8 @@ The source images are the ones the screenshot tests record (Robolectric, not a d
     python3 scripts/readme_screenshots.py
 
 Phone shots are downscaled to 360 px wide. Watch shots are scaled to 300 x 300 and masked to a
-circle (transparent outside), as a round watch shows them. Every image is written for English (en)
-and Danish (da). The set is curated: one image per state the README shows, not every recorded state.
+circle (transparent outside), as a round watch shows them. The README is in English, so only the English
+(en) shots are used. The set is curated: one image per state the README shows, not every recorded state.
 Needs Pillow (pip install Pillow).
 """
 
@@ -22,7 +22,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
-LANGS = ("en", "da")
+LANGS = ("en",)
 PHONE_WIDTH = 360
 WATCH_SIZE = 300
 # The circle mask is drawn this many times larger and scaled down, for a smooth (anti-aliased) edge.
