@@ -45,6 +45,7 @@ class InMemorySettings(initial: Settings = SampleData.settings) : SettingsReposi
         val next = update { if (it.babies.size >= Settings.MAX_BABIES) it else it.withBabies(listOf(baby.id)) }
         return next.babies.firstOrNull { it.id == baby.id } ?: next.babies.last()
     }
+    override suspend fun removeBaby(id: String): Settings = update { it.withRemovedBaby(id, 1L) }
     override suspend fun selectBaby(id: String): Settings = update { it.withSelectedBaby(id) }
     override suspend fun ensureBabies(ids: Collection<String>): Settings = update { it.withBabies(ids) }
     override suspend fun importBabies(babies: Collection<Baby>): Settings = update { it.withMergedBabies(babies) }

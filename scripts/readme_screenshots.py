@@ -57,6 +57,7 @@ PHONE = {
     "24-switch-baby-sheet.png": "switch-baby",
     "25-history-twins.png": "history-twins",
     "26-settings-babies.png": "settings-babies",
+    "44-settings-remove-baby.png": "settings-remove-baby",
     "27-welcome.png": "welcome",
     "28-account-signed-out.png": "account",
     "29-account-signed-in.png": "account-signed-in",

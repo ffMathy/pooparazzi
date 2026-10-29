@@ -109,6 +109,11 @@
     <string name="settings_baby_field">Navn</string>
     <string name="settings_add_baby">Tilføj et barn</string>
     <string name="settings_add_baby_watch_update">Opdatér Pooparazzi på dit ur først.</string>
+    <string name="settings_remove_baby_cd">Fjern %1$s</string>
+    <string name="settings_remove_baby_title">Fjern %1$s?</string>
+    <string name="settings_remove_baby_body">Barnets log bliver slettet fra telefonen og dit ur. Det kan ikke fortrydes.</string>
+    <string name="settings_remove_baby_body_family">Barnets log bliver slettet for alle i din familie og fra din backup. Det kan ikke fortrydes.</string>
+    <string name="settings_remove_baby_confirm">Fjern</string>
     <string name="settings_babies_hint">Navnene bliver på telefonen og dit ur.</string>
     <string name="settings_appearance_hint">Auto bruger Nat om aftenen og natten, mens barnet sover, og når telefonen bruger mørkt tema.</string>
     <string name="settings_section_watch">Ur</string>

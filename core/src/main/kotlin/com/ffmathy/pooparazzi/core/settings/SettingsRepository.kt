@@ -51,6 +51,13 @@ interface SettingsRepository {
     suspend fun addBaby(): Baby
 
     /**
+     * Removes baby [id] ([Settings.withRemovedBaby]); a synced change whose tombstone goes to the family's backup like a
+     * rename. Unknown ids and the last baby change nothing. The baby's entries are the caller's to delete
+     * ([com.ffmathy.pooparazzi.core.data.EntryRepository.deleteBabyEntries]).
+     */
+    suspend fun removeBaby(id: String): Settings
+
+    /**
      * Makes [id] this device's current baby. Local only: not stamped and not mirrored to the other device, which keeps
      * its own. Unknown ids change nothing.
      */
@@ -94,7 +101,7 @@ interface SettingsRepository {
  * The babies are stored as one JSON array. An install from before several babies has only the `baby_name` key: it
  * reads as the first baby with that name, and the key is removed the first time the babies are written.
  *
- * While [cloudBackup] says so (an account is signed in), every baby added or renamed here, or changed by settings from
+ * While [cloudBackup] says so (an account is signed in), every baby added, renamed or removed here, or changed by settings from
  * the watch, is flagged for the backup (the ids in `cloud_pending_babies`, never mirrored to the watch); babies adopted
  * from their entries ([ensureBabies]) are not: they carry nothing the family lacks. Babies merged from the backup
  * ([applyCloudBabies]) are stamped settings changes like local ones, so they reach the watch.
@@ -129,6 +136,9 @@ class DataStoreSettingsRepository(
         return result.babies.firstOrNull { it.id == baby.id } ?: result.babies.last()
     }
 
+    override suspend fun removeBaby(id: String): Settings =
+        updateLocal { current, at -> current.withRemovedBaby(id, at) }
+
     override suspend fun selectBaby(id: String): Settings {
         var result: Settings? = null
         dataStore.edit { prefs ->
@@ -153,10 +163,11 @@ class DataStoreSettingsRepository(
         updateLocal { current, _ -> current.copy(language = language) }
 
     override suspend fun applyRemote(remote: Settings): Boolean {
-        val incoming = remote.normalized()
         var applied = false
         dataStore.edit { prefs ->
             val current = prefs.toSettings()
+            // A device that does not know tombstones yet sends none: the removed babies stay removed.
+            val incoming = remote.normalized().withMergedBabies(current.removedBabies)
             // The current baby is this device's own: it is neither taken from the other device nor a difference.
             val same = incoming.copy(selectedBabyId = current.selectedBabyId) == current
             if (incoming.updatedAtMillis >= current.updatedAtMillis && !same) {
@@ -190,7 +201,7 @@ class DataStoreSettingsRepository(
     override suspend fun markBabiesCloudSynced(babies: List<Baby>): Int {
         var cleared = 0
         dataStore.edit { prefs ->
-            val stored = prefs.toSettings().babies
+            val stored = prefs.toSettings().allBabies
             val pending = prefs[KEY_CLOUD_PENDING].orEmpty()
             // Cleared only while still exactly as uploaded: a baby renamed meanwhile goes up again.
             val done = babies.filter { it.id in pending && it in stored }.mapTo(mutableSetOf()) { it.id }
@@ -201,7 +212,7 @@ class DataStoreSettingsRepository(
     }
 
     override suspend fun markAllBabiesForCloud() {
-        dataStore.edit { prefs -> prefs.writePending(prefs.toSettings().babies.mapTo(mutableSetOf()) { it.id }) }
+        dataStore.edit { prefs -> prefs.writePending(prefs.toSettings().allBabies.mapTo(mutableSetOf()) { it.id }) }
     }
 
     override suspend fun clearBabiesCloudPending() {
@@ -215,14 +226,15 @@ class DataStoreSettingsRepository(
             val merged = current.withMergedBabies(babies)
             val pending = prefs[KEY_CLOUD_PENDING].orEmpty().toMutableSet()
             for (incoming in babies) {
-                val kept = merged.babies.firstOrNull { it.id == incoming.id } ?: continue
-                val same = kept == incoming.copy(name = Settings.sanitizeName(incoming.name))
+                val kept = merged.allBabies.firstOrNull { it.id == incoming.id } ?: continue
+                val tidy = if (incoming.removed) incoming.copy(name = "") else incoming.copy(name = Settings.sanitizeName(incoming.name))
+                val same = kept == tidy
                 // What the backup holds now, or older: the backup's version is no reason to send this one again;
                 // a stored version that beats the backup's goes up (while signed in).
                 if (same) pending -= kept.id else if (cloudBackup()) pending += kept.id
             }
             prefs.writePending(pending)
-            changed = merged.babies.count { it !in current.babies }
+            changed = merged.allBabies.count { it !in current.allBabies }
             if (merged == current) {
                 null
             } else {
@@ -286,7 +298,7 @@ class DataStoreSettingsRepository(
     /** Flags the babies of [after] that are new or changed against [before], while an account is signed in. */
     private fun MutablePreferences.flagChangedBabies(before: Settings, after: Settings) {
         if (!cloudBackup()) return
-        val changed = after.babies.filter { it !in before.babies }.map { it.id }
+        val changed = after.allBabies.filter { it !in before.allBabies }.map { it.id }
         if (changed.isNotEmpty()) writePending(this[KEY_CLOUD_PENDING].orEmpty() + changed)
     }
 
@@ -297,7 +309,7 @@ class DataStoreSettingsRepository(
     /** The flagged babies, in their current version and in list order. */
     private fun Preferences.pendingBabies(): List<Baby> {
         val pending = this[KEY_CLOUD_PENDING].orEmpty()
-        return if (pending.isEmpty()) emptyList() else toSettings().babies.filter { it.id in pending }
+        return if (pending.isEmpty()) emptyList() else toSettings().allBabies.filter { it.id in pending }
     }
 
     /**
@@ -312,6 +324,7 @@ class DataStoreSettingsRepository(
             appearance = this[KEY_APPEARANCE]?.let { name -> Appearance.entries.firstOrNull { it.name == name } } ?: Appearance.AUTO,
             language = this[KEY_LANGUAGE]?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } } ?: AppLanguage.SYSTEM,
             updatedAtMillis = this[KEY_UPDATED_AT] ?: 0L,
+            removedBabies = this[KEY_REMOVED_BABIES]?.let(SettingsJson::decodeBabiesOrNull).orEmpty(),
         ).normalized()
         val selected = this[KEY_SELECTED_BABY]?.takeIf { id -> settings.babies.any { it.id == id } }
         return settings.copy(selectedBabyId = selected ?: settings.babies.first().id)
@@ -320,6 +333,11 @@ class DataStoreSettingsRepository(
     /** Writes the synced settings. Never the current baby: that is written by [selectBaby] alone. */
     private fun MutablePreferences.write(settings: Settings) {
         this[KEY_BABIES] = SettingsJson.encodeBabies(settings.babies)
+        if (settings.removedBabies.isEmpty()) {
+            remove(KEY_REMOVED_BABIES)
+        } else {
+            this[KEY_REMOVED_BABIES] = SettingsJson.encodeBabies(settings.removedBabies)
+        }
         remove(KEY_LEGACY_BABY_NAME)
         this[KEY_APPEARANCE] = settings.appearance.name
         this[KEY_LANGUAGE] = settings.language.name
@@ -329,6 +347,9 @@ class DataStoreSettingsRepository(
     private companion object {
         val KEY_BABIES = stringPreferencesKey("babies")
         val KEY_SELECTED_BABY = stringPreferencesKey("selected_baby")
+
+        /** The removed babies' tombstones ([Settings.removedBabies]), one JSON array. */
+        val KEY_REMOVED_BABIES = stringPreferencesKey("removed_babies")
 
         /** The one baby's name, from before several babies. Read only; removed when the babies are written. */
         val KEY_LEGACY_BABY_NAME = stringPreferencesKey("baby_name")

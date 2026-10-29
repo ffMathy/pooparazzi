@@ -29,4 +29,7 @@ object SettingsSamples {
 
     /** Twins: Noa and Ida, plus a third baby not named yet (its field shows "Baby 3"). */
     fun babies(): SettingsUiState = state(babies = SampleData.twinSettings.babies + Baby("sample-baby-3"))
+
+    /** "Remove Baby 3?" over Settings › Babies, signed in: the log goes for the whole family. */
+    fun removeBaby(): SettingsUiState = babies().let { it.copy(removing = it.babies.last()) }
 }

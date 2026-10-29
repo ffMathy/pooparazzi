@@ -70,6 +70,8 @@ sealed interface AccountSummary {
  *   stored name.
  * @property account what Settings › Account says (BABIES_AND_BACKUP §3.2).
  * @property canAddBaby false at [Settings.MAX_BABIES] (the "Add a baby" pill is hidden then).
+ * @property removing the baby whose "Remove <label>?" confirmation is open, or null.
+ * @property canRemoveBaby true with two or more babies: each name field has a remove button then.
  * @property watchNeedsUpdate the paired watch runs a version from before several babies: "Add a baby" is disabled, with
  *   "Update Pooparazzi on your watch first." under it.
  * @property privacyUrl where Settings › About › Privacy policy opens ([PrivacyPolicy]).
@@ -86,7 +88,10 @@ data class SettingsUiState(
     val canAddBaby: Boolean = babies.size < Settings.MAX_BABIES,
     val watchNeedsUpdate: Boolean = false,
     val privacyUrl: String = PrivacyPolicy.REPOSITORY_URL,
-)
+    val removing: Baby? = null,
+) {
+    val canRemoveBaby: Boolean get() = babies.size > 1
+}
 
 /** Everything the parent can do in Settings. Defaults do nothing, so previews and screenshots can pass [None]. */
 @Stable
@@ -99,6 +104,15 @@ interface SettingsActions {
 
     /** "Add a baby": appends an unnamed baby (the current baby stays). */
     fun onAddBaby() {}
+
+    /** A name field's remove button: asks "Remove <label>?" first. */
+    fun onRemoveBaby(id: String) {}
+
+    /** "Remove" in the confirmation: removes the baby and deletes its log. */
+    fun onConfirmRemoveBaby() {}
+
+    /** "Cancel" in the confirmation, or Back. */
+    fun onDismissRemoveBaby() {}
     fun onAppearance(appearance: Appearance) {}
     fun onLanguage(language: AppLanguage) {}
     fun onRetrySync() {}
@@ -155,6 +169,9 @@ class SettingsViewModel(
     /** What each touched field shows, by baby id. */
     private val nameDrafts = MutableStateFlow<Map<String, String>>(emptyMap())
 
+    /** The id of the baby whose removal waits for the parent's yes. */
+    private val removing = MutableStateFlow<String?>(null)
+
     /**
      * The typed names not written yet, by baby id; a write takes its baby's name atomically, so no keystroke is lost or
      * written twice.
@@ -174,7 +191,9 @@ class SettingsViewModel(
         }
     }
 
-    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, nameDrafts, account, oldWatch) { s, status, drafts, account, old ->
+    private val edits = combine(nameDrafts, removing, ::Pair)
+
+    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, edits, account, oldWatch) { s, status, (drafts, removingId), account, old ->
         SettingsUiState(
             babies = s.babies.map { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
             appearance = s.appearance,
@@ -185,6 +204,8 @@ class SettingsViewModel(
             account = account,
             watchNeedsUpdate = old,
             privacyUrl = PrivacyPolicy.url(accounts.hostingDomain),
+            removing = s.babies.takeIf { it.size > 1 }?.firstOrNull { it.id == removingId }
+                ?.let { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -211,6 +232,30 @@ class SettingsViewModel(
     override fun onAddBaby() {
         if (oldWatch.value) return
         viewModelScope.launch { settings.addBaby() }
+    }
+
+    override fun onRemoveBaby(id: String) {
+        removing.value = id
+    }
+
+    override fun onDismissRemoveBaby() {
+        removing.value = null
+    }
+
+    /**
+     * Removes the baby being confirmed: its name typed but not saved is dropped, then the baby is removed and, when it
+     * was, its log deleted. In the app's scope, so leaving Settings at once cannot cut it short.
+     */
+    override fun onConfirmRemoveBaby() {
+        val id = removing.value ?: return
+        removing.value = null
+        nameJobs.remove(id)?.cancel()
+        pendingNames.remove(id)
+        nameDrafts.update { it - id }
+        writeScope.launch {
+            val after = settings.removeBaby(id)
+            if (after.babies.none { it.id == id }) entries?.deleteBabyEntries(id)
+        }
     }
 
     override fun onAppearance(appearance: Appearance) {

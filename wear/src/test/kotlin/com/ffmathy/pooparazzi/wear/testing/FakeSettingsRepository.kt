@@ -24,6 +24,8 @@ class FakeSettingsRepository(initial: Settings = Settings()) : SettingsRepositor
         return next.babies.firstOrNull { it.id == baby.id } ?: next.babies.last()
     }
 
+    override suspend fun removeBaby(id: String) = state.updateAndGet { it.withRemovedBaby(id, 1L) }
+
     override suspend fun selectBaby(id: String) = state.updateAndGet { it.withSelectedBaby(id) }
 
     override suspend fun ensureBabies(ids: Collection<String>) = state.updateAndGet { it.withBabies(ids) }

@@ -22,10 +22,11 @@ The backend setup (Firebase project, rules, website, cost, GDPR) is in [../BACKE
 ### 2.1 Model
 
 ```
-Baby(id: String, name: String = "", updatedAtMillis: Long = 0)  // synced with the family (§4.1), last writer wins per baby
+Baby(id: String, name: String = "", updatedAtMillis: Long = 0, removed: Boolean = false)  // synced with the family (§4.1), last writer wins per baby
 Settings(
     babies: List<Baby> = [Baby("default")],  // synced phone → watch inside /settings, in order; phone ↔ family backup
     appearance, language, updatedAtMillis,   // as before
+    removedBabies: List<Baby> = [],          // the removed babies' tombstones (removed = true, no name), synced like babies
     selectedBabyId: String = "default",      // this device's current baby: @Transient, never synced
 )
 Settings.selectedBaby  = the baby with selectedBabyId, else the first
@@ -37,6 +38,7 @@ Entry.babyId: String = "default"             // new field; missing in older JSON
 - **Migration.** An install from before this change has one baby, `default`, with the stored name. Its entries get `babyId = "default"`. Settings JSON from an older device (`babyName`, no `babies`) is read as one `default` baby with that name. Both devices derive the same id, so nothing diverges.
 - **The current baby is per device.** The phone and the watch each choose theirs (Home's switcher, the watch's picker). It is never synced, neither to the watch nor to the family. On the phone ↔ watch side the babies list stays single-writer (only the phone edits it), so the settings' last-writer-wins merge cannot lose a rename.
 - **Babies sync through the family.** Each baby carries its own `updatedAtMillis`, bumped when it is added or renamed on this phone, which marks it pending for the backup. Pulled babies merge into the phone's settings per baby (the newer `updatedAtMillis` wins, the name with it; babies the phone lacks are added in the family's order) and reach the watch through the existing `/settings` item. So two parents renaming the same baby end with the later name on both phones; two different babies are never merged by name, only by id.
+- **Removing a baby** (phone only, never the last one) moves it to `removedBabies` as a tombstone: its id, an empty name, `removed: true` and a new `updatedAtMillis`. The tombstone is pending for the backup like a rename and wins like one, so the family's other phones remove the baby too (and a later rename on another phone brings it back). A removed baby is never adopted again from its entries, and a device that sends settings without tombstones (a watch from before this) cannot bring it back: the phone keeps its tombstones when it merges them. The phone soft-deletes all of the baby's entries, which reach the watch and go to the backup as tombstones (§4.1). A device whose current baby was removed falls back to the first baby.
 - **Unknown babies are adopted (phone only).** When entries arrive with a baby id that the phone's settings do not know (before that baby's document arrives, an Android restore of the database), the phone adds an unnamed baby with that id, in order of its first entry; its name follows once the family's baby document is pulled. The watch never adds babies: it learns them from the phone's settings.
 
 ### 2.2 Labels
@@ -58,7 +60,7 @@ Two things span all babies, because a parent must not lose sight of a sleeping b
 
 ### 2.4 Phone UI
 
-- **Settings › Babies** (replaces Settings › Baby). One name field per baby (label "Name", placeholder its label), saved as typed as before (500 ms after the last keystroke, at once on Done). Under them an "Add a baby" pill (hidden at 8), and a hint about where the names go: without an account "Names stay on this phone and your watch."; signed in "Names are shared with your family and kept in your backup." Adding does not switch the current baby. While a paired watch runs a Pooparazzi from before several babies, the pill is disabled with "Update Pooparazzi on your watch first." under it: such a watch ignores baby ids and resolves conflicts across all babies (it would soft-delete one twin's running sleep, or a diaper changed seconds after the other twin's, as a duplicate). Both apps advertise the Wearable capability `pooparazzi_babies` beside `pooparazzi_tracker`; a node with the second but not the first is such a watch. With one baby nothing else changes.
+- **Settings › Babies** (replaces Settings › Baby). One name field per baby (label "Name", placeholder its label), saved as typed as before (500 ms after the last keystroke, at once on Done). Under them an "Add a baby" pill (hidden at 8), and a hint about where the names go: without an account "Names stay on this phone and your watch."; signed in "Names are shared with your family and kept in your backup." Adding does not switch the current baby. With two or more babies each name field ends with a 48 dp remove button (`delete` icon, TalkBack "Remove <label>"); it asks first: "Remove <label>?" with "Their log is deleted from this phone and your watch. This can't be undone." (signed in: "Their log is deleted for everyone in your family and from your backup. This can't be undone.") and Cancel / "Remove" in error colour (DA "Fjern <label>?", "Barnets log bliver slettet fra telefonen og dit ur. Det kan ikke fortrydes." / "… for alle i din familie og fra din backup. …"). On yes the baby is removed (§2.1) and its log deleted. While a paired watch runs a Pooparazzi from before several babies, the pill is disabled with "Update Pooparazzi on your watch first." under it: such a watch ignores baby ids and resolves conflicts across all babies (it would soft-delete one twin's running sleep, or a diaper changed seconds after the other twin's, as a duplicate). Both apps advertise the Wearable capability `pooparazzi_babies` beside `pooparazzi_tracker`; a node with the second but not the first is such a watch. With one baby nothing else changes.
 - **Home's top bar** (two or more babies). The name becomes a 48 dp button with a 16 dp `chevronDown`; it opens the **Switch baby** sheet: one 56 dp radio row per baby (its label), the current one selected. A tap selects that baby, plays SegmentTick and closes the sheet. Switching closes any open card (its Undo belongs to the other baby) and resets the double-toggle guard. In lights-down the button follows the name's colours.
 - **History** shows the current baby's label under its title when there are two or more.
 - **Statistics** (reached from History) averages the current baby's log only, and shows the same label under its title when there are two or more.
@@ -154,7 +156,7 @@ users/{uid}                         { familyId }                                
 families/{fid}                      { createdBy, createdAt }                    never deleted (a tombstone once everyone left)
 families/{fid}/members/{uid}        { email, joinedAt, invite? }
 families/{fid}/entries/{entryId}    { json: EntryJson of the entry (≤ 2 KB), syncedAt: server time of the write }
-families/{fid}/babies/{babyId}      { json: {id, name, updatedAtMillis} (≤ 2 KB), syncedAt: server time of the write }
+families/{fid}/babies/{babyId}      { json: {id, name, updatedAtMillis, removed?} (≤ 2 KB), syncedAt: server time of the write }
 invites/{code}                      { familyId, createdBy, expiresAt, email? }
 users/{uid}/entries/{entryId}       the backup from before families: read once to migrate, then deleted
 ```
@@ -177,7 +179,7 @@ Each local row has a second pending flag beside the Data Layer's `pendingSync`: 
 | Merged from the backend | true | false |
 | A row identical to the backend's version | unchanged | cleared |
 
-Babies have the same flag: a baby added or renamed on this phone (its `updatedAtMillis` bumped) is pending until its document is uploaded; a baby merged from the family is not.
+Babies have the same flag: a baby added, renamed or removed on this phone (its `updatedAtMillis` bumped) is pending until its document is uploaded; a baby merged from the family is not.
 
 A soft-deleted row is purged only when both flags are clear. Without an account nothing is flagged, so deletes are purged as before; signing out clears every flag. The first time a device syncs for a **family** (a different family than before: another account, joining, leaving or being removed, or after signing out), every row and every baby is marked `cloudPending` and the cursors are reset: that is the "everything logged so far is backed up". The bookkeeping (cursors, the first full upload) is keyed by the family id, not the account. The download that runs first starts at the beginning of the backup and clears the flag on rows the backend already holds unchanged, so signing in again on the same phone uploads only differences.
 
