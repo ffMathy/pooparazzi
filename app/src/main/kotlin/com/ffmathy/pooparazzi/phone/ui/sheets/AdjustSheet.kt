@@ -45,7 +45,7 @@ internal fun AdjustSheetContent(sheet: HomeSheetUi.Adjust, zone: ZoneId, formatt
     val readiness = rememberPickerReadiness()
     val title = titleWithTime(CoreR.string.action_adjust_start, formatters.clock.format(sheet.time, zone))
     SheetColumn(title) {
-        SheetHeader(title, callbacks.onCancel)
+        SheetHeader(title, callbacks.onCancel, was = sheet.was?.let { formatters.clock.format(it, zone) })
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
         Spacer(Modifier.height(16.dp))

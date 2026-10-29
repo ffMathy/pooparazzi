@@ -270,9 +270,9 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | Undone (after Undo in a receipt) | `undo` onSurfaceVariant | "Undone" | — |
 
 **Receipt sheet** (after every log: Feed, Diaper, Start sleep, Woke up, End sleep, a widget log opened in the app, and a delete in the edit sheet). A modal sheet like the logging sheets (§3.3.2), opened as the logging sheet closes. **No timeout**: it stays until Done, Undo, Edit or a dismiss (scrim, back, swipe), and the log stays as shown.
-- Header (≥56): event icon 24 (event strong) + 12 · title titleLarge onSurface (time-free, as below) over the **effective time** in dataMedium onSurfaceVariant, joined with the sub-line ("14:27", "14:32 · Left → Right", "14:32 · Slept 1h 07m"); the time line follows every chip tap and is a polite live region · Undo text button at the end (48 tall, r 24, `undo` 18 + 6 + "Undo" labelLarge, primary). The pane title is "Formula logged · 14:27".
+- Header (≥56): event icon 24 (event strong) + 12 · title titleLarge onSurface (time-free, as below) over the **effective time** in dataMedium onSurfaceVariant, joined with the sub-line ("14:27", "14:32 · Left → Right", "14:32 · Slept 1h 07m"); after a nudge "was 14:32" follows the time ("14:22 · was 14:32 · Left → Right"); the time line follows every chip tap and is a polite live region · Undo text button at the end (48 tall, r 24, `undo` 18 + 6 + "Undo" labelLarge, primary). The pane title is "Formula logged · 14:27".
 - Dedupe line (2 s): `feed` 18 FEED strong + "Already logged at 14:32" dataMedium onSurfaceVariant.
-- Offset chips "−15m" "−10m" "−5m" "+5m" (one row, equal widths) when the receipt moves a time.
+- Nudge chips "−15m" "−10m" "−5m" "+5m" (one row, equal widths, never selected) when the receipt moves a time.
 - "End sleep" chip (`wake` 18, hugs its content) for a feed or diaper logged while a sleep still runs.
 - Bottom row: outlined "Edit" (56 tall, r 28, `edit` 20 + 8 + labelLarge) at the start when there is an entry to edit, and "Done" (the Save button style, `check`) at the end.
 - Everything ignores taps for 500 ms when the sheet appears (the picker cooldown, §5.9), so a double tap on a Feed type cannot hit Undo.
@@ -287,17 +287,17 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | Deleted (from the edit sheet) | the entry's icon | "Sleep deleted" / "Pee + poop deleted" | — | — (no Edit) |
 
 Receipt rules:
-- Offsets are relative to the receipt's base time (the sheet's stamp for a log from a sheet, with its offset pre-selected) and never cumulative. Re-tapping the selected chip returns it to 0. Each tap applies at once (event time, sleep start or sleep end) and plays `SegmentTick`.
-- A chip is disabled if it would put a sleep end before its start, or a start or end in the future ("+5m" while the time + 5 min > now).
+- Nudges add up, like the edit sheet's: each tap moves the time by its minutes more (−5m twice is 10 minutes earlier; +5m steps back). The receipt's base time is the sheet's stamp for a log from a sheet, carrying that sheet's nudges; "was 14:32" shows it while the time differs. Each tap applies at once (event time, sleep start or sleep end) and plays `SegmentTick`.
+- A chip is disabled if one more tap would put a sleep end before its start, or a start or end in the future ("+5m" while the time + 5 min > now).
 - "End sleep" ends the running sleep at the logged event's time. The receipt then becomes Woke up for that sleep.
 - Undo: feed/diaper → remove the entry. Sleep start → no running sleep. Woke up → the sleep is running again. Sleep cancelled → the sleep is running again. Deleted → the entry is back. The sheet closes and the "Undone" notice shows for 2 s. Haptic `Reject`.
 - Edit closes the sheet and opens the edit sheet for that entry. Done closes it (Home's 600 ms cooldown follows, as after a committed sheet).
 - Feed, Diaper and the Sleep toggle sit under the scrim while a receipt is open: the next log starts after Done or a dismiss.
 
-**Adjust start sheet** (from "Adjust start" on the running Lamp). Same sheet: header "Adjust start · 01:50" (the start Save writes) + Cancel; the same offset chips relative to the start when the sheet opened; "Edit" and Save. Chips write nothing until Save (`Confirm`); the timer keeps running. Cancel, a scrim tap, back or a swipe move nothing. Edit saves the chosen offset, then opens the edit sheet for the sleep. No timeout.
+**Adjust start sheet** (from "Adjust start" on the running Lamp). Same sheet: header "Adjust start · 01:50" (the start Save writes) + Cancel; the same nudge chips, adding up from the start when the sheet opened, with "was 02:05" beside the title once moved; "Edit" and Save. Chips write nothing until Save (`Confirm`); the timer keeps running. Cancel, a scrim tap, back or a swipe move nothing. Edit saves the chosen offset, then opens the edit sheet for the sleep. No timeout.
 
 **Chip** (used in cards and sheets): a 48 dp tall button holding a 40 dp pill, r 20, labelLarge onSurface, 1 dp outline border, transparent fill.
-- Offset chips (Now, −5m, −10m, −15m, +5m) are a **fixed 76 dp wide** (content centred, padding 0 4), so selecting one never moves its neighbours. Other chips hug or fill their content, padding 0 12.
+- Nudge chips (−15m, −10m, −5m, +5m) share one row in equal widths (content centred, padding 0 4). They are buttons (`Role.Button`), never selected. Other chips hug or fill their content, padding 0 12.
 - Selected: fill primaryContainer, label onPrimaryContainer, **outline border kept**, leading `check` 16 + 4 inside the same width.
 - Disabled: label and border at 0.38 opacity.
 - Single-select chips expose a selected state.
@@ -354,13 +354,13 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 | Part | Spec |
 |---|---|
 | Sheet | full width, 368 tall at reference (top at y 476), surfaceContainerLow, top corners r 28. Handle 32 × 4, r 2, onSurfaceVariant at 0.4, 12 from the top |
-| Header (48) | "Diaper · 14:32" titleLarge onSurface at the 24 gutter. **The time is stamped at the moment Diaper was tapped.** "Cancel" text button (labelLarge onSurfaceVariant) at the end |
-| When chips | four offset chips, gap 8, single-select: "Now" (selected by default), "−5m", "−10m", "−15m". Selecting one changes the title to the backdated time ("Diaper · 14:27") |
+| Header (48) | "Diaper · 14:32" titleLarge onSurface at the 24 gutter. **The time is stamped at the moment Diaper was tapped.** After a nudge, "was 14:32" dataMedium onSurfaceVariant before Cancel. "Cancel" text button (labelLarge onSurfaceVariant) at the end |
+| When chips | four nudge chips, gap 8, equal widths: "−15m", "−10m", "−5m", "+5m". Taps add up, like the edit sheet's nudges: −5m twice changes the title to "Diaper · 14:22" with "was 14:32". "+5m" is disabled while it would reach the future |
 | Tiles | three buttons 106 × 128, r 28, gap 12. Content column: icon 40 at +24, label headlineSmall at +76. Pee: PEE container, `pee` PEE strong, "Pee" PEE onContainer. Poop: POOP container, `poop`, "Poop". Both: hard 50/50 split (start PEE container, end POOP container), two-tone `both`, "Both" in POOP onContainer |
 | Bottom | empty sheet area over the gesture inset |
 
 - No "Last: …" line (the fact is already on Home).
-- Tile → log at stamp + offset, close the sheet, show the matching card on Home with the chosen offset pre-selected (e.g. "−10m" selected, "Pee logged", since-row 2 "Pee 10m ago · 14:22"). If a sleep is running, card row 2 = running-sleep log. Haptic `Confirm`.
+- Tile → log at stamp + offset, close the sheet, show the matching receipt on Home carrying the sheet's nudges (e.g. "Pee logged", "14:22 · was 14:32", since-row 2 "Pee 10m ago · 14:22"). If a sleep is running, card row 2 = running-sleep log. Haptic `Confirm`.
 - Cancel or a scrim tap closes without logging.
 - **Cooldown**: chips and tiles ignore taps for 500 ms each time the sheet appears. They fade 0.6 → 1 over that time and are exposed as disabled until ready. Reason: the Diaper button lies 47 % under the Both tile and 21 % under Poop, so a double tap would log Both.
 
@@ -705,7 +705,7 @@ Counts: Both adds 1 to pee **and** 1 to poop.
 | Mis-tap sleep | a sleep stopped < 60 s after its start is discarded ("Sleep cancelled", with Undo, on phone and watch) |
 | Long sleep | past 12 h: "Asleep 12h 10m · still asleep?" with "Fix end time" / "Yes" |
 | No auto-ending | a feed or diaper during a sleep offers "End sleep" in the card; a sleep is never ended automatically |
-| Offsets | relative to the base time, never cumulative; re-tap returns to 0 |
+| Offsets | nudges add up from the base time, shown as "was 14:32" once moved |
 | Time limits | no start or end in the future; no end before start (chips disabled; edit sheet validation) |
 | Day boundary | "Today" starts at 00:00 by default (configurable; open question 4). A sleep crossing the boundary is drawn as one bar (flush at 00:00 on the later day) and listed as one row with a day prefix |
 | Deletes | soft for 7 days, with an Undo receipt |

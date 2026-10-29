@@ -82,7 +82,7 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
         home.repository.startSleep(SampleData.at(14, 24)).getOrThrow()
         home.tapSleepToggle()
         assertEquals(
-            listOf(OffsetChipUi(-15, false, false), OffsetChipUi(-10, false, false), OffsetChipUi(-5, false, true), OffsetChipUi(5, false, false)),
+            listOf(OffsetChipUi(-15, false), OffsetChipUi(-10, false), OffsetChipUi(-5, true), OffsetChipUi(5, false)),
             home.settle().receipt.chips,
         )
         home.viewModel.onSheetOffset(-10)
@@ -133,7 +133,7 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun offsetsAreRelativeToTheBaseAndRetappingClears() = homeTest { home ->
+    fun receiptNudgesAddUpFromTheBaseAndShowWhatItWas() = homeTest { home ->
         home.tapFeed()
         home.viewModel.onFeedType(FeedType.FOOD)
         home.settle()
@@ -144,11 +144,11 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
         assertEquals(SampleData.NOW_1432 - 5 * MINUTE, feedTime())
         home.viewModel.onSheetOffset(-15)
         home.settle()
-        assertEquals("never cumulative", SampleData.NOW_1432 - 15 * MINUTE, feedTime())
-        home.viewModel.onSheetOffset(-15)
+        assertEquals("taps add up", SampleData.NOW_1432 - 20 * MINUTE, feedTime())
+        home.viewModel.onSheetOffset(5)
         val state = home.settle()
-        assertEquals("re-tapping the selected chip returns to 0", SampleData.NOW_1432, feedTime())
-        assertTrue(state.receipt.chips.none { it.selected })
+        assertEquals(SampleData.NOW_1432 - 15 * MINUTE, feedTime())
+        assertEquals(SampleData.NOW_1432, state.receipt.was)
     }
 
     @Test
@@ -216,7 +216,7 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
         val sheet = state.sheet as HomeSheetUi.Adjust
         assertEquals(sleep.id, sheet.entryId)
         assertEquals(
-            listOf(OffsetChipUi(-15, false, true), OffsetChipUi(-10, false, true), OffsetChipUi(-5, false, true), OffsetChipUi(5, false, false)),
+            listOf(OffsetChipUi(-15, true), OffsetChipUi(-10, true), OffsetChipUi(-5, true), OffsetChipUi(5, false)),
             sheet.chips,
         )
 

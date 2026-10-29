@@ -19,11 +19,8 @@ import java.time.ZoneId
  * and previews build their states through the same rules as the app.
  */
 internal object HomeStateBuilder {
-    /** Receipt and Adjust start chips (DESIGN_SPEC §3.3.1): −15m · −10m · −5m · +5m. */
-    val ADJUST_CHIPS = listOf(-15, -10, -5, 5)
-
-    /** Sheet chips: Now · −5m · −10m · −15m. */
-    val SHEET_CHIPS = listOf(0, -5, -10, -15)
+    /** The nudge chips of every Home sheet (DESIGN_SPEC §3.3.1): −15m · −10m · −5m · +5m, cumulative. */
+    val OFFSET_CHIPS = listOf(-15, -10, -5, 5)
 
     fun build(
         entries: List<Entry>,
@@ -99,9 +96,8 @@ internal object HomeStateBuilder {
         val chips = if (subject == null || entry == null) {
             emptyList()
         } else {
-            ADJUST_CHIPS.map { m ->
-                val selected = model.offsetMinutes == m
-                OffsetChipUi(m, selected, enabled = selected || offsetAllowed(entry, subject.second, model.stamp, m, now))
+            OFFSET_CHIPS.map { m ->
+                OffsetChipUi(m, enabled = offsetAllowed(entry, subject.second, model.stamp, model.offsetMinutes + m, now))
             }
         }
         val runningSleep = summary.runningSleep
@@ -142,16 +138,17 @@ internal object HomeStateBuilder {
 
     private fun sheetUi(sheet: SheetModel, entries: List<Entry>, summary: Summary): HomeSheetUi {
         val now = summary.now
-        fun chips(minutes: List<Int>, enabled: (Int) -> Boolean = { true }) =
-            minutes.map { OffsetChipUi(it, selected = it == sheet.offsetMinutes, enabled = enabled(it)) }
+        // A chip is enabled when one more tap is allowed: never into the future, and within the entry's own bounds.
+        fun chips(allowed: (Int) -> Boolean = { m -> sheet.stamp + m * MINUTE_MILLIS <= now }) =
+            OFFSET_CHIPS.map { OffsetChipUi(it, enabled = allowed(sheet.offsetMinutes + it)) }
         return when (sheet) {
             is SheetModel.Feed -> HomeSheetUi.Feed(
-                sheet.stamp, sheet.offsetMinutes, chips(SHEET_CHIPS), sheet.breast, sheet.ticks, sheet.formula, sheet.amountMl,
+                sheet.stamp, sheet.offsetMinutes, chips(), sheet.breast, sheet.ticks, sheet.formula, sheet.amountMl,
             )
             is SheetModel.Diaper -> HomeSheetUi.Diaper(
                 stamp = sheet.stamp,
                 offsetMinutes = sheet.offsetMinutes,
-                chips = chips(SHEET_CHIPS),
+                chips = chips(),
                 pee = sheet.pee,
                 poop = sheet.poop,
                 color = sheet.color,
@@ -162,9 +159,7 @@ internal object HomeStateBuilder {
                 HomeSheetUi.Adjust(
                     stamp = sheet.stamp,
                     offsetMinutes = sheet.offsetMinutes,
-                    chips = chips(ADJUST_CHIPS) { m ->
-                        m == sheet.offsetMinutes || (entry != null && offsetAllowed(entry, MoveField.START, sheet.stamp, m, now))
-                    },
+                    chips = chips { m -> entry != null && offsetAllowed(entry, MoveField.START, sheet.stamp, m, now) },
                     entryId = sheet.entryId,
                 )
             }

@@ -68,7 +68,7 @@ data class Entry(
 
 - **Home Feed button:** the label is always "Feed" (it has no running form). A tap opens the **Feed sheet**, which follows the same pattern as the diaper sheet (DESIGN_SPEC §3.3.2):
   - Title "Feed · 14:32". The time is stamped on the first tap.
-  - Offset chips: Now · −5m · −10m · −15m (single-select). The title follows the selected chip.
+  - Nudge chips: −15m · −10m · −5m · +5m. Taps add up (like the edit sheet's nudges); the title follows, with "was 14:32" beside it once moved.
   - Three **full-width option rows**, each 72 dp tall with radius 28, filled `feed-container`. Each row has a 32 dp icon in `feed-strong`, a label in headlineSmall `feed-on-container`, and an optional supporting line in bodyMedium:
     - **Breast**: icon `breast`, supporting line "Then the sides, if you like" ("Derefter siderne, hvis du vil").
     - **Formula**: icon `feed` (the bottle), supporting line "Then the amount, if you like" ("Derefter mængden, hvis du vil").
@@ -78,7 +78,7 @@ data class Entry(
   - Tapping **Breast** logs nothing yet: the same sheet moves to its **Breast step** (below). Tapping **Formula** likewise moves to its **Formula step**. The stamp and the selected chip are kept.
   - The rows are full width because the Danish labels are long ("Modermælkserstatning").
 - **Breast step** (the Feed sheet after Breast):
-  - Title "Breast · 14:32" ("Amning · 14:32"), following the chips, which stay: Now · −5m · −10m · −15m.
+  - Title "Breast · 14:32" ("Amning · 14:32"), following the chips, which stay: −15m · −10m · −5m · +5m.
   - Hint (bodyMedium, `on-surface-variant`): "Tick the sides in the order you fed. Optional." / "Sæt flueben i den rækkefølge, du ammede. Valgfrit."
   - **Two checkbox tiles side by side**, Left and Right, styled like the Diaper sheet's tiles but in FEED colours (min 112 dp tall, radius 28). Each shows the `sideLeft` / `sideRight` glyph with the L/R letters (V/H in Danish come from text), its label, and a checkbox glyph top-right.
     - **Off:** `feed-container` fill, 1 dp `outline` border, empty checkbox.
@@ -133,7 +133,7 @@ data class Entry(
 The sheet scrolls. It opens with `skipPartiallyExpanded`.
 
 1. **Header:** title "Diaper · 14:32" with a Cancel button.
-2. **Offset chips:** Now · −5m · −10m · −15m.
+2. **Nudge chips:** −15m · −10m · −5m · +5m (taps add up; "was 14:32" once moved).
 3. **Two toggle tiles**, side by side, each 165 × 112 dp with radius 28. They are **checkboxes**, **both off when the sheet opens**:
    - **Pee:** icon `pee`.
    - **Poop:** icon `poop`.

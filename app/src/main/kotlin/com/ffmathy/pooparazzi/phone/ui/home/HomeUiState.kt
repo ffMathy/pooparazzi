@@ -84,9 +84,9 @@ sealed interface SinceRow {
     }
 }
 
-/** An offset chip ("−5m", "+5m", or "Now" for 0). */
+/** A nudge chip ("−5m", "+5m"): each tap moves the sheet's time by [minutes] more; disabled where that is not allowed. */
 @Immutable
-data class OffsetChipUi(val minutes: Int, val selected: Boolean, val enabled: Boolean = true)
+data class OffsetChipUi(val minutes: Int, val enabled: Boolean = true)
 
 /** The whisper slot's notice card (2 s, DESIGN_SPEC §3.3.1). [key] changes with each new notice (it fades in). */
 @Immutable
@@ -137,6 +137,9 @@ sealed interface HomeSheetUi {
     val offsetMinutes: Int
     val chips: List<OffsetChipUi>
     val time: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
+
+    /** The time before the nudges ("was 14:32"), or null while there are none. */
+    val was: Long? get() = stamp.takeIf { offsetMinutes != 0 }
 
     /**
      * Feed sheet (V1_ADDITIONS §2.1): Breast / Formula / Food / Just the time. Once Breast is tapped ([breast]), the

@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -100,7 +99,7 @@ internal fun FeedSheetContent(
     }
     val title = titleWithTime(titleRes, time)
     SheetColumn(title) {
-        SheetHeader(title, callbacks.onCancel)
+        SheetHeader(title, callbacks.onCancel, was = sheet.was?.let { formatters.clock.format(it, zone) })
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
         Spacer(Modifier.height(12.dp))
@@ -392,17 +391,14 @@ internal fun SheetColumn(title: String, content: @Composable () -> Unit) {
     ) { content() }
 }
 
-/** The single-select offset chips of a sheet (radio semantics): one row of equal chips at every width and font scale. */
+/** The nudge chips of a sheet: one row of equal chips at every width and font scale; taps add up. */
 @Composable
 internal fun SheetChipRow(chips: List<OffsetChipUi>, formatters: Formatters, readiness: PickerReadiness, onOffset: (Int) -> Unit) {
     OffsetChipRow(
         chips,
         formatters,
         onOffset,
-        modifier = Modifier
-            .selectableGroup()
-            .alpha(readiness.alpha),
-        role = Role.RadioButton,
+        modifier = Modifier.alpha(readiness.alpha),
         acceptsTaps = readiness.ready,
     )
 }

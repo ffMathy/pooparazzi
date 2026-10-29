@@ -85,15 +85,15 @@ class HomeStateBuilderTest {
     fun adjustingStartShowsTheChosenStart() {
         val sheet = HomeSamples.adjustingStart().sheet as HomeSheetUi.Adjust
         assertEquals(SampleData.at(1, 50), sheet.time)
-        assertEquals(-15, sheet.chips.single { it.selected }.minutes)
+        assertEquals(SampleData.at(2, 5), sheet.was)
     }
 
     @Test
     fun theBreastStepKeepsTheSheetChipsAndTicks() {
         val sheet = HomeSamples.breastSheet(listOf(Breast.RIGHT, Breast.LEFT)).sheet as HomeSheetUi.Feed
         assertTrue(sheet.breast)
-        assertEquals(listOf(0, -5, -10, -15), sheet.chips.map { it.minutes })
-        assertTrue(sheet.chips.all { it.enabled })
+        assertEquals(listOf(-15, -10, -5, 5), sheet.chips.map { it.minutes })
+        assertEquals("+5m would reach the future", listOf(true, true, true, false), sheet.chips.map { it.enabled })
         assertEquals(BreastSide.RIGHT_THEN_LEFT, sheet.side)
         assertEquals(SampleData.NOW_1432, sheet.time)
     }

@@ -77,7 +77,6 @@
     <string name="action_earlier">Tidligere</string>
     <string name="action_earlier_question">Tidligere?</string>
     <string name="action_adjust_start">Ret start</string>
-    <string name="action_now">Nu</string>
     <string name="action_retry">Prøv igen</string>
 
     <!-- Receipts -->

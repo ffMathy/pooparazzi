@@ -69,9 +69,11 @@ internal fun ReceiptSheetContent(sheet: HomeSheetUi.Receipt, zone: ZoneId, forma
     val colors = MaterialTheme.colorScheme
     val content = receiptContent(sheet.variant, formatters)
     // The effective time leads the second line ("14:27 · Left → Right"); it follows the chips.
+    // After a nudge, "was 14:32" follows it: the time the entry was logged at.
     val time = if (sheet.chips.isEmpty()) null else formatters.clock.format(sheet.time, zone)
-    val line = listOfNotNull(time, content.sub).takeIf { it.isNotEmpty() }?.joinToString(DOT)
-    val lineSpoken = listOfNotNull(time, content.subSpoken ?: content.sub).joinToString(", ")
+    val was = sheet.was?.takeIf { time != null }?.let { stringResource(R.string.edit_was, formatters.clock.format(it, zone)) }
+    val line = listOfNotNull(time, was, content.sub).takeIf { it.isNotEmpty() }?.joinToString(DOT)
+    val lineSpoken = listOfNotNull(time, was, content.subSpoken ?: content.sub).joinToString(", ")
     val paneTitle = time?.let { stringResource(R.string.join_dot, content.title, it) } ?: content.title
     SheetColumn(paneTitle) {
         Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {

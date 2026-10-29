@@ -30,8 +30,34 @@ class HomeFeedTest : HomeViewModelTestBase() {
         home.tapFeed()
         val sheet = home.settle().sheet as HomeSheetUi.Feed
         assertEquals(SampleData.NOW_1432, sheet.stamp)
-        assertEquals(listOf(0, -5, -10, -15), sheet.chips.map { it.minutes })
-        assertTrue(sheet.chips.first { it.minutes == 0 }.selected)
+        assertEquals(listOf(-15, -10, -5, 5), sheet.chips.map { it.minutes })
+        assertEquals("only +5m would reach the future", listOf(true, true, true, false), sheet.chips.map { it.enabled })
+        assertNull("nothing to show as was", sheet.was)
+    }
+
+    @Test
+    fun sheetNudgesAddUpAndShowWhatTheTimeWas() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onSheetOffset(-5)
+        home.viewModel.onSheetOffset(-5)
+        home.viewModel.onSheetOffset(-15)
+        var sheet = home.settle().sheet as HomeSheetUi.Feed
+        assertEquals(-25, sheet.offsetMinutes)
+        assertEquals(SampleData.NOW_1432, sheet.was)
+        assertTrue("+5m is allowed once the time is back from now", sheet.chips.single { it.minutes == 5 }.enabled)
+        home.viewModel.onSheetOffset(5)
+        sheet = home.settle().sheet as HomeSheetUi.Feed
+        assertEquals(-20, sheet.offsetMinutes)
+        assertEquals(List(4) { HomeHaptic.SEGMENT_TICK }, home.haptics)
+    }
+
+    @Test
+    fun aNudgeIntoTheFutureIsRejected() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onSheetOffset(5)
+        val sheet = home.settle().sheet as HomeSheetUi.Feed
+        assertEquals(0, sheet.offsetMinutes)
+        assertEquals(listOf(HomeHaptic.REJECT), home.haptics)
     }
 
     @Test
@@ -56,7 +82,8 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertTrue(receipt.undoable)
         assertEquals(feed.id, receipt.editEntryId)
         assertEquals(listOf(-15, -10, -5, 5), receipt.chips.map { it.minutes })
-        assertTrue("the sheet's offset is pre-selected", receipt.chips.single { it.selected }.minutes == -10)
+        assertEquals("the sheet's offset carries over", -10, receipt.offsetMinutes)
+        assertEquals("was: the time the sheet opened", SampleData.NOW_1432, receipt.was)
         assertEquals(feed.startMillis, receipt.time)
         assertEquals(listOf(HomeHaptic.SEGMENT_TICK, HomeHaptic.SEGMENT_TICK, HomeHaptic.CONFIRM), home.haptics)
     }
@@ -135,7 +162,7 @@ class HomeFeedTest : HomeViewModelTestBase() {
         assertFalse(feed.isRunning)
         assertEquals(BreastSide.LEFT_THEN_RIGHT, feed.breastSide)
         assertEquals(ReceiptVariant.FeedLogged(FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT), state.receipt.variant)
-        assertEquals(-15, state.receipt.chips.single { it.selected }.minutes)
+        assertEquals(-15, state.receipt.offsetMinutes)
         val lamp = state.lamp as LampState.FeedIdle
         assertEquals(feed.id, lamp.lastFeed!!.id)
         assertEquals(1, state.today.feeds)

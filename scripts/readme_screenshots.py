@@ -40,6 +40,7 @@ PHONE = {
     "07-breast-sheet-ticked.png": "breast-sheet",
     "07b-formula-sheet.png": "formula-sheet",
     "08-diaper-sheet.png": "diaper-sheet",
+    "08b-diaper-sheet-nudged.png": "diaper-sheet-nudged",
     "10-history-day.png": "history",
     "11-history-night.png": "history-night",
     "13-edit-breastfeed.png": "edit-feed",
