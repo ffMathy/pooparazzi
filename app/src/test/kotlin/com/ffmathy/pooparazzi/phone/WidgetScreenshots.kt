@@ -45,7 +45,7 @@ import org.robolectric.annotation.GraphicsMode
  * The real Glance widgets, rendered the way a launcher shows them: each widget is composed by Glance into
  * [RemoteViews] at a fixed size, applied to a view and captured (Robolectric native graphics). Each state sits on a
  * panel in its theme's wallpaper tone, as in the mockup. Written to `app/screenshots/<lang>/17-widget-4x2.png` and
- * `18-widget-3x1.png`. The canvas is the phone's width but taller (960 dp), to hold four 4×2 states.
+ * `18-widget-3x1.png` and `19-widget-cover.png`. The canvas is the phone's width but taller (960 dp), to hold four 4×2 states.
  */
 abstract class WidgetScreenshots(private val language: String) {
     @get:Rule
@@ -100,6 +100,20 @@ abstract class WidgetScreenshots(private val language: String) {
             }
         }
         compose.onNodeWithTag(TAG).captureRoboImage("screenshots/$language/18-widget-3x1.png")
+    }
+
+    /** The 4×2 on a Samsung flip's cover screen (Flex Window, 352 × 339 dp): idle (Night) and asleep. */
+    @Test
+    fun widgetCoverScreen() {
+        val size = DpSize(352.dp, 339.dp)
+        val states = listOf(WidgetSamples.idle(night = true), WidgetSamples.asleep())
+        val views = states.map { render(size) { LogWidgetContent(it) } }
+        compose.setContent {
+            Column(Modifier.testTag(TAG)) {
+                states.zip(views).forEach { (state, view) -> Panel(state, size, view) }
+            }
+        }
+        compose.onNodeWithTag(TAG).captureRoboImage("screenshots/$language/19-widget-cover.png")
     }
 
     /** Not part of the tour: the 4×2 at 1.3× font scale (end text moves, labels wrap) and a narrow 276 dp widget. */

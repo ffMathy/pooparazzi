@@ -46,6 +46,10 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-add-past-entry.png" width="200" alt="Add a past entry"> | <img src="docs/screenshots/en/phone-settings.png" width="200" alt="Settings"> | <img src="docs/screenshots/en/phone-widget-4x2.png" width="200" alt="4x2 log widget in its states"> | <img src="docs/screenshots/en/phone-widget-3x1.png" width="200" alt="3x1 quick widget in its sizes"> |
 
+| Cover screen (Samsung flip) |
+|:---:|
+| <img src="docs/screenshots/en/phone-widget-cover.png" width="200" alt="The 4x2 widget on a Samsung flip's cover screen, idle and asleep"> |
+
 ### Watch
 
 | Main, idle | Main, asleep | Main, after a breast feed | Feed type |
