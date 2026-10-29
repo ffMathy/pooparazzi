@@ -24,13 +24,14 @@
             uiMode is handled in Compose: the app resolves Night/Day itself (DESIGN_SPEC §8.1), so a system theme change
             only recomposes instead of recreating the activity. singleTop: a link that arrives while the app runs (the
             watch's "More on phone", a widget, a notification) reaches the open activity in onNewIntent instead of
-            stacking a second one.
+            stacking a second one. portrait: the phone app is laid out for portrait only (DESIGN_SPEC §10.3).
         -->
         <activity
             android:name=".MainActivity"
             android:configChanges="uiMode"
             android:exported="true"
             android:launchMode="singleTop"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Pooparazzi.Starting"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

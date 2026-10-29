@@ -1285,6 +1285,7 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 
 ### 10.3 Phone layout and insets
 
+- **Portrait only**: `MainActivity` is locked to `screenOrientation="portrait"`; the app does not rotate to landscape.
 - Lay out from `WindowInsets.statusBars / navigationBars / displayCutout`, not fixed 24 dp bands. Support predictive back.
 - **Continuous Lamp size**: H = window height − statusBars − navigationBars (dp). Lamp Ø = clamp(264 − (796 − H), 220, 264). The hero autosizes with it (56–76 sp). The whisper slot keeps its 128 dp minimum. Below Ø220, the area above the button block scrolls. Example: 3-button navigation (48 dp) on an 844 dp screen → H = 772 → a 240 dp Lamp.
 - 200 % font scale: §9.3.
