@@ -227,10 +227,10 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | Status-bar inset | 24 | 0–24 | background only |
 | Top bar | 64 | 24–88 | "Noa", status icons, History pill, Settings |
 | gap | 8 | | |
-| Lamp | 264 | 96–360 | §2.4 |
+| Lamp | 248 | 96–344 | §2.4 (it gives up the room the two-line since-rows take) |
 | gap | 4 | | |
-| Since-row 1 | 48 | 364–412 | |
-| Since-row 2 | 48 | 412–460 | |
+| Since-row 1 | 56 | 348–404 | |
+| Since-row 2 | 56 | 404–460 | |
 | gap | 4 | | |
 | Whisper slot | 128 (fixed min) | 464–592 | Today grid, or a 2 s notice card, or a one-off prompt |
 | gap | 12 | | |
@@ -246,17 +246,15 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 - History pill: 48 target / 40 visual, r 20, fill surfaceContainerHigh, padding start 12 / end 14, `history` 18 onSurfaceVariant + 6 + "History" labelLarge onSurface. Opens History.
 - Settings: 48 × 48 icon button, `settings` 24 onSurfaceVariant, content description "Settings".
 
-**Since-rows**: each is a full-width button 350 × 48, r 12, padding 0 16, gap 12. Content: icon 20, lead (titleMedium onSurface) + meta (dataMedium onSurfaceVariant, starts with " · "), `chevronRight` 16 in outline at the end. One line, no wrapping. Text slot = **258 dp**.
+**Since-rows**: each is a full-width button 350 × 56 (min), r 12, padding 4 16, gap 12. Content: icon 20, then two lines — the title (titleMedium onSurface) over the detail (dataMedium onSurfaceVariant: elapsed time, then " · "-separated facts) — and `chevronRight` 16 in outline at the end. Each line is one line, ellipsized; from 130 % font scale each may take two. Text slot = **258 dp**.
 
 | State | Row 1 | Row 2 (kind-first) |
 |---|---|---|
-| Idle | `awake` (SLEEP strong): "Awake 1h 05m" + " · since 13:27" | kind icon: "Pee 48m ago" + " · 13:44" |
-| Sleep running | `feed` (FEED strong): "Last fed 1h 32m ago" + " · 01:40" | "Pee 1h 20m ago" + " · 01:52" |
-| Diaper just logged | (idle row 1) | "Pee just now" + " · 14:32" |
+| Idle | `awake` (SLEEP strong): "Awake" / "1h 05m · since 13:27" | kind icon: "Pee" / "48m ago · 13:44" |
+| Sleep running | `feed` (FEED strong): "Last fed" / "1h 32m ago · 01:40 · L → R" | "Pee" / "1h 20m ago · 01:52" |
+| Diaper just logged | (idle row 1) | "Pee" / "just now · 14:32" |
 
-- Row 2 uses the **kind icon** (`pee` PEE strong, `poop` POOP strong, two-tone `both`), never the generic `diaper`. Its lead starts with the kind word: Pee / Poop / Both.
-- Both rows share one text size: the largest from 18 sp down to 14 sp (0.5 sp steps) at which each fits one line. A row that needs two lines even at 14 sp wraps at that shared size and does not pull the other row down.
-- Measured worst cases: row 1 "Last fed 10h 45m ago · 01:40" = 257.9 dp; row 2 "Poop 10h 45m ago · 03:47" = 231.5 dp.
+- Row 2 uses the **kind icon** (`pee` PEE strong, `poop` POOP strong, two-tone `both`), never the generic `diaper`. Its title is the kind word: Pee / Poop / Both.
 - Tap → the edit sheet for that row's latest entry (row 1: the last sleep, or the last feed while asleep; row 2: the last diaper). This is the one-tap correction path.
 
 **Whisper slot: Today grid** (default). The whole block is a link to History (r 20, padding 14 16). Header "Today" labelMedium onSurfaceVariant + `chevronRight` 16 outline. Below it, a 4-column equal grid (gap 8): number titleMedium onSurface over caption labelMedium onSurfaceVariant; the numbers share one baseline across the row, and so do the captions. 14:32: "5" feeds, "4" pee, "2" poop, "7h 57m" sleep. 03:12: "1" feed, "1" pee, "0" poop, "2h 42m" sleep (the caption is singular "feed" for 1). In lights-down the numbers are onSurfaceVariant.
