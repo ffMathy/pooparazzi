@@ -481,7 +481,7 @@ line reads "soon" / "snart" ("poop soon" / "bæ snart"). A button the week canno
 
 | Surface | Feed | Diaper | Sleep, awake | Sleep, asleep |
 |---|---|---|---|---|
-| 4×2 widget (and the cover screen), 12–13 sp | under the Feed label: "Next ~15:35" / "Næste ~15:35" | under Diaper, when poop is predictable: "Poop ~18:00" / "Bæ ~18:00" | under the status: "Next sleep ~15:25" / "Sover igen ~15:25" | "Wakes ~05:25" / "Vågner ~05:25" |
+| 4×2 widget (and the cover screen), 11–13 sp; with the line, the face tightens to icon 20 + gap 2 | under the Feed label: "Next ~15:35" / "Næste ~15:35" | under Diaper, when poop is predictable: "Poop ~18:00" / "Bæ ~18:00" | under the status: "Next sleep ~15:25" / "Sover igen ~15:25" | "Wakes ~05:25" / "Vågner ~05:25" |
 | Watch Main, scrolled | idle: a "Next feed" card first, "in 1h 05m · ~15:35" (opens the last feed); asleep: the Last fed card's third line "Next feed in 2h 45m" | none | Awake card, third line: "Next sleep in 55m" / "Sover igen om 55m" | Adjust start's secondary line: "Wakes ~05:25" (small watches: under "Asleep since 02:05") |
 
 The widget shows clock times only (it does not tick), rounded to 5 minutes, and refreshes once an estimate has passed.

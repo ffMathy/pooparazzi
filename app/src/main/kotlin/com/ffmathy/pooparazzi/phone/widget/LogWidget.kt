@@ -342,9 +342,10 @@ private val CompactTopSpace = 10.dp
 private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle, sub: String? = null) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
         if (style == FaceStyle.Compact) Spacer(GlanceModifier.height(CompactTopSpace))
-        WidgetIcon(icon, iconColor, if (style == FaceStyle.Compact) 20.dp else 24.dp)
+        // With the forecast line the face tightens (icon 20, gap 2), so the three lines keep their padding in the button.
+        WidgetIcon(icon, iconColor, if (style == FaceStyle.Compact || sub != null) 20.dp else 24.dp)
         if (style != FaceStyle.IconOnly) {
-            Spacer(GlanceModifier.height(if (style == FaceStyle.Compact) 0.dp else 6.dp))
+            Spacer(GlanceModifier.height(if (style == FaceStyle.Compact) 0.dp else if (sub != null) 2.dp else 6.dp))
             WidgetText(
                 text = label,
                 color = labelColor,
@@ -353,7 +354,7 @@ private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: 
                 align = TextAlign.Center,
                 modifier = GlanceModifier.padding(horizontal = 4.dp),
             )
-            if (sub != null) WidgetText(sub, labelColor, 12.sp, maxLines = 1, align = TextAlign.Center)
+            if (sub != null) WidgetText(sub, labelColor, 11.sp, maxLines = 1, align = TextAlign.Center)
         }
     }
 }
