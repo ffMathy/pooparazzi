@@ -33,6 +33,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.ffmathy.pooparazzi.core.domain.Expected
 import com.ffmathy.pooparazzi.core.format.ClockFormatter
 import com.ffmathy.pooparazzi.core.format.LabelFormatter
 import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
@@ -106,6 +107,18 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     fun noFeeds(): String = string(R.string.lamp_no_feed)
     fun asleepSince(millis: Long): String = since(string(CoreR.string.status_asleep), millis)
     fun awakeSince(millis: Long): String = since(string(CoreR.string.status_awake), millis)
+
+    /** "Wakes ~05:30" while asleep, "Next sleep ~15:25" while awake, or "… soon" when due (V1_ADDITIONS §9). */
+    fun sleepForecast(expected: Expected, asleep: Boolean): String = when {
+        expected.overdue -> string(if (asleep) CoreR.string.forecast_wakes_soon else CoreR.string.forecast_next_sleep_soon)
+        else -> string(if (asleep) CoreR.string.forecast_wakes_at else CoreR.string.forecast_next_sleep_at, time(expected.roundedAtMillis))
+    }
+
+    /** TalkBack: "expected to wake around 05:30". */
+    fun sleepForecastSpoken(expected: Expected, asleep: Boolean): String = when {
+        expected.overdue -> sleepForecast(expected, asleep)
+        else -> string(if (asleep) CoreR.string.spoken_forecast_wake_at else CoreR.string.spoken_forecast_sleep_at, time(expected.roundedAtMillis))
+    }
 
     fun receipt(receipt: WidgetReceipt): String = when (receipt.kind) {
         ReceiptKind.LOGGED -> atTime(string(CoreR.string.receipt_logged, labels.diaperKind(receipt.diaperKind ?: DiaperKind.PLAIN)), receipt.atMillis)

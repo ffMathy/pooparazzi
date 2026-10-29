@@ -199,4 +199,14 @@
 
     <!-- java.time pattern for dates such as "Mon 26 Oct" -->
     <string name="pattern_weekday_day_month">EEE d MMM</string>
+
+    <!-- What the last 7 days expect next (V1_ADDITIONS §9): the watch's live lines and the widget's clock times. -->
+    <string name="forecast_next_sleep_in">Next sleep in %1$s</string>
+    <string name="forecast_wakes_in">Wakes in %1$s</string>
+    <string name="forecast_next_sleep_at">Next sleep ~%1$s</string>
+    <string name="forecast_wakes_at">Wakes ~%1$s</string>
+    <string name="forecast_next_sleep_soon">Next sleep soon</string>
+    <string name="forecast_wakes_soon">Wakes soon</string>
+    <string name="spoken_forecast_sleep_at">expected to sleep again around %1$s</string>
+    <string name="spoken_forecast_wake_at">expected to wake around %1$s</string>
 </resources>

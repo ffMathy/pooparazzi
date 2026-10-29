@@ -76,6 +76,8 @@ WATCH = {
     "01-main-idle.png": "main-idle",
     "02-main-asleep.png": "main-asleep",
     "03-main-after-breast.png": "main-after-breast",
+    "04b-main-awake-forecast.png": "main-awake-forecast",
+    "02b-main-asleep-forecast.png": "main-asleep-forecast",
     "05-feed-type.png": "feed-type",
     "06-side-ticked.png": "side",
     "07-diaper.png": "diaper",

@@ -11,7 +11,24 @@ import kotlin.math.abs
  * means the current stretch has already outlasted every comparable one of the past week, so it is due any minute.
  * [samples] is how many past stretches the estimate rests on.
  */
-data class Expected(val atMillis: Long, val overdue: Boolean, val samples: Int)
+data class Expected(val atMillis: Long, val overdue: Boolean, val samples: Int) {
+    /**
+     * Time until it, rounded up to [STEP_MILLIS] ("in 55m": a week's typical gap, not a minute-exact promise); null
+     * when it is due ("soon"): overdue or under one step away.
+     */
+    fun remainingMillis(now: Long): Long? {
+        val left = atMillis - now
+        if (overdue || left < STEP_MILLIS) return null
+        return (left + STEP_MILLIS - 1) / STEP_MILLIS * STEP_MILLIS
+    }
+
+    /** [atMillis] to the nearest [STEP_MILLIS], for surfaces that show a clock time ("~15:25"). */
+    val roundedAtMillis: Long get() = (atMillis + STEP_MILLIS / 2) / STEP_MILLIS * STEP_MILLIS
+
+    companion object {
+        const val STEP_MILLIS = 5 * 60_000L
+    }
+}
 
 /**
  * What the past week says comes next (V1_ADDITIONS §9). [sleep] is the expected wake-up while a sleep runs and the

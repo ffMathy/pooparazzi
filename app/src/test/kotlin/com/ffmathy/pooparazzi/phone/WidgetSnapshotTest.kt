@@ -13,6 +13,7 @@ import com.ffmathy.pooparazzi.phone.widget.WidgetNotice
 import com.ffmathy.pooparazzi.phone.widget.WidgetSamples
 import com.ffmathy.pooparazzi.phone.widget.WidgetSnapshot
 import com.ffmathy.pooparazzi.phone.widget.WidgetUpdater
+import com.ffmathy.pooparazzi.phone.widget.forecastExpiry
 import com.ffmathy.pooparazzi.phone.widget.nextExpiry
 import android.net.Uri
 import org.junit.Assert.assertEquals
@@ -39,6 +40,20 @@ class WidgetSnapshotTest {
         assertEquals(SampleData.at(13, 27), idle.awakeSinceMillis)
         assertFalse(idle.asleep)
         assertEquals(HomeLaunch.Home, idle.backgroundLaunch)
+    }
+
+    @Test
+    fun theSleepToggleCarriesTheWeeksForecast() {
+        // V1_ADDITIONS §9: awake, the next sleep; asleep, the wake-up; both as clock times rounded to 5 minutes.
+        val idle = WidgetSamples.idle(night = true)
+        assertEquals(SampleData.at(15, 25), idle.sleepForecast!!.roundedAtMillis)
+        assertEquals(idle.sleepForecast!!.atMillis, idle.forecastExpiry(SampleData.NOW_1432))
+        val asleep = WidgetSamples.asleep()
+        assertEquals(SampleData.at(5, 25), asleep.sleepForecast!!.roundedAtMillis)
+        // One day of log is no pattern yet: no forecast, and no refresh for one.
+        val oneDay = WidgetSnapshot.of(SampleData.scenario(zone), SampleData.settings, WidgetMemo(), SampleData.NOW_1432, zone, systemDark = false)
+        assertNull(oneDay.sleepForecast)
+        assertNull(oneDay.forecastExpiry(SampleData.NOW_1432))
     }
 
     @Test

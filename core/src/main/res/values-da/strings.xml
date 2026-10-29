@@ -169,4 +169,13 @@
     <!-- "man. 26. okt." -->
     <string name="format_language">da</string>
     <string name="pattern_weekday_day_month">EEE d. MMM</string>
+
+    <string name="forecast_next_sleep_in">Sover igen om %1$s</string>
+    <string name="forecast_wakes_in">Vågner om %1$s</string>
+    <string name="forecast_next_sleep_at">Sover igen ~%1$s</string>
+    <string name="forecast_wakes_at">Vågner ~%1$s</string>
+    <string name="forecast_next_sleep_soon">Sover igen snart</string>
+    <string name="forecast_wakes_soon">Vågner snart</string>
+    <string name="spoken_forecast_sleep_at">forventes at sove igen omkring kl. %1$s</string>
+    <string name="spoken_forecast_wake_at">forventes at vågne omkring kl. %1$s</string>
 </resources>

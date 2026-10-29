@@ -1,5 +1,7 @@
 package com.ffmathy.pooparazzi.phone.widget
 
+import com.ffmathy.pooparazzi.core.domain.Expected
+import com.ffmathy.pooparazzi.core.domain.forecast
 import com.ffmathy.pooparazzi.core.domain.localTime
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.Baby
@@ -22,6 +24,8 @@ import java.time.ZoneId
  * @property receipt the last widget log while it may still be undone; null once expired, replaced or undone elsewhere.
  * @property notice a 2 s line (guard, dedupe, "Undone"); shown instead of the receipt and the status facts.
  * @property babies all babies, in order; with two or more the widgets name the current one ([babyId]).
+ * @property sleepForecast the expected wake-up while asleep, else the expected next sleep (V1_ADDITIONS §9); null when
+ *   the last week cannot predict it.
  */
 data class WidgetSnapshot(
     val night: Boolean,
@@ -35,6 +39,7 @@ data class WidgetSnapshot(
     val notice: WidgetNotice?,
     val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),
     val babyId: String = babies.first().id,
+    val sleepForecast: Expected? = null,
 ) {
     val asleep: Boolean get() = runningSleepStart != null
 
@@ -81,6 +86,7 @@ data class WidgetSnapshot(
                 notice = memo.notice?.takeIf { it.expiresAtMillis > now },
                 babies = settings.babies,
                 babyId = settings.selectedBaby.id,
+                sleepForecast = forecast(summary).sleep,
             )
         }
 
@@ -96,6 +102,12 @@ data class WidgetSnapshot(
         }
     }
 }
+
+/**
+ * When the sleep forecast next changes without any new data: once its time has passed, the week's stretches that are
+ * still longer give a later estimate (or "soon").
+ */
+fun WidgetSnapshot.forecastExpiry(now: Long): Long? = sleepForecast?.takeIf { !it.overdue }?.atMillis?.takeIf { it > now }
 
 /** When the widgets next change without any new data: the receipt or notice expiry, if any. */
 fun WidgetMemo.nextExpiry(now: Long): Long? =
