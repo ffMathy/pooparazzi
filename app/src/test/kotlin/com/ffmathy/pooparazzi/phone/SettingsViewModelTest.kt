@@ -27,7 +27,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.runner.RunWith
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.util.zip.ZipInputStream
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertThrows
+import com.ffmathy.pooparazzi.core.model.EntryJson
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -243,13 +249,49 @@ class SettingsViewModelTest : CoreTestBase() {
         val out = ByteArrayOutputStream()
         val active = core.repository.observeAllEntries().first()
         assertEquals(active.size, vm.export(out))
-        val export = LogExport.decode(out.toString(Charsets.UTF_8))
+        val files = generateSequence(ZipInputStream(ByteArrayInputStream(out.toByteArray()))::getNextEntry).map { it.name }
+        assertEquals("one ZIP file", listOf(LogExport.MANIFEST, LogExport.BABIES, LogExport.ENTRIES, LogExport.README), files.toList())
+        val export = LogExport.read(ByteArrayInputStream(out.toByteArray()))
         assertEquals(LogExport.FORMAT, export.format)
+        assertEquals(LogExport.VERSION, export.version)
         assertEquals(core.clock.now(), export.exportedAtMillis)
         assertEquals("Noa Marie", export.babies.first().name)
         assertEquals("every baby's entries, oldest first", active.sortedBy { it.startMillis }, export.entries)
         assertTrue(export.entries.map { it.id }.containsAll(listOf(feed.id, twin.id)))
         assertTrue("deleted ones are left out", export.entries.none { it.id == gone.id })
+    }
+
+    @Test
+    fun importDataMergesAnExportIntoTheLog() = coreTest(seed = emptyList()) { core ->
+        val vm = SettingsViewModel(
+            core.settings, NoopEntrySync, LocaleApplier { applied += it }, backgroundScope,
+            versionName = "0.1.0", entries = core.repository, clock = core.clock,
+        ).also { core.collect(it.state) }
+        runCurrent()
+        val feed = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432 - 30 * MINUTE, amountMl = 120)
+        val twin = Entry.diaper(SampleData.NOW_1432 - 20 * MINUTE, pee = true, poop = false, babyId = "baby-2")
+        val file = ByteArrayOutputStream().also {
+            LogExport.write(it, listOf(Baby(Baby.FIRST_ID, "Lea"), Baby("baby-2", "Ida", updatedAtMillis = 1L)), listOf(feed, twin), SampleData.NOW_1432)
+        }.toByteArray()
+
+        assertEquals(2, vm.importData(ByteArrayInputStream(file)))
+        runCurrent()
+        assertEquals(feed, core.entry(feed.id))
+        assertEquals(twin, core.entry(twin.id))
+        assertEquals("the twin is added with their name", "Ida", core.name("baby-2"))
+        assertEquals("the name here stays", SampleData.BABY_NAME, core.name())
+
+        assertEquals("the same file again changes nothing", 0, vm.importData(ByteArrayInputStream(file)))
+        val edited = core.repository.update(feed.copy(amountMl = 90))
+        assertEquals("what is newer here stays", 0, vm.importData(ByteArrayInputStream(file)))
+        assertEquals(edited, core.entry(feed.id))
+
+        // The single JSON file of version 1 is read too.
+        val v1 = """{"format":"pooparazzi-log","version":1,"exportedAtMillis":1,"babies":[],"entries":[${EntryJson.encode(feed.copy(id = "v1", startMillis = feed.startMillis - 60 * MINUTE))}]}"""
+        assertEquals(1, vm.importData(ByteArrayInputStream(v1.toByteArray())))
+
+        assertThrows(IOException::class.java) { runBlocking { vm.importData(ByteArrayInputStream("{}".toByteArray())) } }
+        assertThrows(IOException::class.java) { runBlocking { vm.importData(ByteArrayInputStream("not a file".toByteArray())) } }
     }
 }
 

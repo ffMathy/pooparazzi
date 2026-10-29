@@ -77,7 +77,7 @@ Under the GDPR you have the right to:
 - **rectify** it (you can rename babies and edit or delete entries in the app at any time);
 - **erase** it (section 6);
 - **restrict** or **object** to its processing;
-- **data portability**: receive it in a structured, machine-readable format (JSON). Settings › About › **Download my data** saves the log and the babies (with their names) that are on your phone as a JSON file; write to us for what only the backup holds, such as your account and your family's member list;
+- **data portability**: receive it in a structured, machine-readable format (JSON). Settings › About › **Download my data** saves the log and the babies (with their names) that are on your phone as a ZIP file of JSON files (and **Import data** reads it back in); write to us for what only the backup holds, such as your account and your family's member list;
 - **withdraw your consent** at any time, without affecting what was done before.
 
 Write to [mathias.lorenzen@live.com](mailto:mathias.lorenzen@live.com); you will get an answer within one month. You can also complain to the Danish Data Protection Agency, **Datatilsynet** (Carl Jacobsens Vej 35, 2500 Valby, Denmark, [www.datatilsynet.dk](https://www.datatilsynet.dk)), or to the data protection authority where you live.

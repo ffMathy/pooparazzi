@@ -147,6 +147,14 @@ interface EntryRepository {
     suspend fun applyRemoteAll(entries: List<Entry>): Int = entries.count { applyRemote(it) }
 
     /**
+     * Settings › About › "Import data": merges the entries of an export ([com.ffmathy.pooparazzi.core.export.LogExport])
+     * with the rules of [applyRemoteAll] (last-writer-wins by [Entry.updatedAtMillis], each baby's conflicts resolved
+     * once), so importing the same file twice, or a file older than the log, changes nothing. What is stored goes on
+     * to the other device and the backend like a local write. Returns how many entries were stored.
+     */
+    suspend fun importEntries(entries: List<Entry>): Int = applyRemoteAll(entries)
+
+    /**
      * Removes soft-deleted entries whose deletion is older than [EntryRules.SOFT_DELETE_RETENTION_MILLIS] and has
      * reached sync (and the backend, where there is one). Their Data Layer items are kept (as `deleted = true`), so a device that was away the whole
      * time still learns of the deletion. Returns how many were purged.
