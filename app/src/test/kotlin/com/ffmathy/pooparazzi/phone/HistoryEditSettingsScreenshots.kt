@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -75,6 +76,16 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
 
     @Test fun settings() = screen("16-settings", night = true) {
         SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets)
+    }
+
+    /** Settings › About scrolled into view: the privacy policy and "Download my data" (BABIES_AND_BACKUP §3.2). */
+    @Test fun settingsAbout() {
+        compose.setContent {
+            NightLightTheme(night = false) { SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets) }
+        }
+        val export = ApplicationProvider.getApplicationContext<Application>().getString(R.string.settings_export)
+        compose.onNodeWithText(export).performScrollTo()
+        compose.onRoot().captureRoboImage(path("43-settings-about", tour = true))
     }
 
     /** Several babies (BABIES_AND_BACKUP §2): History's baby label, and Settings › Babies with twins and an unnamed third. */

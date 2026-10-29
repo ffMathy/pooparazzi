@@ -403,6 +403,34 @@ class CloudBackupTest {
         assertNull(phone.repo.get(feed.id))
     }
 
+    @Test
+    fun aDeletedEntryGoesUpWithoutWhatWasLogged() = runTest {
+        val phone = Phone(this, alice)
+        phone.backup.start()
+        phone.baby.value = twin
+        val diaper = phone.repo.logDiaper(now - minute, pee = true, poop = true)
+        advanceUntilIdle()
+        assertTrue(store.entries(alice.fid).getValue(diaper.id).poop)
+
+        phone.repo.delete(diaper.id)
+        advanceUntilIdle()
+        val local = phone.repo.get(diaper.id)!!
+        assertEquals(
+            "only the id, kind, baby and write clock",
+            Entry(id = diaper.id, kind = diaper.kind, startMillis = 0, updatedAtMillis = local.updatedAtMillis, deleted = true, babyId = twin),
+            store.entries(alice.fid).getValue(diaper.id),
+        )
+        assertTrue("this phone keeps its own copy until it is purged", local.poop)
+        assertTrue(phone.pending().isEmpty())
+
+        // Another phone of the family learns of the deletion.
+        val second = Phone(this, alice)
+        second.backup.start()
+        advanceUntilIdle()
+        assertTrue(second.repo.get(diaper.id)!!.deleted)
+        assertTrue(second.all().none { it.id == diaper.id })
+    }
+
     // ---- Failures ---------------------------------------------------------------------------------
 
     @Test

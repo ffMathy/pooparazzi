@@ -102,7 +102,7 @@ The first Settings section. One row that opens the **Account** screen, whose sum
 
 While signed in, Home's and History's top bars also show the backup as a small **cloud icon** next to the watch icon, with no text (DESIGN_SPEC §4.5): a tick when backed up, an arrow while backing up, a slash offline, "!" in error colour for an error (a 48 dp button that backs up again) and for a deleted backup (not a button). TalkBack reads the row's status line ("Backed up · 14:31"). Signed out, or in a build without Firebase, there is no cloud icon.
 
-Settings › About gains a **Privacy policy** row that opens `https://<project-id>.web.app/privacy` in the browser.
+Settings › About gains a **Privacy policy** row that opens `https://<project-id>.web.app/privacy` in the browser, and under it **Download my data** · "The whole log and the babies' names as a JSON file" (GDPR art. 15, 20). It asks where to save `pooparazzi-log-<date>.json` (the system's file picker) and then says "Saved 214 entries" or "Couldn't save the file. Try again." in a toast. The file (`LogExport`) holds `format: "pooparazzi-log"`, `version: 1`, `exportedAtMillis`, the babies with their names, and every entry on the phone that is not deleted, of every baby, oldest first, in the backup's JSON shape. It works with or without an account. What only the backend holds (the account, the family's member list) is given by email on request (PRIVACY.md §8).
 
 ### 3.3 Account screen and signing in
 
@@ -156,6 +156,8 @@ families/{fid}/babies/{babyId}      { json: {id, name, updatedAtMillis} (≤ 2 K
 invites/{code}                      { familyId, createdBy, expiresAt, email? }
 users/{uid}/entries/{entryId}       the backup from before families: read once to migrate, then deleted
 ```
+
+A **deleted** entry is uploaded as a tombstone (`Entry.forCloud`): its id, kind, baby id, `updatedAtMillis` and `deleted: true`, with `startMillis` 0 and every detail (amount included) cleared, so what was logged does not stay in the backup once it is deleted (PRIVACY.md §2, §6). The phone that deleted it keeps its own copy until it is purged (7 days); the family's other phones merge the tombstone. Accounts unused for 2 years, the data of accounts deleted otherwise, and expired invites are deleted by the weekly retention job (BACKEND.md › Retention).
 
 No settings and no current baby are stored. The rules ([`firebase/firestore.rules`](../../firebase/firestore.rules), summarised in BACKEND.md) let only a family's members read and write its entries and babies, in exactly that shape, and let accounts with a verified email join only with a valid invite from a current member. A family id is a random id, used once (the family document is never deleted); an invite code is 128 random bits in URL-safe base64 without padding (22 characters).
 

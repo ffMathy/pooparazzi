@@ -24,7 +24,7 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 - **Phone ↔ watch sync** over the Wearable **Data Layer**. Both apps log offline and merge by last-writer-wins; the babies' names and the language follow the phone. The sync state is a small icon, not text: a watch (and, while signed in, a cloud for the backup) under the name on the phone, a phone on the watch, each marked with a tick, "…", a slash or "!" (tap "!" to retry); TalkBack reads the full status.
 - **Optional backup** to a small Firebase backend (free Spark plan, no Cloud Functions): sign in at any time, with Google or a sign-in link sent by email (no passwords), and everything logged so far is backed up; sign in on a new phone to restore it, babies and names included. Without an account the log stays on the phone and the watch, and the app says so. Setup: [docs/BACKEND.md](docs/BACKEND.md).
 - **Families**: invite a partner or a grandparent with a single-use link (valid 6 days) from Settings › Family. Everyone in the family sees the same babies, with their names, and every member's log; joining adds your own log to the family's. Each phone keeps its own current baby. Leave at any time; the family's creator can remove members (and hands the family to the longest-standing member on leaving). Nothing is uploaded until you agree on a consent screen after signing in.
-- **Privacy**: no ads, no analytics, no tracking. Names and the log are shared only with your family's members. The [privacy policy](docs/PRIVACY.md) is also published on the app's website and linked from Settings › About.
+- **Privacy**: no ads, no analytics, no tracking. Names and the log are shared only with your family's members. The [privacy policy](docs/PRIVACY.md) is also published on the app's website and linked from Settings › About, beside **Download my data** (the log and the babies' names as a JSON file). Deleted entries are backed up without what was logged, and a weekly job deletes accounts unused for 2 years. The records of processing, the impact assessment and the breach plan are in [docs/privacy/](docs/privacy).
 - **Glanceable surfaces**:
   - Phone: two **Glance widgets** (a 4×2 log widget and a 3×1 quick widget, both with Feed, Diaper and Sleep; Feed and Diaper open the same sheets as in the app, the sleep toggle works in place), the 4×2 also on the **cover screen of Samsung flip phones**, and an **ongoing notification** for a running sleep (promoted to a Live Update where Android supports it) showing how long it has run, the last feed and diaper, and today's counts. "Woke up" on it leaves a notification with −5m / −10m / −15m to move the wake-up time.
   - Watch: a **Tile** (Feed and Diaper open the watch app's own screens, the sleep toggle works in place), four **complications** (since last feed, last diaper, asleep/awake, sleep and last feed) and an **Ongoing Activity** while a sleep runs.
@@ -85,9 +85,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-account-link-sent.png" width="200" alt="Account: Check your email, the sign-in link went to parent@example.com, Send again and Use another email"> | <img src="docs/screenshots/en/phone-settings-family.png" width="200" alt="Settings, Family: you started the family, a partner and a grandparent with Remove, Invite someone and Leave family"> | <img src="docs/screenshots/en/phone-join-family.png" width="200" alt="Join partner@example.com's family? Your babies and log are added and shared; Join and Not now"> |
 
-| Consent before the first upload | Removing a member | A deletion link asks again |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-consent.png" width="200" alt="Back up to Google Firebase? What is uploaded, who sees it, where, and changing your mind; I agree and Not now, sign out"> | <img src="docs/screenshots/en/phone-family-remove.png" width="200" alt="Remove partner@example.com? They'll stop seeing the family's log from now on; what's already on their phone stays there"> | <img src="docs/screenshots/en/phone-account-delete-link.png" width="200" alt="Delete account? This link deletes your account. Tap Delete to go ahead; Cancel and Delete"> |
+| Consent before the first upload | Removing a member | A deletion link asks again | Settings, About |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/phone-consent.png" width="200" alt="Back up to Google Firebase? What is uploaded, who sees it, where, and changing your mind; I agree and Not now, sign out"> | <img src="docs/screenshots/en/phone-family-remove.png" width="200" alt="Remove partner@example.com? They'll stop seeing the family's log from now on; what's already on their phone stays there"> | <img src="docs/screenshots/en/phone-account-delete-link.png" width="200" alt="Delete account? This link deletes your account. Tap Delete to go ahead; Cancel and Delete"> | <img src="docs/screenshots/en/phone-settings-about.png" width="200" alt="Settings, About: the version, Privacy policy, Download my data and Font licences"> |
 
 ### Watch
 
@@ -121,9 +121,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/da/phone-welcome.png" width="150" alt="Velkommen: Din log bliver på denne telefon"> | <img src="docs/screenshots/da/phone-account.png" width="150" alt="Konto: Fortsæt med Google eller brug e-mail"> | <img src="docs/screenshots/da/phone-settings-family.png" width="150" alt="Indstillinger, Familie: medlemmerne, Invitér nogen og Forlad familien"> | <img src="docs/screenshots/da/phone-join-family.png" width="150" alt="Bliv medlem af familien hos partner@example.com?"> | <img src="docs/screenshots/da/watch-main-twins.png" width="130" alt="Ur, hovedskærm med Noa i tiden"> | <img src="docs/screenshots/da/watch-baby-picker.png" width="130" alt="Ur: Skift barn"> |
 
-| Samtykke | Fjern et medlem |
-|:---:|:---:|
-| <img src="docs/screenshots/da/phone-consent.png" width="150" alt="Tag backup i Google Firebase? Hvad der uploades, hvem der ser det, hvor, og hvis du fortryder; Jeg giver samtykke og Ikke nu, log ud"> | <img src="docs/screenshots/da/phone-family-remove.png" width="150" alt="Fjern partner@example.com? Det, der allerede er på deres telefon, bliver der"> |
+| Samtykke | Fjern et medlem | Indstillinger, Om |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/da/phone-consent.png" width="150" alt="Tag backup i Google Firebase? Hvad der uploades, hvem der ser det, hvor, og hvis du fortryder; Jeg giver samtykke og Ikke nu, log ud"> | <img src="docs/screenshots/da/phone-family-remove.png" width="150" alt="Fjern partner@example.com? Det, der allerede er på deres telefon, bliver der"> | <img src="docs/screenshots/da/phone-settings-about.png" width="150" alt="Indstillinger, Om: Privatlivspolitik og Download mine data"> |
 
 Every image above also exists in the other language: swap `en` and `da` in the path ([`docs/screenshots/`](docs/screenshots)).
 
@@ -135,7 +135,7 @@ Every image above also exists in the other language: swap `en` and `da` in the p
 | [`app/`](app) | The phone app (Compose, Material 3): Home, the Feed (with its Breast step) / Diaper sheets, History, Statistics, Edit, Settings, Welcome and Account (`account/`: Firebase Authentication and the Firestore backup), the Glance widgets (`widget/`) and the running-sleep notifications (`notify/`). |
 | [`wear/`](wear) | The Wear OS app (Compose for Wear OS, Material 3): Main, Feed type, Side, Diaper, Logged, Today and Adjust, plus the Tile (`tile/`), complications (`complication/`) and the Ongoing Activity (`ongoing/`). |
 | [`docs/design/`](docs/design) | The design: [`DESIGN_SPEC.md`](docs/design/DESIGN_SPEC.md) (the "Night Light" direction: screens, tokens, icons, accessibility) and [`V1_ADDITIONS.md`](docs/design/V1_ADDITIONS.md) (feed types, tick-ordered sides, optional diaper details, English + Danish) and [`BABIES_AND_BACKUP.md`](docs/design/BABIES_AND_BACKUP.md) (several babies, the optional account, backup and families); each later one wins where they differ. |
-| [`firebase/`](firebase) | The backend: Firestore security rules, their emulator tests, the Hosting website (`hosting/`: App Links file, invite and sign-in landing pages, privacy policy) and the deploy configuration ([docs/BACKEND.md](docs/BACKEND.md)). |
+| [`firebase/`](firebase) | The backend: Firestore security rules, the retention job (`retention/`), their emulator tests, the Hosting website (`hosting/`: App Links file, invite and sign-in landing pages, privacy policy) and the deploy configuration ([docs/BACKEND.md](docs/BACKEND.md)). |
 | [`scripts/`](scripts) | `readme_screenshots.py`, which builds the README images. |
 | [`third_party/fonts/`](third_party/fonts) | Licences for the bundled fonts (Atkinson Hyperlegible Next and Google Sans Flex, both SIL OFL 1.1). |
 
@@ -176,7 +176,7 @@ Open the phone app once and set the baby's name in Settings › Babies (and add 
 
 Everything runs on the JVM with Robolectric (no emulator needed): view models, the repository and sync merge, formatting in both languages, TalkBack descriptions, navigation, widgets, the Tile layout and complications, and smoke tests of the apps' entry points. Statistics has plain JUnit tests of its rules in `core` (which days count, rounding, ranges, DST days and chart bins), plus view-model, TalkBack (English and Danish), navigation and screenshot tests in `app`.
 
-The backend's Firestore security rules have their own tests on the Firestore emulator (Node.js 22 and JDK 21):
+The backend's Firestore security rules and the retention job have their own tests on the Firestore and Authentication emulators (Node.js 22 and JDK 21):
 
 ```sh
 cd firebase && npm install && npm test

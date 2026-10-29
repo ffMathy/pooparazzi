@@ -17,7 +17,7 @@ The data controller is **Mathias Lorenzen**, Denmark, the developer of Pooparazz
 | What | Details | Why |
 |---|---|---|
 | Your account | Your email address, a user id, when the account was created and last signed in. If you sign in with Google, Firebase Authentication also keeps the name and profile picture link of your Google account (the app does not use them). There is no password: you sign in with Google or with a link sent to your email. | To sign you in and keep your data yours |
-| Your log | Every entry: its times, its kind (feed, diaper, sleep), the feed type and breast side, the diaper's pee and poop with optional colour and texture, which baby it belongs to, and when it was last changed or deleted | To back it up, restore it on a new phone and share it with your family |
+| Your log | Every entry: its times, its kind (feed, diaper, sleep), the feed type and breast side, the diaper's pee and poop with optional colour and texture, which baby it belongs to, and when it was last changed. A deleted entry stays only as a marker that tells your family's other phones it is gone (its id, kind, baby and when it was deleted), without its times or details | To back it up, restore it on a new phone and share it with your family |
 | Your babies | Each baby's name (whatever you type; a nickname is fine) and an id | To show the same babies, with their names, on every family member's phone |
 | Your family | The email address of every member, when they joined and which invite they used; who runs the family (the user id of its creator); invites (the family, who made it, the inviter's email, when it expires) | To let the members see who is in the family, to let its creator remove members, and to let an invited person join |
 
@@ -57,8 +57,10 @@ Your information is kept until you delete it, as follows:
 - **Leave a family** in Settings › Family. Your membership (and your email address in the member list) is removed, and so are the unused invites you made on that phone. Entries already logged into the family stay in the family's shared log for its other members, because they are part of the log they share; your phone keeps its own copy and backs it up into a new, empty family of your own.
 - **If you are removed** from a family, your membership is deleted; your phone keeps its log and backs it up into a new family of your own.
 - **When the last member leaves or deletes their account**, the family's log and babies are deleted with it. What stays is an empty record of the family: its random id, the user id of whoever last ran it, and when it was created, so that no one can ever create a family with the same id and take over what still refers to it (an old invite, say). It holds no email address, log or names.
-- An **invite** is deleted when it is used, or when its maker leaves the family or deletes their account on the phone it was made on. It stops working after 6 days, or as soon as its maker is no longer in the family, and the database deletes expired invites automatically (usually within a day after they expire).
+- An **invite** is deleted when it is used, or when its maker leaves the family or deletes their account on the phone it was made on. It stops working after 6 days, or as soon as its maker is no longer in the family, and the database deletes expired invites automatically (usually within a day after they expire); a weekly clean-up removes any that remain.
 - **Signing out** keeps what is stored as it is; nothing more is uploaded from that phone, and signing in again asks for your consent again.
+- **Deleting an entry** removes its times and details from the backup at once; only the marker described in section 2 stays, until the family's log is deleted.
+- **Accounts nobody uses** are deleted automatically: an account with no sign-in and no use of the app for **2 years** is deleted with everything "Delete account" deletes, by a weekly clean-up. The same clean-up deletes what is left in the database of accounts removed in other ways.
 - You can also ask for deletion **by email** to [mathias.lorenzen@live.com](mailto:mathias.lorenzen@live.com), for example if you no longer have the app. Please write from the address of the account.
 
 Deleted data is removed from Google's systems as described in Google's data processing terms (backups can take a little longer to expire).
@@ -75,7 +77,7 @@ Under the GDPR you have the right to:
 - **rectify** it (you can rename babies and edit or delete entries in the app at any time);
 - **erase** it (section 6);
 - **restrict** or **object** to its processing;
-- **data portability**: receive it in a structured, machine-readable format (JSON);
+- **data portability**: receive it in a structured, machine-readable format (JSON). Settings › About › **Download my data** saves the log and the babies (with their names) that are on your phone as a JSON file; write to us for what only the backup holds, such as your account and your family's member list;
 - **withdraw your consent** at any time, without affecting what was done before.
 
 Write to [mathias.lorenzen@live.com](mailto:mathias.lorenzen@live.com); you will get an answer within one month. You can also complain to the Danish Data Protection Agency, **Datatilsynet** (Carl Jacobsens Vej 35, 2500 Valby, Denmark, [www.datatilsynet.dk](https://www.datatilsynet.dk)), or to the data protection authority where you live.
@@ -101,8 +103,8 @@ Mathias Lorenzen · [mathias.lorenzen@live.com](mailto:mathias.lorenzen@live.com
 - **Med konto** gemmes din e-mail, din log, dine børns navne og din families medlemmer (deres e-mails) i Google Firebase, så du og din familie kan se dem. Databasen ligger i EU (`eur3`). Google er databehandler.
 - **Hvorfor:** med dit samtykke (GDPR art. 6(1)(a)) og, for oplysningerne om dit barn, dit udtrykkelige samtykke som forælder (art. 9(2)(a)). Appen beder om det på en særskilt skærm, før noget uploades (også før du kan blive medlem af en familie), og intet uploades, før du trykker "Jeg giver samtykke". Du trækker det tilbage ved at logge ud, forlade familien eller slette kontoen.
 - **Hvem ser det:** kun du og medlemmerne af din familie. Et medlem, der forlader familien eller fjernes, beholder det, der allerede er på deres telefon. Ingen reklamer, ingen analyse, intet sælges.
-- **Sletning:** slet kontoen i appen (Indstillinger › Konto), forlad familien (Indstillinger › Familie), eller skriv til os. Når det sidste medlem forlader familien, slettes familiens log og børn; kun en tom post om familien (dens id, hvem der sidst stod for den, og hvornår den blev oprettet) bliver, så ingen kan overtage den. Invitationer virker i 6 dage og slettes automatisk, når de er udløbet.
-- **Dine rettigheder:** indsigt, berigtigelse, sletning, begrænsning, indsigelse, dataportabilitet og tilbagetrækning af samtykke. Du kan klage til **Datatilsynet** (www.datatilsynet.dk).
+- **Sletning:** slet kontoen i appen (Indstillinger › Konto), forlad familien (Indstillinger › Familie), eller skriv til os. Når det sidste medlem forlader familien, slettes familiens log og børn; kun en tom post om familien (dens id, hvem der sidst stod for den, og hvornår den blev oprettet) bliver, så ingen kan overtage den. Invitationer virker i 6 dage og slettes automatisk, når de er udløbet. En slettet registrering bliver kun som en markering uden tidspunkter og detaljer, og en konto, der ikke er brugt i 2 år, slettes automatisk.
+- **Dine rettigheder:** indsigt, berigtigelse, sletning, begrænsning, indsigelse, dataportabilitet og tilbagetrækning af samtykke. Indstillinger › Om › **Download mine data** gemmer loggen og børnene som en JSON-fil. Du kan klage til **Datatilsynet** (www.datatilsynet.dk).
 - **Børn:** appen er til forældre; oplysningerne om barnet indtastes af forælderen.
 
 Den fulde politik ovenfor (på engelsk) gælder.

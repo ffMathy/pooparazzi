@@ -1,5 +1,11 @@
 package com.ffmathy.pooparazzi.phone.ui.settings
 
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,8 +76,8 @@ import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.notify.NotificationLink
-import com.ffmathy.pooparazzi.phone.ui.account.backupStatusText
 import com.ffmathy.pooparazzi.phone.notify.openNotificationSettings
+import com.ffmathy.pooparazzi.phone.ui.account.backupStatusText
 import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
 import com.ffmathy.pooparazzi.phone.ui.components.GroupRow
 import com.ffmathy.pooparazzi.phone.ui.components.RadioGroup
@@ -86,6 +93,9 @@ import com.ffmathy.pooparazzi.phone.ui.family.inviteShareIntent
 import com.ffmathy.pooparazzi.phone.ui.history.HistoryRowDefaults
 import com.ffmathy.pooparazzi.phone.ui.preview.SettingsSamples
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
+import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Settings wired to its view model and navigation. */
@@ -108,6 +118,11 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
         onPauseOrDispose {}
     }
     val link by rememberUpdatedState(notifications)
+    val scope = rememberCoroutineScope()
+    // "Download my data": the system's file picker chooses where; the file is written there, and a toast says so.
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(LogExportFile.MIME_TYPE)) { uri ->
+        if (uri != null) scope.launch { context.exportLog(viewModel, uri) }
+    }
     val actions = remember(viewModel, context, uriHandler) {
         object : SettingsActions by viewModel {
             override fun onBack() = back()
@@ -117,6 +132,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
             override fun onOpenPrivacy() {
                 viewModel.state.value?.let { runCatching { uriHandler.openUri(it.privacyUrl) } }
             }
+            override fun onExport() = exporter.launch(LogExportFile.name(LocalDate.now()))
         }
     }
     // "Invite someone": the share sheet with the invite's link and text.
@@ -201,7 +217,7 @@ fun SettingsScreen(
                 NotificationsRow(notifications, actions::onOpenNotificationSettings)
             }
             Section(stringResource(R.string.settings_section_about)) {
-                AboutGroup(state.versionName, actions::onOpenPrivacy, actions::onOpenLicences)
+                AboutGroup(state.versionName, actions::onOpenPrivacy, actions::onExport, actions::onOpenLicences)
             }
         }
     }
@@ -442,11 +458,11 @@ private fun LinkRow(
 }
 
 /**
- * "Pooparazzi · Version 0.1.0", "Privacy policy" (opens it in the browser, BABIES_AND_BACKUP §3.2) and "Font licences"
- * (opens the OFL texts).
+ * "Pooparazzi · Version 0.1.0", "Privacy policy" (opens it in the browser, BABIES_AND_BACKUP §3.2), "Download my data"
+ * (the log and the babies' names as a JSON file, wherever the parent saves it) and "Font licences" (opens the OFL texts).
  */
 @Composable
-private fun AboutGroup(versionName: String, onOpenPrivacy: () -> Unit, onOpenLicences: () -> Unit) {
+private fun AboutGroup(versionName: String, onOpenPrivacy: () -> Unit, onExport: () -> Unit, onOpenLicences: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
         GroupRow(first = true, last = false) {
@@ -465,10 +481,35 @@ private fun AboutGroup(versionName: String, onOpenPrivacy: () -> Unit, onOpenLic
         GroupRow(first = false, last = false) {
             LinkRow(stringResource(R.string.settings_privacy), stringResource(R.string.settings_privacy_summary), onOpenPrivacy)
         }
+        GroupRow(first = false, last = false) {
+            LinkRow(stringResource(R.string.settings_export), stringResource(R.string.settings_export_summary), onExport)
+        }
         GroupRow(first = false, last = true) {
             LinkRow(stringResource(R.string.settings_font_licences), stringResource(R.string.settings_font_licences_summary), onOpenLicences)
         }
     }
+}
+
+/** Writes "Download my data" to [uri] and says how it went. */
+private suspend fun Context.exportLog(viewModel: SettingsViewModel, uri: Uri) {
+    val message = try {
+        val count = checkNotNull(contentResolver.openOutputStream(uri)) { "No stream for $uri" }.use { viewModel.export(it) }
+        resources.getQuantityString(R.plurals.settings_export_done, count, count)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w("Settings", "Could not save the export", e)
+        getString(R.string.settings_export_failed)
+    }
+    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+}
+
+/** The export's file type and suggested name. */
+internal object LogExportFile {
+    const val MIME_TYPE = "application/json"
+
+    /** "pooparazzi-log-2026-10-29.json". */
+    fun name(date: LocalDate): String = "pooparazzi-log-$date.json"
 }
 
 @Preview(name = "Night", widthDp = 390, heightDp = 1000)

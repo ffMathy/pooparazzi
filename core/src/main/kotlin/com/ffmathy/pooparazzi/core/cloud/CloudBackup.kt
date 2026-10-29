@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.core.cloud
 import android.util.Log
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
+import com.ffmathy.pooparazzi.core.model.forCloud
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -36,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    its own: an upload is a plain overwrite, and would otherwise put an older version over it.
  * 3. **Push**: the current version of the pending babies, then of the pending rows, in batches; each is cleared
  *    unless written again meanwhile.
+ *    A deleted row goes up as a tombstone without its time and details ([forCloud]).
  *
  * Syncs run when an account signs in or its family changes, on [requestSync] (the app in the foreground, at most once a
  * minute) and [syncNow], and [pushDelayMillis] after a write leaves rows or babies pending. Nothing keeps a listener
@@ -312,7 +314,8 @@ class CloudBackup(
             checkFamily(family)
             val batch = repository.cloudPending(CloudStore.UPLOAD_BATCH)
             if (batch.isEmpty()) return
-            store.upload(family, batch)
+            // A deleted row goes up as a tombstone without what was logged (forCloud); the flags follow the row itself.
+            store.upload(family, batch.map { it.forCloud() })
             // Nothing cleared: every row was written again meanwhile. Stop rather than chase them: the next sync goes on.
             if (repository.markCloudSynced(batch) == 0) return
         }
