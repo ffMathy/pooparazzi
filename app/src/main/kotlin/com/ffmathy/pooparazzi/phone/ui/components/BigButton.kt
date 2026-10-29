@@ -1,10 +1,7 @@
 package com.ffmathy.pooparazzi.phone.ui.components
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,8 +13,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,7 +33,6 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import kotlin.math.ceil
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
-import com.ffmathy.pooparazzi.phone.ui.theme.LocalNightLightMotion
 
 /** Home's big buttons (DESIGN_SPEC §3.3.1, §5.8): 96 dp tall, icon 32 + 12 + headlineSmall. */
 object BigButtonDefaults {
@@ -47,13 +41,11 @@ object BigButtonDefaults {
     /** On a short screen (the Lamp already at its minimum size) the buttons give up 16 dp each before Home scrolls. */
     val CompactHeight: Dp = 80.dp
     val PillRadius: Dp = 48.dp
-    val PressedRadius: Dp = 16.dp
     val IconSize: Dp = 32.dp
 }
 
 /**
- * A big Home button. The shape morphs from [radius] to [pressedRadius] while pressed (expressive by day, standard
- * motion at night). Labels wrap to two lines at large font scales; the button grows instead of clipping.
+ * A big Home button. Its shape stays [radius] whatever its state (pressed shows as the ripple). Labels wrap to two lines at large font scales; the button grows instead of clipping.
  *
  * @param icon drawn in [iconTint]; pass `Color.Unspecified` for a two-tone vector.
  * @param onClickLabel what a tap does, for accessibility services ("End sleep").
@@ -70,7 +62,6 @@ fun BigButton(
     labelColor: Color,
     modifier: Modifier = Modifier,
     radius: Dp = BigButtonDefaults.PillRadius,
-    pressedRadius: Dp = BigButtonDefaults.PressedRadius,
     border: BorderStroke? = null,
     onClickLabel: String? = null,
     semantics: (SemanticsPropertyReceiver.() -> Unit)? = null,
@@ -78,14 +69,7 @@ fun BigButton(
     sublabel: String? = null,
     sublabelSpoken: String? = null,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val corner by animateDpAsState(
-        targetValue = if (pressed) pressedRadius else radius,
-        animationSpec = LocalNightLightMotion.current.fastSpatialSpec(),
-        label = "corner",
-    )
-    val shape = RoundedCornerShape(corner)
+    val shape = RoundedCornerShape(radius)
     Surface(
         modifier = modifier
             .heightIn(min = minHeight),
@@ -96,7 +80,7 @@ fun BigButton(
         Row(
             Modifier
                 .clickable(
-                    interactionSource = interaction,
+                    interactionSource = null,
                     indication = ripple(),
                     onClickLabel = onClickLabel,
                     role = Role.Button,

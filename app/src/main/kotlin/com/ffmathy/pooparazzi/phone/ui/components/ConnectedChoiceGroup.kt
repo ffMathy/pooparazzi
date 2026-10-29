@@ -1,6 +1,5 @@
 package com.ffmathy.pooparazzi.phone.ui.components
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -20,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -36,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
-import com.ffmathy.pooparazzi.phone.ui.theme.LocalNightLightMotion
 
 /** Geometry of the connected choice group. */
 internal object ConnectedGroupDefaults {
@@ -48,16 +45,13 @@ internal object ConnectedGroupDefaults {
 
     /** Corners between neighbours. */
     val InnerCorner: Dp = 6.dp
-
-    /** A selected button rounds all its corners, so the selection reads by shape as well as by fill. */
-    val SelectedCorner: Dp = 24.dp
 }
 
 /**
  * A single-select connected button group (V1_ADDITIONS §4: "Breast | Formula | Food", the four sides; Settings:
  * "Auto | Night | Day"). Neutral chrome, never an event hue, in the chips' language (DESIGN_SPEC §3.3.1): every button
  * has a 1 dp outline border and a transparent fill; the selected one fills primaryContainer, keeps the border, gains a
- * leading `check` 16 and fully rounded corners (shape, check and fill all tell the selection).
+ * leading `check` 16 and keeps its corners (the shape never changes with the state; check and fill tell the selection).
  *
  * Buttons are laid out [columns] per row with 2 dp gaps; the group's outer corners are r 20 and the inner ones r 6.
  * Labels may wrap to two lines (Danish "Modermælks­erstatning" at its soft hyphen); every button in a row then takes
@@ -126,14 +120,13 @@ private fun ChoiceButton(
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
-    val motion = LocalNightLightMotion.current
     fun corner(outer: Boolean) = if (outer) ConnectedGroupDefaults.OuterCorner else ConnectedGroupDefaults.InnerCorner
-    val selectedCorner = ConnectedGroupDefaults.SelectedCorner
-    val topStart by animateDpAsState(if (selected) selectedCorner else corner(position.top && position.start), motion.fastSpatialSpec())
-    val topEnd by animateDpAsState(if (selected) selectedCorner else corner(position.top && position.end), motion.fastSpatialSpec())
-    val bottomStart by animateDpAsState(if (selected) selectedCorner else corner(position.bottom && position.start), motion.fastSpatialSpec())
-    val bottomEnd by animateDpAsState(if (selected) selectedCorner else corner(position.bottom && position.end), motion.fastSpatialSpec())
-    val shape = RoundedCornerShape(topStart, topEnd, bottomEnd, bottomStart)
+    val shape = RoundedCornerShape(
+        topStart = corner(position.top && position.start),
+        topEnd = corner(position.top && position.end),
+        bottomEnd = corner(position.bottom && position.end),
+        bottomStart = corner(position.bottom && position.start),
+    )
     val content = if (selected) colors.onPrimaryContainer else colors.onSurface
     Box(
         modifier
