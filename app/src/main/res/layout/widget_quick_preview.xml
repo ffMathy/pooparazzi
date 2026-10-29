@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The 2×1 widget in the picker on Android 12–14 (widget_quick_info previewLayout); see widget_log_preview.xml. -->
+<!-- The 3×1 widget in the picker on Android 12–14 (widget_quick_info previewLayout); see widget_log_preview.xml. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -8,11 +8,10 @@
     android:padding="12dp">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:layout_weight="1"
             android:background="@drawable/widget_preview_feed"
-            android:minWidth="52dp"
-            android:paddingHorizontal="12dp"
             android:gravity="center"
             android:orientation="vertical">
 
@@ -41,10 +40,39 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:background="@drawable/widget_preview_diaper"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/x_diaper"
+                android:tint="@color/widget_preview_diaper_s" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:maxLines="1"
+                android:text="@string/kind_diaper"
+                android:textColor="@color/widget_preview_diaper_on"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="8dp"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
             android:background="@drawable/widget_preview_sleep_square"
             android:gravity="center"
             android:orientation="vertical"
-            android:paddingHorizontal="8dp">
+            android:paddingHorizontal="4dp">
 
             <ImageView
                 android:layout_width="24dp"

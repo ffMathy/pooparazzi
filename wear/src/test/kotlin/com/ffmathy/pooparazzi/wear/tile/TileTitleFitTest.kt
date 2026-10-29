@@ -81,9 +81,10 @@ class TileTitleFitTest {
         val proto = materialScopeWithResources(danish, ProtoLayoutScope(), device, false, TileTheme.colorScheme) {
             pooparazziTile(state, SurfaceText.from(danish, SampleData.ZONE), token = 1, dynamic = false)
         }.toString()
-        assertTrue(proto.contains("value=Begge 14:32 · ,"))
+        // "Vågnede 14:32 · Fortryd" is too wide for the title: the time goes, Fortryd stays whole.
+        assertTrue(proto.contains("value=Vågnede · ,"))
         assertTrue(proto.contains("value=Fortryd,"))
-        assertTrue(proto.contains("value=Tis og bæ kl. 14:32. Tryk på flisen for at fortryde,"))
+        assertTrue(proto.contains("value=Vågnede kl. 14:32. Tryk på flisen for at fortryde,"))
     }
 
     private fun device(sizeDp: Int, fontScale: Float = 1f) = DeviceParameters.Builder()
@@ -95,25 +96,6 @@ class TileTitleFitTest {
         .setDevicePlatform(DEVICE_PLATFORM_WEAR_OS)
         .setRendererSchemaVersion(VersionInfo.Builder().setMajor(1).setMinor(500).build())
         .build()
-
-    private fun rowB(labels: List<String>, sizeDp: Int, withTitle: Boolean, fontScale: Float = 1f) = RowBLabels.fitting(
-        labels,
-        TileTextMeasure.rowBLabelWidthDp(device(sizeDp, fontScale), withTitle, gapDp = 6f, horizontalPaddingDp = 6f),
-        fontScale,
-    )
-
-    @Test
-    fun rowBKeepsItsWordsWhereTheyFitClearOfTheRoundedEdges() {
-        val english = listOf("Pee", "Poop", "Both")
-        val danish = listOf("Tis", "Bæ", "Begge")
-        assertEquals(RowBLabels.LABEL_SMALL, rowB(english, 227, withTitle = true))
-        assertEquals(RowBLabels.LABEL_SMALL, rowB(danish, 227, withTitle = true))
-        // Narrow buttons: a size smaller rather than "Po…".
-        assertEquals(RowBLabels.BODY_SMALL, rowB(english, 192, withTitle = false))
-        // "Begge" would touch the curved edges (DESIGN_SPEC §3.6 tile at 192 dp, or at 1.3× font): icons only.
-        assertEquals(RowBLabels.ICONS_ONLY, rowB(danish, 192, withTitle = false))
-        assertEquals(RowBLabels.ICONS_ONLY, rowB(danish, 227, withTitle = true, fontScale = 1.3f))
-    }
 
     @Test
     fun onSmallWatchesTheRowAConfirmationFitsItsLine() {

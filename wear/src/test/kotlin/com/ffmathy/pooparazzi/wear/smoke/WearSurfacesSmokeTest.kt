@@ -80,11 +80,11 @@ class WearSurfacesSmokeTest {
         val resources = requestResources(provider, first.resourcesVersion)
         assertTrue("tile images are served: ${resources.idToImageMapping.keys}", resources.idToImageMapping.isNotEmpty())
 
-        // A tap on Pee in that layout (the first layout's token is 1) logs a diaper without opening the app.
-        val before = diaperCount()
-        val second = requestTile(provider, clickId = "log_pee#1")
+        // A tap on Start sleep in that layout (the first layout's token is 1) starts a sleep without opening the app.
+        val before = sleepCount()
+        val second = requestTile(provider, clickId = "sleep_start#1")
         assertTrue(second.tileTimeline!!.timelineEntries.isNotEmpty())
-        assertEquals("one pee logged from the tile", before + 1, diaperCount())
+        assertEquals("one sleep started from the tile", before + 1, sleepCount())
 
         // A renderer without dynamic text (schema 1.0) gets a static tile with a refresh interval.
         val static = requestTile(provider, clickId = null, renderer = 1 to 0)
@@ -120,7 +120,7 @@ class WearSurfacesSmokeTest {
     // --- helpers -------------------------------------------------------------------------------------------------
 
     /** Diapers in the store the tile service writes to (the process-wide Core graph). */
-    private fun diaperCount(): Int = runBlocking { Core.repository.observeEntries().first().count { it.kind == EntryKind.DIAPER } }
+    private fun sleepCount(): Int = runBlocking { Core.repository.observeEntries().first().count { it.kind == EntryKind.SLEEP } }
 
     private fun complication(service: XComplicationService, request: ComplicationRequest): ComplicationData? {
         val result = AtomicReference<Result<ComplicationData?>>()

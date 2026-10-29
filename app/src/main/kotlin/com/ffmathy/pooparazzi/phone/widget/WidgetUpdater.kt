@@ -77,10 +77,10 @@ object WidgetUpdater {
         enqueueUniqueWork("widget-refresh-$purpose-$at", ExistingWorkPolicy.KEEP, request)
     }
 
-    /** Stops the timed refreshes once no widget of either size is placed (a provider's last instance was removed). */
+    /** Stops the timed refreshes once no widget of any kind is placed (a provider's last instance was removed). */
     fun cancelIfNoneLeft(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
-        val left = listOf(LogWidgetReceiver::class.java, QuickWidgetReceiver::class.java)
+        val left = listOf(LogWidgetReceiver::class.java, QuickWidgetReceiver::class.java, CoverWidgetReceiver::class.java)
             .sumOf { manager.getAppWidgetIds(ComponentName(context, it)).size }
         if (left == 0) runCatching { WorkManager.getInstance(context).cancelAllWorkByTag(TAG_REFRESH) }
     }

@@ -51,7 +51,7 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 | Feature | Surfaces |
 |---|---|
 | One-tap logging of Feed and Sleep start/stop; Diaper in 2 taps (Diaper → Pee / Poop / Both) | Phone Home, watch Main |
-| One-tap Pee / Poop / Both | Phone widget (4×2), watch Tile |
+| Feed and Diaper open the app's own sheets/screens (offset, type, side order, pee/poop, colour, texture); sleep toggles in one tap | Phone widgets (4×2, 3×1, Samsung cover screen), watch Tile |
 | Status at a glance: time since last feed, awake/asleep duration, last diaper | Phone Home, watch Main, Tile, complications, widget, Live Update |
 | Undo after every log | Phone undo card, watch Logged screen, widget receipt, Tile title |
 | Backdating at log time and later editing | Diaper picker offsets, undo-card offsets, Adjust start, phone edit sheet, watch Adjust screen |
@@ -196,7 +196,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | P2 | Phone | Diaper sheet | Pee / Poop / Both, with the time stamped on the first tap and an optional backdate |
 | P3 | Phone | History | Day ribbon, counts, a tappable list of the day's entries, Add entry |
 | P4 | Phone | Edit sheet | Edit or delete an entry, or add a past one |
-| P5 | Phone | Home-screen widgets 4×2, 2×1 | One-tap logging, including the phone's one-tap Pee / Poop / Both |
+| P5 | Phone | Home-screen widgets 4×2, 3×1 | Feed and Diaper open the app's sheets; the sleep toggle logs in one tap |
 | P6 | Phone | Live Update (running sleep) | Status chip and an ongoing notification with "Woke up" |
 | P7 | Phone | Splash | System splash, dark at night and light by day |
 | W1 | Watch | Main, idle | Status block, Feed / Diaper, "Start sleep"; scroll list below |
@@ -421,20 +421,22 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
 
-Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (§8.5) and the device font (no tnum). They show **absolute times only, always with "at"** ("Fed at 12:22"). Buttons log in place without launching the app.
+Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (§8.5) and the device font (no tnum). They show **absolute times only, always with "at"** ("Fed at 12:22"). The sleep toggle logs in place without launching the app; Feed and Diaper open the app on the same Feed and Diaper sheets as Home's buttons, so the optional details (feed type and breast order, pee/poop, colour, texture) are asked for exactly as in the app.
 
 **4×2** (reference 358 × 208, system corner radius (reference r 24), surfaceContainer, padding 12)
 
 | Row | Idle | Asleep | Just logged |
 |---|---|---|---|
-| 1 (24, not a separate target) | `feed` 16 + 6 + "Fed at 12:22" labelLarge 15 sp onSurface; 16 gap; `pee` 16 + "Pee at 13:44" | "Fed at 01:40", "Pee at 01:52" | `check` 16 onSurfaceVariant + 6 + "Poop logged at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo poop") |
-| 2 (68) | 4 equal buttons, gap 8, r 20; icon 24 at +10, label 15 sp at +40: Feed (FEED colours), Pee, Poop, Both (split fill, two-tone icon, POOP onContainer label) | unchanged | unchanged |
+| 1 (24, not a separate target) | `feed` 16 + 6 + "Fed at 12:22" labelLarge 15 sp onSurface; 16 gap; `pee` 16 + "Pee at 13:44" | "Fed at 01:40", "Pee at 01:52" | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
+| 2 (68) | 2 equal buttons, gap 8, r 20; icon 24 at +10, label 15 sp at +40: Feed (FEED colours, opens the Feed sheet), Diaper (DIAPER colours, `diaper`, opens the Diaper sheet) | unchanged | unchanged |
 | 3 (68) | Sleep toggle, full width, r 34, SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake since 13:27" dataSmall | checked: r 20, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned `sleepRunning` 16 + 6 + "Asleep since 02:05" | unchanged |
 
 - Just logged: nothing else changes. No button moves, relabels or changes colour, and Undo never sits where a log button is. The receipt reverts on the next log or after 10 s.
 - The widget background (outside the buttons) opens the app with the undo card for the last widget log.
 
-**2×1** (reference 171 × 100, padding 12): two buttons 76 tall, r 20, content column (icon 24, label 14 sp): Feed (`feed`, "Feed"); Sleep (padding 0 8, label max 2 lines: "Start" / "sleep" at large font scales). When asleep, Sleep shows `wake` + "Woke up" with the checked style.
+**3×1** (reference 260 × 100, padding 12, minimum 160 wide): three equal buttons 76 tall, gap 8, r 20, content column (icon 24, label 14 sp, max 2 lines, never broken inside a word): Feed (`feed`, opens the Feed sheet); Diaper (`diaper`, DIAPER colours, opens the Diaper sheet); Sleep ("Start sleep", the toggle). When asleep, Sleep shows `wake` + "Woke up" with the checked style. Every widget offers all three: Feed, Diaper and Sleep. (It was a 2×1 with Feed and Sleep; the provider keeps its receiver so placed widgets survive.)
+
+**Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else.
 
 Breakpoints: §10.11.
 
@@ -593,14 +595,14 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 |---|---|
 | Header | `lamp` 24 `#E8D8C3`, y 11–35 (system app icon) |
 | Title (titleSlot) | y 37–53, titleSmall `#E8D8C3`, centred: **"Pee 48m ago"** (last diaper) |
-| Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; "Feed" labelMedium 15 sp `#FFDCBB` over "2h 10m ago" labelSmall `#FFDCBB` |
-| Row B | three buttons 57.3 wide, gap 6, 52 tall, r 26: content column icon 20 + label labelSmall 13 sp. Pee / Poop / Both in diaper colours (Both split, two-tone) |
+| Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; "Feed" labelMedium 15 sp `#FFDCBB` over "2h 10m ago" labelSmall `#FFDCBB`. Opens the app's Feed type screen |
+| Row B | Diaper button 184 × 52, r 26, DIAPER container `#13312C`: `diaper` 24 DIAPER strong at 16 from the start; "Diaper" labelMedium 15 sp `#BFE9E0` over "48m ago" (or "No diapers yet") labelSmall. Opens the app's Diaper screen, like Main's Diaper button; diapers are never logged from the tile |
 | EdgeButton | drawn 46 tall (y 179–225), 48 dp hit box, 9 dp below Row B; fill `#222844`, "Start sleep" labelMedium 15 sp `#D6DBF6` |
 
 | State | Title | Other changes |
 |---|---|---|
 | Idle | "Pee 48m ago" | — |
-| Just logged (10 s) | `check` 14 `#F2B577` + 4 + "Fed 14:32 · " `#E8D8C3` + `undo` 14 + 3 + "Undo" (weight 700) | Row A secondary "just now". The tile background opens Logged for that entry with Undo active at once |
+| Just logged (10 s, a Woke up or Sleep cancelled from the tile) | `check` 14 `#7C88C4` + 4 + "Woke up 14:32 · " `#E8D8C3` + `undo` 14 + 3 + "Undo" (weight 700) | The tile background opens Logged for that entry with Undo active at once |
 | Asleep | `sleepRunning` 14 `#7C88C4` + 4 + "Asleep 1h 07m" titleSmall `#AEB6E6` | Row A secondary "1h 32m ago"; EdgeButton fill `#2E3660` + 1.5 dp `#7C88C4` border, "Woke up" |
 | Guard (2 s) | `sleep` + "Already asleep" (or `awake` + "Already awake") in `#AEB6E6` | `Reject`; nothing moves |
 
@@ -1321,8 +1323,8 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 ### 10.11 Glance widget
 
-- 4×2 and 2×1 with `SizeMode.Responsive`. A 2×2 falls back to the 4×2 content without the status row.
-- `actionRunCallback` per button (no app launch). Idempotent writes. 48 dp targets. System corner radius. Generated previews (Glance 1.2 `providePreview`).
+- 4×2 and 3×1 with `SizeMode.Responsive`. A 2×2 falls back to the 4×2 content without the status row.
+- `actionRunCallback` for the sleep toggle and Undo (no app launch), idempotent writes; Feed and Diaper start the app on their sheet (`pooparazzi://home/feed`, `pooparazzi://home/diaper`). 48 dp targets. System corner radius. Generated previews (Glance 1.2 `providePreview`).
 - Absolute clock times only: RemoteViews cannot tick a relative "ago" in the app grammar, and the update budget would leave it stale.
 - Update the widget on every log and every sleep change.
 - **Palette**: build every colour as a single-value `ColorProvider` chosen at update time from the NIGHT / DAY token sets. No day/night pairs and no `GlanceTheme` dynamic colours. Call `updateAll()` at sunset, at sunrise, on an Appearance change and on every sleep start/stop.
@@ -1335,9 +1337,9 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 | Condition | Change |
 |---|---|
 | 4×2 narrower than 320 dp, or font scale ≥ 1.3 | hide the end-aligned "Awake since 13:27" / "Asleep since 02:05" in row 3. While asleep, show "Asleep since 02:05" in row 1 instead. (The guideline 4×2 is 276 dp wide, 252 inside the padding, against the 294 dp row 3 needs) |
-| 2×1 | Sleep button padding 0 8 dp, `maxLines = 2` |
-| 2×1 narrower than 160 dp | label "Sleep" (unchecked) / "Woke up" (checked) |
-| 2×1 narrower than 120 dp | icon-only buttons with content descriptions "Log feed" / "Start sleep" |
+| 3×1 where a word of "Start sleep" does not fit its button | label "Sleep" (unchecked) / "Woke up" (checked) |
+| 3×1 where any label still does not fit | icon-only buttons with content descriptions "Log feed" / "Log diaper" / "Start sleep" |
+| 3×1 narrower than 180 dp (an old 2×1) | padding 8, gaps 4, so the three 24 dp icons still fit |
 
 - QS sleep tile: optional, v1.1.
 

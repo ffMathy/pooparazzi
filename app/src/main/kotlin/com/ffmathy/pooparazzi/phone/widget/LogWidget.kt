@@ -19,12 +19,9 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
-import androidx.glance.background
 import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.RowScope
@@ -41,16 +38,18 @@ import androidx.glance.text.TextAlign
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
 import com.ffmathy.pooparazzi.phone.R
-import com.ffmathy.pooparazzi.phone.launch.DeepLinks
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import com.ffmathy.pooparazzi.phone.system.inAppLanguage
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
  * The 4×2 home-screen widget (P5, DESIGN_SPEC §3.3.6 with V1_ADDITIONS §2.1): a status row (the latest feed and diaper
- * as absolute times, or the receipt of the last widget log with Undo), Feed · Pee · Poop · Both, and the sleep toggle.
+ * as absolute times, or the receipt of the last widget log with Undo), Feed · Diaper, and the sleep toggle.
  *
- * Pee, Poop, Both and the toggle log in place without opening the app. Feed opens the app's Feed sheet.
+ * The toggle logs in place without opening the app. Feed and Diaper open the app's Feed and Diaper sheets, so the
+ * details (feed type, breast order, pee/poop, colour, texture) are asked for exactly as in the app.
+ *
+ * The same widget is also offered on the cover screen of Samsung's flip phones ([CoverWidgetReceiver]).
  */
 class LogWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(LogLayout.Sizes)
@@ -79,8 +78,8 @@ internal data class LogLayout(val statusRow: Boolean, val labels: Boolean, val w
     /** Row 1's width inside the 12 dp padding. */
     val rowWidth: Dp get() = width - 24.dp
 
-    /** One of the four log buttons (gaps 8). */
-    val buttonWidth: Dp get() = (width - 24.dp - 24.dp) / 4
+    /** One of the two log buttons (gap 8). */
+    val buttonWidth: Dp get() = (width - 24.dp - 8.dp) / 2
 
     companion object {
         val Sizes: Set<DpSize> = setOf(
@@ -124,7 +123,7 @@ internal fun LogWidgetContent(snapshot: WidgetSnapshot) {
                 StatusRow(snapshot, strings, colors, layout, measure, GlanceModifier.fillMaxWidth().height(48.dp))
                 Spacer(GlanceModifier.height(4.dp))
             }
-            LogButtons(snapshot, strings, colors, layout, measure, GlanceModifier.fillMaxWidth().defaultWeight())
+            LogButtons(strings, colors, layout, measure, GlanceModifier.fillMaxWidth().defaultWeight())
             Spacer(GlanceModifier.height(8.dp))
             SleepToggle(snapshot, strings, colors, layout, GlanceModifier.fillMaxWidth().defaultWeight())
         }
@@ -218,18 +217,12 @@ private fun GlanceModifier.clickableUndo(receipt: WidgetReceipt, description: St
     clickable(actionRunCallback<UndoWidgetLogAction>(actionParametersOf(UndoWidgetLogAction.EntryId to receipt.entryId)))
         .semantics { contentDescription = description }
 
-/** The 2 s guard, dedupe and "Undone" lines (DESIGN_SPEC §10.7). */
+/** The 2 s guard and "Undone" lines (DESIGN_SPEC §10.7). */
 @Composable
 private fun NoticeLine(notice: WidgetNotice, strings: WidgetStrings, colors: WidgetColors) {
-    val kind = notice.diaperKind
     val (icon, iconColor, textColor) = when (notice.type) {
         NoticeType.ALREADY_ASLEEP -> Triple(XDrawables.sleep, colors.sleep.strong, colors.sleep.text)
         NoticeType.ALREADY_AWAKE -> Triple(XDrawables.awake, colors.sleep.strong, colors.sleep.text)
-        NoticeType.ALREADY_LOGGED -> when (kind) {
-            DiaperKind.BOTH -> Triple(colors.bothIcon, null, colors.onSurfaceVariant)
-            null -> Triple(XDrawables.diaper, colors.pee.strong, colors.onSurfaceVariant)
-            else -> Triple(XDrawables.forDiaperKind(kind), colors.diaper(kind).strong, colors.onSurfaceVariant)
-        }
         NoticeType.UNDONE -> Triple(XDrawables.undo, colors.onSurfaceVariant, colors.onSurface)
     }
     WidgetIcon(icon, iconColor, 16.dp)
@@ -237,93 +230,38 @@ private fun NoticeLine(notice: WidgetNotice, strings: WidgetStrings, colors: Wid
     WidgetText(strings.notice(notice), textColor, 15.sp)
 }
 
-/** Feed, Pee, Poop and Both: four equal buttons, gap 8, r 20. */
+/**
+ * Feed and Diaper: two equal buttons, gap 8, r 20. Each opens the app on its logging sheet (the same sheet as Home's
+ * buttons), where the optional details are chosen: feed type and breast order, pee/poop, colour and texture.
+ */
 @Composable
 private fun LogButtons(
-    snapshot: WidgetSnapshot,
     strings: WidgetStrings,
     colors: WidgetColors,
     layout: LogLayout,
     measure: WidgetMeasure,
     modifier: GlanceModifier,
 ) {
-    val context = LocalContext.current
+    // Both buttons share one face, so their icons stay aligned: a label that needs two lines compacts both.
     val feedLabel = strings.string(CoreR.string.kind_feed)
-    val diaperLabels = DiaperKind.entries.associateWith { strings.string(diaperLabel(it)) }
-    // Each button picks its own face: only a label that needs two lines (a narrow widget) takes the compact one, so Pee, Poop and Both look the same in every state. The compact face is laid out so that its icon
-    // sits where the regular face's does, keeping the row's icons aligned.
-    fun styleFor(label: String, inset: Dp): FaceStyle = when {
+    val diaperLabel = strings.string(CoreR.string.kind_diaper)
+    val style = when {
         !layout.labels -> FaceStyle.IconOnly
-        measure.fits(label, LabelSize, layout.buttonWidth - 8.dp - inset) -> FaceStyle.Regular
+        listOf(feedLabel, diaperLabel).all { measure.fits(it, LabelSize, layout.buttonWidth - 8.dp) } -> FaceStyle.Regular
         else -> FaceStyle.Compact
     }
-    val feedStyle = styleFor(feedLabel, inset = 0.dp)
-    // The three diaper buttons share one face (their labels are short; a narrow widget compacts all three).
-    val diaperStyle = diaperLabels.values.map { styleFor(it, 0.dp) }.maxBy { it.ordinal }
     Row(modifier) {
         val cell = GlanceModifier.defaultWeight().fillMaxHeight()
-        WidgetButton(
-            modifier = cell,
-            fill = colors.feed.container,
-            radius = 20.dp,
-            action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Feed)),
-            description = strings.string(R.string.widget_cd_log_feed),
-        ) {
-            ButtonFace(XDrawables.feed, colors.feed.strong, feedLabel, colors.feed.onContainer, feedStyle)
+        val feed = colors.feed
+        SheetButton(HomeLaunch.Feed, feed, strings.string(R.string.widget_cd_log_feed), cell) {
+            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style)
         }
         Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.PEE, diaperLabels.getValue(DiaperKind.PEE), strings, colors, cell, diaperStyle)
-        Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.POOP, diaperLabels.getValue(DiaperKind.POOP), strings, colors, cell, diaperStyle)
-        Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.BOTH, diaperLabels.getValue(DiaperKind.BOTH), strings, colors, cell, diaperStyle)
-    }
-}
-
-@Composable
-private fun DiaperButton(
-    kind: DiaperKind,
-    label: String,
-    strings: WidgetStrings,
-    colors: WidgetColors,
-    modifier: GlanceModifier,
-    style: FaceStyle,
-) {
-    val action = actionRunCallback<LogDiaperAction>(actionParametersOf(LogDiaperAction.Kind to kind.name))
-    val description = strings.string(
-        when (kind) {
-            DiaperKind.PEE -> R.string.widget_cd_log_pee
-            DiaperKind.POOP -> R.string.widget_cd_log_poop
-            DiaperKind.BOTH -> R.string.widget_cd_log_both
-            // Not a widget button (the widget logs pee, poop or both in one tap); named for completeness.
-            DiaperKind.PLAIN -> CoreR.string.kind_diaper
-        },
-    )
-    if (kind == DiaperKind.BOTH) {
-        // Both is a 50/50 split of the PEE and POOP containers with a two-tone glyph and a POOP onContainer label.
-        Box(modifier.cornerRadius(20.dp).clickable(action).semantics { contentDescription = description }) {
-            Row(GlanceModifier.fillMaxSize()) {
-                Box(GlanceModifier.defaultWeight().fillMaxHeight().background(colors.pee.container.provider())) {}
-                Box(GlanceModifier.defaultWeight().fillMaxHeight().background(colors.poop.container.provider())) {}
-            }
-            Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                ButtonFace(colors.bothIcon, null, label, colors.poop.onContainer, style)
-            }
-        }
-    } else {
-        val event = colors.diaper(kind)
-        WidgetButton(modifier = modifier, fill = event.container, radius = 20.dp, action = action, description = description) {
-            ButtonFace(XDrawables.forDiaperKind(kind), event.strong, label, event.onContainer, style)
+        val diaper = colors.diaper
+        SheetButton(HomeLaunch.Diaper, diaper, strings.string(R.string.widget_cd_log_diaper), cell) {
+            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style)
         }
     }
-}
-
-/** The button labels: "Pee", "Poop" and the short status word "Both" (the 77 dp buttons have no room for "Pee + poop"). */
-private fun diaperLabel(kind: DiaperKind): Int = when (kind) {
-    DiaperKind.PEE -> CoreR.string.diaper_pee
-    DiaperKind.POOP -> CoreR.string.diaper_poop
-    DiaperKind.BOTH -> CoreR.string.diaper_both
-    DiaperKind.PLAIN -> CoreR.string.kind_diaper
 }
 
 /** How a log button shows its label: icon 24 over 15 sp, the compact two-line face, or the icon alone (small widget). */

@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 /**
  * Measures widget text in the device font. RemoteViews cannot measure or auto-size, but the launcher draws the
  * widget with the same system font, so the app can decide before rendering whether a label fits on one line, which
- * fact fits in row 1 and how wide the 2×1 Feed button must be. Font scale is included (non-linear on Android 14+).
+ * fact fits in row 1 and which labels fit in the 3×1 buttons. Font scale is included (non-linear on Android 14+).
  */
 internal class WidgetMeasure(context: Context) {
     private val metrics = context.resources.displayMetrics
