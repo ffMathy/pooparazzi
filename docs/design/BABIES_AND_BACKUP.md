@@ -95,6 +95,8 @@ The first Settings section. One row that opens the **Account** screen, whose sum
 | Backup deleted, account not (§3.3) | email · "Backup deleted · Back up now to start again" (a tap opens the Account screen only) |
 | No Firebase configuration in this build | (not tappable) "Backup isn't set up in this build. Everything is saved on this phone." |
 
+While signed in, Home's and History's top bars also show the backup as a small **cloud icon** next to the watch icon, with no text (DESIGN_SPEC §4.5): a tick when backed up, an arrow while backing up, a slash offline, "!" in error colour for an error (a 48 dp button that backs up again) and for a deleted backup (not a button). TalkBack reads the row's status line ("Backed up · 14:31"). Signed out, or in a build without Firebase, there is no cloud icon.
+
 ### 3.3 Account screen
 
 - **Signed out:** the explanation of §3.1, "Continue with Google" first (one tap, no password), then "or use email": a Sign in / Create account choice, email and password fields, the main button, "Forgot password?" (sign in; sends a reset link to the typed address), and errors in words ("Wrong email or password", "That email already has an account", "Use at least 6 characters", "No connection. Try again."). A call without an answer within 30 s says "No answer yet. It may still go through in a moment.": Firebase keeps trying, and should the sign-in go through after all, the screen follows the account (signed in, the error gone).

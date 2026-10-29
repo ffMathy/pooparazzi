@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
@@ -409,29 +408,22 @@ fun XCompactButton(
 }
 
 /**
- * The sync line (DESIGN_SPEC §3.5.6, §4.5): `synced` / `offline` / `pending` 14 + 4 + bodySmall onSurfaceVariant.
- * Null [text] hides it (no peer). Long Danish lines step down in size rather than wrap.
+ * The sync status (DESIGN_SPEC §3.5.6, §4.5): a 20 dp phone with its state on the screen (tick, "…", slash) in
+ * onSurfaceVariant, no visible text; TalkBack reads [text] ("Synced with phone · 14:31"). Null [text] hides it (no
+ * peer). The watch shows no error state: [SyncStatus.Error] reads, and looks, like saved on the watch.
  */
 @Composable
-fun SyncLine(status: SyncStatus, text: String?, modifier: Modifier = Modifier, maxWidth: Dp = 186.dp) {
+fun SyncIcon(status: SyncStatus, text: String?, modifier: Modifier = Modifier) {
     if (text == null) return
     val color = if (isAmbient()) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant
-    val icon = when (status) {
-        is SyncStatus.Synced -> XIcons.synced
-        SyncStatus.Pending -> XIcons.pending
-        else -> XIcons.offline
-    }
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-        XIcon(icon, contentDescription = null, tint = color, size = 14.dp)
-        Spacer(Modifier.width(4.dp))
-        AutoSizeLine(
-            text = text,
-            style = WatchType.bodySmall,
-            color = color,
-            minSize = 9,
-            modifier = Modifier.widthIn(max = maxWidth),
-        )
-    }
+    XIcon(phoneGlyph(status), contentDescription = text, tint = color, modifier = modifier, size = 20.dp)
+}
+
+/** The phone with a tick, "…" or a slash (DESIGN_SPEC §4.5). */
+fun phoneGlyph(status: SyncStatus): ImageVector = when (status) {
+    is SyncStatus.Synced -> XIcons.phoneSynced
+    SyncStatus.Pending -> XIcons.phonePending
+    SyncStatus.Offline, SyncStatus.Error, SyncStatus.Unavailable -> XIcons.phoneOffline
 }
 
 /** A small round swatch with the 1 dp outline ring (V1_ADDITIONS §3.1), for poop colour options. */

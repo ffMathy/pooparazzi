@@ -68,15 +68,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
-import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.time.rememberReducedMotion
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.ui.components.IconTarget
-import com.ffmathy.pooparazzi.phone.ui.components.SyncLine
+import com.ffmathy.pooparazzi.phone.ui.components.SyncIcons
 import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
-import com.ffmathy.pooparazzi.phone.ui.components.syncLineText
+import com.ffmathy.pooparazzi.phone.ui.components.syncIcons
 import com.ffmathy.pooparazzi.phone.ui.edit.EditSheet
 import com.ffmathy.pooparazzi.phone.ui.edit.EditViewModel
 import com.ffmathy.pooparazzi.phone.ui.edit.rememberEditEffects
@@ -125,8 +124,8 @@ fun HistoryRoute(onBack: () -> Unit, onOpenStatistics: () -> Unit) {
 }
 
 /**
- * History (P3, DESIGN_SPEC §3.3.3, V1_ADDITIONS §4): the top bar with the sync line, the day switcher, the day ribbon,
- * the stats, and the day's entries newest first. Rows open the edit sheet and swipe to reveal Delete (with an Undo
+ * History (P3, DESIGN_SPEC §3.3.3, V1_ADDITIONS §4): the top bar with the status icons, the day switcher, the day
+ * ribbon, the stats, and the day's entries newest first. Rows open the edit sheet and swipe to reveal Delete (with an Undo
  * snackbar); the "Add entry" FAB adds a past entry. Laid out edge to edge from [windowInsets].
  */
 @Composable
@@ -238,13 +237,12 @@ fun HistoryScreen(
 }
 
 /**
- * Back, "History", the current baby's label with two or more babies (BABIES_AND_BACKUP §2.4), the sync line (a 48 dp
- * retry target in the error state) and the `chart` button to Statistics.
+ * Back, "History", the current baby's label with two or more babies (BABIES_AND_BACKUP §2.4), the status icons (an
+ * icon in its error state is a 48 dp retry target) and the `chart` button to Statistics.
  */
 @Composable
 private fun HistoryTopBar(state: HistoryUiState, formatters: Formatters, actions: HistoryActions) {
-    val sync = state.sync
-    val zone = state.zone
+    val icons = syncIcons(state.sync, state.cloud, state.zone, formatters, actions::onRetrySync, actions::onRetryBackup)
     XTopBar(
         title = stringResource(CoreR.string.nav_history),
         navigationIcon = XIcons.back,
@@ -261,18 +259,7 @@ private fun HistoryTopBar(state: HistoryUiState, formatters: Formatters, actions
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (sync is SyncStatus.Error) {
-            val label = syncLineText(sync, zone, formatters).orEmpty()
-            Box(
-                Modifier
-                    .heightIn(min = 48.dp)
-                    .clickable(role = Role.Button, onClick = actions::onRetrySync)
-                    .semantics { contentDescription = label },
-                contentAlignment = Alignment.CenterStart,
-            ) { SyncLine(sync, zone, formatters) }
-        } else {
-            SyncLine(sync, zone, formatters)
-        }
+        SyncIcons(icons, Modifier.padding(top = 4.dp))
     }
 }
 

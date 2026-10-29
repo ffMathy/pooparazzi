@@ -8,6 +8,7 @@ import com.ffmathy.pooparazzi.core.sample.SampleData.NOW_1432
 import com.ffmathy.pooparazzi.core.sample.SampleData.TODAY
 import com.ffmathy.pooparazzi.core.sample.SampleData.ZONE
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -375,9 +376,33 @@ class StatisticsEdgeTest {
     }
 
     @Test
-    fun onlyTodayLoggedHasNoReport() {
-        // The scenario starts Sun 22:40, so its first full day would be today.
-        assertNull(statsReport(SampleData.scenario(), NOW_1432, ZONE, StatsRange.Last30Days))
+    fun beforeAWholeDayItCountsTodaySoFar() {
+        // The scenario starts Sun 22:40: Sun evening and Mon until 14:32, with no whole day yet.
+        val soFar = report(SampleData.scenario())
+        assertTrue(soFar.soFar)
+        assertEquals(oct(25), soFar.firstDay)
+        assertEquals(TODAY, soFar.lastDay)
+        assertEquals(oct(20) to TODAY, soFar.lastSevenDays.from to soFar.lastSevenDays.to)
+        assertEquals(2, soFar.lastSevenDays.loggedDays)
+        // Feeds and diapers only today; sleep Sun 80 and Mon 477 minutes, 278.5 rounded up.
+        assertEquals(listOf(50L, 40L, 20L, 279L), soFar.lastSevenDays.averages())
+        assertEquals(soFar.lastSevenDays.averages(), soFar.lastThirtyDays.averages())
+    }
+
+    @Test
+    fun aSingleEntryIsEnough() {
+        val single = report(listOf(Entry.diaper(at(TODAY, 9), pee = false, poop = true, id = "first")))
+        assertTrue(single.soFar)
+        assertEquals(TODAY to TODAY, single.firstDay to single.lastDay)
+        assertEquals(listOf(null, 0L, 10L, null), single.lastSevenDays.averages())
+        assertEquals(1, single.lastSevenDays.loggedDays)
+        assertEquals(StatsBar(TODAY, TODAY, total = 1, countedDays = 1), single.chart(StatsMetric.POOP).bars.last())
+    }
+
+    @Test
+    fun aWholeDayEndsTheSoFarCount() {
+        assertFalse(report().soFar)
+        assertFalse(report(listOf(Entry.feed(null, at(oct(24), 15), id = "sat"))).soFar)
     }
 
     @Test

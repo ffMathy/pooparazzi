@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ffmathy.pooparazzi.core.Core
+import com.ffmathy.pooparazzi.core.cloud.CloudSync
+import com.ffmathy.pooparazzi.core.cloud.NoopCloudSync
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EntryRepository
 import com.ffmathy.pooparazzi.core.data.observeCurrentLog
@@ -41,6 +43,7 @@ class HistoryViewModel(
     private val clock: Clock,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val savedState: SavedStateHandle = SavedStateHandle(),
+    private val cloud: CloudSync = NoopCloudSync,
 ) : ViewModel(), HistoryActions {
 
     private val now = MutableStateFlow(clock.now())
@@ -55,14 +58,19 @@ class HistoryViewModel(
      */
     val state: StateFlow<HistoryUiState?> = combine(
         repository.observeCurrentLog(settings.settings),
-        sync.status,
+        combine(sync.status, cloud.status) { s, c -> s to c },
         now,
         combine(day, receipt) { d, r -> d to r },
-    ) { log, status, _, (d, r) ->
+    ) { log, (status, cloudStatus), _, (d, r) ->
         val s = log.settings
         // [now] only re-runs this each minute; the time is read fresh, so an entry logged elsewhere within the current
         // minute (the watch, a widget) is listed at once.
-        HistoryStateBuilder.build(log.entries, status, clock.now(), zone, d, r, babies = s.babies, babyId = s.selectedBaby.id)
+        HistoryStateBuilder.build(
+            log.entries, status, clock.now(), zone, d, r,
+            babies = s.babies,
+            babyId = s.selectedBaby.id,
+            cloud = cloudStatus,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
@@ -71,6 +79,10 @@ class HistoryViewModel(
 
     override fun onRetrySync() {
         viewModelScope.launch { sync.retry() }
+    }
+
+    override fun onRetryBackup() {
+        viewModelScope.launch { cloud.syncNow() }
     }
 
     override fun onPreviousDay() = act {
@@ -127,6 +139,7 @@ class HistoryViewModel(
             log.entries, sync.status.value, clock.now(), zone, day.value, receipt.value,
             babies = s.babies,
             babyId = s.selectedBaby.id,
+            cloud = cloud.status.value,
         )
     }
 
@@ -153,7 +166,13 @@ class HistoryViewModel(
         private const val ADD_DEFAULT_OFFSET_MILLIS = 15 * 60_000L
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer { HistoryViewModel(Core.repository, Core.settings, Core.sync, Core.clock, savedState = createSavedStateHandle()) }
+            initializer {
+                HistoryViewModel(
+                    Core.repository, Core.settings, Core.sync, Core.clock,
+                    savedState = createSavedStateHandle(),
+                    cloud = Core.cloud,
+                )
+            }
         }
     }
 }

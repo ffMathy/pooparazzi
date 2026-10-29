@@ -245,7 +245,8 @@ private fun StatisticsContent(
                 }
             }
             Text(
-                stringResource(R.string.statistics_footnote),
+                // Until a whole day has been logged, the averages count today so far (V1_ADDITIONS §8).
+                stringResource(if (report.soFar) R.string.statistics_footnote_so_far else R.string.statistics_footnote),
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(top = 12.dp, start = 4.dp, end = 4.dp),

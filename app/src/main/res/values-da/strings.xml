@@ -48,7 +48,8 @@
     <string name="statistics_gaps_diapers">Dage uden registrerede bleer er ikke talt med.</string>
     <string name="statistics_gaps_sleep">Dage uden registreret søvn er ikke talt med.</string>
     <string name="statistics_chart_empty">Intet registreret på disse dage.</string>
-    <string name="statistics_empty">Statistikken begynder efter den første hele dag med registreringer.</string>
+    <string name="statistics_empty">Statistikken begynder, så snart der er registreret noget.</string>
+    <string name="statistics_footnote_so_far">Der er endnu ikke registreret en hel dag, så gennemsnittene tæller i dag indtil nu. Fra den første hele dag tæller de hele dage til og med i går.</string>
     <string name="statistics_footnote">Gennemsnittene tæller hele dage til og med i går. En dag tæller kun med for måltider, bleer eller søvn, hvis der blev registreret nogen den dag. Den første dag med registreringer er ikke talt med.</string>
     <string name="statistics_spoken_per_day">%1$s om dagen</string>
     <string name="statistics_spoken_not_logged">ikke registreret</string>

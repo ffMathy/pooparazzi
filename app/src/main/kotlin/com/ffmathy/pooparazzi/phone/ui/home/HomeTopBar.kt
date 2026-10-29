@@ -35,23 +35,29 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.format.Formatters
-import com.ffmathy.pooparazzi.core.format.SyncPeer
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
-import com.ffmathy.pooparazzi.phone.ui.components.SyncLine
+import com.ffmathy.pooparazzi.phone.ui.components.SyncGlyphs
+import com.ffmathy.pooparazzi.phone.ui.components.SyncIcon
+import com.ffmathy.pooparazzi.phone.ui.components.SyncIcons
+import com.ffmathy.pooparazzi.phone.ui.components.SyncTargets
+import com.ffmathy.pooparazzi.phone.ui.components.syncIcons
+import com.ffmathy.pooparazzi.phone.ui.components.syncIconsWidth
 import java.time.ZoneId
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
- * Home's top bar (DESIGN_SPEC §3.3.1): the baby's name, the sync line (a retry button in the error state), the History
- * pill and Settings. In lights-down the text and icons use onSurfaceVariant and the pill loses its fill.
+ * Home's top bar (DESIGN_SPEC §3.3.1): the baby's name, the status icons under it (the watch, and the cloud while
+ * signed in; an icon in its error state is a retry button), the History pill and Settings. In lights-down the text and
+ * icons use onSurfaceVariant and the pill loses its fill.
  *
  * With two or more [babies] (BABIES_AND_BACKUP §2.4) the name is the current baby's label on a 48 dp button with a
- * chevron that opens the Switch baby sheet; the sync line's retry target then sits under it instead of over the name.
+ * chevron that opens the Switch baby sheet; the icons' retry targets then sit under it instead of over the name.
  */
 @Composable
 internal fun HomeTopBar(
@@ -64,14 +70,16 @@ internal fun HomeTopBar(
     modifier: Modifier = Modifier,
     babies: List<Baby> = listOf(Baby(Baby.FIRST_ID, babyName)),
     babyId: String = babies.first().id,
+    cloud: CloudStatus = CloudStatus.Off,
 ) {
     val colors = MaterialTheme.colorScheme
     val chrome = if (lightsDown) colors.onSurfaceVariant else colors.onSurface
     val several = babies.size > 1
+    val icons = syncIcons(sync, cloud, zone, formatters, actions::onRetrySync, actions::onRetryBackup)
     BoxWithConstraints(modifier.fillMaxWidth()) {
-        val pill = historyPillStyle(formatters.labels.syncLine(sync, SyncPeer.WATCH, formatters.clock, zone), maxWidth)
+        val pill = historyPillStyle(icons, maxWidth)
         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Centred, so the name lines up with History and Settings when the sync line is hidden (no watch).
+            // Centred, so the name lines up with History and Settings when there are no icons (no watch, no account).
             Box(
                 Modifier
                     .weight(1f)
@@ -84,9 +92,7 @@ internal fun HomeTopBar(
                         label = formatters.labels.baby(baby, babies),
                         named = baby.name.isNotBlank(),
                         chrome = chrome,
-                        sync = sync,
-                        zone = zone,
-                        formatters = formatters,
+                        icons = icons,
                         actions = actions,
                     )
                 } else {
@@ -100,20 +106,13 @@ internal fun HomeTopBar(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.semantics { heading() },
                         )
-                        SyncLine(sync, zone, formatters)
+                        if (icons.isNotEmpty()) SyncGlyphs(icons, Modifier.padding(top = 4.dp))
                     }
                 }
-                if (sync is SyncStatus.Error && !several) {
-                    // "Couldn't save · Tap to retry" is a 48 dp button over the sync line; it overlaps only the name.
-                    val label = formatters.labels.syncLine(sync, SyncPeer.WATCH, formatters.clock, zone).orEmpty()
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomStart)
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .clickable(role = Role.Button, onClick = actions::onRetrySync)
-                            .semantics { contentDescription = label },
-                    )
+                if (!several && icons.any { it.onRetry != null }) {
+                    // An icon in its error state ("Couldn't save · Tap to retry") is a 48 dp button over its glyph,
+                    // reaching up over the name only.
+                    SyncTargets(icons, Modifier.align(Alignment.BottomStart).padding(start = 20.dp))
                 }
             }
             HistoryPill(pill, lightsDown, actions::onOpenHistory)
@@ -135,17 +134,15 @@ private val TopBarGap = 4.dp
 
 /**
  * The name as the switcher (two or more babies): the [label] and a 16 dp chevron on a 48 dp button
- * ("Noa. Switch baby"), then the sync line. In the error state the sync line is its own 48 dp retry row under the
- * button, so the two targets never overlap.
+ * ("Noa. Switch baby"), then the status icons. In an error state the icons are their own 48 dp row under the button,
+ * so the targets never overlap.
  */
 @Composable
 private fun SwitcherColumn(
     label: String,
     named: Boolean,
     chrome: Color,
-    sync: SyncStatus,
-    zone: ZoneId,
-    formatters: Formatters,
+    icons: List<SyncIcon>,
     actions: HomeActions,
 ) {
     val color = if (named) chrome else MaterialTheme.colorScheme.onSurfaceVariant
@@ -176,41 +173,26 @@ private fun SwitcherColumn(
             Spacer(Modifier.width(4.dp))
             XIcon(XIcons.chevronDown, contentDescription = null, tint = color, size = 16.dp)
         }
-        if (sync is SyncStatus.Error) {
-            val retry = formatters.labels.syncLine(sync, SyncPeer.WATCH, formatters.clock, zone).orEmpty()
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(role = Role.Button, onClick = actions::onRetrySync)
-                    .semantics { contentDescription = retry }
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) { SyncLine(sync, zone, formatters, Modifier.clearAndSetSemantics {}) }
-        } else {
-            SyncLine(sync, zone, formatters, Modifier.padding(horizontal = 8.dp))
-        }
+        SyncIcons(icons, Modifier.padding(horizontal = 8.dp))
     }
 }
 
-/** How much of the History pill fits beside the sync line. */
+/** How much of the History pill fits beside the status icons. */
 private enum class PillStyle { FULL, TEXT, ICON }
 
 /**
- * The full pill ("History" with its icon) unless the sync line would not fit beside it. Danish "Synkroniseret med ur ·
- * 14:31" next to "Historik" needs about 20 dp more than the 390 dp reference has, so the pill first drops its icon and,
- * at large font scales, its label (TalkBack still reads "History").
+ * The full pill ("History" with its icon) unless the status icons would not fit beside it: on a narrow phone at a large
+ * font scale the pill first drops its icon and then its label (TalkBack still reads "History"). The name ellipsizes.
  */
 @Composable
-private fun historyPillStyle(syncLine: String?, maxWidth: Dp): PillStyle {
-    if (syncLine == null) return PillStyle.FULL
+private fun historyPillStyle(icons: List<SyncIcon>, maxWidth: Dp): PillStyle {
+    if (icons.isEmpty()) return PillStyle.FULL
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val label = stringResource(CoreR.string.nav_history)
-    return remember(syncLine, label, maxWidth, density) {
+    val sync = syncIconsWidth(icons)
+    return remember(sync, label, maxWidth, density) {
         with(density) {
-            val sync = measurer.measure(syncLine, PhoneType.syncLabel, maxLines = 1).size.width.toDp() + 14.dp + 6.dp
             val text = measurer.measure(label, PhoneType.labelLarge, maxLines = 1).size.width.toDp()
             // Start 20, the gaps either side of the pill, Settings 48 and its 12 end margin.
             val left = maxWidth - 20.dp - TopBarGap * 2 - 48.dp - 12.dp

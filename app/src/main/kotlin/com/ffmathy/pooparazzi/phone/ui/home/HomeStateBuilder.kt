@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.phone.ui.home
 
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.domain.LampState
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.lampState
@@ -37,6 +38,7 @@ internal object HomeStateBuilder {
         babies: List<Baby> = listOf(Baby(Baby.FIRST_ID, babyName)),
         babyId: String = babies.first().id,
         switchingBaby: Boolean = false,
+        cloud: CloudStatus = CloudStatus.Off,
     ): HomeUiState {
         val summary = summarize(entries, now, zone)
         val lamp = lampState(summary)
@@ -45,6 +47,7 @@ internal object HomeStateBuilder {
             zone = zone,
             babyName = babyName,
             sync = sync,
+            cloud = cloud,
             lamp = lamp,
             row1 = row1(summary, lamp),
             row2 = row2(summary),

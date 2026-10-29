@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone.ui.home
 
 import androidx.compose.runtime.Immutable
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.domain.LampState
 import com.ffmathy.pooparazzi.core.model.Baby
@@ -19,6 +20,7 @@ import java.time.ZoneId
  * current locale's resources, so the same state renders in English and Danish.
  *
  * @property now the minute the screen describes (epoch ms).
+ * @property cloud the backup's status; [CloudStatus.Off] (nobody signed in) shows no cloud icon.
  * @property babyName empty until the parent sets one (the screen then shows the "Baby" hint).
  * @property row1 since-row 1: "Awake …" when idle, "Last fed …" while a sleep runs (each fact appears once per screen).
  * @property row2 since-row 2: the last diaper, kind first.
@@ -34,6 +36,7 @@ data class HomeUiState(
     val zone: ZoneId,
     val babyName: String,
     val sync: SyncStatus,
+    val cloud: CloudStatus = CloudStatus.Off,
     val lamp: LampState,
     val row1: SinceRow?,
     val row2: SinceRow?,

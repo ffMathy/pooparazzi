@@ -360,7 +360,7 @@ These names are what the apps code against.
   - `dayEntries(day)` for History.
 - `fun lampState(summary): LampState`, one of `FeedIdle`, `SleepRunning`.
 - `fun dailyCounts(entries, from, to, now, zone): List<DayCounts>`: History's counts for every day of a range, in one pass.
-- Statistics (§8): `fun statsReport(entries, now, zone, range): StatsReport?` (the last 7 days, the last 30 days and the comparison window; null before the first full day of logging), `StatsReport.chart(metric): StatsChart`, `binDays(dayCount)`, and `StatsRange.clamped` / `normalised` for chosen dates.
+- Statistics (§8): `fun statsReport(entries, now, zone, range): StatsReport?` (the last 7 days, the last 30 days and the comparison window; null only when nothing is logged), `StatsReport.chart(metric): StatsChart`, `binDays(dayCount)`, and `StatsRange.clamped` / `normalised` for chosen dates.
 
 **`format/`**
 - `DurationFormatter` (units injected; resource-backed factory `DurationFormatter.from(context)`).
@@ -400,7 +400,7 @@ These names are what the apps code against.
 
 ### 8.1 Ranges
 
-Only whole days count: every window ends **yesterday**, and the **first logged day** is left out as probably partial, so the first countable day (`firstDay`) is the day after it. The numbers therefore change only at midnight or when an entry changes, never as today goes on. Before `firstDay` reaches yesterday there is nothing to show: "Statistics start after the first full day of logging."
+Only whole days count: every window ends **yesterday**, and the **first logged day** is left out as probably partial, so the first countable day (`firstDay`) is the day after it. The numbers therefore change only at midnight or when an entry changes, never as today goes on. Until there is a whole day (the first entry is from today or yesterday), the report counts **today so far** instead, from the first logged day through today (`soFar`), so even a single entry shows; the footnote then says "No whole day has been logged yet, so these averages count today so far. …". With nothing logged at all: "Statistics start as soon as something is logged."
 
 | Range | Days | Reference (`history()` at Mon 26 Oct 2026) |
 |---|---|---|

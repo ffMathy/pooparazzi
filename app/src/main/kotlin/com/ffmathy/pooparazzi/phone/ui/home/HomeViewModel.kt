@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ffmathy.pooparazzi.core.Core
+import com.ffmathy.pooparazzi.core.cloud.CloudSync
+import com.ffmathy.pooparazzi.core.cloud.NoopCloudSync
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EndResult
 import com.ffmathy.pooparazzi.core.data.EntryRepository
@@ -68,6 +70,7 @@ class HomeViewModel(
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val timings: HomeTimings = HomeTimings(),
     private val elapsedRealtime: () -> Long = { android.os.SystemClock.elapsedRealtime() },
+    private val cloud: CloudSync = NoopCloudSync,
 ) : ViewModel(), HomeActions {
 
     private val now = MutableStateFlow(clock.now())
@@ -105,10 +108,10 @@ class HomeViewModel(
      */
     val state: StateFlow<HomeUiState?> = combine(
         repository.observeCurrentLog(settings.settings),
-        sync.status,
+        combine(sync.status, cloud.status) { s, c -> s to c },
         now,
         combine(card, sheet, switchingBaby) { c, s, sw -> Triple(c, s, sw) },
-    ) { log, syncStatus, _, (c, sh, sw) ->
+    ) { log, (syncStatus, cloudStatus), _, (c, sh, sw) ->
         val entries = log.entries
         val s = log.settings
         // [now] only re-runs this each minute; the time itself is read fresh, so an entry written elsewhere within the
@@ -118,6 +121,7 @@ class HomeViewModel(
             babies = s.babies,
             babyId = s.selectedBaby.id,
             switchingBaby = sw,
+            cloud = cloudStatus,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -150,6 +154,10 @@ class HomeViewModel(
 
     override fun onRetrySync() {
         viewModelScope.launch { sync.retry() }
+    }
+
+    override fun onRetryBackup() {
+        viewModelScope.launch { cloud.syncNow() }
     }
 
     // ---- Switch baby (BABIES_AND_BACKUP §2.4) --------------------------------------------------
@@ -679,7 +687,9 @@ class HomeViewModel(
 
         /** The production view model on [Core]'s graph. */
         fun factory(timings: HomeTimings = HomeTimings()): ViewModelProvider.Factory = viewModelFactory {
-            initializer { HomeViewModel(Core.repository, Core.settings, Core.sync, Core.clock, timings = timings) }
+            initializer {
+                HomeViewModel(Core.repository, Core.settings, Core.sync, Core.clock, timings = timings, cloud = Core.cloud)
+            }
         }
     }
 }

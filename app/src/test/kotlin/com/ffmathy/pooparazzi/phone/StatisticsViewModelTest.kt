@@ -173,9 +173,11 @@ class StatisticsViewModelTest : CoreTestBase() {
     }
 
     @Test
-    fun beforeTheFirstFullDayItIsEmpty() = coreTest { core ->
-        // The reference scenario starts Sun 22:40, so its first full day would be today.
-        assertNull(core.statistics().current().report)
+    fun beforeAWholeDayItCountsTodaySoFar() = coreTest { core ->
+        // The reference scenario starts Sun 22:40, so there is no whole day yet: Sun and today so far count.
+        val report = checkNotNull(core.statistics().current().report)
+        assertTrue(report.soFar)
+        assertEquals(listOf(50L, 40L, 20L, 279L), report.lastSevenDays.averages())
     }
 
     /**

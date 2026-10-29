@@ -84,7 +84,7 @@ import com.ffmathy.pooparazzi.wear.theme.XWearTheme
 import com.ffmathy.pooparazzi.wear.theme.isAmbient
 import com.ffmathy.pooparazzi.wear.ui.AutoSizeLine
 import com.ffmathy.pooparazzi.wear.ui.SpokenLabels
-import com.ffmathy.pooparazzi.wear.ui.SyncLine
+import com.ffmathy.pooparazzi.wear.ui.SyncIcon
 import com.ffmathy.pooparazzi.wear.ui.events
 import com.ffmathy.pooparazzi.wear.ui.feedTypeLabel
 import com.ffmathy.pooparazzi.wear.ui.keepSidesTogether
@@ -101,7 +101,7 @@ const val LOGGED_INERT_MILLIS = 1_000
 
 /**
  * Logged (DESIGN_SPEC §3.5.6; V1_ADDITIONS §2.2, §3.2): the check circle in the event container, the title with
- * the time in the event colour, an optional second line, the sync line and a Small Undo EdgeButton, under a 270°
+ * the time in the event colour, an optional second line, the sync icon and a Small Undo EdgeButton, under a 270°
  * neutral bezel arc that drains over the window. Any tap outside Undo dismisses; both are inert for the first
  * second. When the window ends, [onTimeout] runs. No TimeText.
  */
@@ -138,8 +138,8 @@ fun LoggedScreen(
         timeout()
     }
 
-    // A large font scale grows the title: tighten the top so the sync line stays clear of Undo. A second line
-    // ("Left → Right · 18m") moves the block up a little for the same reason (§3.5.6: sync line at y 148–162).
+    // A large font scale grows the title: tighten the top so the sync icon stays clear of Undo. A second line
+    // ("Left → Right · 18m") moves the block up a little for the same reason (§3.5.6: sync icon at y 148–168).
     val compact = LocalConfiguration.current.fontScale > 1.15f
     val line2 = receiptLine2(receipt, f)
     val top = when {
@@ -189,9 +189,7 @@ fun LoggedScreen(
                 val syncText = if (sync == SyncStatus.Pending) null else f.labels.syncLine(sync, SyncPeer.PHONE, f.clock, f.zone)
                 if (syncText != null) {
                     Spacer(Modifier.height(2.dp))
-                    // The round screen is wider higher up, where a large font scale moves the line; lower down it
-                    // keeps clear of the drain arc (Danish "Synkroniseret med telefon · 14:31" steps down a size).
-                    SyncLine(sync, syncText, maxWidth = if (compact) 200.dp else 166.dp)
+                    SyncIcon(sync, syncText)
                 }
             }
             UndoEdgeButton(
