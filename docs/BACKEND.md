@@ -64,7 +64,7 @@ The one heavy moment is the **first sign-in on a phone with a long history**: ev
 
    Without a matching fingerprint, the Google button fails and email and password still work.
 3. Download **`google-services.json`** after enabling Google sign-in, because the file then carries the web client id the app needs. Download it again whenever you add fingerprints.
-4. Local builds: put it at **`app/google-services.json`**. The phone build applies the Google services Gradle plugin only when that file exists. Without it, the app builds and runs as before, with accounts turned off: Settings says "Backup isn't set up in this build".
+4. Local builds: put it at **`app/google-services.json`** (git ignores it). The phone build applies the Google services Gradle plugin only when that file exists. Without it, the app builds and runs as before, with accounts turned off and no Firebase code running: Settings says "Backup isn't set up in this build". With it but without the web client id (Google sign-in not enabled when the file was downloaded), only email and password are offered. The unit tests never start Firebase, with or without the file.
 5. Release builds: add the whole file's content as the repository secret **`GOOGLE_SERVICES_JSON`** (Settings › Secrets and variables › Actions). [`release.yml`](../.github/workflows/release.yml) writes it to `app/google-services.json` before building ([RELEASING.md](RELEASING.md)). Pull request builds ([`ci.yml`](../.github/workflows/ci.yml)) do not need it.
 
 The file is not a secret in the strict sense: its API key only identifies the project, and the rules decide what anyone can do. Keeping it out of the repository just keeps it out of search results.

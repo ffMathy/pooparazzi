@@ -97,7 +97,7 @@ export ANDROID_HOME=/path/to/android-sdk
 
 The APKs land in `app/build/outputs/apk/debug/app-debug.apk` and `wear/build/outputs/apk/debug/wear-debug.apk`.
 
-Accounts and the backup need the Firebase project's `google-services.json` at `app/google-services.json` ([docs/BACKEND.md](docs/BACKEND.md#4-connect-the-app)). Without the file the phone app builds and runs as before, with accounts turned off.
+Accounts and the backup need the Firebase project's `google-services.json` at `app/google-services.json` ([docs/BACKEND.md](docs/BACKEND.md#4-connect-the-app)). Keep it there locally (git ignores it); release builds get it from the `GOOGLE_SERVICES_JSON` repository secret. Without the file the phone app builds and runs as before, with accounts turned off.
 
 ## Install on devices
 

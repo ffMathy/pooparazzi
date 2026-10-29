@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- The ongoing notification of a running sleep (DESIGN_SPEC §10.5); asked for on the first sleep. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -79,6 +80,15 @@
         <receiver
             android:name=".notify.TimerActionReceiver"
             android:exported="false" />
+
+        <!--
+            Firebase starts in PooparazziApp, and only in builds with a Firebase configuration (AppAccounts): without one
+            no Firebase code runs at all, not even this start-up provider.
+        -->
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="${applicationId}.firebaseinitprovider"
+            tools:node="remove" />
 
         <!-- Stores the in-app language on API < 33, where the system has no per-app language setting (V1_ADDITIONS §5). -->
         <service

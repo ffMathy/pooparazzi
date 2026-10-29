@@ -10,6 +10,8 @@ import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
 import com.ffmathy.pooparazzi.phone.app.LocaleApplier
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
+import com.ffmathy.pooparazzi.phone.ui.settings.AccountSummary
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
@@ -196,6 +198,41 @@ class SettingsViewModelTest : CoreTestBase() {
         runCurrent()
         assertEquals(Settings.MAX_BABIES, vm.state.value!!.babies.size)
         assertFalse("the pill is hidden at the cap", vm.state.value!!.canAddBaby)
+    }
+}
+
+/** Settings › Account (BABIES_AND_BACKUP §3.2). */
+@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36], application = Application::class)
+class SettingsAccountTest : CoreTestBase() {
+    private fun TestScope.settings(core: CoreTestRig, accounts: FakeAccounts, cloud: FakeCloudSync): SettingsViewModel =
+        SettingsViewModel(core.settings, NoopEntrySync, LocaleApplier {}, backgroundScope, accounts = accounts, cloud = cloud)
+            .also { core.collect(it.state) }
+
+    @Test
+    fun theAccountRowSaysWhereTheLogIs() = coreTest { core ->
+        assertEquals(
+            "builds without a configuration",
+            AccountSummary.Unavailable,
+            settings(core, FakeAccounts(available = false), FakeCloudSync()).state.value!!.account,
+        )
+        val accounts = FakeAccounts()
+        val cloud = FakeCloudSync()
+        val vm = settings(core, accounts, cloud)
+        assertEquals(AccountSummary.SignedOut, vm.state.value!!.account)
+
+        accounts.signInAs(accounts.nextUser)
+        cloud.state.value = CloudStatus.Synced(SampleData.SYNCED_1431)
+        runCurrent()
+        assertEquals(AccountSummary.SignedIn("parent@example.com", CloudStatus.Synced(SampleData.SYNCED_1431)), vm.state.value!!.account)
+
+        cloud.state.value = CloudStatus.Error
+        runCurrent()
+        assertEquals(AccountSummary.SignedIn("parent@example.com", CloudStatus.Error), vm.state.value!!.account)
+        vm.onRetryBackup()
+        runCurrent()
+        assertEquals(1, cloud.syncs)
     }
 }
 

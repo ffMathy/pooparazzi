@@ -8,6 +8,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ffmathy.pooparazzi.core.Core
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
+import com.ffmathy.pooparazzi.core.cloud.CloudSync
+import com.ffmathy.pooparazzi.core.cloud.NoopCloudSync
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
@@ -16,6 +19,9 @@ import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.EntrySync
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.phone.BuildConfig
+import com.ffmathy.pooparazzi.phone.account.Accounts
+import com.ffmathy.pooparazzi.phone.account.AppAccounts
+import com.ffmathy.pooparazzi.phone.account.NoAccounts
 import com.ffmathy.pooparazzi.phone.app.AppLocales
 import com.ffmathy.pooparazzi.phone.app.LocaleApplier
 import kotlinx.coroutines.CoroutineScope
@@ -33,11 +39,25 @@ import kotlinx.coroutines.sync.withLock
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 
+/** What Settings › Account says (BABIES_AND_BACKUP §3.2). */
+@Immutable
+sealed interface AccountSummary {
+    /** The build has no Firebase configuration: "Backup isn't set up in this build", not tappable. */
+    data object Unavailable : AccountSummary
+
+    /** "Not signed in · Your log is only on this phone. Sign in to back it up." */
+    data object SignedOut : AccountSummary
+
+    /** The address and the backup status line. */
+    data class SignedIn(val email: String, val status: CloudStatus) : AccountSummary
+}
+
 /**
  * Settings (DESIGN_SPEC §3.3.5, V1_ADDITIONS §5, BABIES_AND_BACKUP §2.4) as data.
  *
  * @property babies the babies in their order, each with what its name field shows: the parent's typing, or the
  *   stored name.
+ * @property account what Settings › Account says (BABIES_AND_BACKUP §3.2).
  * @property canAddBaby false at [Settings.MAX_BABIES] (the "Add a baby" pill is hidden then).
  */
 @Immutable
@@ -48,6 +68,7 @@ data class SettingsUiState(
     val sync: SyncStatus,
     val zone: ZoneId,
     val versionName: String,
+    val account: AccountSummary = AccountSummary.Unavailable,
     val canAddBaby: Boolean = babies.size < Settings.MAX_BABIES,
 )
 
@@ -65,6 +86,12 @@ interface SettingsActions {
     fun onAppearance(appearance: Appearance) {}
     fun onLanguage(language: AppLanguage) {}
     fun onRetrySync() {}
+
+    /** Settings › Account: opens the Account screen. */
+    fun onOpenAccount() {}
+
+    /** The account row in "Couldn't back up · Tap to retry": backs up again. */
+    fun onRetryBackup() {}
     fun onOpenLicences() {}
 
     /** Settings › Notifications: the system setting for Live Updates or notifications. */
@@ -85,6 +112,8 @@ class SettingsViewModel(
     private val sync: EntrySync,
     private val locales: LocaleApplier,
     private val writeScope: CoroutineScope,
+    private val accounts: Accounts = NoAccounts,
+    private val cloud: CloudSync = NoopCloudSync,
     private val versionName: String = BuildConfig.VERSION_NAME,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val nameDebounceMillis: Long = NAME_DEBOUNCE_MILLIS,
@@ -104,7 +133,15 @@ class SettingsViewModel(
     private val nameJobs = mutableMapOf<String, Job>()
 
     /** Null until the settings have loaded. */
-    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, nameDrafts) { s, status, drafts ->
+    private val account = combine(accounts.user, cloud.status) { user, status ->
+        when {
+            !accounts.available -> AccountSummary.Unavailable
+            user == null -> AccountSummary.SignedOut
+            else -> AccountSummary.SignedIn(user.email, status)
+        }
+    }
+
+    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, nameDrafts, account) { s, status, drafts, account ->
         SettingsUiState(
             babies = s.babies.map { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
             appearance = s.appearance,
@@ -112,6 +149,7 @@ class SettingsViewModel(
             sync = status,
             zone = zone,
             versionName = versionName,
+            account = account,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -151,6 +189,11 @@ class SettingsViewModel(
         viewModelScope.launch { sync.retry() }
     }
 
+    override fun onRetryBackup() {
+        // In the app's scope: the Account screen opens over Settings while it runs.
+        writeScope.launch { cloud.syncNow() }
+    }
+
     override fun onCleared() {
         pendingNames.keys.toList().forEach { id -> writeScope.launch { flushName(id) } }
     }
@@ -165,7 +208,9 @@ class SettingsViewModel(
         const val NAME_DEBOUNCE_MILLIS = 500L
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer { SettingsViewModel(Core.settings, Core.sync, AppLocales, Core.graph.scope) }
+            initializer {
+                SettingsViewModel(Core.settings, Core.sync, AppLocales, Core.graph.scope, AppAccounts.accounts, Core.cloud)
+            }
         }
     }
 }

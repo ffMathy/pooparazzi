@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -46,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,6 +56,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
@@ -65,6 +68,7 @@ import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.notify.NotificationLink
+import com.ffmathy.pooparazzi.phone.ui.account.backupStatusText
 import com.ffmathy.pooparazzi.phone.notify.openNotificationSettings
 import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
 import com.ffmathy.pooparazzi.phone.ui.components.GroupRow
@@ -80,12 +84,13 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Settings wired to its view model and navigation. */
 @Composable
-fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit) {
+fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount: () -> Unit = {}) {
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
     // Only while this screen is resumed: a second tap during a transition must not pop Home or stack Licences twice.
     val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
     val licences by rememberUpdatedState(dropUnlessResumed(block = onOpenLicences))
+    val account by rememberUpdatedState(dropUnlessResumed(block = onOpenAccount))
     val context = LocalContext.current
     // The permission and the system switch can change in system settings: re-read them whenever Settings resumes.
     var notifications by remember { mutableStateOf(NotificationLink.current(context)) }
@@ -98,6 +103,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit) {
         object : SettingsActions by viewModel {
             override fun onBack() = back()
             override fun onOpenLicences() = licences()
+            override fun onOpenAccount() = account()
             override fun onOpenNotificationSettings() = context.openNotificationSettings(link)
         }
     }
@@ -110,7 +116,8 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit) {
 }
 
 /**
- * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the babies, Appearance
+ * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the account and backup
+ * (BABIES_AND_BACKUP §3.2), the babies, Appearance
  * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry, Notifications (the link
  * to the system's Live Update setting, §10.5) and About (version, font licences). Section headings are labelMedium;
  * grouped rows use the History list's r 20 / r 6 corners.
@@ -148,6 +155,7 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp + bottomInset),
         ) {
+            Section(stringResource(R.string.settings_section_account)) { AccountRow(state, actions) }
             val babiesTitle = if (state.babies.size > 1) R.string.settings_section_babies else R.string.settings_section_baby
             Section(stringResource(babiesTitle)) { BabiesGroup(state, actions) }
             Section(stringResource(CoreR.string.settings_appearance)) {
@@ -273,6 +281,50 @@ private fun NameField(
     )
 }
 
+/**
+ * Settings › Account (BABIES_AND_BACKUP §3.2): one row that opens the Account screen, saying where the log is. In
+ * "Couldn't back up · Tap to retry" a tap also backs up again. Builds without a Firebase configuration say so, and the
+ * row does nothing.
+ */
+@Composable
+private fun AccountRow(state: SettingsUiState, actions: SettingsActions) {
+    val colors = MaterialTheme.colorScheme
+    when (val account = state.account) {
+        AccountSummary.Unavailable -> GroupRow(first = true, last = true) {
+            Text(
+                stringResource(R.string.account_unavailable),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+            )
+        }
+        AccountSummary.SignedOut -> GroupRow(first = true, last = true) {
+            LinkRow(
+                stringResource(R.string.account_not_signed_in),
+                stringResource(R.string.account_not_signed_in_summary),
+                actions::onOpenAccount,
+            )
+        }
+        is AccountSummary.SignedIn -> {
+            val clock = rememberFormatters(state.zone).clock
+            val failed = account.status == CloudStatus.Error
+            GroupRow(first = true, last = true) {
+                LinkRow(
+                    account.email,
+                    backupStatusText(account.status, clock, state.zone),
+                    onClick = {
+                        if (failed) actions.onRetryBackup()
+                        actions.onOpenAccount()
+                    },
+                    summaryColor = if (failed) colors.error else colors.onSurfaceVariant,
+                    // "Backed up · 14:31" has digits: Google Sans Flex with tabular figures (the digit rule).
+                    summaryStyle = PhoneType.dataSmall,
+                )
+            }
+        }
+    }
+}
+
 /** System default · English · Dansk as radio rows (language names in their own language). */
 @Composable
 private fun LanguageGroup(selected: AppLanguage, onSelect: (AppLanguage) -> Unit) {
@@ -327,7 +379,13 @@ private fun NotificationsRow(link: NotificationLink, onOpen: () -> Unit) {
 
 /** A tappable row: title and summary with a chevron (opens another screen). */
 @Composable
-private fun LinkRow(title: String, summary: String, onClick: () -> Unit) {
+private fun LinkRow(
+    title: String,
+    summary: String,
+    onClick: () -> Unit,
+    summaryColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    summaryStyle: TextStyle = MaterialTheme.typography.bodySmall,
+) {
     val colors = MaterialTheme.colorScheme
     Row(
         Modifier
@@ -339,7 +397,7 @@ private fun LinkRow(title: String, summary: String, onClick: () -> Unit) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
-            Text(summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(summary, style = summaryStyle, color = summaryColor)
         }
         Spacer(Modifier.width(12.dp))
         XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)

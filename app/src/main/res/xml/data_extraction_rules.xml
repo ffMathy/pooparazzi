@@ -2,8 +2,8 @@
 <!--
     Backup and device-to-device transfer (API 31+). The log and the settings travel; the device-local flags of the
     system surfaces do not: the widget previews must be published again on the new phone, the notification
-    permission is that phone's own, and the widget memo and dismissed timers describe this phone's widgets and
-    notifications (see SurfacePrefs, WidgetMemo).
+    permission is that phone's own, the widget memo and dismissed timers describe this phone's widgets and
+    notifications (see SurfacePrefs, WidgetMemo), and a new phone shows the account Welcome again (WelcomePrefs).
 
     The settings hold the babies' names, which never leave the parent's own devices (BABIES_AND_BACKUP §1): they are
     left out of the cloud backup, while a transfer from the old phone to the new one may carry them. The backup's
@@ -14,12 +14,14 @@
     <cloud-backup>
         <exclude domain="sharedpref" path="system_surfaces.xml" />
         <exclude domain="sharedpref" path="widget_memo.xml" />
+        <exclude domain="sharedpref" path="account_welcome.xml" />
         <exclude domain="file" path="datastore/pooparazzi_settings.preferences_pb" />
         <exclude domain="file" path="datastore/pooparazzi_cloud.preferences_pb" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="system_surfaces.xml" />
         <exclude domain="sharedpref" path="widget_memo.xml" />
+        <exclude domain="sharedpref" path="account_welcome.xml" />
         <exclude domain="file" path="datastore/pooparazzi_cloud.preferences_pb" />
     </device-transfer>
 </data-extraction-rules>

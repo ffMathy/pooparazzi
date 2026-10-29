@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val inputs by appViewModel.appearance.collectAsStateWithLifecycle()
             val launch by appViewModel.launch.collectAsStateWithLifecycle()
+            val welcome by appViewModel.welcome.collectAsStateWithLifecycle()
             inputs?.let {
                 PooparazziPhoneApp(
                     inputs = it,
@@ -47,6 +48,8 @@ class MainActivity : AppCompatActivity() {
                     onNightResolved = ::applyNight,
                     launch = launch,
                     onLaunchHandled = appViewModel::consume,
+                    welcome = welcome,
+                    onWelcomeDone = appViewModel::finishWelcome,
                 )
             }
         }
@@ -66,6 +69,8 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // Notifications may have been turned on in system settings while the app was away.
         SystemSurfaces.onAppResumed(this)
+        // The backup pulls what changed elsewhere (another phone on the account) at most once a minute (§4.4).
+        Core.graph.cloud.requestSync()
         // The language the app runs in is the platform's per-app choice (the parent may change it in system settings
         // on API 33+). Mirror it into the settings, which sync it to the watch (V1_ADDITIONS §5).
         val running = AppLocales.current()

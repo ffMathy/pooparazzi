@@ -9,3 +9,5 @@ dist/
 # Firebase rules tests (firebase/)
 node_modules/
 *-debug.log
+# The Firebase configuration of the optional backup (docs/BACKEND.md): kept out of the repository
+app/google-services.json

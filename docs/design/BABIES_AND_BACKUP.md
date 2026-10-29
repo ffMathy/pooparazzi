@@ -74,9 +74,11 @@ The first time the phone app opens with accounts available and nobody signed in 
 > **Your log stays on this phone**
 > Without an account, everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.
 > You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do.
-> [Continue with Google] · [Create account] · [Sign in with email] · [Continue without an account]
+> [Continue with Google]
+> — or use email — [Sign in | Create account] · Email · Password · [Sign in] · Forgot password?
+> [Continue without an account]
 
-The choice is remembered on this phone only (excluded from backups). Builds without a Firebase configuration never show it.
+The sign-in choices are the Account screen's (§3.3). Signing in, or "Continue without an account" (Back counts as that), answers the Welcome, and a widget or notification link that opened the app is followed after it; the answer is remembered on this phone only (excluded from backups and device transfers), and a phone that is already signed in never shows it. Builds without a Firebase configuration never show it, and neither do the unit tests (Firebase never starts in them).
 
 ### 3.2 Settings › Account
 
@@ -88,14 +90,14 @@ The first Settings section. One row that opens the **Account** screen, whose sum
 | Backing up | email · "Backing up…" |
 | Backed up | email · "Backed up · 14:31" |
 | Offline | email · "Saved on phone · will back up" |
-| Error | email · "Couldn't back up · Tap to retry" |
+| Error | email · "Couldn't back up · Tap to retry" (a tap also backs up again) |
 | No Firebase configuration in this build | (not tappable) "Backup isn't set up in this build. Everything is saved on this phone." |
 
 ### 3.3 Account screen
 
 - **Signed out:** the explanation of §3.1, "Continue with Google" first (one tap, no password), then "or use email": a Sign in / Create account choice, email and password fields, the main button, "Forgot password?" (sign in; sends a reset link to the typed address), and errors in words ("Wrong email or password", "That email already has an account", "Use at least 6 characters", "No connection. Try again.").
 - **Create account** creates the account and signs in; the backup starts at once. There is no invitation and no email confirmation step.
-- **Signed in:** the address, the backup status line, "Back up now", "Sign out", and "Delete account…" (a dialog that asks to sign in again — the password, or Google — then deletes the backup and the account; the log on this phone stays). Account deletion inside the app is a Google Play requirement.
+- **Signed in:** the address, the backup status line, "Back up now", "Sign out", and "Delete account…". That opens a "Delete account?" confirmation in place on the screen (not a separate dialog window, so the password field behaves like the rest of the screen; Back cancels it): it says what is deleted and that the log on this phone stays, then asks to sign in again — the password, or for a Google account just "Delete", which opens Google's account picker. It then deletes the backup and the account. If the backup cannot be deleted, the account is kept and it says so (the next sync completes the backup again); if the backup was deleted but the account was not, it says exactly that, and trying again finishes the job. Closing Google's picker is not an error and says nothing. Account deletion inside the app is a Google Play requirement.
 - Signing out keeps the log on the phone. Signing in to an account merges the phone's log with the account's backup (nothing is lost on either side) and uploads the phone's entries.
 
 ## 4. Sync with the backend
@@ -126,9 +128,9 @@ A soft-deleted row is purged only when both flags are clear. The first time a de
 One at a time, never throwing:
 
 1. Signed out → status Off.
-2. **Pull:** page through `users/{uid}/entries` ordered by (`syncedAt`, document id), starting after the stored cursor, 500 per page. Merge each page into the database (last-writer-wins, per-baby conflict rules, forwarded to the watch), then store the cursor of its last document.
+2. **Pull:** page through `users/{uid}/entries` ordered by (`syncedAt`, document id), starting after the stored cursor, 500 per page. Merge each page into the database (last-writer-wins, per-baby conflict rules, forwarded to the watch), then store the cursor of its last document. A document that does not decode (or whose entry id is not its document id) is skipped; one without a server time yet (this phone's own write still in flight) is skipped too, and the cursor stops before it so it is read once it has one.
 3. **Push:** upload the current version of `cloudPending` rows in batches of up to 400 writes, each with `syncedAt` set by the server; clear the flag of each row that was not written again meanwhile.
-4. Status Backed up (time), or Offline / Error.
+4. Status Backed up (time), or Offline / Error. Every backend call gives up after 30 s and counts as Offline, so a phone without a connection never waits on a sync.
 
 ### 4.4 When it runs (and what it costs)
 

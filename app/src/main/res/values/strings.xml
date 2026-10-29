@@ -140,4 +140,53 @@
     <string name="settings_notifications_summary">A running sleep shows a notification with Woke up</string>
     <string name="settings_notifications_off">Notifications are off</string>
     <string name="settings_notifications_off_summary">Turn them on to see a running sleep outside the app</string>
+
+    <!-- Account and backup (BABIES_AND_BACKUP §3) -->
+    <string name="settings_section_account">Account</string>
+    <string name="account_not_signed_in">Not signed in</string>
+    <string name="account_not_signed_in_summary">Your log is only on this phone. Sign in to back it up.</string>
+    <string name="account_status_syncing">Backing up…</string>
+    <!-- "Backed up · 14:31". %1$s is a clock time. -->
+    <string name="account_status_synced">Backed up · %1$s</string>
+    <string name="account_status_offline">Saved on phone · will back up</string>
+    <string name="account_status_error">Couldn\'t back up · Tap to retry</string>
+    <string name="account_unavailable">Backup isn\'t set up in this build. Everything is saved on this phone.</string>
+    <!-- Welcome (§3.1) and the signed-out Account screen -->
+    <string name="welcome_title">Your log stays on this phone</string>
+    <string name="welcome_body_local">Without an account, everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.</string>
+    <string name="welcome_body_later">You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do.</string>
+    <string name="welcome_continue_without">Continue without an account</string>
+    <string name="account_google">Continue with Google</string>
+    <string name="account_or_email">or use email</string>
+    <string name="account_mode_sign_in">Sign in</string>
+    <string name="account_mode_create">Create account</string>
+    <string name="account_email">Email</string>
+    <string name="account_password">Password</string>
+    <string name="account_password_hint">At least 6 characters</string>
+    <string name="account_forgot_password">Forgot password?</string>
+    <!-- %1$s is the typed email address -->
+    <string name="account_reset_sent">If %1$s has an account, a link to choose a new password is on its way.</string>
+    <string name="account_error_invalid_email">Enter a valid email address</string>
+    <string name="account_error_missing_password">Enter your password</string>
+    <string name="account_error_wrong_credentials">Wrong email or password</string>
+    <string name="account_error_email_in_use">That email already has an account</string>
+    <string name="account_error_weak_password">Use at least 6 characters</string>
+    <string name="account_error_no_connection">No connection. Try again.</string>
+    <string name="account_error_too_many">Too many tries. Wait a moment and try again.</string>
+    <string name="account_error_no_google">No Google account on this phone. Add one in system settings, or use email.</string>
+    <string name="account_error_recent_login">Sign in again to delete your account.</string>
+    <string name="account_error_wrong_account">That\'s another account. Choose the one you\'re signed in with.</string>
+    <string name="account_error_other">Something went wrong. Try again.</string>
+    <!-- Signed in (§3.3) -->
+    <string name="account_signed_in_as">Signed in as</string>
+    <string name="account_back_up_now">Back up now</string>
+    <string name="account_sign_out">Sign out</string>
+    <string name="account_signed_in_hint">Signing out keeps the log on this phone.</string>
+    <string name="account_delete">Delete account…</string>
+    <string name="account_delete_title">Delete account?</string>
+    <string name="account_delete_body">This deletes your backup and your account. The log on this phone stays.</string>
+    <string name="account_delete_password_prompt">Enter your password to confirm.</string>
+    <string name="account_delete_google_prompt">You\'ll sign in with Google again to confirm.</string>
+    <string name="account_delete_backup_failed">Couldn\'t delete your backup, so your account was kept. Try again.</string>
+    <string name="account_delete_account_failed">Your backup was deleted, but your account wasn\'t. Try again.</string>
 </resources>
