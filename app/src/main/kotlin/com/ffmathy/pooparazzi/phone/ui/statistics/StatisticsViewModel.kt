@@ -28,7 +28,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Statistics' state (P8, V1_ADDITIONS §8): the open row and the comparison range, both kept across process death, over
+ * Statistics' state (P8, V1_ADDITIONS §8): the open row and the range, both kept across process death, over
  * the whole log of the current baby ([settings]; BABIES_AND_BACKUP §2.4). A new visit starts at the last 30 days with
  * Poop open. Actions run one at a time, in tap order.
  */
@@ -71,6 +71,7 @@ class StatisticsViewModel(
         val stored = if (range is StatsRange.Custom && report != null) range.normalised(report.firstDay, report.lastDay) else range
         this.range.value = stored
         savedState[KEY_RANGE] = when (stored) {
+            StatsRange.Last7Days -> RANGE_LAST_7_DAYS
             StatsRange.Last30Days -> RANGE_LAST_30_DAYS
             StatsRange.Last90Days -> RANGE_LAST_90_DAYS
             StatsRange.AllDays -> RANGE_ALL_DAYS
@@ -91,6 +92,7 @@ class StatisticsViewModel(
      * last 30 days.
      */
     private fun restoredRange(): StatsRange = when (savedState.get<Any>(KEY_RANGE) as? String) {
+        RANGE_LAST_7_DAYS -> StatsRange.Last7Days
         RANGE_LAST_90_DAYS -> StatsRange.Last90Days
         RANGE_ALL_DAYS -> StatsRange.AllDays
         RANGE_CUSTOM -> {
@@ -120,6 +122,7 @@ class StatisticsViewModel(
         private const val KEY_RANGE = "statistics_range"
         private const val KEY_FROM = "statistics_from"
         private const val KEY_TO = "statistics_to"
+        private const val RANGE_LAST_7_DAYS = "LAST_7_DAYS"
         private const val RANGE_LAST_30_DAYS = "LAST_30_DAYS"
         private const val RANGE_LAST_90_DAYS = "LAST_90_DAYS"
         private const val RANGE_ALL_DAYS = "ALL_DAYS"

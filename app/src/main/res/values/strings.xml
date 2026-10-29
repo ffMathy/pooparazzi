@@ -125,10 +125,8 @@
     <string name="statistics_no_value" translatable="false">–</string>
     <!-- A range of visible dates: "26 Sep – 25 Oct" -->
     <string name="join_dash" translatable="false">%1$s – %2$s</string>
-    <!-- TalkBack, a row: "Feeds. Last 7 days: 6.7 a day. Last 30 days: 7.1 a day." -->
-    <string name="statistics_spoken_row" translatable="false">%1$s. %2$s: %3$s. %4$s: %5$s.</string>
-    <!-- TalkBack, a row with another range: "Feeds. Last 7 days: 6.7 a day. Chosen dates: 7.1 a day. Last 30 days: 7.1 a day." -->
-    <string name="statistics_spoken_row_compare" translatable="false">%1$s. %2$s: %3$s. %4$s: %5$s. %6$s: %7$s.</string>
+    <!-- TalkBack, a row: "Feeds. Last 30 days: 7.1 a day." -->
+    <string name="statistics_spoken_row" translatable="false">%1$s. %2$s: %3$s.</string>
 
     <!-- Edit sheet (P4) -->
     <string name="edit_title_sleep">Edit sleep</string>

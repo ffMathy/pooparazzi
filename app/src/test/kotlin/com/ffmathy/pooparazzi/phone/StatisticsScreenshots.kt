@@ -50,6 +50,8 @@ abstract class StatisticsScreenshots(private val language: String) {
     @Test fun statisticsTwins() = screen("34-statistics-twins", night = false) { Statistics(StatisticsSamples.twins()) }
 
     /** Not part of the tour (written under build/): the other rows, ranges and amounts of logging. */
+    @Test fun statisticsLastSevenDays() = screen("statistics-last-7-days", night = false, tour = false) { Statistics(StatisticsSamples.lastSevenDays()) }
+
     @Test fun statisticsSleep() = screen("statistics-sleep", night = false, tour = false) { Statistics(StatisticsSamples.sleep()) }
 
     @Test fun statisticsGaps() = screen("statistics-gaps", night = true, tour = false) { Statistics(StatisticsSamples.gaps()) }
