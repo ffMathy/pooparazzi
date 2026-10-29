@@ -1,10 +1,8 @@
-# Xaternity Tracker — Design Specification
+# Pooparazzi — Design Specification
 
-> **Renamed:** the product is now called **Pooparazzi**. This design document predates the rename and keeps the working name "Xaternity"; in code, read `com.ffmathy.xaternity` as `com.ffmathy.pooparazzi`, `xaternity://` as `pooparazzi://` and `Xaternity*` classes as `Pooparazzi*`.
+Design: "Night Light" (final) · Spec date: Mon 26 Oct 2026 · Status: **approved**; later changes are in [`V1_ADDITIONS.md`](V1_ADDITIONS.md)
 
-Design: "Night Light" (final) · Spec date: Mon 26 Oct 2026 · Status: **pending the user's approval of the mockups**
-
-This document defines the product as designed in the approved-for-review mockups. It is written for the developers who will build:
+This document defines the product as designed in the approved mockups. It is written for the developers who will build:
 
 - the **Android phone app** (Jetpack Compose, Material 3 Expressive), its **Glance home-screen widgets** and its **Live Update** notification;
 - the **Wear OS app** (Compose for Wear OS, Material 3), its **Tile**, its **complications** and its **Ongoing Activity / Live Update**.
@@ -15,7 +13,7 @@ Conventions
 - Reference coordinates such as "y 96–360" are for the reference device only. Lay out from window insets (§10.3), not from fixed bands.
 - Quoted strings are final UI copy. Copy them exactly, including the middle dot `·` (U+00B7), the en dash `–` (U+2013) in time ranges, the minus sign `−` (U+2212) in offset chips such as "−5m", and the ellipsis `…` (U+2026).
 - Sample values (Noa, 14:32, "2h 10m"…) come from the reference scenario in Appendix A. Use it for previews and screenshot tests.
-- The mockup set also contains two alternative visual directions ("Big Buttons", "Soft Paper") shown for comparison only. They are not specified here. If the user picks one, this document must be revised.
+- The mockup set also contains two alternative visual directions ("Big Buttons", "Soft Paper") shown for comparison only. They were not chosen and are not specified here.
 
 ---
 
