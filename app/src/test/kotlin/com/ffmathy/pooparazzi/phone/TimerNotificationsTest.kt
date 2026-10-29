@@ -104,6 +104,21 @@ class TimerNotificationsTest : CoreTestBase() {
         assertTrue(lines.toString(), lines.last().startsWith("Today · 1 feed · "))
     }
 
+    /** A sleep started seconds ago runs, though the shown time is whole minutes. */
+    @Test
+    fun aSleepStartedWithinTheMinuteIsRunning() {
+        val start = SampleData.NOW_1432 + 40_000
+        val sleep = com.ffmathy.pooparazzi.core.model.Entry(
+            id = "fresh",
+            kind = com.ffmathy.pooparazzi.core.model.EntryKind.SLEEP,
+            startMillis = start,
+            updatedAtMillis = start,
+        )
+        val state = TimerState.of(listOf(sleep), SampleData.settings, start + 5_000, zone)
+        assertEquals(RunningTimer("fresh", start), state.sleep)
+        assertEquals(SampleData.NOW_1432, state.now)
+    }
+
     /** The duration follows the clock: a non-waking alarm re-renders at the next minute while the sleep shows. */
     @Test
     fun aMinuteAlarmKeepsTheDurationCurrent() {

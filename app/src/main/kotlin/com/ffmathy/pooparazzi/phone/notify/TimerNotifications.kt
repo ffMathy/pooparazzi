@@ -57,11 +57,11 @@ data class TimerState(
 ) {
     companion object {
         fun of(entries: List<Entry>, settings: Settings, now: Long, zone: ZoneId): TimerState {
-            val minute = now - now.mod(MINUTE_MILLIS)
-            val summary = summarize(entries, minute, zone)
+            // Summarized at the real time (a sleep started seconds ago is not in the future), shown in whole minutes.
+            val summary = summarize(entries, now, zone)
             return TimerState(
                 sleep = summary.runningSleep?.let { RunningTimer(it.id, it.startMillis) },
-                now = minute,
+                now = now - now.mod(MINUTE_MILLIS),
                 babyName = settings.babyName,
                 language = settings.language,
                 zone = zone,
