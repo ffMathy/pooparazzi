@@ -52,8 +52,12 @@
     <string name="statistics_footnote">Gennemsnittene tæller hele dage til og med i går. En dag tæller kun med for måltider, bleer eller søvn, hvis der blev registreret nogen den dag. Den første dag med registreringer er ikke talt med.</string>
     <string name="statistics_spoken_per_day">%1$s om dagen</string>
     <string name="statistics_spoken_not_logged">ikke registreret</string>
-    <string name="statistics_spoken_chart_days">%1$s pr. dag, %2$s. Højest %3$s %4$s. Lavest %5$s %6$s.</string>
-    <string name="statistics_spoken_chart_bars">%1$s pr. dag, %2$s, hver søjle %3$s. Højest %4$s fra %5$s. Lavest %6$s fra %7$s.</string>
+    <string name="statistics_spoken_chart_days">%1$s pr. dag, %2$s.</string>
+    <string name="statistics_spoken_chart_bars">%1$s pr. dag, %2$s, hver søjle %3$s.</string>
+    <string name="statistics_spoken_highest_on">Højest %1$s %2$s.</string>
+    <string name="statistics_spoken_highest_from">Højest %1$s fra %2$s.</string>
+    <string name="statistics_spoken_lowest_on">Lavest %1$s %2$s.</string>
+    <string name="statistics_spoken_lowest_from">Lavest %1$s fra %2$s.</string>
     <plurals name="statistics_spoken_gaps_feeds">
         <item quantity="one">%d dag uden registrerede måltider er ikke talt med.</item>
         <item quantity="other">%d dage uden registrerede måltider er ikke talt med.</item>

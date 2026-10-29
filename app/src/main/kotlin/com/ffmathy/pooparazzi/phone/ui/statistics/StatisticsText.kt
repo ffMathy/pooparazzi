@@ -189,7 +189,8 @@ internal fun gapsNote(metric: StatsMetric): String = stringResource(
  * The chart's text alternative: "Poop per day, 26 September to 25 October. Highest 5 on Wednesday 7 October. Lowest 0
  * on Friday 23 October.", for bars of several days "Poop per day, 29 April to 25 October, each bar 7 days. Highest 3.3
  * from 11 May to 17 May. Lowest 1.1 from 17 August to 23 August.", then "2 days with no diapers logged are left out."
- * and "Days before 23 October are left out." when they apply.
+ * and "Days before 23 October are left out." when they apply. The oldest of several-day bars can be a single day; it
+ * is then said like a day ("Lowest 1.0 on Sunday 23 August.").
  */
 @Composable
 @ReadOnlyComposable
@@ -201,27 +202,12 @@ internal fun chartSpoken(chart: StatsChart, report: StatsReport, today: LocalDat
     val range = spokenRange(chart.from, chart.to, year, formatters)
     val sentences = mutableListOf<String>()
     sentences += if (chart.binDays == 1) {
-        stringResource(
-            R.string.statistics_spoken_chart_days,
-            name,
-            range,
-            spokenBarValue(highest, chart, formatters),
-            spokenDay(highest.from, year, formatters),
-            spokenBarValue(lowest, chart, formatters),
-            spokenDay(lowest.from, year, formatters),
-        )
+        stringResource(R.string.statistics_spoken_chart_days, name, range)
     } else {
-        stringResource(
-            R.string.statistics_spoken_chart_bars,
-            name,
-            range,
-            pluralStringResource(CoreR.plurals.spoken_days, chart.binDays, chart.binDays),
-            spokenBarValue(highest, chart, formatters),
-            spokenRange(highest.from, highest.to, year, formatters),
-            spokenBarValue(lowest, chart, formatters),
-            spokenRange(lowest.from, lowest.to, year, formatters),
-        )
+        stringResource(R.string.statistics_spoken_chart_bars, name, range, pluralStringResource(CoreR.plurals.spoken_days, chart.binDays, chart.binDays))
     }
+    sentences += extremeSpoken(R.string.statistics_spoken_highest_on, R.string.statistics_spoken_highest_from, highest, chart, year, formatters)
+    sentences += extremeSpoken(R.string.statistics_spoken_lowest_on, R.string.statistics_spoken_lowest_from, lowest, chart, year, formatters)
     if (chart.gapDays > 0) {
         val gaps = when (chart.metric) {
             StatsMetric.FEEDS -> R.plurals.statistics_spoken_gaps_feeds
@@ -234,6 +220,25 @@ internal fun chartSpoken(chart: StatsChart, report: StatsReport, today: LocalDat
         sentences += stringResource(R.string.statistics_spoken_before, spokenDate(report.firstDay, year, formatters))
     }
     return sentences.reduce { text, sentence -> stringResource(R.string.join_space, text, sentence) }
+}
+
+/** "Highest 5 on Wednesday 7 October." for a one-day [bar], "Highest 3.3 from 11 May to 17 May." for a longer one. */
+@Composable
+@ReadOnlyComposable
+private fun extremeSpoken(
+    @StringRes onDay: Int,
+    @StringRes overDays: Int,
+    bar: StatsBar,
+    chart: StatsChart,
+    year: Boolean,
+    formatters: Formatters,
+): String {
+    val value = spokenBarValue(bar, chart, formatters)
+    return if (bar.from == bar.to) {
+        stringResource(onDay, value, spokenDay(bar.from, year, formatters))
+    } else {
+        stringResource(overDays, value, spokenRange(bar.from, bar.to, year, formatters))
+    }
 }
 
 /**

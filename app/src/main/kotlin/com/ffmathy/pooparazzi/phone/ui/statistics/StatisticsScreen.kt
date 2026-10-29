@@ -414,8 +414,16 @@ internal fun StatisticsRangeDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CoreR.string.action_cancel)) } },
         tonalElevation = 0.dp,
     ) {
-        // A bounded height: the picker's months are a lazy list, so it never goes inside a vertical scroll.
-        DateRangePicker(state, Modifier.weight(1f))
+        // The picker draws its day, weekday and year labels in bodyLarge (Atkinson, no tabular figures); lines with
+        // digits use Google Sans Flex (DESIGN_SPEC §5.7), so give it the data style instead.
+        MaterialTheme(
+            colorScheme = MaterialTheme.colorScheme,
+            shapes = MaterialTheme.shapes,
+            typography = MaterialTheme.typography.copy(bodyLarge = PhoneType.dataMedium),
+        ) {
+            // A bounded height: the picker's months are a lazy list, so it never goes inside a vertical scroll.
+            DateRangePicker(state, Modifier.weight(1f))
+        }
     }
 }
 

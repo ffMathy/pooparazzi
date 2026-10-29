@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -57,9 +58,13 @@ internal object StatisticsChartDefaults {
 
     const val HAIRLINE = 1f
 
-    /** The last-7-days band: 1 inside its first and last slots, r 6, the plot's full height. */
+    /**
+     * The last-7-days band: 1 inside its first and last slots, r 6, the plot's full height, with a 1 dp outline so it
+     * reaches 3 : 1 where no 7-day line crosses it (bars of several days).
+     */
     const val BAND_INSET = 1f
     const val BAND_RADIUS = 6f
+    const val BAND_EDGE = 1f
 
     /** The 7-day (solid) and comparison (dashed) lines, each over a halo that knocks out the bars beneath. */
     const val LINE_WIDTH = 2f
@@ -102,6 +107,7 @@ internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: Loca
     // Colours are read here, never inside the Canvas (as in HistoryRibbon).
     val bar = metricStrong(chart.metric, LocalXPalette.current.events)
     val band = colors.surfaceContainerHighest
+    val bandEdge = colors.outline
     val card = colors.surfaceContainer
     val hairline = colors.outlineVariant
     val weekLine = colors.onSurface
@@ -112,7 +118,7 @@ internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: Loca
         Text(scaleLabel(chart, formatters), style = labelStyle, color = colors.onSurfaceVariant)
         Spacer(Modifier.height(2.dp))
         Canvas(Modifier.fillMaxWidth().height(StatisticsChartDefaults.PlotHeight)) {
-            plot(chart, bar = bar, band = band, card = card, hairline = hairline, weekColor = weekLine, rangeColor = rangeLine)
+            plot(chart, bar = bar, band = band, bandEdge = bandEdge, card = card, hairline = hairline, weekColor = weekLine, rangeColor = rangeLine)
         }
         Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth()) {
@@ -135,7 +141,7 @@ internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: Loca
             }
         }
         Spacer(Modifier.height(8.dp))
-        Legend(chart, report, band = band, weekColor = weekLine, rangeColor = rangeLine)
+        Legend(chart, report, band = band, bandEdge = bandEdge, weekColor = weekLine, rangeColor = rangeLine)
         if (chart.gapDays > 0) {
             Text(
                 gapsNote(chart.metric),
@@ -148,7 +154,16 @@ internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: Loca
 }
 
 /** Band, hairline, bars and zero marks, the dashed comparison line, then the 7-day line (V1_ADDITIONS §8). */
-private fun DrawScope.plot(chart: StatsChart, bar: Color, band: Color, card: Color, hairline: Color, weekColor: Color, rangeColor: Color) {
+private fun DrawScope.plot(
+    chart: StatsChart,
+    bar: Color,
+    band: Color,
+    bandEdge: Color,
+    card: Color,
+    hairline: Color,
+    weekColor: Color,
+    rangeColor: Color,
+) {
     val d = density
     val height = size.height
     val slot = size.width / chart.bars.size
@@ -166,6 +181,7 @@ private fun DrawScope.plot(chart: StatsChart, bar: Color, band: Color, card: Col
             size = Size(bandRight - bandLeft, height),
             cornerRadius = CornerRadius(StatisticsChartDefaults.BAND_RADIUS * d),
         )
+        bandOutline(bandEdge, Offset(bandLeft, 0f), Size(bandRight - bandLeft, height), StatisticsChartDefaults.BAND_RADIUS * d)
     }
 
     drawRect(hairline, topLeft = Offset.Zero, size = Size(size.width, StatisticsChartDefaults.HAIRLINE * d))
@@ -197,17 +213,32 @@ private fun DrawScope.plot(chart: StatsChart, bar: Color, band: Color, card: Col
     val week = chart.weekLine
     if (week != null && bandBars != null && bandRight > bandLeft) {
         val at = y(week)
-        drawLine(band, Offset(bandLeft, at), Offset(bandRight, at), strokeWidth = StatisticsChartDefaults.HALO_WIDTH * d, cap = StrokeCap.Butt)
-        drawLine(weekColor, Offset(bandLeft, at), Offset(bandRight, at), strokeWidth = StatisticsChartDefaults.LINE_WIDTH * d, cap = StrokeCap.Butt)
+        // Inside the band's outline, so the halo does not cut it.
+        val start = Offset(bandLeft + StatisticsChartDefaults.BAND_EDGE * d, at)
+        val end = Offset(bandRight - StatisticsChartDefaults.BAND_EDGE * d, at)
+        drawLine(band, start, end, strokeWidth = StatisticsChartDefaults.HALO_WIDTH * d, cap = StrokeCap.Butt)
+        drawLine(weekColor, start, end, strokeWidth = StatisticsChartDefaults.LINE_WIDTH * d, cap = StrokeCap.Butt)
     }
 }
 
+/** A 1 dp outline just inside the band's rounded rectangle at [topLeft] with [size]. */
+private fun DrawScope.bandOutline(color: Color, topLeft: Offset, size: Size, radius: Float) {
+    val edge = StatisticsChartDefaults.BAND_EDGE * density
+    drawRoundRect(
+        color,
+        topLeft = Offset(topLeft.x + edge / 2, topLeft.y + edge / 2),
+        size = Size(size.width - edge, size.height - edge),
+        cornerRadius = CornerRadius(radius - edge / 2),
+        style = Stroke(edge),
+    )
+}
+
 /**
- * "Last 7 days" (a band swatch, with the solid line when it is drawn), the range ("Last 30 days", a dashed line) and
+ * "Last 7 days" (an outlined band swatch, with the solid line when it is drawn), the range ("Last 30 days", a dashed line) and
  * "Each bar is 7 days" for bars of several days. One row for up to two items; stacked for three, or from 130 % font.
  */
 @Composable
-private fun Legend(chart: StatsChart, report: StatsReport, band: Color, weekColor: Color, rangeColor: Color) {
+private fun Legend(chart: StatsChart, report: StatsReport, band: Color, bandEdge: Color, weekColor: Color, rangeColor: Color) {
     val showWeek = chart.bandBars != null
     val showBins = chart.binDays > 1
     val items = 1 + (if (showWeek) 1 else 0) + (if (showBins) 1 else 0)
@@ -217,6 +248,7 @@ private fun Legend(chart: StatsChart, report: StatsReport, band: Color, weekColo
             LegendItem(stringResource(R.string.statistics_last_7_days)) {
                 Canvas(Modifier.size(StatisticsChartDefaults.SwatchWidth, StatisticsChartDefaults.SwatchHeight)) {
                     drawRoundRect(band, cornerRadius = CornerRadius(StatisticsChartDefaults.SWATCH_RADIUS * density))
+                    bandOutline(bandEdge, Offset.Zero, size, StatisticsChartDefaults.SWATCH_RADIUS * density)
                     if (chart.weekLine != null) {
                         val y = size.height / 2
                         drawLine(weekColor, Offset(0f, y), Offset(size.width, y), strokeWidth = StatisticsChartDefaults.LINE_WIDTH * density)

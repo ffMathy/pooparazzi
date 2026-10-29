@@ -400,7 +400,7 @@ Only whole days count: every window ends **yesterday**, and the **first logged d
 | Chosen dates | picked in the date range dialog | e.g. 5 – 18 Oct |
 
 - **Presets are nominal.** "Last 30 days" is always 30 days, even for a new user: days before `firstDay` are drawn empty and counted in "n of N days logged". Presets are relative (they move at midnight); chosen dates are absolute.
-- **The range chip** (like the edit sheet's day chip) shows "Last 30 days", "Last 90 days", "All days" or "Chosen dates". Its menu offers the presets and "Choose dates…", which opens the M3 `DateRangePicker` in a `DatePickerDialog`: selectable days are `firstDay` … yesterday, a start alone is a one-day range, and Cancel changes nothing.
+- **The range chip** (like the edit sheet's day chip) shows "Last 30 days", "Last 90 days", "All days" or "Chosen dates". Its menu offers the presets and "Choose dates…", which opens the M3 `DateRangePicker` in a `DatePickerDialog`: selectable days are `firstDay` … yesterday, a start alone is a one-day range, and Cancel changes nothing. Its day, weekday and year labels use dataMedium (Google Sans Flex, tabular figures) instead of the default bodyLarge, so the dialog keeps the digit rule (DESIGN_SPEC §5.7).
 - **Chosen dates are cut** to `firstDay` … yesterday on every build (entirely outside: the last 30 days). On OK, dates equal to a preset's become that preset.
 - **Saved state:** the open row and the range survive rotation (view model) and process death (`statistics_metric`, `statistics_range`, and `statistics_from` / `statistics_to` as epoch days for chosen dates). Anything unknown restores as the last 30 days with Poop open.
 
@@ -434,9 +434,9 @@ The column width is `(content width − 2 × 16 − 12) / 2`: 153 dp at 390 dp, 
 
 - **Block:** the scale label (labelSmall: the top count "5", or "16h 00m" for sleep) over a decorative 1 dp outlineVariant hairline; the plot (full width × 112 dp, a `Canvas`); the first and last dates; the legend; "Days with no diapers logged are left out." (per kind) when the window has gaps. With nothing counted the block is "Nothing logged on these days."
 - **Bars:** one per day up to 62 days; longer windows use 7-day bars cut from the end (14-, 21-day … beyond 434 days), so there are never more than 62 bars and the newest bar is exactly the last 7 days. A bar's value is the average per counted day. Bars are 60 % of their slot (2–12 dp wide, at least 3 tall), r 3, in the kind's strong colour; a gap draws nothing.
-- **The last 7 days** sit on a band (surfaceContainerHighest, r 6) when the window ends yesterday and is longer than a week, with their average as a solid 2 dp onSurface line across the band (daily bars only). **The range's average** is a dashed 2 dp onSurfaceVariant line across the plot. Both lines sit on 4 dp halos (band and card colour) so they stay visible over the bars.
+- **The last 7 days** sit on a band (surfaceContainerHighest, r 6, with a 1 dp outline so it reaches 3 : 1 even where no line crosses it) when the window ends yesterday and is longer than a week, with their average as a solid 2 dp onSurface line across the band (daily bars only). **The range's average** is a dashed 2 dp onSurfaceVariant line across the plot. Both lines sit on 4 dp halos (band and card colour) so they stay visible over the bars.
 - **Scale:** counts up to the next whole number (at least 1), sleep up to the next whole hour.
-- **Legend:** "Last 7 days" (band swatch, with the line when drawn), the range's name (dashed swatch), "Each bar is 7 days" for binned bars; in a row, or stacked for three items or from 130 % font.
+- **Legend:** "Last 7 days" (outlined band swatch, with the line when drawn), the range's name (dashed swatch), "Each bar is 7 days" for binned bars; in a row, or stacked for three items or from 130 % font.
 - **Not by colour alone:** band + solid line versus dashed line, legend words, a zero mark versus no mark, one series per chart named by the row. Bars reach 3 : 1 on the card and on the band in both themes (weakest: Night poop 3.13 on the band).
 
 ### 8.5 TalkBack
@@ -444,7 +444,7 @@ The column width is `(content width − 2 × 16 − 12) / 2`: 153 dp at 390 dp, 
 - **Header:** "Last 7 days, 19 October to 25 October" (a heading), with ", 3 of 7 days logged" when it applies.
 - **Range chip:** a button, click label "Change range": "Last 30 days, 26 September to 25 October" or "Chosen dates, 5 October to 18 October".
 - **Rows** are radio buttons in a selectable group: "Poop. Last 7 days: 0.7 a day. Last 30 days: 1.8 a day."; under another range "Feeds. Last 7 days: 6.7 a day. Chosen dates: 7.1 a day. Last 30 days: 7.1 a day."; durations in words ("14 hours 1 minute a day"); "not logged" instead of "–".
-- **Chart:** one node: "Poop per day, 26 September to 25 October. Highest 5 on Wednesday 7 October. Lowest 0 on Friday 23 October.", for bars of several days "…, each bar 7 days. Highest 3.3 from 11 May to 17 May. …", then "2 days with no diapers logged are left out." and "Days before 23 October are left out." when they apply.
+- **Chart:** one node: "Poop per day, 26 September to 25 October. Highest 5 on Wednesday 7 October. Lowest 0 on Friday 23 October.", for bars of several days "…, each bar 7 days. Highest 3.3 from 11 May to 17 May. …" (the oldest bar can be a single day, and is then said like a day: "Lowest 1.0 on Sunday 23 August."), then "2 days with no diapers logged are left out." and "Days before 23 October are left out." when they apply.
 - Spoken dates use full month names; the year is added when a range spans two years or is not in the current year.
 
 ### 8.6 Known limit

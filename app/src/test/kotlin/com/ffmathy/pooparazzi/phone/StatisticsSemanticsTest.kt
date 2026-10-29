@@ -21,11 +21,13 @@ import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.domain.StatsMetric
 import com.ffmathy.pooparazzi.core.domain.StatsRange
+import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.ui.preview.StatisticsSamples
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsActions
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsRangeDialog
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsRangeMenuItems
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsScreen
+import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsStateBuilder
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsUiState
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
 import org.junit.Assert.assertEquals
@@ -69,6 +71,15 @@ class StatisticsSemanticsTest {
     }
 
     private fun oct(day: Int): LocalDate = LocalDate.of(2026, 10, day)
+
+    /** 64 days cut into 7-day bars from the end: the oldest bar is one day, Sun 23 Aug (1 poop), the lowest. */
+    private fun oneDayOldestBar(): StatisticsUiState = StatisticsStateBuilder.build(
+        SampleData.history(days = 200),
+        SampleData.NOW_1432,
+        SampleData.ZONE,
+        StatsMetric.POOP,
+        StatsRange.Custom(LocalDate.of(2026, 8, 23), oct(25)),
+    )
 
     @Test
     fun theRowsSpeakTheirAveragesAndPoopIsOpen() {
@@ -174,6 +185,15 @@ class StatisticsSemanticsTest {
         compose.onNodeWithContentDescription(
             "Poop per day, 29 April to 25 October, each bar 7 days. Highest 3.3 from 11 May to 17 May. " +
                 "Lowest 1.1 from 17 August to 23 August.",
+        ).assertExists()
+    }
+
+    @Test
+    fun aOneDayBarIsSpokenLikeADay() {
+        show(oneDayOldestBar(), night = false)
+        compose.onNodeWithContentDescription(
+            "Poop per day, 23 August to 25 October, each bar 7 days. Highest 2.4 from 14 September to 20 September. " +
+                "Lowest 1.0 on Sunday 23 August.",
         ).assertExists()
     }
 
