@@ -154,11 +154,11 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
     @Test
     fun theReceiptHasNoTimeoutAndDoneKeepsTheLog() = homeTest { home ->
         home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFeedType(FeedType.FOOD)
         home.settle()
         home.viewModel.onSheetOffset(-10)
         home.scope.testScheduler.advanceTimeBy(10 * MINUTE)
-        assertEquals("still open", ReceiptVariant.FeedLogged(FeedType.FORMULA), home.settle().receipt.variant)
+        assertEquals("still open", ReceiptVariant.FeedLogged(FeedType.FOOD), home.settle().receipt.variant)
 
         home.viewModel.onReceiptDone()
         val state = home.settle()
@@ -170,7 +170,7 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
     @Test
     fun dismissingTheReceiptKeepsTheLogAsShown() = homeTest { home ->
         home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFeedType(FeedType.FOOD)
         home.viewModel.onSheetOffset(-5)
         home.viewModel.onSheetDismiss()
         home.settle()
@@ -181,7 +181,7 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
     @Test
     fun editInTheReceiptClosesItAndOpensTheEditor() = homeTest { home ->
         home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFeedType(FeedType.FOOD)
         val receipt = home.settle().receipt
         var editorOpened = false
         home.viewModel.onSheetEdit(receipt.editEntryId!!) { editorOpened = true }
