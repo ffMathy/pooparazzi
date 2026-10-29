@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.phone.widget
 
 import com.ffmathy.pooparazzi.core.domain.localTime
 import com.ffmathy.pooparazzi.core.domain.summarize
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.isRunning
@@ -19,6 +20,7 @@ import java.time.ZoneId
  * @property night the app's resolved appearance (never the launcher's): the widgets use the fixed Night or Day tokens.
  * @property receipt the last widget log while it may still be undone; null once expired, replaced or undone elsewhere.
  * @property notice a 2 s line (guard, dedupe, "Undone"); shown instead of the receipt and the status facts.
+ * @property babies all babies, in order; with two or more the widgets name the current one ([babyId]).
  */
 data class WidgetSnapshot(
     val night: Boolean,
@@ -30,8 +32,16 @@ data class WidgetSnapshot(
     val awakeSinceMillis: Long?,
     val receipt: WidgetReceipt?,
     val notice: WidgetNotice?,
+    val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),
+    val babyId: String = babies.first().id,
 ) {
     val asleep: Boolean get() = runningSleepStart != null
+
+    /** Two or more babies: the status row starts with the baby's label and TalkBack names it (BABIES_AND_BACKUP §2.4). */
+    val hasSeveralBabies: Boolean get() = babies.size > 1
+
+    /** The current baby, the one the widgets log for. */
+    val baby: Baby get() = babies.firstOrNull { it.id == babyId } ?: babies.first()
 
     /** What a tap on the widget background opens: Home with the undo card for the receipt, or Home. */
     val backgroundLaunch: HomeLaunch
@@ -39,8 +49,9 @@ data class WidgetSnapshot(
 
     companion object {
         /**
-         * The snapshot at [now]. Receipts and notices are dropped once expired, and a receipt also when its log no
-         * longer stands (undone or edited away in the app or on the watch).
+         * The snapshot at [now] of the current baby's [entries]. Receipts and notices are dropped once expired, and a
+         * receipt also when its log no longer stands (undone or edited away in the app or on the watch) or was made for
+         * another baby than the current one.
          */
         fun of(
             entries: List<Entry>,
@@ -60,8 +71,12 @@ data class WidgetSnapshot(
                 lastDiaper = summary.lastDiaper,
                 runningSleepStart = sleep?.startMillis,
                 awakeSinceMillis = if (sleep == null) summary.lastSleepEnd else null,
-                receipt = memo.receipt?.takeIf { it.expiresAtMillis > now && it.stillStands(entries) },
+                receipt = memo.receipt?.takeIf {
+                    it.expiresAtMillis > now && it.babyId == settings.selectedBaby.id && it.stillStands(entries)
+                },
                 notice = memo.notice?.takeIf { it.expiresAtMillis > now },
+                babies = settings.babies,
+                babyId = settings.selectedBaby.id,
             )
         }
 
@@ -71,7 +86,7 @@ data class WidgetSnapshot(
                 ReceiptKind.LOGGED -> entry != null
                 ReceiptKind.SLEEP_STARTED -> entry != null && entry.kind == EntryKind.SLEEP && entry.isRunning
                 ReceiptKind.WOKE_UP -> entry != null && entry.kind == EntryKind.SLEEP && !entry.isRunning
-                // A discarded sleep is soft-deleted: it is gone from the visible entries.
+                // A discarded sleep is soft-deleted: it is gone from the visible entries (of its own baby: see [of]).
                 ReceiptKind.SLEEP_CANCELLED -> entry == null
             }
         }

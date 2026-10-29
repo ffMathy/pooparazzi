@@ -12,7 +12,10 @@ import com.ffmathy.pooparazzi.phone.system.SystemSurfaces
 class PooparazziApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        SystemSurfaces.start(this, Core.init(this))
+        val graph = Core.init(this)
+        // The phone keeps a baby for every baby id among its entries (BABIES_AND_BACKUP §2.1); the watch never adopts.
+        graph.adoptBabiesFromEntries()
+        SystemSurfaces.start(this, graph)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

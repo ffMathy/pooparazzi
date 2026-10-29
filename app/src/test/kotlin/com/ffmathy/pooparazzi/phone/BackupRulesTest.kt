@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone
 
 import android.app.Application
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.phone.system.SurfacePrefs
 import com.ffmathy.pooparazzi.phone.widget.PrefsWidgetMemoStore
@@ -15,15 +16,16 @@ import java.io.File
 
 /**
  * Backup and device transfer leave the system surfaces' device-local flags behind: restored on a new phone, the
- * published-previews version would stop the widget previews from being published there.
+ * published-previews version would stop the widget previews from being published there. The settings, which hold the
+ * babies' names, never go to the cloud (BABIES_AND_BACKUP §1), and the backup's bookkeeping goes nowhere.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], application = Application::class)
 class BackupRulesTest {
     private val app: Application = ApplicationProvider.getApplicationContext()
 
-    /** The shared-preference files the rules name, for each section of [xml]. */
-    private fun excludedPrefs(xml: Int): Map<String, Set<String>> {
+    /** The files of [domain] the rules exclude, for each section of [xml]. */
+    private fun excluded(xml: Int, domain: String): Map<String, Set<String>> {
         val parser = app.resources.getXml(xml)
         val result = mutableMapOf<String, MutableSet<String>>()
         var section = "root"
@@ -31,13 +33,15 @@ class BackupRulesTest {
             if (parser.eventType != XmlPullParser.START_TAG) continue
             when (parser.name) {
                 "cloud-backup", "device-transfer" -> section = parser.name
-                "exclude" -> if (parser.getAttributeValue(null, "domain") == "sharedpref") {
+                "exclude" -> if (parser.getAttributeValue(null, "domain") == domain) {
                     result.getOrPut(section) { mutableSetOf() } += parser.getAttributeValue(null, "path")
                 }
             }
         }
         return result
     }
+
+    private fun excludedPrefs(xml: Int) = excluded(xml, "sharedpref")
 
     private fun prefsFile(name: String) = File(app.dataDir, "shared_prefs/$name")
 
@@ -52,5 +56,19 @@ class BackupRulesTest {
         assertEquals(local, rules["cloud-backup"])
         assertEquals(local, rules["device-transfer"])
         assertEquals(local, excludedPrefs(R.xml.backup_rules_legacy)["root"])
+    }
+
+    @Test
+    fun theNamesNeverGoToTheCloudAndTheBackupBookkeepingStaysHere() {
+        // Where core's DataStores keep their files (preferencesDataStore: files/datastore/<name>.preferences_pb).
+        val settings = "datastore/pooparazzi_settings.preferences_pb"
+        val cloud = "datastore/pooparazzi_cloud.preferences_pb"
+        assertEquals(File(app.filesDir, settings), app.preferencesDataStoreFile("pooparazzi_settings"))
+
+        val rules = excluded(R.xml.data_extraction_rules, "file")
+        assertEquals("the names stay out of the cloud", setOf(settings, cloud), rules["cloud-backup"])
+        assertEquals("a transfer to the new phone may carry them", setOf(cloud), rules["device-transfer"])
+        // API 30 cannot tell the two apart: the names stay out of both.
+        assertEquals(setOf(settings, cloud), excluded(R.xml.backup_rules_legacy, "file")["root"])
     }
 }

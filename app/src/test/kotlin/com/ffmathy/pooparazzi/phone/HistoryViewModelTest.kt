@@ -26,7 +26,7 @@ import org.robolectric.annotation.Config
 class HistoryViewModelTest : CoreTestBase() {
 
     private fun CoreTestRig.history(saved: SavedStateHandle = SavedStateHandle()): HistoryViewModel =
-        HistoryViewModel(repository, NoopEntrySync, clock, SampleData.ZONE, saved).also { collect(it.state) }
+        HistoryViewModel(repository, settings, NoopEntrySync, clock, SampleData.ZONE, saved).also { collect(it.state) }
 
     private fun HistoryViewModel.current(): HistoryUiState = checkNotNull(state.value) { "History has not loaded" }
 

@@ -52,6 +52,10 @@
 
     <!-- Indstillinger -->
     <string name="settings_section_baby">Barn</string>
+    <string name="settings_section_babies">Børn</string>
+    <string name="settings_baby_field">Navn</string>
+    <string name="settings_add_baby">Tilføj et barn</string>
+    <string name="settings_babies_hint">Navnene bliver på telefonen og dit ur. De bliver aldrig sendt op.</string>
     <string name="settings_appearance_hint">Auto bruger Nat om aftenen og natten, mens barnet sover, og når telefonen bruger mørkt tema.</string>
     <string name="settings_section_watch">Ur</string>
     <string name="settings_sync_now">Synkroniser nu</string>
@@ -69,6 +73,7 @@
     <string name="widget_cd_log_pee">Registrér tis</string>
     <string name="widget_cd_log_poop">Registrér bæ</string>
     <string name="widget_cd_log_both">Registrér tis og bæ</string>
+    <string name="widget_cd_for_baby">%1$s for %2$s</string>
     <string name="widget_undo_pee">Fortryd tis</string>
     <string name="widget_undo_poop">Fortryd bæ</string>
     <string name="widget_undo_both">Fortryd tis og bæ</string>

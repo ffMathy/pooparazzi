@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.phone.widget
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.phone.launch.ReceiptKind
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,8 @@ import kotlinx.serialization.json.Json
 /**
  * The receipt of the last log made on a widget (DESIGN_SPEC §3.3.6, §10.11): row 1 shows "Poop logged at 14:32" with
  * Undo until the next log or [expiresAtMillis]. [previousJson] is the entry before the log, for Undo of "Woke up" and
- * "Sleep cancelled" (which bring the sleep back).
+ * "Sleep cancelled" (which bring the sleep back). [babyId] is the baby it was made for: the receipt stands only while
+ * that baby is the current one (BABIES_AND_BACKUP §2.4); receipts stored before several babies belong to the first.
  */
 @Serializable
 data class WidgetReceipt(
@@ -24,6 +26,7 @@ data class WidgetReceipt(
     val expiresAtMillis: Long,
     val diaperKind: DiaperKind? = null,
     val previousJson: String? = null,
+    val babyId: String = Baby.FIRST_ID,
 )
 
 /** A short line in row 1 that needs no action: the 2 s guard and dedupe lines, and "Undone" (DESIGN_SPEC §10.7). */

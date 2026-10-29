@@ -42,14 +42,23 @@ object WidgetSamples {
     /** 14:50, after the 14:32 breast feed: "Fed at 14:32" with the breast icon. */
     fun afterBreastfeed(night: Boolean): WidgetSnapshot = build(SampleData.scenarioWithRecentFeed(zone), SampleData.NOW_1450, night)
 
+    /** Twins (Noa current) at 14:32: the status row starts with "Noa", and TalkBack names her. */
+    fun twins(night: Boolean): WidgetSnapshot = build(SampleData.scenario(zone), SampleData.NOW_1432, night, base = SampleData.twinSettings)
+
     /** [night] fixes the Appearance (Night or Day); null leaves it on Auto. */
-    private fun build(entries: List<Entry>, now: Long, night: Boolean?, memo: WidgetMemo = WidgetMemo()): WidgetSnapshot {
+    private fun build(
+        entries: List<Entry>,
+        now: Long,
+        night: Boolean?,
+        memo: WidgetMemo = WidgetMemo(),
+        base: Settings = SampleData.settings,
+    ): WidgetSnapshot {
         val appearance = when (night) {
             null -> Appearance.AUTO
             true -> Appearance.NIGHT
             false -> Appearance.DAY
         }
-        val settings: Settings = SampleData.settings.copy(appearance = appearance)
+        val settings: Settings = base.copy(appearance = appearance)
         return WidgetSnapshot.of(entries, settings, memo, now, zone, systemDark = false)
     }
 }

@@ -116,6 +116,22 @@ abstract class WidgetScreenshots(private val language: String) {
         compose.onNodeWithTag(TAG).captureRoboImage("build/outputs/roborazzi/widget-breakpoints-$language.png")
     }
 
+    /** Not part of the tour: twins, the 4×2 status row starting with "Noa" (Night and Day) and the 2×1. */
+    @Test
+    fun widgetTwins() {
+        val size = DpSize(358.dp, 208.dp)
+        val states = listOf(WidgetSamples.twins(night = true), WidgetSamples.twins(night = false))
+        val views = states.map { render(size) { LogWidgetContent(it) } }
+        val quick = render(DpSize(171.dp, 100.dp)) { QuickWidgetContent(states.first()) }
+        compose.setContent {
+            Column(Modifier.testTag(TAG)) {
+                states.zip(views).forEach { (state, view) -> Panel(state, size, view) }
+                Panel(states.first(), DpSize(171.dp, 100.dp), quick)
+            }
+        }
+        compose.onNodeWithTag(TAG).captureRoboImage("build/outputs/roborazzi/widget-twins-$language.png")
+    }
+
     /**
      * Not part of the tour: the static picker previews (`previewLayout`, Android 12–14) inflated as RemoteViews, as a
      * launcher does, so a view RemoteViews does not allow fails here. Night configuration (values-night palette).

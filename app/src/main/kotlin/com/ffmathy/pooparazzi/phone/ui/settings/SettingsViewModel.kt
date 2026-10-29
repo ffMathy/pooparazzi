@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ffmathy.pooparazzi.core.Core
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
 import com.ffmathy.pooparazzi.core.settings.Settings
@@ -25,35 +26,42 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.ZoneId
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Settings (DESIGN_SPEC §3.3.5, V1_ADDITIONS §5) as data.
+ * Settings (DESIGN_SPEC §3.3.5, V1_ADDITIONS §5, BABIES_AND_BACKUP §2.4) as data.
  *
- * @property babyName what the name field shows: the parent's typing, or the stored name.
+ * @property babies the babies in their order, each with what its name field shows: the parent's typing, or the
+ *   stored name.
+ * @property canAddBaby false at [Settings.MAX_BABIES] (the "Add a baby" pill is hidden then).
  */
 @Immutable
 data class SettingsUiState(
-    val babyName: String,
+    val babies: List<Baby>,
     val appearance: Appearance,
     val language: AppLanguage,
     val sync: SyncStatus,
     val zone: ZoneId,
     val versionName: String,
+    val canAddBaby: Boolean = babies.size < Settings.MAX_BABIES,
 )
 
 /** Everything the parent can do in Settings. Defaults do nothing, so previews and screenshots can pass [None]. */
 @Stable
 interface SettingsActions {
     fun onBack() {}
-    fun onBabyNameChange(name: String) {}
+    fun onBabyNameChange(id: String, name: String) {}
 
-    /** The keyboard's Done: saves the name at once. */
-    fun onBabyNameDone() {}
+    /** The keyboard's Done in baby [id]'s field: saves its name at once. */
+    fun onBabyNameDone(id: String) {}
+
+    /** "Add a baby": appends an unnamed baby (the current baby stays). */
+    fun onAddBaby() {}
     fun onAppearance(appearance: Appearance) {}
     fun onLanguage(language: AppLanguage) {}
     fun onRetrySync() {}
@@ -66,9 +74,9 @@ interface SettingsActions {
 }
 
 /**
- * Settings' state: the baby's name (saved 500 ms after the last keystroke, or at once on Done, and never lost when the
- * screen closes mid-typing), Appearance, and the language, which is persisted in [settings] (so it syncs to the
- * watch) and applied through [locales].
+ * Settings' state: the babies' names (each saved 500 ms after the last keystroke in its field, or at once on Done, and
+ * never lost when the screen closes mid-typing), adding a baby, Appearance, and the language, which is persisted in
+ * [settings] (so it syncs to the watch) and applied through [locales].
  *
  * @param writeScope outlives this view model, so a pending name write still lands after the screen closed.
  */
@@ -82,17 +90,23 @@ class SettingsViewModel(
     private val nameDebounceMillis: Long = NAME_DEBOUNCE_MILLIS,
 ) : ViewModel(), SettingsActions {
 
-    private val nameDraft = MutableStateFlow<String?>(null)
+    /** What each touched field shows, by baby id. */
+    private val nameDrafts = MutableStateFlow<Map<String, String>>(emptyMap())
 
-    /** The typed name not written yet; taken atomically by the write, so no keystroke is lost or written twice. */
-    private val pendingName = AtomicReference<String?>(null)
+    /**
+     * The typed names not written yet, by baby id; a write takes its baby's name atomically, so no keystroke is lost or
+     * written twice.
+     */
+    private val pendingNames = ConcurrentHashMap<String, String>()
+
+    /** One name write at a time, for every baby: an older name never lands after a newer one. */
     private val nameWrites = Mutex()
-    private var nameJob: Job? = null
+    private val nameJobs = mutableMapOf<String, Job>()
 
     /** Null until the settings have loaded. */
-    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, nameDraft) { s, status, draft ->
+    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, nameDrafts) { s, status, drafts ->
         SettingsUiState(
-            babyName = draft ?: s.babyName,
+            babies = s.babies.map { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
             appearance = s.appearance,
             language = s.language,
             sync = status,
@@ -101,20 +115,24 @@ class SettingsViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    override fun onBabyNameChange(name: String) {
+    override fun onBabyNameChange(id: String, name: String) {
         val limited = name.take(Settings.MAX_BABY_NAME_LENGTH)
-        nameDraft.value = limited
-        pendingName.set(limited)
-        nameJob?.cancel()
-        nameJob = writeScope.launch {
+        nameDrafts.update { it + (id to limited) }
+        pendingNames[id] = limited
+        nameJobs.remove(id)?.cancel()
+        nameJobs[id] = writeScope.launch {
             delay(nameDebounceMillis)
-            flushName()
+            flushName(id)
         }
     }
 
-    override fun onBabyNameDone() {
-        nameJob?.cancel()
-        nameJob = writeScope.launch { flushName() }
+    override fun onBabyNameDone(id: String) {
+        nameJobs.remove(id)?.cancel()
+        nameJobs[id] = writeScope.launch { flushName(id) }
+    }
+
+    override fun onAddBaby() {
+        viewModelScope.launch { settings.addBaby() }
     }
 
     override fun onAppearance(appearance: Appearance) {
@@ -134,13 +152,13 @@ class SettingsViewModel(
     }
 
     override fun onCleared() {
-        if (pendingName.get() != null) writeScope.launch { flushName() }
+        pendingNames.keys.toList().forEach { id -> writeScope.launch { flushName(id) } }
     }
 
-    /** Writes the latest typed name, one write at a time (an older name never lands after a newer one). */
-    private suspend fun flushName() = nameWrites.withLock {
-        val name = pendingName.getAndSet(null) ?: return@withLock
-        settings.setBabyName(name)
+    /** Writes the latest typed name of baby [id], one write at a time (an older name never lands after a newer one). */
+    private suspend fun flushName(id: String) = nameWrites.withLock {
+        val name = pendingNames.remove(id) ?: return@withLock
+        settings.renameBaby(id, name)
     }
 
     companion object {

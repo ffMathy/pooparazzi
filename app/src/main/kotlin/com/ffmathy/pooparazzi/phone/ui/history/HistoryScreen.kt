@@ -83,7 +83,6 @@ import com.ffmathy.pooparazzi.phone.ui.edit.rememberEditEffects
 import com.ffmathy.pooparazzi.phone.ui.home.LARGE_FONT_SCALE
 import com.ffmathy.pooparazzi.phone.ui.preview.HistorySamples
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
-import java.time.ZoneId
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Layout constants (DESIGN_SPEC §3.3.3). */
@@ -144,7 +143,7 @@ fun HistoryScreen(
 
     Box(modifier.fillMaxSize().background(colors.background)) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(windowInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))) {
-            HistoryTopBar(state.sync, state.zone, formatters, actions)
+            HistoryTopBar(state, formatters, actions)
             LazyColumn(
                 Modifier.fillMaxWidth().weight(1f),
                 state = listState,
@@ -233,15 +232,29 @@ fun HistoryScreen(
     }
 }
 
-/** Back, "History" and the sync line (a 48 dp retry target in the error state). */
+/**
+ * Back, "History", the current baby's label with two or more babies (BABIES_AND_BACKUP §2.4) and the sync line (a 48 dp
+ * retry target in the error state).
+ */
 @Composable
-private fun HistoryTopBar(sync: SyncStatus, zone: ZoneId, formatters: Formatters, actions: HistoryActions) {
+private fun HistoryTopBar(state: HistoryUiState, formatters: Formatters, actions: HistoryActions) {
+    val sync = state.sync
+    val zone = state.zone
     XTopBar(
         title = stringResource(CoreR.string.nav_history),
         navigationIcon = XIcons.back,
         navigationLabel = stringResource(R.string.cd_back),
         onNavigate = actions::onBack,
     ) {
+        if (state.hasSeveralBabies) {
+            Text(
+                formatters.labels.baby(state.baby, state.babies),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         if (sync is SyncStatus.Error) {
             val label = syncLineText(sync, zone, formatters).orEmpty()
             Box(

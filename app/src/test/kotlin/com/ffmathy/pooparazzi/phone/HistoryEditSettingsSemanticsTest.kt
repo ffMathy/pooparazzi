@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
@@ -23,12 +24,15 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Breast
+import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
 import com.ffmathy.pooparazzi.phone.ui.edit.EditActions
@@ -79,6 +83,8 @@ class HistoryEditSettingsSemanticsTest {
     private val settings = object : SettingsActions {
         override fun onAppearance(appearance: Appearance) { calls += "appearance:$appearance" }
         override fun onLanguage(language: AppLanguage) { calls += "language:$language" }
+        override fun onBabyNameChange(id: String, name: String) { calls += "name:$id:$name" }
+        override fun onAddBaby() { calls += "add-baby" }
     }
 
     @Before
@@ -196,10 +202,58 @@ class HistoryEditSettingsSemanticsTest {
     @Test
     fun settingsAppearanceAndLanguageAreSelectable() {
         compose.setContent { NightLightTheme(night = true) { SettingsScreen(SettingsSamples.state(), settings) } }
-        compose.onNodeWithText("Auto").assertIsSelected()
-        compose.onNodeWithText("Night").assertIsNotSelected().performClick()
-        compose.onNodeWithText("System default").assertIsSelected()
+        compose.onNodeWithText("Auto").performScrollTo().assertIsSelected()
+        compose.onNodeWithText("Night").performScrollTo().assertIsNotSelected().performClick()
+        compose.onNodeWithText("System default").performScrollTo().assertIsSelected()
         compose.onNodeWithText("Dansk").performScrollTo().performClick()
         assertEquals(listOf("appearance:NIGHT", "language:DA"), calls)
+    }
+
+    /** Settings › Baby with one baby: one "Name" field, "Add a baby" and the hint (BABIES_AND_BACKUP §2.4). */
+    @Test
+    fun settingsBabyHasANameFieldAndAddABaby() {
+        compose.setContent { NightLightTheme(night = true) { SettingsScreen(SettingsSamples.state(), settings) } }
+        compose.onNodeWithText("Baby").assertExists()
+        compose.onNode(hasSetTextAction()).assert(hasText("Noa")).assert(hasText("Name"))
+        compose.onNodeWithText("Names stay on this phone and your watch. They're never uploaded.").assertExists()
+        compose.onNodeWithText("Add a baby").performScrollTo().assertHasClickAction().performClick()
+        compose.onNode(hasSetTextAction()).performTextReplacement("Maja")
+        assertEquals(listOf("add-baby", "name:default:Maja"), calls)
+    }
+
+    @Test
+    fun settingsBabiesHasAFieldPerBabyWithItsLabelAsPlaceholder() {
+        compose.setContent { NightLightTheme(night = true) { SettingsScreen(SettingsSamples.babies(), settings) } }
+        compose.onNodeWithText("Babies").assertExists()
+        val fields = compose.onAllNodes(hasSetTextAction())
+        fields.assertCountEquals(3)
+        fields[0].assert(hasText("Noa"))
+        fields[1].assert(hasText("Ida"))
+        // The placeholder shows once the empty field has the focus (the "Name" label moves up).
+        fields[2].performScrollTo().performClick()
+        fields[2].assert(hasText("Baby 3"))
+        fields[1].performTextReplacement("Idun")
+        assertEquals(listOf("name:${SampleData.TWIN_ID}:Idun"), calls)
+    }
+
+    @Test
+    fun addABabyIsHiddenAtTheCap() {
+        val full = SettingsSamples.state(babies = (1..com.ffmathy.pooparazzi.core.settings.Settings.MAX_BABIES).map { Baby("baby-$it") })
+        compose.setContent { NightLightTheme(night = true) { SettingsScreen(full, settings) } }
+        compose.onNodeWithText("Add a baby").assertDoesNotExist()
+    }
+
+    @Test
+    fun historyNamesTheBabyOnlyWithSeveral() {
+        compose.setContent { NightLightTheme(night = false) { HistoryScreen(HistorySamples.twins(), history) } }
+        compose.onNodeWithText("History").assertExists()
+        compose.onNodeWithText("Noa").assertExists()
+    }
+
+    @Test
+    fun historyWithOneBabyHasNoName() {
+        compose.setContent { NightLightTheme(night = false) { HistoryScreen(HistorySamples.today(), history) } }
+        compose.onNodeWithText("Baby").assertDoesNotExist()
+        compose.onNodeWithText("Noa").assertDoesNotExist()
     }
 }

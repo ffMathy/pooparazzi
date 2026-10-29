@@ -134,6 +134,13 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
         },
     )
 
+    /** The current baby's label with two or more babies ("Noa", "Baby 2"); null with one (BABIES_AND_BACKUP §2.2). */
+    fun babyLabel(snapshot: WidgetSnapshot): String? =
+        if (snapshot.hasSeveralBabies) labels.baby(snapshot.baby, snapshot.babies) else null
+
+    /** A TalkBack name for [baby] ("Log pee for Noa"); [name] alone when [baby] is null (one baby). */
+    fun forBaby(name: String, baby: String?): String = baby?.let { string(R.string.widget_cd_for_baby, name, it) } ?: name
+
     fun notice(notice: WidgetNotice): String = when (notice.type) {
         NoticeType.ALREADY_ASLEEP -> string(CoreR.string.guard_already_asleep, time(notice.atMillis))
         NoticeType.ALREADY_AWAKE -> string(CoreR.string.guard_already_awake, time(notice.atMillis))

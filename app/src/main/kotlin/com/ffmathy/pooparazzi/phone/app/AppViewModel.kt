@@ -25,14 +25,15 @@ import kotlinx.coroutines.flow.stateIn
 data class AppearanceInputs(val appearance: Appearance, val sleepRunning: Boolean)
 
 /**
- * App-level state: the Appearance setting and whether a sleep runs (Auto dims for naps), and the launch a widget or
+ * App-level state: the Appearance setting and whether a sleep runs for any baby (Auto dims for naps while any baby is
+ * asleep, BABIES_AND_BACKUP §2.3), and the launch a widget or
  * notification asked for. [appearance] is null until the stores have answered, which keeps the splash on screen so
  * the first frame already has the right theme.
  */
 class AppViewModel(repository: EntryRepository, settings: SettingsRepository) : ViewModel() {
     val appearance: StateFlow<AppearanceInputs?> = combine(
         settings.settings.map { it.appearance }.distinctUntilChanged(),
-        repository.observeEntries().map { entries -> entries.any { it.isSleep && it.isRunning } }.distinctUntilChanged(),
+        repository.observeAllEntries().map { entries -> entries.any { it.isSleep && it.isRunning } }.distinctUntilChanged(),
     ) { appearance, sleepRunning -> AppearanceInputs(appearance, sleepRunning) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 

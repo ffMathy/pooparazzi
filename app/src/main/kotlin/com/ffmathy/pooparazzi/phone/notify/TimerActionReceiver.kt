@@ -7,6 +7,7 @@ import android.content.Intent
 import android.util.Log
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.data.EndResult
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.phone.system.SurfacePrefs
@@ -26,7 +27,7 @@ class TimerActionReceiver : BroadcastReceiver() {
                 val graph = Core.ensureInitialized(context)
                 graph.scope.launch {
                     try {
-                        endSleep(context, entryId)
+                        endSleep(context, entryId, intent.getStringExtra(EXTRA_BABY_ID))
                     } finally {
                         pending.finish()
                     }
@@ -44,12 +45,14 @@ class TimerActionReceiver : BroadcastReceiver() {
         const val ACTION_WOKE_UP = "com.ffmathy.pooparazzi.phone.action.WOKE_UP"
         const val ACTION_DISMISSED = "com.ffmathy.pooparazzi.phone.action.TIMER_DISMISSED"
         const val EXTRA_ENTRY_ID = "entry_id"
+        const val EXTRA_BABY_ID = "baby_id"
 
         /**
-         * Ends the running sleep [entryId] now. A sleep that already ended (on the watch, in the app) is left alone; one
-         * stopped within 60 s is discarded by the repository like any mis-tap.
+         * Ends the running sleep [entryId] now, whichever baby is the current one, and cancels that baby's notification
+         * ([babyId], else the entry's). A sleep that already ended (on the watch, in the app) is left alone; one stopped
+         * within 60 s is discarded by the repository like any mis-tap.
          */
-        suspend fun endSleep(context: Context, entryId: String): EndResult? {
+        suspend fun endSleep(context: Context, entryId: String, babyId: String? = null): EndResult? {
             val graph = Core.ensureInitialized(context)
             val sleep = graph.repository.get(entryId)
             val result = if (sleep != null && sleep.isSleep && sleep.isRunning) {
@@ -59,18 +62,20 @@ class TimerActionReceiver : BroadcastReceiver() {
             } else {
                 null
             }
-            TimerNotifications(context).cancelSleep()
+            TimerNotifications(context).cancelSleep(babyId ?: sleep?.babyId ?: Baby.FIRST_ID)
             return result
         }
 
-        fun wokeUpIntent(context: Context, entryId: String): PendingIntent = broadcast(context, ACTION_WOKE_UP, entryId)
+        fun wokeUpIntent(context: Context, entryId: String, babyId: String): PendingIntent =
+            broadcast(context, ACTION_WOKE_UP, entryId, babyId)
 
         fun dismissedIntent(context: Context, entryId: String): PendingIntent = broadcast(context, ACTION_DISMISSED, entryId)
 
-        private fun broadcast(context: Context, action: String, entryId: String): PendingIntent {
+        private fun broadcast(context: Context, action: String, entryId: String, babyId: String? = null): PendingIntent {
             val intent = Intent(context, TimerActionReceiver::class.java)
                 .setAction(action)
                 .putExtra(EXTRA_ENTRY_ID, entryId)
+                .apply { if (babyId != null) putExtra(EXTRA_BABY_ID, babyId) }
             return PendingIntent.getBroadcast(
                 context,
                 entryId.hashCode(),

@@ -79,6 +79,8 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
     val layout = QuickLayout.of(LocalSize.current)
     val measure = remember(context) { WidgetMeasure(context) }
     val colors = WidgetColors(snapshot.night)
+    // With two or more babies TalkBack names the baby the buttons log for (BABIES_AND_BACKUP §2.4).
+    val baby = strings.babyLabel(snapshot)
     WidgetSurface(colors, snapshot.backgroundLaunch, GlanceModifier.padding(12.dp)) {
         Row(GlanceModifier.fillMaxSize()) {
             // The mockup's Feed is the narrower button (52 of 147 dp), widened to its label ("Måltid") so the word
@@ -94,7 +96,7 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
                 fill = feed.container,
                 radius = 20.dp,
                 action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Feed)),
-                description = strings.string(R.string.widget_cd_log_feed),
+                description = strings.forBaby(strings.string(R.string.widget_cd_log_feed), baby),
             ) {
                 QuickFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, layout.labels, labelPadding = 4.dp)
             }
@@ -115,7 +117,10 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
                 border = if (asleep) sleep.strong else null,
                 radius = 20.dp,
                 action = actionRunCallback<ToggleSleepAction>(),
-                description = strings.string(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep),
+                description = strings.forBaby(
+                    strings.string(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep),
+                    baby,
+                ),
             ) {
                 QuickFace(if (asleep) XDrawables.wake else XDrawables.sleep, sleep.strong, label, sleep.onContainer, layout.labels)
             }

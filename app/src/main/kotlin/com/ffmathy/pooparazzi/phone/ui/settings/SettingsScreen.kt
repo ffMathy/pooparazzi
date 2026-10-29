@@ -19,8 +19,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,18 +26,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -59,6 +58,7 @@ import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
+import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
@@ -67,6 +67,8 @@ import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.notify.NotificationLink
 import com.ffmathy.pooparazzi.phone.notify.openNotificationSettings
 import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
+import com.ffmathy.pooparazzi.phone.ui.components.GroupRow
+import com.ffmathy.pooparazzi.phone.ui.components.RadioGroup
 import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
 import com.ffmathy.pooparazzi.phone.ui.components.syncIcon
 import com.ffmathy.pooparazzi.phone.ui.components.syncLineText
@@ -108,7 +110,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit) {
 }
 
 /**
- * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the baby's name, Appearance
+ * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the babies, Appearance
  * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry, Notifications (the link
  * to the system's Live Update setting, §10.5) and About (version, font licences). Section headings are labelMedium;
  * grouped rows use the History list's r 20 / r 6 corners.
@@ -146,7 +148,8 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp + bottomInset),
         ) {
-            Section(stringResource(R.string.settings_section_baby)) { NameField(state.babyName, actions) }
+            val babiesTitle = if (state.babies.size > 1) R.string.settings_section_babies else R.string.settings_section_baby
+            Section(stringResource(babiesTitle)) { BabiesGroup(state, actions) }
             Section(stringResource(CoreR.string.settings_appearance)) {
                 ConnectedChoiceGroup(
                     options = Appearance.entries,
@@ -184,23 +187,80 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
     Column(content = content)
 }
 
-/** The baby's name (shown in the top bar and notifications); empty shows the "Baby" hint. Done saves at once. */
+/**
+ * Settings › Babies (BABIES_AND_BACKUP §2.4): one name field per baby (its label as the placeholder), "Add a baby"
+ * (hidden at [Settings.MAX_BABIES]; the new baby's field takes the focus) and the hint that names stay on the parent's
+ * devices.
+ */
 @Composable
-private fun NameField(name: String, actions: SettingsActions) {
+private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
+    val labels = rememberFormatters(state.zone).labels
+    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    var focusAdded by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        state.babies.forEach { baby ->
+            key(baby.id) {
+                val requester = focusRequesters.getOrPut(baby.id) { FocusRequester() }
+                NameField(
+                    name = baby.name,
+                    // The label an empty name shows: "Baby", or "Baby 2" … with several.
+                    placeholder = labels.baby(baby.copy(name = ""), state.babies),
+                    onChange = { actions.onBabyNameChange(baby.id, it) },
+                    onDone = { actions.onBabyNameDone(baby.id) },
+                    modifier = Modifier.focusRequester(requester),
+                )
+            }
+        }
+    }
+    val newest = state.babies.last().id
+    LaunchedEffect(newest) {
+        if (focusAdded) {
+            focusAdded = false
+            focusRequesters[newest]?.requestFocus()
+        }
+    }
+    if (state.canAddBaby) {
+        OutlinePill(
+            stringResource(R.string.settings_add_baby),
+            onClick = {
+                focusAdded = true
+                actions.onAddBaby()
+            },
+            icon = XIcons.plus,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
+    Text(
+        stringResource(R.string.settings_babies_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
+    )
+}
+
+/** A baby's name (shown in the top bar and notifications); empty shows its [placeholder] label. Done saves at once. */
+@Composable
+private fun NameField(
+    name: String,
+    placeholder: String,
+    onChange: (String) -> Unit,
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = MaterialTheme.colorScheme
     val focus = LocalFocusManager.current
     OutlinedTextField(
         value = name,
-        onValueChange = actions::onBabyNameChange,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(CoreR.string.settings_baby_name)) },
-        placeholder = { Text(stringResource(CoreR.string.baby_name_hint)) },
+        onValueChange = onChange,
+        modifier = modifier.fillMaxWidth(),
+        label = { Text(stringResource(R.string.settings_baby_field)) },
+        placeholder = { Text(placeholder) },
         singleLine = true,
         textStyle = MaterialTheme.typography.titleMedium,
         shape = RoundedCornerShape(16.dp),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = {
-            actions.onBabyNameDone()
+            onDone()
             focus.clearFocus()
         }),
         colors = OutlinedTextFieldDefaults.colors(
@@ -216,38 +276,7 @@ private fun NameField(name: String, actions: SettingsActions) {
 /** System default · English · Dansk as radio rows (language names in their own language). */
 @Composable
 private fun LanguageGroup(selected: AppLanguage, onSelect: (AppLanguage) -> Unit) {
-    val options = AppLanguage.entries
-    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
-        options.forEachIndexed { index, language ->
-            GroupRow(first = index == 0, last = index == options.lastIndex) {
-                val isSelected = language == selected
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 56.dp)
-                        .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(language) })
-                        .padding(start = 16.dp, end = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(Labels.language(language)),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                    )
-                    RadioButton(
-                        selected = isSelected,
-                        onClick = null,
-                        colors = RadioButtonDefaults.colors(
-                            selectedColor = MaterialTheme.colorScheme.onSurface,
-                            unselectedColor = MaterialTheme.colorScheme.outline,
-                        ),
-                        modifier = Modifier.padding(12.dp),
-                    )
-                }
-            }
-        }
-    }
+    RadioGroup(AppLanguage.entries, selected, onSelect, label = { stringResource(Labels.language(it)) })
 }
 
 /** The sync line with "Sync now"; without a watch: "No watch connected. Everything is saved on this phone." */
@@ -339,17 +368,6 @@ private fun AboutGroup(versionName: String, onOpenLicences: () -> Unit) {
             LinkRow(stringResource(R.string.settings_font_licences), stringResource(R.string.settings_font_licences_summary), onOpenLicences)
         }
     }
-}
-
-/** A row of a grouped list: surfaceContainer, outer corners r 20, inner r 6 (as the History list). */
-@Composable
-private fun GroupRow(first: Boolean, last: Boolean, content: @Composable () -> Unit) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .clip(HistoryRowDefaults.shape(first, last))
-            .background(MaterialTheme.colorScheme.surfaceContainer),
-    ) { content() }
 }
 
 @Preview(name = "Night", widthDp = 390, heightDp = 1000)

@@ -21,6 +21,9 @@ object HistorySamples {
     /** Sun 25 Oct, seen at 14:32 on Monday: the evening's 22:40 sleep runs past midnight. */
     fun yesterday(): HistoryUiState = build(SampleData.scenario(zone), SampleData.NOW_1432, day = SampleData.YESTERDAY)
 
+    /** [today] with twins (Noa current): "Noa" under the title. */
+    fun twins(): HistoryUiState = today().copy(babies = SampleData.twinSettings.babies, babyId = SampleData.twinSettings.selectedBaby.id)
+
     private fun build(
         entries: List<Entry>,
         now: Long,

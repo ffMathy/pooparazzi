@@ -71,6 +71,13 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
         SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets)
     }
 
+    /** Not part of the tour (written under build/): Settings › Babies with twins and an unnamed third, and History's label. */
+    @Test fun settingsBabies() = screen("settings-babies", night = false, tour = false) {
+        SettingsScreen(SettingsSamples.babies(), SettingsActions.None, windowInsets = ReferenceInsets)
+    }
+
+    @Test fun historyTwins() = screen("history-twins", night = true, tour = false) { History(HistorySamples.twins()) }
+
     /** Not part of the tour (written under build/): the blocking validation line, and a past day. */
     @Test fun editValidation() = sheet("edit-validation", night = true, EditSamples.sleepEndBeforeStart(), tour = false)
 

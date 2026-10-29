@@ -11,7 +11,9 @@ import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.phone.MainActivity
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.phone.notify.RunningTimer
+import com.ffmathy.pooparazzi.phone.notify.SleepingBaby
 import com.ffmathy.pooparazzi.phone.notify.TimerNotifications
 import com.ffmathy.pooparazzi.phone.notify.TimerState
 import org.junit.After
@@ -55,10 +57,10 @@ class Android17SmokeTest {
     @Test
     fun timerNotificationsUseTheMetricStyle() {
         shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        val noa = Baby(Baby.FIRST_ID, "Noa")
         val state = TimerState(
-            sleep = RunningTimer("sleep-1", SampleData.at(2, 5)),
-            lastFeedStartMillis = SampleData.at(1, 40),
-            babyName = "Noa",
+            sleeping = listOf(SleepingBaby(noa, RunningTimer("sleep-1", SampleData.at(2, 5)), lastFeedStartMillis = SampleData.at(1, 40))),
+            babies = listOf(noa),
             language = AppLanguage.DA,
             zone = SampleData.ZONE,
         )

@@ -143,31 +143,56 @@ private fun StatusRow(
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         val notice = snapshot.notice
         val receipt = snapshot.receipt
+        val baby = strings.babyLabel(snapshot)
         when {
             notice != null -> NoticeLine(notice, strings, colors)
-            receipt != null -> ReceiptLine(receipt, strings, colors, layout, measure)
-            else -> StatusFacts(snapshot, strings, colors, layout, measure)
+            receipt != null -> ReceiptLine(receipt, baby, strings, colors, layout, measure)
+            else -> StatusFacts(snapshot, baby, strings, colors, layout, measure)
         }
     }
 }
 
-/** Idle and asleep: "Fed at 12:22" and "Pee at 13:44" (the diaper only when both fit). */
+/**
+ * Idle and asleep: "Fed at 12:22" and "Pee at 13:44" (the diaper only when both fit). With two or more babies the row
+ * starts with the [baby]'s label, and the facts that no longer fit beside it are dropped.
+ */
 @Composable
-private fun RowScope.StatusFacts(snapshot: WidgetSnapshot, strings: WidgetStrings, colors: WidgetColors, layout: LogLayout, measure: WidgetMeasure) {
+private fun RowScope.StatusFacts(
+    snapshot: WidgetSnapshot,
+    baby: String?,
+    strings: WidgetStrings,
+    colors: WidgetColors,
+    layout: LogLayout,
+    measure: WidgetMeasure,
+) {
     fun factWidth(text: String) = FactIconWidth + measure.width(text, FactSize)
     val sleepStart = snapshot.runningSleepStart
     val lastFeed = snapshot.lastFeed
+    var room = layout.rowWidth
+    if (baby != null) {
+        BabyLabel(baby, colors)
+        room -= measure.width(baby, FactSize) + FactGap
+        Spacer(GlanceModifier.width(FactGap))
+    }
     when {
         // Narrow: the toggle row has no room for "Asleep since 02:05", so it moves up here (DESIGN_SPEC §10.11).
-        sleepStart != null && !layout.wide -> Fact(XDrawables.sleepRunning, colors.sleep.strong, strings.asleepSince(sleepStart), colors)
+        sleepStart != null && !layout.wide -> {
+            val text = strings.asleepSince(sleepStart)
+            if (baby == null || factWidth(text) <= room) Fact(XDrawables.sleepRunning, colors.sleep.strong, text, colors)
+        }
         else -> {
             val feedText = lastFeed?.let { strings.fedAt(it) } ?: strings.noFeeds()
-            Fact(XDrawables.forFeedType(lastFeed?.feedType), colors.feed.strong, feedText, colors)
+            // Without a name the feed fact always shows (as before several babies); beside one only when it fits.
+            val feedShown = baby == null || factWidth(feedText) <= room
+            if (feedShown) {
+                Fact(XDrawables.forFeedType(lastFeed?.feedType), colors.feed.strong, feedText, colors)
+                room -= factWidth(feedText) + FactGap
+            }
             val diaper = snapshot.lastDiaper
             val kind = diaper?.let { DiaperKind.of(it.pee, it.poop) }
-            if (diaper != null && kind != null) {
+            if (feedShown && diaper != null && kind != null) {
                 val diaperText = strings.diaperAt(kind, diaper.startMillis)
-                if (factWidth(feedText) + FactGap + factWidth(diaperText) <= layout.rowWidth) {
+                if (factWidth(diaperText) <= room) {
                     Spacer(GlanceModifier.width(FactGap))
                     val icon = if (kind == DiaperKind.BOTH) colors.bothIcon else XDrawables.forDiaperKind(kind)
                     Fact(icon, if (kind == DiaperKind.BOTH) null else colors.diaper(kind).strong, diaperText, colors)
@@ -184,6 +209,12 @@ private fun Fact(icon: Int, color: Color?, text: String, colors: WidgetColors) {
     WidgetText(text, colors.onSurface, FactSize)
 }
 
+/** The current baby's label at the start of the status row (two or more babies), in the facts' type (as measured). */
+@Composable
+private fun BabyLabel(label: String, colors: WidgetColors) {
+    WidgetText(label, colors.onSurface, FactSize)
+}
+
 private val FactSize = 15.sp
 private val FactIconWidth = 22.dp
 private val FactGap = 16.dp
@@ -193,10 +224,24 @@ private val FactGap = 16.dp
  * beside Undo ("Tis + bæ registreret kl. 14:32") it drops the verb: the check mark already says it was logged.
  */
 @Composable
-private fun RowScope.ReceiptLine(receipt: WidgetReceipt, strings: WidgetStrings, colors: WidgetColors, layout: LogLayout, measure: WidgetMeasure) {
+private fun RowScope.ReceiptLine(
+    receipt: WidgetReceipt,
+    baby: String?,
+    strings: WidgetStrings,
+    colors: WidgetColors,
+    layout: LogLayout,
+    measure: WidgetMeasure,
+) {
     val undo = strings.string(CoreR.string.action_undo)
     val available = layout.rowWidth - FactIconWidth - (12.dp + 22.dp + measure.width(undo, FactSize) + 12.dp)
-    val text = strings.receipt(receipt).takeIf { measure.fits(it, FactSize, available) } ?: strings.receiptShort(receipt)
+    // With two or more babies the line starts with the baby's label, where the label and the receipt (short) fit.
+    val named = baby?.takeIf { measure.fits(strings.receiptShort(receipt), FactSize, available - measure.width(it, FactSize) - FactGap) }
+    val room = if (named != null) available - measure.width(named, FactSize) - FactGap else available
+    val text = strings.receipt(receipt).takeIf { measure.fits(it, FactSize, room) } ?: strings.receiptShort(receipt)
+    if (named != null) {
+        BabyLabel(named, colors)
+        Spacer(GlanceModifier.width(FactGap))
+    }
     WidgetIcon(XDrawables.check, colors.onSurfaceVariant, 16.dp)
     Spacer(GlanceModifier.width(6.dp))
     WidgetText(text, colors.onSurface, FactSize, GlanceModifier.defaultWeight())
@@ -205,7 +250,7 @@ private fun RowScope.ReceiptLine(receipt: WidgetReceipt, strings: WidgetStrings,
             .fillMaxHeight()
             .cornerRadius(24.dp)
             .padding(horizontal = 12.dp)
-            .clickableUndo(receipt, strings.undoDescription(receipt)),
+            .clickableUndo(receipt, strings.forBaby(strings.undoDescription(receipt), baby)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         WidgetIcon(XDrawables.undo, colors.primary, 16.dp)
@@ -248,6 +293,7 @@ private fun LogButtons(
     modifier: GlanceModifier,
 ) {
     val context = LocalContext.current
+    val baby = strings.babyLabel(snapshot)
     val feedLabel = strings.string(CoreR.string.kind_feed)
     val diaperLabels = DiaperKind.entries.associateWith { strings.string(diaperLabel(it)) }
     // Each button picks its own face: only a label that needs two lines (a narrow widget) takes the compact one, so Pee, Poop and Both look the same in every state. The compact face is laid out so that its icon
@@ -267,16 +313,16 @@ private fun LogButtons(
             fill = colors.feed.container,
             radius = 20.dp,
             action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Feed)),
-            description = strings.string(R.string.widget_cd_log_feed),
+            description = strings.forBaby(strings.string(R.string.widget_cd_log_feed), baby),
         ) {
             ButtonFace(XDrawables.feed, colors.feed.strong, feedLabel, colors.feed.onContainer, feedStyle)
         }
         Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.PEE, diaperLabels.getValue(DiaperKind.PEE), strings, colors, cell, diaperStyle)
+        DiaperButton(DiaperKind.PEE, diaperLabels.getValue(DiaperKind.PEE), baby, strings, colors, cell, diaperStyle)
         Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.POOP, diaperLabels.getValue(DiaperKind.POOP), strings, colors, cell, diaperStyle)
+        DiaperButton(DiaperKind.POOP, diaperLabels.getValue(DiaperKind.POOP), baby, strings, colors, cell, diaperStyle)
         Spacer(GlanceModifier.width(8.dp))
-        DiaperButton(DiaperKind.BOTH, diaperLabels.getValue(DiaperKind.BOTH), strings, colors, cell, diaperStyle)
+        DiaperButton(DiaperKind.BOTH, diaperLabels.getValue(DiaperKind.BOTH), baby, strings, colors, cell, diaperStyle)
     }
 }
 
@@ -284,13 +330,14 @@ private fun LogButtons(
 private fun DiaperButton(
     kind: DiaperKind,
     label: String,
+    baby: String?,
     strings: WidgetStrings,
     colors: WidgetColors,
     modifier: GlanceModifier,
     style: FaceStyle,
 ) {
     val action = actionRunCallback<LogDiaperAction>(actionParametersOf(LogDiaperAction.Kind to kind.name))
-    val description = strings.string(
+    val name = strings.string(
         when (kind) {
             DiaperKind.PEE -> R.string.widget_cd_log_pee
             DiaperKind.POOP -> R.string.widget_cd_log_poop
@@ -299,6 +346,7 @@ private fun DiaperButton(
             DiaperKind.PLAIN -> CoreR.string.kind_diaper
         },
     )
+    val description = strings.forBaby(name, baby)
     if (kind == DiaperKind.BOTH) {
         // Both is a 50/50 split of the PEE and POOP containers with a two-tone glyph and a POOP onContainer label.
         Box(modifier.cornerRadius(20.dp).clickable(action).semantics { contentDescription = description }) {
@@ -373,7 +421,10 @@ private fun SleepToggle(snapshot: WidgetSnapshot, strings: WidgetStrings, colors
         awakeSince != null -> strings.awakeSince(awakeSince)
         else -> null
     }
-    val name = strings.string(if (sleepStart != null) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep)
+    val name = strings.forBaby(
+        strings.string(if (sleepStart != null) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep),
+        strings.babyLabel(snapshot),
+    )
     WidgetButton(
         modifier = modifier,
         fill = if (sleepStart != null) sleep.containerLit else sleep.container,

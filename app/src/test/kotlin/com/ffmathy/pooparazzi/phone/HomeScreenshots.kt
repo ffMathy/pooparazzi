@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.model.Breast
+import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.phone.ui.home.HomeActions
 import com.ffmathy.pooparazzi.phone.ui.home.HomeScreen
 import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
@@ -70,6 +71,26 @@ abstract class HomeScreenshots(private val language: String) {
     @Test fun diaperSheet() = sheet("08-diaper-sheet", night = true, HomeSamples.diaperSheet())
 
     @Test fun diaperSheetHint() = sheet("09-diaper-sheet-hint", night = true, HomeSamples.diaperSheetHint())
+
+    /** Not part of the tour (written under build/): twins, the name as the switcher, and the Switch baby sheet. */
+    @Test fun homeTwins() {
+        compose.setContent { Themed(night = false) { HomeScreen(HomeSamples.twins(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/$language-home-twins.png")
+    }
+
+    /** Twins with "Couldn't save · Tap to retry": the retry row sits under the switcher. */
+    @Test fun homeTwinsSyncError() {
+        val error = HomeSamples.twins(sync = SyncStatus.Error)
+        compose.setContent { Themed(night = true) { HomeScreen(error, HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/$language-home-twins-sync-error.png")
+    }
+
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test fun switchBabySheet() {
+        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.twinsSwitching(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.waitForIdle()
+        captureScreenRoboImage("build/outputs/roborazzi/$language-switch-baby-sheet.png")
+    }
 
     /**
      * Not part of the tour: checks that Home survives a 200 % font scale (DESIGN_SPEC §9.3): labels wrap, the area

@@ -42,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -296,7 +297,10 @@ private fun DayMenuItem(text: String, selected: Boolean, onClick: () -> Unit) {
     )
 }
 
-/** A 48 dp target holding a 40 dp outlined pill (r 20, labelLarge onSurface): nudges and "End now". */
+/**
+ * A 48 dp target holding a 40 dp outlined pill (r 20, labelLarge onSurface): nudges, "End now", "Add a baby". An
+ * [icon] (18 dp, decorative) leads the label.
+ */
 @Composable
 internal fun OutlinePill(
     text: String,
@@ -304,6 +308,7 @@ internal fun OutlinePill(
     modifier: Modifier = Modifier,
     spoken: String? = null,
     fill: Boolean = false,
+    icon: ImageVector? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     Box(
@@ -324,12 +329,18 @@ internal fun OutlinePill(
         ) {
             // A pill with a fixed share of the row (nudges) shrinks its label rather than clip it at large font scales.
             val style = MaterialTheme.typography.labelLarge
-            BasicText(
-                text,
-                style = style.copy(color = colors.onSurface),
-                maxLines = 1,
-                autoSize = if (fill) TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = style.fontSize, stepSize = 1.sp) else null,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (icon != null) {
+                    XIcon(icon, contentDescription = null, tint = colors.onSurface, size = 18.dp)
+                    Spacer(Modifier.width(8.dp))
+                }
+                BasicText(
+                    text,
+                    style = style.copy(color = colors.onSurface),
+                    maxLines = 1,
+                    autoSize = if (fill) TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = style.fontSize, stepSize = 1.sp) else null,
+                )
+            }
         }
     }
 }
