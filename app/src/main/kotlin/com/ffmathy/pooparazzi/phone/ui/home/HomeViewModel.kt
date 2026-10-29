@@ -355,6 +355,14 @@ class HomeViewModel(
             }
             return@act
         }
+        if (type == FeedType.FORMULA) {
+            // Formula is an instant too, but first offers the optional amount: the sheet stays open.
+            if (!feedSheet.formula) {
+                sheet.value = feedSheet.copy(formula = true)
+                haptic(HomeHaptic.SEGMENT_TICK)
+            }
+            return@act
+        }
         logFeed(feedSheet, type, side = null)
     }
 
@@ -370,17 +378,30 @@ class HomeViewModel(
         logFeed(feedSheet, FeedType.BREAST, BreastSide.fromOrder(feedSheet.ticks))
     }
 
+    override fun onFormulaAmount(amountMl: Int?) = act {
+        val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
+        if (!feedSheet.formula) return@act
+        val amount = amountMl?.takeIf { it > 0 }
+        if (amount != feedSheet.amountMl) sheet.value = feedSheet.copy(amountMl = amount)
+    }
+
+    override fun onLogFormula() = act {
+        val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
+        if (!feedSheet.formula) return@act
+        logFeed(feedSheet, FeedType.FORMULA, side = null, amountMl = feedSheet.amountMl)
+    }
+
     /** Logs a feed instant of [type] at the sheet's stamp + offset, closing the sheet. */
-    private suspend fun logFeed(feedSheet: SheetModel.Feed, type: FeedType?, side: BreastSide?) {
+    private suspend fun logFeed(feedSheet: SheetModel.Feed, type: FeedType?, side: BreastSide?, amountMl: Int? = null) {
         val at = feedSheet.stamp + feedSheet.offsetMinutes * MINUTE_MILLIS
         closeSheet(committed = true)
         val duringSleep = summary().runningSleep != null
-        attempt { repository.logFeedChecked(type, at, side) }
+        attempt { repository.logFeedChecked(type, at, side, amountMl) }
             .onSuccess { result ->
                 when (result) {
                     is LogResult.Logged -> {
                         showCard(
-                            CardSpec.FeedLogged(result.entry.id, type, result.entry.breastSide),
+                            CardSpec.FeedLogged(result.entry.id, type, result.entry.breastSide, result.entry.amountMl),
                             baseTime = feedSheet.stamp,
                             offsetMinutes = feedSheet.offsetMinutes,
                             duringSleep = duringSleep,
@@ -500,7 +521,7 @@ class HomeViewModel(
                 if (entry.deleted) return
                 val spec = when (entry.kind) {
                     EntryKind.DIAPER -> CardSpec.DiaperLogged(entry.id, entry.diaperKind ?: DiaperKind.PLAIN)
-                    EntryKind.FEED -> CardSpec.FeedLogged(entry.id, entry.feedType, entry.breastSide)
+                    EntryKind.FEED -> CardSpec.FeedLogged(entry.id, entry.feedType, entry.breastSide, entry.amountMl)
                     EntryKind.SLEEP -> CardSpec.SleepStarted(entry.id)
                 }
                 val sleep = summary().runningSleep
@@ -604,7 +625,7 @@ class HomeViewModel(
         } else {
             val spec = when (existing.kind) {
                 EntryKind.DIAPER -> CardSpec.DiaperLogged(existing.id, existing.diaperKind ?: DiaperKind.PLAIN)
-                else -> CardSpec.FeedLogged(existing.id, existing.feedType, existing.breastSide)
+                else -> CardSpec.FeedLogged(existing.id, existing.feedType, existing.breastSide, existing.amountMl)
             }
             showCard(spec, baseTime = existing.startMillis, duringSleep = duringSleep, undo = Undo.Delete(existing.id), message = message)
         }

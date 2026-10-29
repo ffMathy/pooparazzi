@@ -117,6 +117,13 @@ object HomeSamples {
         sheet = SheetModel.Feed(SampleData.NOW_1432, breast = true, ticks = ticks),
     )
 
+    /** The Feed sheet opened at 14:32 after tapping Formula: the amount slider at [amountMl] (null: no amount). */
+    fun formulaSheet(amountMl: Int? = 120): HomeUiState = build(
+        SampleData.scenario(zone),
+        SampleData.NOW_1432,
+        sheet = SheetModel.Feed(SampleData.NOW_1432, formula = true, amountMl = amountMl),
+    )
+
     /** The Diaper sheet with Pee and Poop on, Yellow and Seedy selected. */
     fun diaperSheet(): HomeUiState = build(
         SampleData.scenario(zone),

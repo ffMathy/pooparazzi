@@ -8,7 +8,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import java.time.ZoneId
 
-/** All formatters for one locale, 12/24 h setting and time zone. */
+/** All formatters for one locale, 12/24 h setting, region (the formula [volume] unit) and time zone. */
 @Immutable
 class Formatters(
     val duration: DurationFormatter,
@@ -16,6 +16,7 @@ class Formatters(
     val relative: RelativeFormatter,
     val labels: LabelFormatter,
     val zone: ZoneId,
+    val volume: VolumeFormatter = VolumeFormatter(VolumeUnit.MILLILITRES, clock.locale),
 ) {
     companion object {
         fun from(context: Context, zone: ZoneId = ZoneId.systemDefault()): Formatters {
@@ -27,6 +28,7 @@ class Formatters(
                 relative = RelativeFormatter(duration, clock, RelativePhrases.from(context)),
                 labels = LabelFormatter(context),
                 zone = zone,
+                volume = VolumeFormatter.from(context),
             )
         }
     }

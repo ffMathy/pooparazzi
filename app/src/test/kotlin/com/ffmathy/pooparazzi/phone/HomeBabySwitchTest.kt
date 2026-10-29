@@ -87,10 +87,10 @@ class HomeBabySwitchTest : HomeViewModelTestBase() {
 
         // Logs now go to Ida.
         home.viewModel.onFeed()
-        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFeedType(FeedType.FOOD)
         home.settle()
         val feed = home.entries().single()
-        assertEquals(FeedType.FORMULA, feed.feedType)
+        assertEquals(FeedType.FOOD, feed.feedType)
         assertEquals(SampleData.TWIN_ID, feed.babyId)
     }
 
