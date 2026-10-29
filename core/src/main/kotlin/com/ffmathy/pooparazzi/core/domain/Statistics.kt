@@ -11,10 +11,11 @@ import kotlin.math.ceil
 enum class StatsMetric { FEEDS, PEE, POOP, SLEEP }
 
 /**
- * The range Statistics compares with the last 7 days (V1_ADDITIONS §8). Presets are relative to today and end
- * yesterday; [Custom] is absolute and is cut to the countable days on every build ([clamped]).
+ * The one range Statistics shows (V1_ADDITIONS §8). Presets are relative to today and end yesterday; [Custom] is
+ * absolute and is cut to the countable days on every build ([clamped]).
  */
 sealed interface StatsRange {
+    data object Last7Days : StatsRange
     data object Last30Days : StatsRange
     data object Last90Days : StatsRange
     data object AllDays : StatsRange
@@ -113,7 +114,7 @@ data class StatsWindow(val from: LocalDate, val to: LocalDate, val days: List<St
 
 /**
  * Everything Statistics shows (V1_ADDITIONS §8). [firstDay] is the day after the first logged day, [lastDay] is
- * yesterday; [range] is the effective range (a Custom one already clamped) and [comparison] is its window.
+ * yesterday; [range] is the effective range (a Custom one already clamped) and [window] is its days.
  *
  * @property soFar no whole day has been logged yet, so [firstDay] is the first logged day itself and [lastDay] is
  * today: the numbers count today so far (and move as it goes on) until the next midnight brings a whole day.
@@ -123,9 +124,7 @@ data class StatsReport(
     val firstDay: LocalDate,
     val lastDay: LocalDate,
     val range: StatsRange,
-    val lastSevenDays: StatsWindow,
-    val lastThirtyDays: StatsWindow,
-    val comparison: StatsWindow,
+    val window: StatsWindow,
     val soFar: Boolean = false,
 )
 
@@ -137,7 +136,7 @@ fun firstLoggedDay(entries: List<Entry>, now: Long, zone: ZoneId): LocalDate? =
         ?.let { localDate(it, zone) }
 
 /**
- * The statistics of [entries] at [now] in [zone], comparing the last 7 days with [range]; null only when nothing is
+ * The statistics of [entries] at [now] in [zone] over [range]; null only when nothing is
  * logged. Only whole days up to yesterday count, so the numbers change at midnight or when an entry changes, never as
  * today goes on. Until there is a whole day (the first logged day is today or yesterday) it counts from the first
  * logged day through today so far instead ([StatsReport.soFar]), so a single entry already shows. One [dailyCounts]
@@ -150,23 +149,13 @@ fun statsReport(entries: List<Entry>, now: Long, zone: ZoneId, range: StatsRange
     val lastDay = if (soFar) today else today.minusDays(1)
     val firstDay = if (soFar) firstLogged else firstLogged.plusDays(1)
     val effective = range.clamped(firstDay, lastDay)
-    val (compareFrom, compareTo) = effective.window(firstDay, lastDay)
-    val monthFrom = lastDay.minusDays(MONTH_DAYS - 1L)
-    val from = minOf(compareFrom, monthFrom)
-    val days = statsDays(entries, from, lastDay, firstDay, now, zone)
-    fun window(start: LocalDate, end: LocalDate): StatsWindow {
-        val first = ChronoUnit.DAYS.between(from, start).toInt()
-        val last = ChronoUnit.DAYS.between(from, end).toInt()
-        return StatsWindow(start, end, days.subList(first, last + 1))
-    }
+    val (from, to) = effective.window(firstDay, lastDay)
     return StatsReport(
         today = today,
         firstDay = firstDay,
         lastDay = lastDay,
         range = effective,
-        lastSevenDays = window(lastDay.minusDays(WEEK_DAYS - 1L), lastDay),
-        lastThirtyDays = window(monthFrom, lastDay),
-        comparison = window(compareFrom, compareTo),
+        window = StatsWindow(from, to, statsDays(entries, from, to, firstDay, now, zone)),
         soFar = soFar,
     )
 }
@@ -208,18 +197,19 @@ fun StatsRange.clamped(firstDay: LocalDate, lastDay: LocalDate): StatsRange = wh
     else -> this
 }
 
-/** [clamped], then a Custom range with the dates of the last 30 days, the last 90 days or all days becomes that preset. */
+/** [clamped], then a Custom range with the dates of a preset (the last 7, 30 or 90 days, or all days) becomes that preset. */
 fun StatsRange.normalised(firstDay: LocalDate, lastDay: LocalDate): StatsRange {
     val range = clamped(firstDay, lastDay)
     if (range !is StatsRange.Custom) return range
     val dates = range.from to range.to
-    return listOf(StatsRange.Last30Days, StatsRange.Last90Days, StatsRange.AllDays)
+    return listOf(StatsRange.Last7Days, StatsRange.Last30Days, StatsRange.Last90Days, StatsRange.AllDays)
         .firstOrNull { it.window(firstDay, lastDay) == dates }
         ?: range
 }
 
 /** The first and last date this range covers: presets by their nominal dates (even before logging began), Custom clamped. */
 fun StatsRange.window(firstDay: LocalDate, lastDay: LocalDate): Pair<LocalDate, LocalDate> = when (val range = clamped(firstDay, lastDay)) {
+    StatsRange.Last7Days -> lastDay.minusDays(WEEK_DAYS - 1L) to lastDay
     StatsRange.Last30Days -> lastDay.minusDays(MONTH_DAYS - 1L) to lastDay
     StatsRange.Last90Days -> lastDay.minusDays(QUARTER_DAYS - 1L) to lastDay
     StatsRange.AllDays -> firstDay to lastDay
@@ -248,11 +238,9 @@ data class StatsBar(val from: LocalDate, val to: LocalDate, val total: Long, val
 }
 
 /**
- * The bar chart of [metric] over the comparison window (V1_ADDITIONS §8).
+ * The bar chart of [metric] over the report's window (V1_ADDITIONS §8).
  *
  * @property binDays days per bar; bars are cut from the end, so only the oldest can be shorter.
- * @property bandBars the bars of the last 7 days, drawn on a band, when the window ends yesterday and is longer than a week.
- * @property weekLine the rounded 7-day average, drawn across the band (one-day bars only).
  * @property rangeLine the rounded average of the whole window, drawn dashed.
  * @property top the top of the scale: a whole count, or a whole hour of sleep in minutes.
  * @property highest the bar with the highest value (the latest of equal ones), null when nothing counts.
@@ -266,8 +254,6 @@ data class StatsChart(
     val to: LocalDate,
     val binDays: Int,
     val bars: List<StatsBar>,
-    val bandBars: IntRange?,
-    val weekLine: Double?,
     val rangeLine: Double?,
     val top: Double,
     val highest: StatsBar?,
@@ -279,9 +265,9 @@ data class StatsChart(
     val isEmpty: Boolean get() = highest == null
 }
 
-/** The chart of [metric] over [StatsReport.comparison]. */
+/** The chart of [metric] over [StatsReport.window]. */
 fun StatsReport.chart(metric: StatsMetric): StatsChart {
-    val days = comparison.days
+    val days = window.days
     val n = days.size
     val bin = binDays(n)
     val count = (n + bin - 1) / bin
@@ -298,25 +284,16 @@ fun StatsReport.chart(metric: StatsMetric): StatsChart {
         }
         StatsBar(days[first].date, days[last].date, total, counted)
     }
-    val banded = comparison.to == lastDay && n > WEEK_DAYS && (bin == 1 || bin == WEEK_DAYS)
-    val bandBars = when {
-        !banded -> null
-        bin == 1 -> (count - WEEK_DAYS) until count
-        else -> bars.lastIndex..bars.lastIndex
-    }
-    val weekLine = if (banded && bin == 1) lastSevenDays.average(metric)?.shown(metric) else null
-    val rangeLine = comparison.average(metric)?.shown(metric)
-    val peak = (bars.mapNotNull { it.value } + listOfNotNull(weekLine, rangeLine)).maxOrNull() ?: 0.0
+    val rangeLine = window.average(metric)?.shown(metric)
+    val peak = (bars.mapNotNull { it.value } + listOfNotNull(rangeLine)).maxOrNull() ?: 0.0
     val top = if (metric == StatsMetric.SLEEP) maxOf(60.0, ceil(peak / 60) * 60) else maxOf(1.0, ceil(peak))
     val valued = bars.filter { it.countedDays > 0 }
     return StatsChart(
         metric = metric,
-        from = comparison.from,
-        to = comparison.to,
+        from = window.from,
+        to = window.to,
         binDays = bin,
         bars = bars,
-        bandBars = bandBars,
-        weekLine = weekLine,
         rangeLine = rangeLine,
         top = top,
         highest = valued.maxWithOrNull(compareBy<StatsBar> { it.value }.thenBy { it.to }),

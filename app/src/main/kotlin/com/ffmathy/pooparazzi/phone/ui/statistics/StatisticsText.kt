@@ -23,11 +23,12 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 // Statistics' text (V1_ADDITIONS §8). Visible dates are abbreviated ("26 Sep"); TalkBack always hears full month names
 // ("26 September", "Wednesday 7 October"), names before values, and durations in words.
 
-/** "Last 30 days", "Last 90 days", "All days", or "Chosen dates" for dates picked in the dialog. */
+/** "Last 7 days", "Last 30 days", "Last 90 days", "All days", or "Chosen dates" for dates picked in the dialog. */
 @Composable
 @ReadOnlyComposable
 internal fun rangeLabel(range: StatsRange): String = stringResource(
     when (range) {
+        StatsRange.Last7Days -> R.string.statistics_last_7_days
         StatsRange.Last30Days -> R.string.statistics_last_30_days
         StatsRange.Last90Days -> R.string.statistics_last_90_days
         StatsRange.AllDays -> R.string.statistics_all_days
@@ -139,32 +140,15 @@ internal fun averageSpoken(average: StatsAverage?, metric: StatsMetric, formatte
     else -> stringResource(R.string.statistics_spoken_per_day, formatTenths(average.tenths, formatters.clock.locale))
 }
 
-/**
- * A row for TalkBack: "Poop. Last 7 days: 0.7 a day. Last 30 days: 1.8 a day.", and for another range
- * "Feeds. Last 7 days: 6.7 a day. Chosen dates: 7.1 a day. Last 30 days: 7.1 a day." (the last 30 days stay in sight).
- */
+/** A row for TalkBack: "Poop. Last 30 days: 1.8 a day.", or "Feeds. Chosen dates: 7.1 a day.". */
 @Composable
 @ReadOnlyComposable
-internal fun rowSpoken(metric: StatsMetric, report: StatsReport, formatters: Formatters): String {
-    val name = metricName(metric)
-    val week = stringResource(R.string.statistics_last_7_days)
-    val weekValue = averageSpoken(report.lastSevenDays.average(metric), metric, formatters)
-    val compareValue = averageSpoken(report.comparison.average(metric), metric, formatters)
-    return if (report.range == StatsRange.Last30Days) {
-        stringResource(R.string.statistics_spoken_row, name, week, weekValue, rangeLabel(report.range), compareValue)
-    } else {
-        stringResource(
-            R.string.statistics_spoken_row_compare,
-            name,
-            week,
-            weekValue,
-            rangeLabel(report.range),
-            compareValue,
-            stringResource(R.string.statistics_last_30_days),
-            averageSpoken(report.lastThirtyDays.average(metric), metric, formatters),
-        )
-    }
-}
+internal fun rowSpoken(metric: StatsMetric, report: StatsReport, formatters: Formatters): String = stringResource(
+    R.string.statistics_spoken_row,
+    metricName(metric),
+    rangeLabel(report.range),
+    averageSpoken(report.window.average(metric), metric, formatters),
+)
 
 /** The label on the chart's top line: "5", or "16h 00m" for sleep. */
 internal fun scaleLabel(chart: StatsChart, formatters: Formatters): String =
