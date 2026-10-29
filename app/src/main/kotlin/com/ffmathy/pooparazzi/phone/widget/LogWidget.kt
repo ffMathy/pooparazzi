@@ -19,7 +19,6 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Alignment
@@ -38,9 +37,7 @@ import androidx.glance.semantics.semantics
 import androidx.glance.text.TextAlign
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
-import com.ffmathy.pooparazzi.core.ui.tokens.EventColors
 import com.ffmathy.pooparazzi.phone.R
-import com.ffmathy.pooparazzi.phone.launch.DeepLinks
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import com.ffmathy.pooparazzi.phone.system.inAppLanguage
 import com.ffmathy.pooparazzi.core.R as CoreR
@@ -255,32 +252,15 @@ private fun LogButtons(
     }
     Row(modifier) {
         val cell = GlanceModifier.defaultWeight().fillMaxHeight()
-        SheetButton(HomeLaunch.Feed, XDrawables.feed, feedLabel, colors.feed, strings.string(R.string.widget_cd_log_feed), style, cell)
+        val feed = colors.feed
+        SheetButton(HomeLaunch.Feed, feed, strings.string(R.string.widget_cd_log_feed), cell) {
+            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style)
+        }
         Spacer(GlanceModifier.width(8.dp))
-        SheetButton(HomeLaunch.Diaper, XDrawables.diaper, diaperLabel, colors.diaper, strings.string(R.string.widget_cd_log_diaper), style, cell)
-    }
-}
-
-/** A log button that opens the app on [launch]'s sheet. */
-@Composable
-private fun SheetButton(
-    launch: HomeLaunch,
-    icon: Int,
-    label: String,
-    event: EventColors,
-    description: String,
-    style: FaceStyle,
-    modifier: GlanceModifier,
-) {
-    val context = LocalContext.current
-    WidgetButton(
-        modifier = modifier,
-        fill = event.container,
-        radius = 20.dp,
-        action = actionStartActivity(DeepLinks.intent(context, launch)),
-        description = description,
-    ) {
-        ButtonFace(icon, event.strong, label, event.onContainer, style)
+        val diaper = colors.diaper
+        SheetButton(HomeLaunch.Diaper, diaper, strings.string(R.string.widget_cd_log_diaper), cell) {
+            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style)
+        }
     }
 }
 

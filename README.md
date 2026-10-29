@@ -19,7 +19,7 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 - **History, edit and undo**: a day view with a 24-hour ribbon and day totals; tap any entry to edit its times, type, side or diaper details, or delete it; add a past entry; every log shows an **Undo** card (phone) or button (watch), with "Earlier?" chips to move it back.
 - **Phone ↔ watch sync** over the Wearable **Data Layer**. Both apps log offline and merge by last-writer-wins; the baby's name and the language follow the phone.
 - **Glanceable surfaces**:
-  - Phone: two **Glance widgets** (a 4×2 log widget and a 2×1 quick widget; Feed and Diaper open the same sheets as in the app, the sleep toggle works in place), the 4×2 also on the **cover screen of Samsung flip phones**, and an **ongoing notification** for a running sleep (promoted to a Live Update where Android supports it).
+  - Phone: two **Glance widgets** (a 4×2 log widget and a 3×1 quick widget, both with Feed, Diaper and Sleep; Feed and Diaper open the same sheets as in the app, the sleep toggle works in place), the 4×2 also on the **cover screen of Samsung flip phones**, and an **ongoing notification** for a running sleep (promoted to a Live Update where Android supports it).
   - Watch: a **Tile**, four **complications** (since last feed, last diaper, asleep/awake, sleep and last feed) and an **Ongoing Activity** while a sleep runs.
 - **Night Light design**: a dim, warm Night theme for the dark hours and a Day theme, chosen automatically (or fixed in Settings). Large targets, TalkBack descriptions in full words ("2 hours 10 minutes ago"), large-font and small-watch layouts.
 - **English and Danish**, with an in-app language choice (Settings › Language) that the widgets, notifications and the watch follow.
@@ -42,9 +42,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-history.png" width="200" alt="History with day ribbon"> | <img src="docs/screenshots/en/phone-history-night.png" width="200" alt="History at night"> | <img src="docs/screenshots/en/phone-edit-feed.png" width="200" alt="Edit a breastfeed"> | <img src="docs/screenshots/en/phone-edit-diaper.png" width="200" alt="Edit a diaper"> |
 
-| Add past entry | Settings | Widget 4×2 | Widget 2×1 |
+| Add past entry | Settings | Widget 4×2 | Widget 3×1 |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-add-past-entry.png" width="200" alt="Add a past entry"> | <img src="docs/screenshots/en/phone-settings.png" width="200" alt="Settings"> | <img src="docs/screenshots/en/phone-widget-4x2.png" width="200" alt="4x2 log widget in its states"> | <img src="docs/screenshots/en/phone-widget-2x1.png" width="200" alt="2x1 quick widget in its sizes"> |
+| <img src="docs/screenshots/en/phone-add-past-entry.png" width="200" alt="Add a past entry"> | <img src="docs/screenshots/en/phone-settings.png" width="200" alt="Settings"> | <img src="docs/screenshots/en/phone-widget-4x2.png" width="200" alt="4x2 log widget in its states"> | <img src="docs/screenshots/en/phone-widget-3x1.png" width="200" alt="3x1 quick widget in its sizes"> |
 
 ### Watch
 

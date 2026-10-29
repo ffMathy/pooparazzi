@@ -17,7 +17,6 @@ import androidx.glance.LocalSize
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
@@ -31,14 +30,16 @@ import androidx.glance.layout.width
 import androidx.glance.text.TextAlign
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
 import com.ffmathy.pooparazzi.phone.R
-import com.ffmathy.pooparazzi.phone.launch.DeepLinks
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import com.ffmathy.pooparazzi.phone.system.inAppLanguage
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
- * The 2×1 home-screen widget (P5, DESIGN_SPEC §3.3.6): Feed and the sleep toggle. Feed opens the app's Feed sheet;
- * the toggle logs in place.
+ * The 3×1 home-screen widget (P5, DESIGN_SPEC §3.3.6): Feed, Diaper and the sleep toggle, like the 4×2 without its
+ * status row. Feed and Diaper open the app's Feed and Diaper sheets; the toggle logs in place.
+ *
+ * It was a 2×1 (Feed and the toggle) before Diaper joined; widgets placed at that size keep working, with icon-only
+ * buttons where the labels do not fit.
  */
 class QuickWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(QuickLayout.Sizes)
@@ -58,20 +59,30 @@ class QuickWidget : GlanceAppWidget() {
     }
 }
 
-/** 2×1 breakpoints (DESIGN_SPEC §10.11): "Sleep" under 160 dp, icon-only buttons under 120 dp. */
-internal data class QuickLayout(val labels: Boolean, val shortSleepLabel: Boolean, val narrowFeed: Boolean) {
-    companion object {
-        val Sizes: Set<DpSize> = setOf(DpSize(90.dp, 60.dp), DpSize(120.dp, 60.dp), DpSize(160.dp, 60.dp))
+/**
+ * Three equal buttons. [compact] tightens the padding and gaps (8 and 4 dp) for an old 2×1 so the three icons still
+ * fit; [width] is the size the widget is composed for.
+ */
+internal data class QuickLayout(val width: Dp, val compact: Boolean) {
+    val padding: Dp get() = if (compact) 8.dp else 12.dp
+    val gap: Dp get() = if (compact) 4.dp else 8.dp
 
-        fun of(size: DpSize): QuickLayout = QuickLayout(
-            labels = size.width >= 120.dp,
-            shortSleepLabel = size.width < 160.dp,
-            narrowFeed = size.width >= 160.dp,
+    /** One of the three buttons. */
+    val buttonWidth: Dp get() = (width - padding * 2 - gap * 2) / 3
+
+    companion object {
+        val Sizes: Set<DpSize> = setOf(
+            DpSize(110.dp, 60.dp),
+            DpSize(180.dp, 60.dp),
+            DpSize(220.dp, 60.dp),
+            DpSize(260.dp, 60.dp),
         )
+
+        fun of(size: DpSize): QuickLayout = QuickLayout(width = size.width, compact = size.width < 180.dp)
     }
 }
 
-/** The 2×1 widget for [snapshot], laid out for the current [LocalSize]. */
+/** The 3×1 widget for [snapshot], laid out for the current [LocalSize]. */
 @Composable
 internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
     val context = LocalContext.current
@@ -79,60 +90,58 @@ internal fun QuickWidgetContent(snapshot: WidgetSnapshot) {
     val layout = QuickLayout.of(LocalSize.current)
     val measure = remember(context) { WidgetMeasure(context) }
     val colors = WidgetColors(snapshot.night)
-    WidgetSurface(colors, snapshot.backgroundLaunch, GlanceModifier.padding(12.dp)) {
+    val asleep = snapshot.asleep
+    val feedLabel = strings.string(CoreR.string.kind_feed)
+    val diaperLabel = strings.string(CoreR.string.kind_diaper)
+    // Labels may wrap to two lines but never break inside a word.
+    val room = layout.buttonWidth - QuickLabelPadding * 2
+    fun fits(label: String) = label.split(' ').all { measure.fits(it, QuickLabelSize, room) }
+    val sleepLabel = when {
+        asleep -> strings.string(CoreR.string.action_woke_up)
+        fits(strings.string(CoreR.string.action_start_sleep)) -> strings.string(CoreR.string.action_start_sleep)
+        else -> strings.string(CoreR.string.kind_sleep)
+    }
+    // All three show their label, or none does (icons stay on one line).
+    val labels = listOf(feedLabel, diaperLabel, sleepLabel).all(::fits)
+    WidgetSurface(colors, snapshot.backgroundLaunch, GlanceModifier.padding(layout.padding)) {
         Row(GlanceModifier.fillMaxSize()) {
-            // The mockup's Feed is the narrower button (52 of 147 dp), widened to its label ("Måltid") so the word
-            // never breaks: the sleep button keeps the rest of the row and its one-line label.
-            val feedLabel = strings.string(CoreR.string.kind_feed)
-            val feedDp: Dp? = if (layout.narrowFeed) maxOf(52.dp, measure.width(feedLabel, QuickLabelSize) + 16.dp) else null
-            val feedWidth = feedDp?.let { GlanceModifier.width(it) } ?: GlanceModifier.defaultWeight()
-            // The sleep button's room beside a fixed-width Feed (12 dp padding each side, 8 dp gap).
-            val sleepRoom = feedDp?.let { LocalSize.current.width - 24.dp - 8.dp - it }
+            val cell = GlanceModifier.defaultWeight().fillMaxHeight()
             val feed = colors.feed
-            WidgetButton(
-                modifier = feedWidth.fillMaxHeight(),
-                fill = feed.container,
-                radius = 20.dp,
-                action = actionStartActivity(DeepLinks.intent(context, HomeLaunch.Feed)),
-                description = strings.string(R.string.widget_cd_log_feed),
-            ) {
-                QuickFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, layout.labels, labelPadding = 4.dp)
+            SheetButton(HomeLaunch.Feed, feed, strings.string(R.string.widget_cd_log_feed), cell) {
+                QuickFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, labels)
             }
-            Spacer(GlanceModifier.width(8.dp))
+            Spacer(GlanceModifier.width(layout.gap))
+            val diaper = colors.diaper
+            SheetButton(HomeLaunch.Diaper, diaper, strings.string(R.string.widget_cd_log_diaper), cell) {
+                QuickFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, labels)
+            }
+            Spacer(GlanceModifier.width(layout.gap))
             val sleep = colors.sleep
-            val asleep = snapshot.asleep
-            val startSleep = strings.string(CoreR.string.action_start_sleep)
-            val label = when {
-                asleep -> strings.string(CoreR.string.action_woke_up)
-                layout.shortSleepLabel -> strings.string(CoreR.string.kind_sleep)
-                // Where there is no room for "Start søvn" on one line beside Feed: "Søvn", like a narrow widget.
-                sleepRoom != null && !measure.fits(startSleep, QuickLabelSize, sleepRoom - 16.dp) -> strings.string(CoreR.string.kind_sleep)
-                else -> startSleep
-            }
             WidgetButton(
-                modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
+                modifier = cell,
                 fill = if (asleep) sleep.containerLit else sleep.container,
                 border = if (asleep) sleep.strong else null,
                 radius = 20.dp,
                 action = actionRunCallback<ToggleSleepAction>(),
                 description = strings.string(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep),
             ) {
-                QuickFace(if (asleep) XDrawables.wake else XDrawables.sleep, sleep.strong, label, sleep.onContainer, layout.labels)
+                QuickFace(if (asleep) XDrawables.wake else XDrawables.sleep, sleep.strong, sleepLabel, sleep.onContainer, labels)
             }
         }
     }
 }
 
 private val QuickLabelSize = 14.sp
+private val QuickLabelPadding = 4.dp
 
-/** Icon 24 over a 14 sp label of up to two lines ("Start" / "sleep" at large font scales), padding 0 8. */
+/** Icon 24 over a 14 sp label of up to two lines ("Start" / "sleep"). */
 @Composable
-private fun QuickFace(icon: Int, iconColor: Color, label: String, labelColor: Color, showLabel: Boolean, labelPadding: Dp = 8.dp) {
+private fun QuickFace(icon: Int, iconColor: Color, label: String, labelColor: Color, showLabel: Boolean) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
         WidgetIcon(icon, iconColor, 24.dp)
         if (showLabel) {
             Spacer(GlanceModifier.height(6.dp))
-            WidgetText(label, labelColor, QuickLabelSize, maxLines = 2, align = TextAlign.Center, modifier = GlanceModifier.padding(horizontal = labelPadding))
+            WidgetText(label, labelColor, QuickLabelSize, maxLines = 2, align = TextAlign.Center, modifier = GlanceModifier.padding(horizontal = QuickLabelPadding))
         }
     }
 }

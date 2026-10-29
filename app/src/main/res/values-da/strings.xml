@@ -63,8 +63,8 @@
     <!-- Widgets på startskærmen -->
     <string name="widget_log_name">Registrering og status</string>
     <string name="widget_log_description">Registrér måltider, bleer og søvn, og se seneste måltid og ble</string>
-    <string name="widget_quick_name">Måltid og søvn</string>
-    <string name="widget_quick_description">Måltid og søvnknappen</string>
+    <string name="widget_quick_name">Måltid, ble og søvn</string>
+    <string name="widget_quick_description">Måltid, ble og søvnknappen</string>
     <string name="widget_cover_name">Coverskærm</string>
     <string name="widget_cover_description">Registrér måltider, bleer og søvn fra coverskærmen</string>
     <string name="widget_cd_log_feed">Registrér måltid</string>

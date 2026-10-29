@@ -198,7 +198,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | P2 | Phone | Diaper sheet | Pee / Poop / Both, with the time stamped on the first tap and an optional backdate |
 | P3 | Phone | History | Day ribbon, counts, a tappable list of the day's entries, Add entry |
 | P4 | Phone | Edit sheet | Edit or delete an entry, or add a past one |
-| P5 | Phone | Home-screen widgets 4×2, 2×1 | One-tap logging, including the phone's one-tap Pee / Poop / Both |
+| P5 | Phone | Home-screen widgets 4×2, 3×1 | Feed and Diaper open the app's sheets; the sleep toggle logs in one tap |
 | P6 | Phone | Live Update (running sleep) | Status chip and an ongoing notification with "Woke up" |
 | P7 | Phone | Splash | System splash, dark at night and light by day |
 | W1 | Watch | Main, idle | Status block, Feed / Diaper, "Start sleep"; scroll list below |
@@ -436,7 +436,7 @@ Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (
 - Just logged: nothing else changes. No button moves, relabels or changes colour, and Undo never sits where a log button is. The receipt reverts on the next log or after 10 s.
 - The widget background (outside the buttons) opens the app with the undo card for the last widget log.
 
-**2×1** (reference 171 × 100, padding 12): two buttons 76 tall, r 20, content column (icon 24, label 14 sp): Feed (`feed`, "Feed"); Sleep (padding 0 8, label max 2 lines: "Start" / "sleep" at large font scales). When asleep, Sleep shows `wake` + "Woke up" with the checked style.
+**3×1** (reference 260 × 100, padding 12, minimum 160 wide): three equal buttons 76 tall, gap 8, r 20, content column (icon 24, label 14 sp, max 2 lines, never broken inside a word): Feed (`feed`, opens the Feed sheet); Diaper (`diaper`, DIAPER colours, opens the Diaper sheet); Sleep ("Start sleep", the toggle). When asleep, Sleep shows `wake` + "Woke up" with the checked style. Every widget offers all three: Feed, Diaper and Sleep. (It was a 2×1 with Feed and Sleep; the provider keeps its receiver so placed widgets survive.)
 
 **Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else.
 
@@ -1325,7 +1325,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 ### 10.11 Glance widget
 
-- 4×2 and 2×1 with `SizeMode.Responsive`. A 2×2 falls back to the 4×2 content without the status row.
+- 4×2 and 3×1 with `SizeMode.Responsive`. A 2×2 falls back to the 4×2 content without the status row.
 - `actionRunCallback` for the sleep toggle and Undo (no app launch), idempotent writes; Feed and Diaper start the app on their sheet (`pooparazzi://home/feed`, `pooparazzi://home/diaper`). 48 dp targets. System corner radius. Generated previews (Glance 1.2 `providePreview`).
 - Absolute clock times only: RemoteViews cannot tick a relative "ago" in the app grammar, and the update budget would leave it stale.
 - Update the widget on every log and every sleep change.
@@ -1339,9 +1339,9 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 | Condition | Change |
 |---|---|
 | 4×2 narrower than 320 dp, or font scale ≥ 1.3 | hide the end-aligned "Awake since 13:27" / "Asleep since 02:05" in row 3. While asleep, show "Asleep since 02:05" in row 1 instead. (The guideline 4×2 is 276 dp wide, 252 inside the padding, against the 294 dp row 3 needs) |
-| 2×1 | Sleep button padding 0 8 dp, `maxLines = 2` |
-| 2×1 narrower than 160 dp | label "Sleep" (unchecked) / "Woke up" (checked) |
-| 2×1 narrower than 120 dp | icon-only buttons with content descriptions "Log feed" / "Start sleep" |
+| 3×1 where a word of "Start sleep" does not fit its button | label "Sleep" (unchecked) / "Woke up" (checked) |
+| 3×1 where any label still does not fit | icon-only buttons with content descriptions "Log feed" / "Log diaper" / "Start sleep" |
+| 3×1 narrower than 180 dp (an old 2×1) | padding 8, gaps 4, so the three 24 dp icons still fit |
 
 - QS sleep tile: optional, v1.1.
 

@@ -101,8 +101,8 @@
     <!-- Home-screen widgets (P5, DESIGN_SPEC §3.3.6) -->
     <string name="widget_log_name">Log and status</string>
     <string name="widget_log_description">Log feeds, diapers and sleep, and see the latest feed and diaper</string>
-    <string name="widget_quick_name">Feed and sleep</string>
-    <string name="widget_quick_description">Feed and the sleep toggle</string>
+    <string name="widget_quick_name">Feed, diaper and sleep</string>
+    <string name="widget_quick_description">Feed, diaper and the sleep toggle</string>
     <string name="widget_cover_name">Cover screen</string>
     <string name="widget_cover_description">Log feeds, diapers and sleep from the cover screen</string>
     <!-- TalkBack names of the widget buttons -->

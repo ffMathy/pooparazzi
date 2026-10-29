@@ -51,7 +51,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Home-screen widgets (P5, DESIGN_SPEC §3.3.6): 4×2 and 2×1, and the 4×2 on a Samsung flip's cover screen. -->
+        <!-- Home-screen widgets (P5, DESIGN_SPEC §3.3.6): 4×2 and 3×1, and the 4×2 on a Samsung flip's cover screen. -->
         <receiver
             android:name=".widget.LogWidgetReceiver"
             android:exported="true"

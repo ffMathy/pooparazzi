@@ -38,7 +38,7 @@ class LogWidgetReceiver : GlanceAppWidgetReceiver() {
     }
 }
 
-/** The 2×1 widget's provider. */
+/** The 3×1 widget's provider (the former 2×1; the class name stays so placed widgets survive). */
 class QuickWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = QuickWidget()
 
