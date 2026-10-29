@@ -3,9 +3,9 @@
 This document adds two things to [DESIGN_SPEC.md](DESIGN_SPEC.md) and [V1_ADDITIONS.md](V1_ADDITIONS.md), and wins where they differ:
 
 1. **Several babies** (twins, siblings): the log is kept per baby, each device has a *current* baby that it shows and logs for, and babies can be added and renamed.
-2. **An optional, invite-only account** on the phone that backs the log up to a small Firebase backend and restores it on a new phone. Without an account everything works as before, on the phone and the watch only.
+2. **An optional account** on the phone that backs the log up to a small Firebase backend and restores it on a new phone. Without an account everything works as before, on the phone and the watch only.
 
-The backend setup (Firebase project, rules, invitations, cost) is in [../BACKEND.md](../BACKEND.md).
+The backend setup (Firebase project, rules, cost) is in [../BACKEND.md](../BACKEND.md).
 
 ## 1. Principles
 
@@ -73,7 +73,7 @@ The first time the phone app opens with accounts available and nobody signed in 
 
 > **Your log stays on this phone**
 > Without an account, everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.
-> You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do. Accounts are by invitation.
+> You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do.
 > [Create account] · [Sign in] · [Continue without an account]
 
 The choice is remembered on this phone only (excluded from backups). Builds without a Firebase configuration never show it.
@@ -85,19 +85,16 @@ The first Settings section. One row that opens the **Account** screen, whose sum
 | State | Row |
 |---|---|
 | Not signed in | "Not signed in" · "Your log is only on this phone. Sign in to back it up." |
-| Waiting for the email confirmation | email · "Confirm your email to start the backup" |
 | Backing up | email · "Backing up…" |
 | Backed up | email · "Backed up · 14:31" |
 | Offline | email · "Saved on phone · will back up" |
-| Not invited | email · "This email isn't invited" |
 | Error | email · "Couldn't back up · Tap to retry" |
 | No Firebase configuration in this build | (not tappable) "Backup isn't set up in this build. Everything is saved on this phone." |
 
 ### 3.3 Account screen
 
-- **Signed out:** the explanation of §3.1, a Sign in / Create account choice, email and password fields, the main button, "Forgot password?" (sign in; sends a reset link to the typed address), and errors in words ("Wrong email or password", "That email already has an account", "Use at least 6 characters", "No connection. Try again.", "This email isn't invited. Ask for an invitation.").
-- **Create account** creates the account, checks the invitation (an address that is not invited is deleted again at once and told so), and sends a confirmation link.
-- **Waiting for the confirmation:** "Confirm your email. We sent a link to …. Open it, then come back." with "I've confirmed it", "Send the link again" and "Sign out". The app re-checks when it returns to the foreground.
+- **Signed out:** the explanation of §3.1, a Sign in / Create account choice, email and password fields, the main button, "Forgot password?" (sign in; sends a reset link to the typed address), and errors in words ("Wrong email or password", "That email already has an account", "Use at least 6 characters", "No connection. Try again.").
+- **Create account** creates the account and signs in; the backup starts at once. There is no invitation and no email confirmation step.
 - **Signed in:** the address, the backup status line, "Back up now", "Sign out", and "Delete account…" (a dialog that asks for the password, then deletes the backup and the account; the log on this phone stays). Account deletion inside the app is a Google Play requirement.
 - Signing out keeps the log on the phone. Signing in to an account merges the phone's log with the account's backup (nothing is lost on either side) and uploads the phone's entries.
 
@@ -106,11 +103,10 @@ The first Settings section. One row that opens the **Account** screen, whose sum
 ### 4.1 Data
 
 ```
-invites/{email in lower case}           empty documents, added by hand in the Firebase console
 users/{uid}/entries/{entryId}           { json: EntryJson of the entry (≤ 2 KB), syncedAt: server time of the write }
 ```
 
-Nothing else is stored: no settings, no babies, no names. The rules (`firebase/firestore.rules`) let an account read and delete only its own entries, and write them only once its email is confirmed and an invitation exists.
+Nothing else is stored: no settings, no babies, no names. The rules (`firebase/firestore.rules`) let a signed-in account read, write and delete only its own entries, in exactly that shape.
 
 ### 4.2 Pending uploads
 
@@ -129,15 +125,15 @@ A soft-deleted row is purged only when both flags are clear. The first time a de
 
 One at a time, never throwing:
 
-1. Signed out → status Off. Email not confirmed → status Waiting.
+1. Signed out → status Off.
 2. **Pull:** page through `users/{uid}/entries` ordered by (`syncedAt`, document id), starting after the stored cursor, 500 per page. Merge each page into the database (last-writer-wins, per-baby conflict rules, forwarded to the watch), then store the cursor of its last document.
 3. **Push:** upload the current version of `cloudPending` rows in batches of up to 400 writes, each with `syncedAt` set by the server; clear the flag of each row that was not written again meanwhile.
-4. Status Backed up (time), or Offline / Not invited / Error.
+4. Status Backed up (time), or Offline / Error.
 
 ### 4.4 When it runs (and what it costs)
 
-- At app start, when the account becomes signed in and confirmed, when the phone app comes to the foreground (at most once a minute), and from "Back up now".
+- At app start, when an account signs in, when the phone app comes to the foreground (at most once a minute), and from "Back up now".
 - A push (no pull) about 2 s after any local write or watch merge leaves rows pending.
-- No snapshot listener: Firestore bills a re-attached listener as a full re-read after 30 minutes away. A pull with nothing new costs one read; each changed entry costs one read; each uploaded entry one write; the invitation check in the rules one read per request.
+- No snapshot listener: Firestore bills a re-attached listener as a full re-read after 30 minutes away. A pull with nothing new costs one read; each changed entry costs one read; each uploaded entry one write.
 
 For a family logging about 40 entries a day this is roughly 40 writes and well under 200 reads a day, against Spark's free 20 000 writes and 50 000 reads a day. Fifty such accounts use about 10 % of the free quota. A first sign-in with a year of history (about 15 000 entries) uploads in one go and may hit that day's write quota; the rest then follows the next day, automatically.

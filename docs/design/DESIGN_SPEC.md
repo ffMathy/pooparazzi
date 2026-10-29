@@ -2,7 +2,7 @@
 
 > **Renamed:** the product is now called **Pooparazzi**. This design document predates the rename and keeps the working name "Xaternity"; in code, read `com.ffmathy.xaternity` as `com.ffmathy.pooparazzi`, `xaternity://` as `pooparazzi://` and `Xaternity*` classes as `Pooparazzi*`.
 
-> **Several babies and the backup:** [`BABIES_AND_BACKUP.md`](BABIES_AND_BACKUP.md) adds several babies (a current baby per device) and an optional, invite-only account that backs the log up; it wins where it differs from this document (one baby, "phone ↔ watch only").
+> **Several babies and the backup:** [`BABIES_AND_BACKUP.md`](BABIES_AND_BACKUP.md) adds several babies (a current baby per device) and an optional account that backs the log up; it wins where it differs from this document (one baby, "phone ↔ watch only").
 
 Design: "Night Light" (final) · Spec date: Mon 26 Oct 2026 · Status: **pending the user's approval of the mockups**
 

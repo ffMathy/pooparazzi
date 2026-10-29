@@ -1,11 +1,10 @@
 # The backup backend
 
-The phone app can back the log up to a small Firebase backend. Accounts are optional and by invitation: without one, the app keeps everything on the phone and the watch, as before. How the app behaves is in [design/BABIES_AND_BACKUP.md](design/BABIES_AND_BACKUP.md); this page is the setup and the running of the backend.
+The phone app can back the log up to a small Firebase backend. Accounts are optional: without one, the app keeps everything on the phone and the watch, as before. How the app behaves is in [design/BABIES_AND_BACKUP.md](design/BABIES_AND_BACKUP.md); this page is the setup and the running of the backend.
 
 | Part | Firebase product | What it holds |
 |---|---|---|
-| Accounts | Authentication, email and password | Email address, password hash, whether the email is confirmed |
-| Invitations | Cloud Firestore, `invites/{email}` | One empty document per invited address, added by you |
+| Accounts | Authentication, email and password | Email address and password hash |
 | The backup | Cloud Firestore, `users/{uid}/entries/{entryId}` | Each log entry as JSON (times, kind, feed type and side, diaper details, an opaque baby id) and the server time it was written |
 
 Baby names are **never uploaded**: they stay on the phone and the watch. The security rules ([`firebase/firestore.rules`](../firebase/firestore.rules)) refuse every other document, so there is nowhere for a name to go.
@@ -16,7 +15,7 @@ Use the free **Spark** plan and do not add a billing account. A Spark project ca
 
 | Spark quota (per project) | Free | Pooparazzi's use |
 |---|---|---|
-| Firestore document reads | 50 000 a day | about 1 per sync with nothing new, plus 1 per changed entry, plus 1 per request for the invitation check in the rules |
+| Firestore document reads | 50 000 a day | about 1 per sync with nothing new, plus 1 per changed entry |
 | Firestore document writes | 20 000 a day | 1 per logged, edited or deleted entry |
 | Firestore deletes | 20 000 a day | only when an account is deleted |
 | Firestore storage | 1 GiB | about 0.5 KB per entry: a year of logging is about 7 MB |
@@ -32,12 +31,12 @@ The one heavy moment is the **first sign-in on a phone with a long history**: ev
 
 1. Go to the [Firebase console](https://console.firebase.google.com/), click **Create a project** and name it, for example, Pooparazzi. Google Analytics is not needed.
 2. Keep the project on the **Spark** plan (the default). Do not upgrade it to Blaze.
-3. Under Project settings › General, set the **public-facing name** (Pooparazzi). It appears in the confirmation and password emails.
+3. Under Project settings › General, set the **public-facing name** (Pooparazzi). It appears in the password reset email.
 
 ### 2. Turn on email and password sign-in
 
 1. Build › **Authentication** › Get started › Sign-in method › **Email/Password** › Enable. Leave "Email link (passwordless sign-in)" off.
-2. Optional: Authentication › Templates. The app sends the **email address verification** and **password reset** emails. Choose their language (Danish is available) and wording there.
+2. Optional: Authentication › Templates. The app sends the **password reset** email from there. Choose its language (Danish is available) and wording.
 
 ### 3. Create the database and its rules
 
@@ -64,17 +63,11 @@ The file is not a secret in the strict sense: its API key only identifies the pr
 
 Only the phone app uses Firebase. The watch app shares the applicationId but has no Firebase code or configuration.
 
-## Inviting people
+## Who can sign up
 
-An account can store a backup only if its email address is confirmed and **invited**:
+Anyone with the app can create an account; there are no invitations. That is fine for a small group: on the Spark plan nothing can cost money, and the worst a misbehaving client could do is use up the day's free quota. Firebase also limits account creation per IP address.
 
-1. Firestore Database › Data › **Start collection** (the first time), named `invites`. After that, open `invites` and click **Add document**.
-2. **Document ID:** the email address in lower case, for example `anna@example.com`.
-3. Fields: none are needed, and the rules ignore them. A `note` (string) saying who it is can help you later.
-
-The person can then create an account in the app (Settings › Account, or the welcome screen) and confirm the address from the email they receive. Creating an account with an address that is not invited is refused, and the account is deleted again straight away.
-
-**Removing access:** delete the person's `invites` document. They can still read and delete their own backup, but cannot add to it. To remove them completely, delete their user under Authentication › Users, and their data under Firestore › `users` › their user id (the id is shown in Authentication › Users).
+**Removing someone:** delete their user under Authentication › Users, and their data under Firestore › `users` › their user id (shown in Authentication › Users). People can also delete their own account and backup in the app.
 
 ## What the app does
 
@@ -97,4 +90,4 @@ npm install
 npm test
 ```
 
-They check the invitation and confirmed-email requirement, the address match in any letter case, that nobody reads or writes another account's log, the shape of an entry document (JSON of at most 2 KB, the server's write time), and that nothing else can be stored. The [`Firestore rules`](../.github/workflows/rules.yml) workflow runs them on every pull request that changes `firebase/`.
+They check that nobody reads or writes another account's log (or anything while signed out), the shape of an entry document (JSON of at most 2 KB, the server's write time), and that nothing else can be stored. The [`Firestore rules`](../.github/workflows/rules.yml) workflow runs them on every pull request that changes `firebase/`.

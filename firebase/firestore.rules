@@ -2,10 +2,8 @@ rules_version = '2';
 
 // Pooparazzi's optional backup (docs/BACKEND.md).
 //
-// - Invite-only: an account may store entries only once its email address is confirmed and has a document in
-//   /invites. The project owner adds those by hand in the Firebase console.
-// - Each account sees only its own log, under /users/{uid}/entries. Baby names are never uploaded: an entry carries
-//   an opaque baby id, and the names stay on the phone and the watch.
+// - Each account reads and writes only its own log, under /users/{uid}/entries.
+// - Baby names are never uploaded: an entry carries an opaque baby id, and the names stay on the phone and the watch.
 // - Nothing else exists, so everything else is denied.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -14,30 +12,11 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
-    /** The signed-in account's email address in lower case, or '' when it has none. */
-    function email() {
-      return request.auth.token.get('email', '').lower();
-    }
-
-    function isInvited() {
-      return request.auth.token.get('email_verified', false) == true
-        && email() != ''
-        && exists(/databases/$(database)/documents/invites/$(email()));
-    }
-
-    // One empty document per invited email address, its id the address in lower case. The app may only ask whether
-    // its own address is invited (right after creating an account, to explain a refusal).
-    match /invites/{address} {
-      allow get: if request.auth != null && email() != '' && email() == address;
-    }
-
     // One document per log entry: its JSON (EntryJson in the app) and the server time of the write, which the app
-    // pages through to fetch only what changed since its last sync. The owner may always read and delete (account
-    // deletion); writing needs an invitation.
+    // pages through to fetch only what changed since its last sync. Deleting is for account deletion.
     match /users/{uid}/entries/{entryId} {
       allow read, delete: if signedInAs(uid);
       allow create, update: if signedInAs(uid)
-        && isInvited()
         && request.resource.data.keys().hasAll(['json', 'syncedAt'])
         && request.resource.data.keys().hasOnly(['json', 'syncedAt'])
         && request.resource.data.json is string
