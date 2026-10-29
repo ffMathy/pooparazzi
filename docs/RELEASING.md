@@ -78,7 +78,7 @@ Repository › Settings › Secrets and variables › Actions.
 | `UPLOAD_KEYSTORE_PASSWORD` | The keystore password |
 | `UPLOAD_KEY_ALIAS` | The key alias (`upload` above) |
 | `UPLOAD_KEY_PASSWORD` | The key password (the same as the keystore password if `keytool` did not ask for a separate one) |
-| `GOOGLE_SERVICES_JSON` | Optional: the whole `google-services.json` of the Firebase backend ([BACKEND.md](BACKEND.md#4-connect-the-app)). Without it the release builds with accounts and the backup turned off, and the run warns |
+| `GOOGLE_SERVICES_JSON` | Optional: the whole `google-services.json` of the Firebase backend ([BACKEND.md](BACKEND.md#6-connect-the-app)). Without it the release builds with accounts and the backup turned off, and the run warns |
 
 **Variables** (all optional):
 

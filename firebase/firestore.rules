@@ -1,27 +1,152 @@
 rules_version = '2';
 
-// Pooparazzi's optional backup (docs/BACKEND.md).
+// Pooparazzi's optional backup and family sharing (docs/BACKEND.md).
 //
-// - Each account reads and writes only its own log, under /users/{uid}/entries.
-// - Baby names are never uploaded: an entry carries an opaque baby id, and the names stay on the phone and the watch.
-// - Nothing else exists, so everything else is denied.
+// - Every account belongs to one family, named by /users/{uid}.familyId. A family is its members (one document per
+//   account under /families/{fid}/members) and what they share: the log (entries) and the babies, names included.
+// - Only members read or write a family's data. Membership is checked by the member document's existence, so every
+//   request costs one extra document read.
+// - A family is created by its first member, in one batch with that member's document. Anyone else joins with an
+//   invite (/invites/{code}): a member makes it, the invitee joins with it within 7 days, and joining deletes it.
+// - The log of the first backup (/users/{uid}/entries) can only be read and deleted, to move it into the family.
+// - There are no Cloud Functions (free Spark plan), so everything the rules cannot check is the app's job. Nothing
+//   else exists, so everything else is denied.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedInAs(uid) {
-      return request.auth != null && request.auth.uid == uid;
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // One document per log entry: its JSON (EntryJson in the app) and the server time of the write, which the app
-    // pages through to fetch only what changed since its last sync. Deleting is for account deletion.
-    match /users/{uid}/entries/{entryId} {
-      allow read, delete: if signedInAs(uid);
-      allow create, update: if signedInAs(uid)
-        && request.resource.data.keys().hasAll(['json', 'syncedAt'])
-        && request.resource.data.keys().hasOnly(['json', 'syncedAt'])
+    function signedInAs(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function familyPath(fid) {
+      return /databases/$(database)/documents/families/$(fid);
+    }
+
+    function memberPath(fid, uid) {
+      return /databases/$(database)/documents/families/$(fid)/members/$(uid);
+    }
+
+    function invitePath(code) {
+      return /databases/$(database)/documents/invites/$(code);
+    }
+
+    // The signed-in account is in the family (before this request).
+    function isMember(fid) {
+      return signedIn() && exists(memberPath(fid, request.auth.uid));
+    }
+
+    // The signed-in account is in the family once this request (a batch, say) is done.
+    function isMemberAfter(fid) {
+      return signedIn() && existsAfter(memberPath(fid, request.auth.uid));
+    }
+
+    // Exactly these fields, no more and no fewer.
+    function hasExactly(fields) {
+      return request.resource.data.keys().hasAll(fields) && request.resource.data.keys().hasOnly(fields);
+    }
+
+    // A synced document: its JSON (EntryJson or a baby's JSON in the app, at most 2 KB) and the server time of the
+    // write, which the app pages through to fetch only what changed since its last sync.
+    function isSyncedDoc() {
+      return hasExactly(['json', 'syncedAt'])
         && request.resource.data.json is string
         && request.resource.data.json.size() <= 2048
         && request.resource.data.syncedAt == request.time;
+    }
+
+    // The account's pointer to its family. It may name only a family the account is in (also one it joins or
+    // creates in the same batch). Deleting it is for account deletion.
+    match /users/{uid} {
+      allow get, delete: if signedInAs(uid);
+      allow create, update: if signedInAs(uid)
+        && hasExactly(['familyId'])
+        && request.resource.data.familyId is string
+        && existsAfter(memberPath(request.resource.data.familyId, uid));
+
+      // The backup from before families: read once to move it into the family, then deleted. Never written again.
+      match /entries/{entryId} {
+        allow read, delete: if signedInAs(uid);
+      }
+    }
+
+    match /families/{fid} {
+      // Created by its first member, whose member document is created in the same batch. Never changed.
+      allow create: if signedIn()
+        && hasExactly(['createdBy', 'createdAt'])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && existsAfter(memberPath(fid, request.auth.uid));
+      allow get: if isMember(fid);
+      // Deleted by the last member as they leave (deleting their member document in the same batch), after deleting
+      // the entries and babies. The rules cannot count the members: the app deletes it only when nobody else is left.
+      allow delete: if isMember(fid) && !isMemberAfter(fid);
+
+      // Who is in the family: { email, joinedAt, invite? }. An account adds only itself, with its own email, either
+      // as the creator of a family made in the same batch, or with an unexpired invite to this family that the same
+      // batch deletes (so an invite lets one account in, once). Members are never changed. A member leaves by
+      // deleting their own document; the family's creator, while a member, may remove anyone.
+      match /members/{uid} {
+        allow read: if isMember(fid);
+        allow create: if signedInAs(uid)
+          && request.resource.data.keys().hasAll(['email', 'joinedAt'])
+          && request.resource.data.keys().hasOnly(['email', 'joinedAt', 'invite'])
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.joinedAt == request.time
+          && (
+            // (a) The creator of a new family.
+            (!('invite' in request.resource.data)
+              && !exists(familyPath(fid))
+              && getAfter(familyPath(fid)).data.createdBy == uid)
+            ||
+            // (b) An invitee: the invite is to this family, still valid, and used up by this batch.
+            (request.resource.data.get('invite', null) is string
+              && get(invitePath(request.resource.data.invite)).data.familyId == fid
+              && get(invitePath(request.resource.data.invite)).data.expiresAt > request.time
+              && !existsAfter(invitePath(request.resource.data.invite)))
+          );
+        allow delete: if signedInAs(uid)
+          || (isMember(fid) && get(familyPath(fid)).data.createdBy == request.auth.uid);
+      }
+
+      // The shared log, one document per entry.
+      match /entries/{entryId} {
+        allow read, delete: if isMember(fid);
+        allow create, update: if isMember(fid) && isSyncedDoc();
+      }
+
+      // The shared babies (id, name, updatedAtMillis), one document per baby.
+      match /babies/{babyId} {
+        allow read, delete: if isMember(fid);
+        allow create, update: if isMember(fid) && isSyncedDoc();
+      }
+    }
+
+    // An invite to a family: { familyId, createdBy, expiresAt, email? }. The code is the secret: 128 random bits,
+    // URL-safe base64 (22 characters, at most 64 accepted), so any signed-in account that has the link may read it,
+    // but nobody can list them. A member makes it for their own family, valid for at most 7 days, optionally with
+    // their own email (shown to the invitee). Deleted by whoever made it, by a member of its family, or by the
+    // invitee as they join (in the joining batch).
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn()
+        && code.size() >= 22 && code.size() <= 64
+        && code.matches('[A-Za-z0-9_-]+')
+        && request.resource.data.keys().hasAll(['familyId', 'createdBy', 'expiresAt'])
+        && request.resource.data.keys().hasOnly(['familyId', 'createdBy', 'expiresAt', 'email'])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.familyId is string
+        && isMember(request.resource.data.familyId)
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt <= request.time + duration.value(7, 'd')
+        && (!('email' in request.resource.data) || request.resource.data.email == request.auth.token.email);
+      allow delete: if signedIn()
+        && (resource.data.createdBy == request.auth.uid
+          || isMember(resource.data.familyId)
+          || isMemberAfter(resource.data.familyId));
     }
   }
 }
