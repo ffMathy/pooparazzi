@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.core.sample
 
 import com.ffmathy.pooparazzi.core.domain.epochMillis
+import com.ffmathy.pooparazzi.core.domain.localDate
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -131,6 +132,12 @@ object SampleData {
         }
         return entries + scenario(zone)
     }
+
+    /** The days [historyWithGaps] leaves empty: a forgotten Tue 13 and Wed 14 Oct. */
+    val GAP_DAYS: Set<LocalDate> = setOf(LocalDate.of(2026, 10, 13), LocalDate.of(2026, 10, 14))
+
+    /** [history] without the entries that start on [GAP_DAYS]: days when nothing was logged, for Statistics. */
+    fun historyWithGaps(zone: ZoneId = ZONE): List<Entry> = history(zone = zone).filterNot { localDate(it.startMillis, zone) in GAP_DAYS }
 
     private fun minutes(count: Int): Long = count * 60_000L
 

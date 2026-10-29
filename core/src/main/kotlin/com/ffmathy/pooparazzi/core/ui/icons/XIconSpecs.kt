@@ -26,7 +26,7 @@ data class XIconSpec(val name: String, val paths: List<XIconPath>) {
 
 /**
  * Path data of every icon. The spec icons are copied verbatim from DESIGN_SPEC §6.2; the v1 additions
- * ([breast], [food], the side glyphs, [checkbox], [checkboxChecked], [info]) follow the same style.
+ * ([breast], [food], the side glyphs, [checkbox], [checkboxChecked], [info], [chart]) follow the same style.
  */
 object XIconSpecs {
     val sleep = icon("sleep", "M20 14.6A8.5 8.5 0 1 1 9.4 4a7 7 0 0 0 10.6 10.6z")
@@ -156,11 +156,14 @@ object XIconSpecs {
     /** Info: a circled "i" (health hint). */
     val info = icon("info", "M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17z", "M12 11v5", "M12 7.75h.01")
 
+    /** Chart: three uneven bars on a baseline (History's button to Statistics). */
+    val chart = icon("chart", "M3.5 20.5h17", "M7 17v-5", "M12 17V6", "M17 17v-8")
+
     /** Every icon, in the order of DESIGN_SPEC §6.2 followed by the v1 additions. */
     val all: List<XIconSpec> = listOf(
         sleep, wake, feed, diaper, pee, poop, both, history, edit, undo, delete, profile, settings, phone, synced, pending,
         offline, check, plus, back, chevronLeft, chevronRight, chevronDown, close, clock, lamp, awake, sleepRunning,
-        breast, food, sideLeft, sideRight, sideLeftRight, sideRightLeft, checkbox, checkboxChecked, info,
+        breast, food, sideLeft, sideRight, sideLeftRight, sideRightLeft, checkbox, checkboxChecked, info, chart,
     )
 
     internal const val BOTH_PEE = "M7.5 3C5.6 5.6 4 7.6 4 9.9a3.5 3.5 0 0 0 7 0C11 7.6 9.4 5.6 7.5 3z"

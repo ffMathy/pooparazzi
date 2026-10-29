@@ -28,6 +28,14 @@ class SampleHistoryTest {
     }
 
     @Test
+    fun historyWithGapsLeavesOutTuesday13AndWednesday14October() {
+        val gaps = SampleData.historyWithGaps()
+        assertTrue(gaps.none { localDate(it.startMillis, ZONE) in SampleData.GAP_DAYS })
+        assertEquals(history.filterNot { localDate(it.startMillis, ZONE) in SampleData.GAP_DAYS }, gaps)
+        assertTrue("both days had entries to leave out", history.size - gaps.size > 20)
+    }
+
+    @Test
     fun everyEntryIsValidWithAUniqueIdAndSleepsNeverOverlap() {
         history.forEach { assertNull(it.id, validate(it)) }
         assertEquals(history.size, history.map { it.id }.toSet().size)
