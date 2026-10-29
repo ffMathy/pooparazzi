@@ -66,5 +66,8 @@ interface HistoryActions {
     /** The snackbar for [receipt] went away without Undo. */
     fun onReceiptDismissed(receipt: DeletedReceipt) {}
 
+    /** The `chart` button in the top bar: Statistics (P8). */
+    fun onOpenStatistics() {}
+
     object None : HistoryActions
 }

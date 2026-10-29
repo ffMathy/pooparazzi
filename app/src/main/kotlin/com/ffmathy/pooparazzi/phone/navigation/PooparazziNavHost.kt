@@ -15,6 +15,7 @@ import com.ffmathy.pooparazzi.phone.ui.history.HistoryRoute
 import com.ffmathy.pooparazzi.phone.ui.home.HomeRoute
 import com.ffmathy.pooparazzi.phone.ui.settings.LicencesRoute
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsRoute
+import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsRoute
 import com.ffmathy.pooparazzi.phone.ui.theme.LocalNightLight
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
 import kotlinx.serialization.Serializable
@@ -26,6 +27,10 @@ data object Home
 /** History (P3). */
 @Serializable
 data object History
+
+/** Statistics (P8), opened from History. */
+@Serializable
+data object Statistics
 
 /** Settings. */
 @Serializable
@@ -56,10 +61,10 @@ fun PooparazziPhoneApp(
 }
 
 /**
- * Home, History, Settings and the font licences. The edit sheet (P4) is not a destination: it opens over the screen
- * that asked for it (Home's since-rows and Adjust card, History's rows and FAB), with its scrim over that screen.
- * A deep link returns to Home first, which then opens the sheet or card it asks for; [HomeLaunch.History] (the watch's
- * "More on phone") opens History over Home instead.
+ * Home, History (with Statistics over it), Settings and the font licences. The edit sheet (P4) is not a destination:
+ * it opens over the screen that asked for it (Home's since-rows and Adjust card, History's rows and FAB), with its
+ * scrim over that screen. A deep link returns to Home first, which then opens the sheet or card it asks for;
+ * [HomeLaunch.History] (the watch's "More on phone") opens History over Home instead.
  */
 @Composable
 fun PooparazziNavHost(
@@ -93,7 +98,8 @@ fun PooparazziNavHost(
                 onLaunchHandled = onLaunchHandled,
             )
         }
-        composable<History> { HistoryRoute(onBack = back) }
+        composable<History> { HistoryRoute(onBack = back, onOpenStatistics = { open(Statistics) }) }
+        composable<Statistics> { StatisticsRoute(onBack = back) }
         composable<Settings> { SettingsRoute(onBack = back, onOpenLicences = { open(Licences) }) }
         composable<Licences> { LicencesRoute(onBack = back) }
     }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -29,7 +30,9 @@ import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 
 /**
  * A 64 dp top bar (DESIGN_SPEC §3.3.3): a 48 dp icon button 8 from the start (`back` 24, onSurfaceVariant) and the
- * title (titleLarge, a heading) at 64. [below] adds lines under the title, such as the sync line.
+ * title (titleLarge, a heading) at 64. [below] adds lines under the title, such as the sync line. [actions] adds
+ * icon buttons at the end (History's `chart`): the row's end padding is then 8, so a 24 dp glyph in a 48 dp target
+ * sits 20 from the edge, mirroring Back. [actions] comes before [below], so a trailing lambda still means [below].
  */
 @Composable
 internal fun XTopBar(
@@ -38,6 +41,7 @@ internal fun XTopBar(
     navigationLabel: String,
     onNavigate: () -> Unit,
     modifier: Modifier = Modifier,
+    actions: (@Composable RowScope.() -> Unit)? = null,
     below: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -45,7 +49,7 @@ internal fun XTopBar(
         modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .padding(start = 8.dp, end = 16.dp),
+            .padding(start = 8.dp, end = if (actions != null) 8.dp else 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconTarget(navigationIcon, navigationLabel, onNavigate)
@@ -60,6 +64,10 @@ internal fun XTopBar(
                 modifier = Modifier.semantics { heading() },
             )
             below?.invoke(this)
+        }
+        if (actions != null) {
+            Spacer(Modifier.width(4.dp))
+            actions(this)
         }
     }
 }
