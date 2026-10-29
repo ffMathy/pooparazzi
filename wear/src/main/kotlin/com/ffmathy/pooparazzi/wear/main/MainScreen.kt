@@ -722,13 +722,36 @@ private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
     val lastDiaperSpoken = stringResource(CoreR.string.spoken_last_diaper)
     val bothIcon = rememberBothIcon(events.pee.strong, events.poop.strong)
 
+    val feedForecast = state.feedForecast
     if (state.mode == MainMode.ASLEEP) {
         state.lastFeed?.let { feed ->
+            // The expected next feed as the card's third line (V1_ADDITIONS §9).
+            val next = feedForecast?.let { expected ->
+                expected.remainingMillis(now)
+                    ?.let { stringResource(CoreR.string.forecast_next_feed_in, f.duration.format(it)) to stringResource(CoreR.string.forecast_next_feed_in, f.duration.spoken(it)) }
+                    ?: stringResource(CoreR.string.forecast_next_feed_soon).let { it to it }
+            }
+            val spoken = f.spokenAgo(lastFeedSpoken, spokenFeedType(feed), feed.startMillis, now)
             cards += CardModel(
                 "last-feed", feed, TimeField.START, XIcons.forFeedType(feed.feedType), events.feed.strong,
                 lastFedWord, f.agoAndClock(feed.startMillis, now) + feedSideSuffix(feed),
-                f.spokenAgo(lastFeedSpoken, spokenFeedType(feed), feed.startMillis, now),
+                next?.let { stringResource(R.string.spoken_pair, spoken, it.second) } ?: spoken,
+                next?.first,
             )
+        }
+    } else {
+        // Idle, the hero shows the last feed; the expected next one gets its own card, first (V1_ADDITIONS §9). It opens
+        // the last feed, like the hero.
+        val feed = state.lastFeed
+        if (feed != null && feedForecast != null) {
+            val title = stringResource(CoreR.string.forecast_next_feed)
+            val remaining = feedForecast.remainingMillis(now)
+            val clock = f.clock.format(feedForecast.roundedAtMillis, f.zone)
+            val detail = remaining?.let { stringResource(CoreR.string.forecast_in_at, f.duration.format(it), clock) }
+                ?: stringResource(CoreR.string.forecast_soon_word)
+            val spoken = remaining?.let { stringResource(CoreR.string.forecast_next_feed_in, f.duration.spoken(it)) }
+                ?: stringResource(CoreR.string.forecast_next_feed_soon)
+            cards += CardModel("next-feed", feed, TimeField.START, XIcons.feed, events.feed.strong, title, detail, spoken)
         }
     }
     if (state.runningSleep == null) {

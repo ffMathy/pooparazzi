@@ -26,6 +26,7 @@ import java.time.ZoneId
  * @property babies all babies, in order; with two or more the widgets name the current one ([babyId]).
  * @property sleepForecast the expected wake-up while asleep, else the expected next sleep (V1_ADDITIONS §9); null when
  *   the last week cannot predict it.
+ * @property feedForecast the expected next feed; [poopForecast] the expected next poop, when poop is regular enough.
  */
 data class WidgetSnapshot(
     val night: Boolean,
@@ -40,6 +41,8 @@ data class WidgetSnapshot(
     val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),
     val babyId: String = babies.first().id,
     val sleepForecast: Expected? = null,
+    val feedForecast: Expected? = null,
+    val poopForecast: Expected? = null,
 ) {
     val asleep: Boolean get() = runningSleepStart != null
 
@@ -70,6 +73,7 @@ data class WidgetSnapshot(
             allEntries: List<Entry> = entries,
         ): WidgetSnapshot {
             val summary = summarize(entries, now, zone)
+            val week = forecast(summary)
             val sleep = summary.runningSleep
             val anyAsleep = sleep != null || allEntries.any { it.isSleep && it.isRunning }
             return WidgetSnapshot(
@@ -86,7 +90,9 @@ data class WidgetSnapshot(
                 notice = memo.notice?.takeIf { it.expiresAtMillis > now },
                 babies = settings.babies,
                 babyId = settings.selectedBaby.id,
-                sleepForecast = forecast(summary).sleep,
+                sleepForecast = week.sleep,
+                feedForecast = week.feed,
+                poopForecast = week.poop,
             )
         }
 
@@ -104,10 +110,12 @@ data class WidgetSnapshot(
 }
 
 /**
- * When the sleep forecast next changes without any new data: once its time has passed, the week's stretches that are
- * still longer give a later estimate (or "soon").
+ * When a forecast next changes without any new data: once its time has passed, the week's stretches that are still
+ * longer give a later estimate (or "soon").
  */
-fun WidgetSnapshot.forecastExpiry(now: Long): Long? = sleepForecast?.takeIf { !it.overdue }?.atMillis?.takeIf { it > now }
+fun WidgetSnapshot.forecastExpiry(now: Long): Long? = listOfNotNull(sleepForecast, feedForecast, poopForecast)
+    .filter { !it.overdue && it.atMillis > now }
+    .minOfOrNull { it.atMillis }
 
 /** When the widgets next change without any new data: the receipt or notice expiry, if any. */
 fun WidgetMemo.nextExpiry(now: Long): Long? =

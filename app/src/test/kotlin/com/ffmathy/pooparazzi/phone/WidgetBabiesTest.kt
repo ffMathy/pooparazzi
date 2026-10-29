@@ -84,7 +84,8 @@ class WidgetBabiesTest {
     fun bothWidgetsNameTheBabyToTalkBack() {
         val log = render(DpSize(358.dp, 208.dp)) { LogWidgetContent(WidgetSamples.twins(night = true)) }.descriptions()
         assertTrue(log.toString(), "Log diaper for Noa" in log)
-        assertTrue(log.toString(), "Log feed for Noa" in log)
+        // The feed button goes on with what the week expects next (V1_ADDITIONS §9).
+        assertTrue(log.toString(), log.any { it.startsWith("Log feed for Noa") })
         assertTrue(log.toString(), log.any { it.startsWith("Start sleep for Noa") })
 
         val quick = render(DpSize(171.dp, 100.dp)) { QuickWidgetContent(WidgetSamples.twins(night = true)) }.descriptions()

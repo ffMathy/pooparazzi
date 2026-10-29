@@ -52,6 +52,8 @@ data class MainUiState(
     val babyId: String = Baby.FIRST_ID,
     /** The expected wake-up while asleep, else the expected next sleep (V1_ADDITIONS §9); null when unpredictable. */
     val sleepForecast: Expected? = null,
+    /** The expected next feed (V1_ADDITIONS §9); null when unpredictable. */
+    val feedForecast: Expected? = null,
 ) {
     val mode: MainMode
         get() = if (runningSleep != null) MainMode.ASLEEP else MainMode.IDLE
@@ -81,8 +83,7 @@ data class MainUiState(
             sync = sync,
             babies = babies,
             babyId = babyId,
-            sleepForecast = forecast(summary).sleep,
-        )
+        ).let { state -> forecast(summary).let { state.copy(sleepForecast = it.sleep, feedForecast = it.feed) } }
 
         /** Before the first database read. */
         fun loading(now: Long, zone: ZoneId) = MainUiState(

@@ -209,4 +209,15 @@
     <string name="forecast_wakes_soon">Wakes soon</string>
     <string name="spoken_forecast_sleep_at">expected to sleep again around %1$s</string>
     <string name="spoken_forecast_wake_at">expected to wake around %1$s</string>
+    <string name="forecast_next_feed">Next feed</string>
+    <string name="forecast_in_at">in %1$s · ~%2$s</string>
+    <string name="forecast_soon_word">soon</string>
+    <string name="forecast_next_feed_in">Next feed in %1$s</string>
+    <string name="forecast_next_feed_soon">Next feed soon</string>
+    <string name="forecast_feed_at">Next ~%1$s</string>
+    <string name="forecast_feed_soon_short">Next soon</string>
+    <string name="forecast_poop_at">Poop ~%1$s</string>
+    <string name="forecast_poop_soon_short">Poop soon</string>
+    <string name="spoken_forecast_feed_at">next feed expected around %1$s</string>
+    <string name="spoken_forecast_poop_at">next poop expected around %1$s</string>
 </resources>

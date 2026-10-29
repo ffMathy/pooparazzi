@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.phone.widget
 
+import androidx.annotation.StringRes
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -303,16 +304,23 @@ private fun LogButtons(
         listOf(feedLabel, diaperLabel).all { measure.fits(it, LabelSize, layout.buttonWidth - 8.dp) } -> FaceStyle.Regular
         else -> FaceStyle.Compact
     }
+    // What the last week expects next (V1_ADDITIONS §9), under the label of the regular face only. When either button
+    // has a line, both keep its room, so the icons stay aligned.
+    val feedNext = snapshot.feedForecast?.takeIf { style == FaceStyle.Regular }
+    val poopNext = snapshot.poopForecast?.takeIf { style == FaceStyle.Regular }
+    val sub = feedNext != null || poopNext != null
+    fun described(@StringRes name: Int, spoken: String?) =
+        strings.forBaby(strings.string(name), baby).let { if (spoken == null) it else strings.string(R.string.spoken_pair, it, spoken) }
     Row(modifier) {
         val cell = GlanceModifier.defaultWeight().fillMaxHeight()
         val feed = colors.feed
-        SheetButton(HomeLaunch.Feed, feed, strings.forBaby(strings.string(R.string.widget_cd_log_feed), baby), cell) {
-            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style)
+        SheetButton(HomeLaunch.Feed, feed, described(R.string.widget_cd_log_feed, feedNext?.let(strings::feedForecastSpoken)), cell) {
+            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style, sub = feedNext?.let(strings::feedForecast) ?: "\u00A0".takeIf { sub })
         }
         Spacer(GlanceModifier.width(8.dp))
         val diaper = colors.diaper
-        SheetButton(HomeLaunch.Diaper, diaper, strings.forBaby(strings.string(R.string.widget_cd_log_diaper), baby), cell) {
-            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style)
+        SheetButton(HomeLaunch.Diaper, diaper, described(R.string.widget_cd_log_diaper, poopNext?.let(strings::poopForecastSpoken)), cell) {
+            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style, sub = poopNext?.let(strings::poopForecast) ?: "\u00A0".takeIf { sub })
         }
     }
 }
@@ -331,7 +339,7 @@ private val CompactTopSpace = 10.dp
  * the regular face's.
  */
 @Composable
-private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle) {
+private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle, sub: String? = null) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
         if (style == FaceStyle.Compact) Spacer(GlanceModifier.height(CompactTopSpace))
         WidgetIcon(icon, iconColor, if (style == FaceStyle.Compact) 20.dp else 24.dp)
@@ -345,6 +353,7 @@ private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: 
                 align = TextAlign.Center,
                 modifier = GlanceModifier.padding(horizontal = 4.dp),
             )
+            if (sub != null) WidgetText(sub, labelColor, 12.sp, maxLines = 1, align = TextAlign.Center)
         }
     }
 }

@@ -114,6 +114,21 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
         else -> string(if (asleep) CoreR.string.forecast_wakes_at else CoreR.string.forecast_next_sleep_at, time(expected.roundedAtMillis))
     }
 
+    /** Under Feed: "Next ~15:35" ("Next soon" when due). */
+    fun feedForecast(expected: Expected): String =
+        if (expected.overdue) string(CoreR.string.forecast_feed_soon_short) else string(CoreR.string.forecast_feed_at, time(expected.roundedAtMillis))
+
+    /** Under Diaper: "Poop ~18:00" ("Poop soon" when due). */
+    fun poopForecast(expected: Expected): String =
+        if (expected.overdue) string(CoreR.string.forecast_poop_soon_short) else string(CoreR.string.forecast_poop_at, time(expected.roundedAtMillis))
+
+    /** TalkBack: "next feed expected around 15:35" / "next poop expected around 18:00", or the "soon" line. */
+    fun feedForecastSpoken(expected: Expected): String =
+        if (expected.overdue) string(CoreR.string.forecast_next_feed_soon) else string(CoreR.string.spoken_forecast_feed_at, time(expected.roundedAtMillis))
+
+    fun poopForecastSpoken(expected: Expected): String =
+        if (expected.overdue) poopForecast(expected) else string(CoreR.string.spoken_forecast_poop_at, time(expected.roundedAtMillis))
+
     /** TalkBack: "expected to wake around 05:30". */
     fun sleepForecastSpoken(expected: Expected, asleep: Boolean): String = when {
         expected.overdue -> sleepForecast(expected, asleep)

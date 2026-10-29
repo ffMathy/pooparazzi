@@ -116,7 +116,7 @@ abstract class WatchScreenshots(private val lang: String) {
         after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4) },
     ) { MainScreen(WearSamples.mainIdle(), MainActions()) }
 
-    /** The Awake card with what the last week expects next: "Next sleep in 55m" (V1_ADDITIONS §9). */
+    /** Next feed and the Awake card with what the last week expects next: "Next sleep in 55m" (V1_ADDITIONS §9). */
     @Test
     fun s04b_mainAwakeForecast() = capture(
         "04b-main-awake-forecast",
@@ -130,6 +130,14 @@ abstract class WatchScreenshots(private val lang: String) {
         "02b-main-asleep-forecast",
         SampleData.NOW_0312,
         after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1) },
+    ) { MainScreen(WearSamples.mainAsleep(), MainActions()) }
+
+    /** Asleep, scrolled to Last fed: "Next feed in 2h 45m" as its third line (V1_ADDITIONS §9). */
+    @Test
+    fun s02c_mainAsleepFeedForecast() = capture(
+        "02c-main-asleep-feed-forecast",
+        SampleData.NOW_0312,
+        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3) },
     ) { MainScreen(WearSamples.mainAsleep(), MainActions()) }
 
     @Test
