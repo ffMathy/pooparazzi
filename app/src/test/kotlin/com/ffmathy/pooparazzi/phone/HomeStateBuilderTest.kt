@@ -92,8 +92,8 @@ class HomeStateBuilderTest {
     fun theBreastStepKeepsTheSheetChipsAndTicks() {
         val sheet = HomeSamples.breastSheet(listOf(Breast.RIGHT, Breast.LEFT)).sheet as HomeSheetUi.Feed
         assertTrue(sheet.breast)
-        assertEquals(listOf(0, -5, -10, -15), sheet.chips.map { it.minutes })
-        assertTrue(sheet.chips.all { it.enabled })
+        assertEquals(listOf(-15, -10, -5, 5), sheet.chips.map { it.minutes })
+        assertEquals("+5m would reach the future", listOf(true, true, true, false), sheet.chips.map { it.enabled })
         assertEquals(BreastSide.RIGHT_THEN_LEFT, sheet.side)
         assertEquals(SampleData.NOW_1432, sheet.time)
     }
