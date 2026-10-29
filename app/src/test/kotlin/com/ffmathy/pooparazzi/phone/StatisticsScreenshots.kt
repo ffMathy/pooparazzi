@@ -60,6 +60,8 @@ abstract class StatisticsScreenshots(private val language: String) {
 
     @Test fun statisticsHalfYear() = screen("statistics-half-year", night = false, tour = false) { Statistics(StatisticsSamples.halfYear()) }
 
+    @Test fun statisticsSoFar() = screen("statistics-so-far", night = false, tour = false) { Statistics(StatisticsSamples.soFar()) }
+
     @Test fun statisticsEmpty() = screen("statistics-empty", night = true, tour = false) { Statistics(StatisticsSamples.empty()) }
 
     /** 200 % font scale (DESIGN_SPEC §9.3): labels wrap, the numbers shrink, nothing clips. Written under build/. */

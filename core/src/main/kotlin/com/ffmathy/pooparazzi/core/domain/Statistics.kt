@@ -37,7 +37,7 @@ enum class DayStatus {
     /** Before the first full day of logging (the first logged day is probably partial). */
     BEFORE_LOGGING,
 
-    /** Today or later. Windows end yesterday, so this does not occur in a [StatsReport]. */
+    /** After the last counted day. Windows end there, so this does not occur in a [StatsReport]. */
     NOT_OVER,
 }
 
@@ -114,6 +114,9 @@ data class StatsWindow(val from: LocalDate, val to: LocalDate, val days: List<St
 /**
  * Everything Statistics shows (V1_ADDITIONS §8). [firstDay] is the day after the first logged day, [lastDay] is
  * yesterday; [range] is the effective range (a Custom one already clamped) and [comparison] is its window.
+ *
+ * @property soFar no whole day has been logged yet, so [firstDay] is the first logged day itself and [lastDay] is
+ * today: the numbers count today so far (and move as it goes on) until the next midnight brings a whole day.
  */
 data class StatsReport(
     val today: LocalDate,
@@ -123,6 +126,7 @@ data class StatsReport(
     val lastSevenDays: StatsWindow,
     val lastThirtyDays: StatsWindow,
     val comparison: StatsWindow,
+    val soFar: Boolean = false,
 )
 
 /** The local date of the earliest entry that is not deleted and starts at or before [now], or null. */
@@ -133,17 +137,18 @@ fun firstLoggedDay(entries: List<Entry>, now: Long, zone: ZoneId): LocalDate? =
         ?.let { localDate(it, zone) }
 
 /**
- * The statistics of [entries] at [now] in [zone], comparing the last 7 days with [range]; null while nothing can be
- * counted yet (nothing logged, or no whole day since the first logged day). Only whole days up to yesterday count, so
- * the numbers change at midnight or when an entry changes, never as today goes on. One [dailyCounts] call plus one
- * pass over [entries]; their order does not matter.
+ * The statistics of [entries] at [now] in [zone], comparing the last 7 days with [range]; null only when nothing is
+ * logged. Only whole days up to yesterday count, so the numbers change at midnight or when an entry changes, never as
+ * today goes on. Until there is a whole day (the first logged day is today or yesterday) it counts from the first
+ * logged day through today so far instead ([StatsReport.soFar]), so a single entry already shows. One [dailyCounts]
+ * call plus one pass over [entries]; their order does not matter.
  */
 fun statsReport(entries: List<Entry>, now: Long, zone: ZoneId, range: StatsRange): StatsReport? {
     val firstLogged = firstLoggedDay(entries, now, zone) ?: return null
     val today = localDate(now, zone)
-    val lastDay = today.minusDays(1)
-    val firstDay = firstLogged.plusDays(1)
-    if (firstDay > lastDay) return null
+    val soFar = firstLogged.plusDays(1) > today.minusDays(1)
+    val lastDay = if (soFar) today else today.minusDays(1)
+    val firstDay = if (soFar) firstLogged else firstLogged.plusDays(1)
     val effective = range.clamped(firstDay, lastDay)
     val (compareFrom, compareTo) = effective.window(firstDay, lastDay)
     val monthFrom = lastDay.minusDays(MONTH_DAYS - 1L)
@@ -162,6 +167,7 @@ fun statsReport(entries: List<Entry>, now: Long, zone: ZoneId, range: StatsRange
         lastSevenDays = window(lastDay.minusDays(WEEK_DAYS - 1L), lastDay),
         lastThirtyDays = window(monthFrom, lastDay),
         comparison = window(compareFrom, compareTo),
+        soFar = soFar,
     )
 }
 
@@ -183,11 +189,10 @@ private fun statsDays(entries: List<Entry>, from: LocalDate, to: LocalDate, firs
             EntryKind.FEED -> Unit
         }
     }
-    val today = localDate(now, zone)
     return List(counts.size) { i ->
         val date = from.plusDays(i.toLong())
         val status = when {
-            date >= today -> DayStatus.NOT_OVER
+            date > to -> DayStatus.NOT_OVER
             date < firstDay -> DayStatus.BEFORE_LOGGING
             anyStarts[i] == 0 -> DayStatus.NOTHING_LOGGED
             else -> DayStatus.COUNTED
