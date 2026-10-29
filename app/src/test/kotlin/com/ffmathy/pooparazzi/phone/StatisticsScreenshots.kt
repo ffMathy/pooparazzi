@@ -29,7 +29,7 @@ import java.time.LocalDate
 
 /**
  * Statistics (P8) on the reference phone (390 × 844 dp, xxhdpi) with the sample history and a fixed clock (V1_ADDITIONS
- * §6, §8), in English and Danish: `app/screenshots/<lang>/19-…20-*.png`, continuing the tour after the widgets. The
+ * §6, §8), in English and Danish: `app/screenshots/<lang>/21-…22-*.png`, continuing the tour after the notifications. The
  * other states are written under `build/outputs/roborazzi/` for review. The status and navigation bars are left empty
  * (24 dp insets, as on the reference device).
  */
@@ -42,9 +42,9 @@ abstract class StatisticsScreenshots(private val language: String) {
         Settings.System.putString(ApplicationProvider.getApplicationContext<Application>().contentResolver, Settings.System.TIME_12_24, "24")
     }
 
-    @Test fun statisticsDay() = screen("19-statistics", night = false) { Statistics(StatisticsSamples.lastThirtyDays()) }
+    @Test fun statisticsDay() = screen("21-statistics", night = false) { Statistics(StatisticsSamples.lastThirtyDays()) }
 
-    @Test fun statisticsNight() = screen("20-statistics-night", night = true) { Statistics(StatisticsSamples.night()) }
+    @Test fun statisticsNight() = screen("22-statistics-night", night = true) { Statistics(StatisticsSamples.night()) }
 
     /** Not part of the tour (written under build/): the other rows, ranges and amounts of logging. */
     @Test fun statisticsSleep() = screen("statistics-sleep", night = false, tour = false) { Statistics(StatisticsSamples.sleep()) }

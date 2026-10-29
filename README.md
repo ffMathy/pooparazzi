@@ -47,9 +47,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-add-past-entry.png" width="200" alt="Add a past entry"> | <img src="docs/screenshots/en/phone-settings.png" width="200" alt="Settings"> | <img src="docs/screenshots/en/phone-widget-4x2.png" width="200" alt="4x2 log widget in its states"> | <img src="docs/screenshots/en/phone-widget-3x1.png" width="200" alt="3x1 quick widget in its sizes"> |
 
-| Cover screen (Samsung flip) | Sleep notifications |
-|:---:|:---:|
-| <img src="docs/screenshots/en/phone-widget-cover.png" width="200" alt="The 4x2 widget on a Samsung flip's cover screen, idle and asleep"> | <img src="docs/screenshots/en/phone-notifications.png" width="200" alt="The running-sleep notification with its duration, last feed, last diaper and today's counts, and the woke-up notification with its earlier offsets"> |
+| Cover screen (Samsung flip) | Sleep notifications | Statistics | Statistics, Night |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/phone-widget-cover.png" width="200" alt="The 4x2 widget on a Samsung flip's cover screen, idle and asleep"> | <img src="docs/screenshots/en/phone-notifications.png" width="200" alt="The running-sleep notification with its duration, last feed, last diaper and today's counts, and the woke-up notification with its earlier offsets"> | <img src="docs/screenshots/en/phone-statistics.png" width="200" alt="Statistics: averages per day for the last 7 days next to the last 30 days, with the poop chart open"> | <img src="docs/screenshots/en/phone-statistics-night.png" width="200" alt="Statistics at night"> |
 
 ### Watch
 
@@ -67,9 +67,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 ### På dansk (Danish)
 
-| Hjem, nat | Hjem, dag | Amning | Ble | Historik | Indstillinger |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/da/phone-home-night.png" width="150" alt="Hjem, nat"> | <img src="docs/screenshots/da/phone-home-day.png" width="150" alt="Hjem, dag"> | <img src="docs/screenshots/da/phone-breast-sheet.png" width="150" alt="Amning: siderækkefølge"> | <img src="docs/screenshots/da/phone-diaper-sheet.png" width="150" alt="Ble"> | <img src="docs/screenshots/da/phone-history.png" width="150" alt="Historik"> | <img src="docs/screenshots/da/phone-settings.png" width="150" alt="Indstillinger"> |
+| Hjem, nat | Hjem, dag | Amning | Ble | Historik | Statistik | Indstillinger |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/da/phone-home-night.png" width="150" alt="Hjem, nat"> | <img src="docs/screenshots/da/phone-home-day.png" width="150" alt="Hjem, dag"> | <img src="docs/screenshots/da/phone-breast-sheet.png" width="150" alt="Amning: siderækkefølge"> | <img src="docs/screenshots/da/phone-diaper-sheet.png" width="150" alt="Ble"> | <img src="docs/screenshots/da/phone-history.png" width="150" alt="Historik"> | <img src="docs/screenshots/da/phone-statistics.png" width="150" alt="Statistik"> | <img src="docs/screenshots/da/phone-settings.png" width="150" alt="Indstillinger"> |
 
 | Ur: hoved | Måltid | Hvilken side? | Ble | Registreret | Flise |
 |:---:|:---:|:---:|:---:|:---:|:---:|
@@ -136,6 +136,8 @@ python3 scripts/readme_screenshots.py
 ```
 
 `readme_screenshots.py` takes a curated subset, scales phone shots to 360 px wide and masks watch shots to a 300 px circle with a transparent outside, for both languages. Edit the `PHONE` and `WATCH` lists in the script to change the set.
+
+On pull requests, the [`screenshots.yml`](.github/workflows/screenshots.yml) workflow does both on CI's Android SDK and pushes the result to the branch when anything changed, so the screenshots always show the UI being merged.
 
 ## Releasing
 
