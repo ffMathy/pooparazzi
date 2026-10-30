@@ -45,7 +45,9 @@ object BigButtonDefaults {
 }
 
 /**
- * A big Home button. Its shape stays [radius] whatever its state (pressed shows as the ripple). Labels wrap to two lines at large font scales; the button grows instead of clipping.
+ * A big Home button. Its shape stays [radius] whatever its state (pressed shows as the ripple). Labels wrap to two
+ * lines at large font scales; the button grows instead of clipping. The label and sublabel are start-aligned beside the
+ * icon, and icon and text are centred in the button together.
  *
  * @param icon drawn in [iconTint]; pass `Color.Unspecified` for a two-tone vector.
  * @param onClickLabel what a tap does, for accessibility services ("End sleep").
@@ -92,9 +94,10 @@ fun BigButton(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             XIcon(icon, contentDescription = null, tint = iconTint, size = BigButtonDefaults.IconSize)
-            val style = MaterialTheme.typography.headlineSmall.copy(hyphens = Hyphens.Auto, textAlign = TextAlign.Center)
+            val style = MaterialTheme.typography.headlineSmall.copy(hyphens = Hyphens.Auto, textAlign = TextAlign.Start)
             val measurer = rememberTextMeasurer()
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Label and forecast start at the same edge, next to the icon; the Row centres icon and text as one group.
+            Column(horizontalAlignment = Alignment.Start) {
                 Text(
                     label,
                     style = style,
