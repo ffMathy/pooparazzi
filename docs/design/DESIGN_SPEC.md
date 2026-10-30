@@ -302,7 +302,7 @@ Receipt rules:
 
 **Feed and Diaper buttons**: 169 × 96, full pill r 48 (pressed r 16). Fill FEED / DIAPER container. Content row: icon 32 (event strong) + 12 + headlineSmall "Feed" / "Diaper" (event onContainer). **Unchanged in lights-down.**
 
-**Forecast line**: under the label of Feed, Diaper and the Sleep toggle, what the last 7 days expect next ("in 1h 05m"; Diaper "poop in 3h"; Woke up the expected wake-up). See V1_ADDITIONS §9, which also puts the estimates on the 4×2 widget and the watch.
+**Forecast line**: under the label of Feed, Diaper and the Sleep toggle, what the last 7 days expect next ("in 1h 05m"; Diaper "poop in 3h"; Woke up the expected wake-up). The label and the forecast line are start-aligned 12 dp after the icon; icon and text are centred in the button as one group. See V1_ADDITIONS §9, which also puts the estimates on the 4×2 widget and the watch.
 
 **Sleep toggle**: 350 × 96, a button whose name changes with its state (it exposes no separate on/off state; §9.4).
 - Unchecked: r 48, SLEEP container, `sleep` 32 SLEEP strong + 12 + "Start sleep" headlineSmall SLEEP onContainer.
