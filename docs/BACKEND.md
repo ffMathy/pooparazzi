@@ -110,7 +110,13 @@ npx firebase login
 npm run deploy -- --project <your-project-id>
 ```
 
-That deploys the Firestore rules (and indexes) and the website in [`firebase/hosting/`](../firebase/hosting). Deploy again after changing either. Or, for the rules only, open Firestore › **Rules** in the console, paste the whole of [`firebase/firestore.rules`](../firebase/firestore.rules) and click Publish.
+That deploys the Firestore rules (and indexes) and the website in [`firebase/hosting/`](../firebase/hosting). Or, for the rules only, open Firestore › **Rules** in the console, paste the whole of [`firebase/firestore.rules`](../firebase/firestore.rules) and click Publish.
+
+After that, the [`Deploy backend`](../.github/workflows/deploy.yml) workflow deploys both again on every merge to `main` that changes them, once the rules' tests pass. It needs a service account of its own, kept apart from the retention job's so neither can do the other's work:
+
+1. Google Cloud console of the Firebase project › IAM & Admin › Service accounts › Create service account `deploy`, with the roles **Firebase Rules Admin**, **Firebase Hosting Admin**, **Cloud Datastore Index Admin**, **Firebase Viewer** and **Service Usage Consumer**. Keys › Add key › JSON.
+2. Add the whole key file's content as the repository secret **`FIREBASE_DEPLOY_SERVICE_ACCOUNT`**, then delete the file. Without the secret the workflow does nothing and says so, and you deploy by hand as above.
+3. Run it once by hand (Actions › Deploy backend › Run workflow) to check that the account may deploy: a missing role fails the run with the permission it lacked.
 
 The website ([`firebase.json`](../firebase/firebase.json) › `hosting`), served at `https://<project-id>.web.app` and `https://<project-id>.firebaseapp.com`, is a few static pages with no scripts, no cookies and no external resources (`Content-Security-Policy: default-src 'none'`, `Referrer-Policy: no-referrer`, so an invite code never leaks to Google Play through the referrer). Those headers apply to the site's own paths only (`firebase.json` matches every path except those starting with `/__/`), so Firebase's reserved pages under `/__/` (the email link handler `/__/auth/links`, which runs scripts) keep their own:
 
