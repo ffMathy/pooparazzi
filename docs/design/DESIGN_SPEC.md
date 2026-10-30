@@ -300,7 +300,7 @@ Receipt rules:
 - Disabled: label and border at 0.38 opacity.
 - Single-select chips expose a selected state.
 
-**Feed and Diaper buttons**: 169 × 96, full pill r 48 (pressed r 16). Fill FEED / DIAPER container. Content row: icon 32 (event strong) + 12 + headlineSmall "Feed" / "Diaper" (event onContainer). **Unchanged in lights-down.**
+**Feed and Diaper buttons**: 169 × 96, full pill r 48 (pressed or not: the ripple shows the press). Fill FEED / DIAPER container. Content row: icon 32 (event strong) + 12 + headlineSmall "Feed" / "Diaper" (event onContainer). **Unchanged in lights-down.**
 
 **Forecast line**: under the label of Feed, Diaper and the Sleep toggle, what the last 7 days expect next ("in 1h 05m"; Diaper "poop in 3h"; Woke up the expected wake-up). The label and the forecast line are start-aligned 12 dp after the icon; icon and text are centred in the button as one group. See V1_ADDITIONS §9, which also puts the estimates on the 4×2 widget and the watch.
 
@@ -919,7 +919,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 | Element | Phone | Watch |
 |---|---|---|
 | Lamp | Ø264; ring r 129, track 6; ember Ø10; tail 48° | outer Ø126; ring r 60.5, track 5; ember Ø8; tail 48° |
-| Feed / Diaper buttons | 169 × 96, full pill r 48; pressed r 16 | 98 × 60, r 26 |
+| Feed / Diaper buttons | 169 × 96, full pill r 48 | 98 × 60, r 26 |
 | Sleep toggle | 350 × 96; r 48, checked or not | EdgeButton Medium 70 (system shape, 143 wide D-shape; content area ≈ 99 × 56, so the icon is stacked over the label) |
 | EdgeButton Small | — | 56 (content ≈ 92 × 42; icon + label in a row; Undo only) |
 | Tile EdgeButton | — | 46 drawn, 48 hit box |
@@ -934,6 +934,8 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 | Ribbon | card r 20; sleep bars 14 tall, rx 3, min width 6; feed ticks 4 × 14, rx 2; diaper marks Ø10–12 | — |
 | Widget | system radius (reference r 24); buttons r 20; 4×2 sleep toggle r 34, checked or not | — |
 | Save button / FAB | 160 × 56 r 28 / extended FAB r 16 | — |
+
+**A shape never changes with its state.** Pressed, checked, selected and active elements (the big buttons, the sleep toggle, connected button groups, checkbox tiles, chips, widget buttons, watch buttons) keep their corners; fill, border, icon, check and ripple tell the state.
 
 ### 5.9 Spacing, targets, elevation
 
@@ -1283,6 +1285,7 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 
 ### 10.3 Phone layout and insets
 
+- **Portrait only**: `MainActivity` is locked to `screenOrientation="portrait"`; the app does not rotate to landscape.
 - Lay out from `WindowInsets.statusBars / navigationBars / displayCutout`, not fixed 24 dp bands. Support predictive back.
 - **Continuous Lamp size**: H = window height − statusBars − navigationBars (dp). Lamp Ø = clamp(264 − (796 − H), 220, 264). The hero autosizes with it (56–76 sp). The whisper slot keeps its 128 dp minimum. Below Ø220, the area above the button block scrolls. Example: 3-button navigation (48 dp) on an 844 dp screen → H = 772 → a 240 dp Lamp.
 - 200 % font scale: §9.3.
