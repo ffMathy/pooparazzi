@@ -7,6 +7,8 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.sample.SampleData
+import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
+import com.ffmathy.pooparazzi.phone.launch.ReceiptKind
 import com.ffmathy.pooparazzi.phone.ui.home.GuardKind
 import com.ffmathy.pooparazzi.phone.ui.home.NoticeVariant
 import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
@@ -114,9 +116,7 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
 
     @Test
     fun undoRemovesALogAndUndoneLastsTwoSeconds() = homeTest { home ->
-        home.viewModel.onDiaper()
-        home.viewModel.onDiaperPee(true)
-        home.viewModel.onDiaperSave()
+        home.tapSleepToggle()
         home.settle()
         assertEquals(1, home.entries().size)
 
@@ -133,32 +133,43 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
     }
 
     @Test
+    fun aLogFromASheetShowsNoReceipt() = homeTest { home ->
+        home.viewModel.onDiaper()
+        home.viewModel.onSheetOffset(-5)
+        home.viewModel.onDiaperPee(true)
+        home.viewModel.onDiaperSave()
+        val state = home.settle()
+        assertNull("the sheet already picked the time", state.sheet)
+        assertNull(state.card)
+        assertEquals(SampleData.NOW_1432 - 5 * MINUTE, home.entries().single().startMillis)
+        assertEquals(HomeHaptic.CONFIRM, home.haptics.last())
+    }
+
+    @Test
     fun receiptNudgesAddUpFromTheBaseAndShowWhatItWas() = homeTest { home ->
-        home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FOOD)
+        home.tapSleepToggle()
         home.settle()
-        suspend fun feedTime() = home.entries().single().startMillis
+        suspend fun startTime() = home.entries().single().startMillis
 
         home.viewModel.onSheetOffset(-5)
         home.settle()
-        assertEquals(SampleData.NOW_1432 - 5 * MINUTE, feedTime())
+        assertEquals(SampleData.NOW_1432 - 5 * MINUTE, startTime())
         home.viewModel.onSheetOffset(-15)
         home.settle()
-        assertEquals("taps add up", SampleData.NOW_1432 - 20 * MINUTE, feedTime())
+        assertEquals("taps add up", SampleData.NOW_1432 - 20 * MINUTE, startTime())
         home.viewModel.onSheetOffset(5)
         val state = home.settle()
-        assertEquals(SampleData.NOW_1432 - 15 * MINUTE, feedTime())
+        assertEquals(SampleData.NOW_1432 - 15 * MINUTE, startTime())
         assertEquals(SampleData.NOW_1432, state.receipt.was)
     }
 
     @Test
     fun theReceiptHasNoTimeoutAndDoneKeepsTheLog() = homeTest { home ->
-        home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FOOD)
+        home.tapSleepToggle()
         home.settle()
         home.viewModel.onSheetOffset(-10)
         home.scope.testScheduler.advanceTimeBy(10 * MINUTE)
-        assertEquals("still open", ReceiptVariant.FeedLogged(FeedType.FOOD), home.settle().receipt.variant)
+        assertEquals("still open", ReceiptVariant.SleepStarted, home.settle().receipt.variant)
 
         home.viewModel.onReceiptDone()
         val state = home.settle()
@@ -169,19 +180,17 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
 
     @Test
     fun dismissingTheReceiptKeepsTheLogAsShown() = homeTest { home ->
-        home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FOOD)
+        home.tapSleepToggle()
+        home.settle()
         home.viewModel.onSheetOffset(-5)
         home.viewModel.onSheetDismiss()
-        home.settle()
         assertNull(home.settle().sheet)
         assertEquals(SampleData.NOW_1432 - 5 * MINUTE, home.entries().single().startMillis)
     }
 
     @Test
     fun editInTheReceiptClosesItAndOpensTheEditor() = homeTest { home ->
-        home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FOOD)
+        home.tapSleepToggle()
         val receipt = home.settle().receipt
         var editorOpened = false
         home.viewModel.onSheetEdit(receipt.editEntryId!!) { editorOpened = true }
@@ -191,12 +200,10 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun aDiaperLoggedDuringASleepCanEndTheSleepAtItsTime() = homeTest { home ->
+    fun aWidgetDiaperLoggedDuringASleepCanEndTheSleepAtItsTime() = homeTest { home ->
         val sleep = home.repository.startSleep(SampleData.at(13, 0)).getOrThrow()
-        home.viewModel.onDiaper()
-        home.viewModel.onSheetOffset(-5)
-        home.viewModel.onDiaperPoop(true)
-        home.viewModel.onDiaperSave()
+        val poop = home.repository.logDiaper(SampleData.at(14, 27), pee = false, poop = true)
+        home.viewModel.onLaunch(HomeLaunch.Receipt(ReceiptKind.LOGGED, poop.id))
         var state = home.settle()
         assertEquals(true, state.receipt.endSleep)
 
@@ -274,13 +281,10 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
 
     @Test
     fun homeIgnoresTapsWhileAReceiptIsOpenAndForSixHundredMillisAfterDone() = homeTest { home ->
-        home.viewModel.onDiaper()
-        home.viewModel.onDiaperPee(true)
-        home.viewModel.onDiaperSave()
-        home.settle()
-        home.viewModel.onSheetClosed()
         home.tapSleepToggle()
-        assertFalse("Sleep toggle ignored under the receipt", home.settle().sleepRunning)
+        home.settle()
+        home.viewModel.onDiaper()
+        assertTrue("Diaper ignored under the receipt", home.settle().sheet is HomeSheetUi.Receipt)
 
         home.viewModel.onReceiptDone()
         home.settle()
@@ -291,7 +295,7 @@ class HomeSleepAndReceiptTest : HomeViewModelTestBase() {
         home.tapSleepToggle()
         var state = home.settle()
         assertNull("Diaper ignored", state.sheet)
-        assertFalse("Sleep toggle ignored", state.sleepRunning)
+        assertTrue("Sleep toggle ignored", state.sleepRunning)
 
         home.scope.testScheduler.advanceTimeBy(400)
         home.viewModel.onDiaper()

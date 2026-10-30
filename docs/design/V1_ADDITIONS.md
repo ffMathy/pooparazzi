@@ -74,7 +74,7 @@ data class Entry(
     - **Formula**: icon `feed` (the bottle), supporting line "Then the amount, if you like" ("Derefter mængden, hvis du vil").
     - **Food**: icon `food` (bowl and spoon).
   - A fourth row, **"Just the time"** ("Kun tidspunktet"): same size, but *outlined* (1 dp `outline`, no fill), icon `clock`, label in `on-surface`. It logs a feed with no type.
-  - Tapping **Food** logs an instant at `stamp + offset`, closes the sheet and shows the receipt sheet "Food logged" with Undo and offset chips. **Just the time** does the same with "Feed logged" ("Måltid registreret").
+  - Tapping **Food** logs an instant at `stamp + offset`, and closes the sheet; no receipt follows (the sheet already picked the time). **Just the time** does the same with no type.
   - Tapping **Breast** logs nothing yet: the same sheet moves to its **Breast step** (below). Tapping **Formula** likewise moves to its **Formula step**. The stamp and the selected chip are kept.
   - The rows are full width because the Danish labels are long ("Modermælkserstatning").
 - **Breast step** (the Feed sheet after Breast):
@@ -86,15 +86,15 @@ data class Entry(
     - **Order:** the first box ticked is 1, the second 2. Unticking removes a side from the order; ticking it again appends it.
     - **Semantics:** `Role.Checkbox`; TalkBack reads "Left, first, checkbox, checked".
   - A **summary line** under the tiles (titleMedium, live region): "Left → Right" in FEED text, or "No side" in `on-surface-variant` while nothing is ticked. TalkBack reads "Left then right".
-  - **"Log feed"** ("Registrér"): the primary button bottom-right (as Save in the Diaper sheet). It is always enabled, because the side is optional. It logs a breast feed instant at `stamp + offset` with the ticked order (none ticked: just the time), closes the sheet and shows the receipt sheet "Breast logged", "14:32 · Left → Right" (just the time with no side), with offset chips that move its time.
+  - **"Log feed"** ("Registrér"): the primary button bottom-right (as Save in the Diaper sheet). It is always enabled, because the side is optional. It logs a breast feed instant at `stamp + offset` with the ticked order (none ticked: just the time), and closes the sheet; no receipt follows.
   - "Cancel" (or a scrim tap) closes the sheet and logs nothing.
 - **Formula step** (the Feed sheet after Formula):
   - Title "Formula · 14:32" ("Modermælkserstatning · 14:32"), following the chips, which stay.
   - Section heading "Amount · Optional" ("Mængde · Valgfri"), then the amount in titleLarge FEED text ("120 ml"), or "No amount" ("Ingen mængde") in `on-surface-variant`.
   - A full-width **slider** (min 48 dp tall) in FEED colours: thumb and active track `feed-strong`, inactive track `feed-container`. Its start is **No amount**; each step adds **10 ml** up to **300 ml**, or **½ fl oz** up to **10 fl oz** where the region measures in fluid ounces (the US, Liberia, Myanmar: the app's region, else the device's, since the in-app languages carry none). Ounces are shown to the nearest half ("4 fl oz", "4.5 fl oz", Danish "4,5 fl oz") and stored as millilitres. TalkBack reads "Amount, 120 ml, slider".
-  - **"Log feed"** ("Registrér") bottom-right, always enabled (the amount is optional). It logs a formula feed at `stamp + offset` with the amount (at No amount: just the time) and shows the receipt sheet "Formula logged", "14:32 · 120 ml" (just the time without an amount).
+  - **"Log feed"** ("Registrér") bottom-right, always enabled (the amount is optional). It logs a formula feed at `stamp + offset` with the amount (at No amount: just the time) and closes the sheet; no receipt follows.
   - The amount shows in History's supporting line ("12:22 · 120 ml"; TalkBack "Formula, 12:22, 120 ml") and on the watch's Today list. The watch logs formula without an amount.
-- **Running sleep and a feed:** logging any feed (a breast feed included) while a sleep runs shows the receipt with the "End sleep" chip. The sleep keeps the Lamp.
+- **Running sleep and a feed:** logging any feed (a breast feed included) while a sleep runs leaves the sleep running; it keeps the Lamp.
 - **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line: "ago · 12:22 · Formula". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, formula, 2 hours 10 minutes ago, at 12:22". A feed with no type shows the generic `feed` icon and no type word ("ago · 12:22"; TalkBack "Last feed, 2 hours 10 minutes ago, at 12:22").
 - **Breast order on every last-feed line.** A breastfeed with a recorded side shows the order instead of the word "Breast", because it is what the next feed starts from:
   - Lamp sub-line "ago · 14:32 · Left → Right". When that would exceed the chord it shortens to "ago · 14:32 · L → R", then "14:32 · L → R".
@@ -144,7 +144,7 @@ The sheet scrolls. It opens with `skipPartiallyExpanded`.
    - **Colour** (labelMedium heading): six chips in a wrapping row. Each is 48 dp tall with a 20 dp swatch dot and a label: Yellow, Green, Brown, Black, Red, Pale. They are single-select and **optional**: tapping the selected chip clears it.
    - **Texture**: five chips: Watery, Seedy, Mushy, Formed, Hard. Also single-select and optional.
    - **Health hint:** when Pale, Red or Black is selected, a bodySmall line in `on-surface-variant` with an `info` icon appears: "Pale, red or black poop can be a reason to call your doctor or health visitor." The app never diagnoses.
-5. **Save:** a primary button at the bottom right of the sheet, in the thumb zone, labelled "Save". It is **always enabled**: Pee, Poop, colour and texture are all optional. Saving logs the entry at `stamp + offset`, closes the sheet and shows the receipt sheet ("Pee logged" / "Poop logged" / "Pee + poop logged", or "Diaper logged" for a plain change).
+5. **Save:** a primary button at the bottom right of the sheet, in the thumb zone, labelled "Save". It is **always enabled**: Pee, Poop, colour and texture are all optional. Saving logs the entry at `stamp + offset` and closes the sheet; no receipt follows (the sheet already picked the time).
 
 **Swatch colours.** These are content colours, not theme colours, so they look the same in Night and Day. Every chip has a text label, so colour is never the only cue. Each swatch gets a 1 dp `outline` ring so Black and Pale stay visible on any surface.
 

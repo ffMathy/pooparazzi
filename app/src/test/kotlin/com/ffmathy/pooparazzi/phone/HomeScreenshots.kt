@@ -56,11 +56,19 @@ abstract class HomeScreenshots(private val language: String) {
     /** "Adjust start" on the running Lamp: the Adjust start sheet, with no timeout. */
     @Test fun adjustStartSheet() = sheet("03-home-adjust-start", night = true, HomeSamples.adjustingStart())
 
-    /** The receipt after a breast feed backdated with −15m in the Feed sheet. */
-    @Test fun homeBreastLogged() = sheet("04-home-breast-logged", night = false, HomeSamples.breastLogged())
+    /** Home right after a breast feed backdated with −15m in the Feed sheet: no receipt follows a logging sheet. */
+    @Test fun homeBreastLogged() = home("04-home-breast-logged", night = false, HomeSamples.breastLogged())
 
-    /** The receipt after every log: what was logged and when, Undo, the offsets, Edit and Done; no timeout. */
-    @Test fun homeReceipt() = sheet("05-home-receipt", night = true, HomeSamples.justLogged())
+    /** The receipt after Start sleep: what was logged and when, Undo, the offsets, Edit and Done; no timeout. */
+    @Test fun homeReceipt() = sheet("05-home-receipt", night = true, HomeSamples.sleepStarted())
+
+    /** The whisper slot's 2 s notice for a repeat log within 5 s: "Already logged at 14:32", no receipt. */
+    @Test fun homeDuplicateNotice() {
+        compose.mainClock.autoAdvance = false
+        compose.setContent { Themed(night = true) { HomeScreen(HomeSamples.duplicateNotice(), HomeActions.None, windowInsets = ReferenceInsets) } }
+        compose.mainClock.advanceTimeBy(300)
+        compose.onRoot().captureRoboImage(path("05-home-duplicate-notice"))
+    }
 
     /** The whisper slot's 2 s notice for a toggle drawn before the sleep started elsewhere. */
     @Test fun homeGuardNotice() {

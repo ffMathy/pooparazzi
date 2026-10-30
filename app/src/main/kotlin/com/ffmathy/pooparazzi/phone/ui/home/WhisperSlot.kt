@@ -49,6 +49,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.format.Formatters
+import com.ffmathy.pooparazzi.core.model.DiaperKind
+import com.ffmathy.pooparazzi.core.model.EntryKind
+import com.ffmathy.pooparazzi.core.model.diaperKind
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.tokens.LocalXPalette
@@ -65,8 +68,9 @@ internal object WhisperDefaults {
 }
 
 /**
- * The fixed whisper slot: the Today grid, or a 2 s notice card in its place ("Undone", a guard). The card fades in over
- * 150 ms with no slide (DESIGN_SPEC §5.10) and is a polite live region. Receipts with Undo are a sheet (ReceiptSheet).
+ * The fixed whisper slot: the Today grid, or a 2 s notice card in its place ("Undone", a guard, a repeat log). The card
+ * fades in over 150 ms with no slide (DESIGN_SPEC §5.10) and is a polite live region. Receipts with Undo are a sheet
+ * (ReceiptSheet).
  */
 @Composable
 internal fun WhisperSlot(
@@ -204,7 +208,10 @@ private fun fitAll(texts: List<String>, style: TextStyle, width: androidx.compos
 /** From this font scale the Today grid is 2 × 2. */
 private const val TODAY_TWO_COLUMN_SCALE = 1.5f
 
-/** The notice card: icon · title, then the guard line ("Already asleep since 14:32") for a guard. */
+/**
+ * The notice card: icon · title, then the guard line ("Already asleep since 14:32") for a guard, or "Already logged at
+ * 14:32" for a repeat log.
+ */
 @Composable
 private fun NoticeCard(card: NoticeCardUi, zone: ZoneId, formatters: Formatters) {
     val colors = MaterialTheme.colorScheme
@@ -217,6 +224,10 @@ private fun NoticeCard(card: NoticeCardUi, zone: ZoneId, formatters: Formatters)
             GuardKind.AWAKE -> TintedIcon(XIcons.awake, events.sleep.strong) to stringResource(CoreR.string.status_awake)
         }
         NoticeVariant.Undone -> TintedIcon(XIcons.undo, colors.onSurfaceVariant) to stringResource(CoreR.string.receipt_undone)
+        is NoticeVariant.Duplicate -> entryIcon(variant.existing, events) to when (variant.existing.kind) {
+            EntryKind.DIAPER -> diaperLabel(variant.existing.diaperKind ?: DiaperKind.PLAIN)
+            else -> feedTypeLabel(variant.existing.feedType)
+        }
     }
     Column(
         Modifier
@@ -240,6 +251,13 @@ private fun NoticeCard(card: NoticeCardUi, zone: ZoneId, formatters: Formatters)
                 stringResource(format, formatters.clock.format(guard.sinceMillis, zone)),
                 style = PhoneType.dataMedium,
                 color = events.sleep.text,
+            )
+        }
+        (card.variant as? NoticeVariant.Duplicate)?.let { duplicate ->
+            Text(
+                stringResource(CoreR.string.guard_already_logged, formatters.clock.format(duplicate.existing.startMillis, zone)),
+                style = PhoneType.dataMedium,
+                color = colors.onSurfaceVariant,
             )
         }
     }

@@ -55,7 +55,8 @@ enum class HomeHaptic { CONFIRM, TOGGLE_ON, TOGGLE_OFF, REJECT, SEGMENT_TICK }
 
 /**
  * Home's state machine (DESIGN_SPEC §3.3.1, §4.4; V1_ADDITIONS §2.1, §3.1): logging, the sheets, the receipt sheet
- * with its offsets and variants, Adjust start, the notices, the 2 s double-toggle guard, the 60 s discard, dedupe and the input cooldowns.
+ * with its offsets and variants, Adjust start, the notices, the 2 s double-toggle guard, the 60 s discard, dedupe and the
+ * input cooldowns.
  *
  * Writes go through [repository] (which enforces the entry invariants); everything shown is derived from its
  * entries by [HomeStateBuilder]. Actions run one at a time, in tap order.
@@ -132,7 +133,6 @@ class HomeViewModel(
     private val actions = Mutex()
     private var nextKey = 0L
     private var cardJob: Job? = null
-    private var messageJob: Job? = null
     private var lastToggleAt: Long? = null
     private var homeReadyAt = Long.MIN_VALUE
     private var cooldownPending = false
@@ -182,7 +182,6 @@ class HomeViewModel(
         attempt { settings.selectBaby(babyId) }
             .onSuccess {
                 cardJob?.cancel()
-                messageJob?.cancel()
                 card.value = null
                 sheet.value = null
                 cooldownPending = false
@@ -356,7 +355,7 @@ class HomeViewModel(
         }
         attempt { repository.update(entry.moved(field, receipt.stamp + next * MINUTE_MILLIS)) }
             .onSuccess {
-                sheet.update { if (it is SheetModel.Receipt && it.key == receipt.key) it.copy(offsetMinutes = next, dedupe = null) else it }
+                sheet.update { if (it is SheetModel.Receipt && it.key == receipt.key) it.copy(offsetMinutes = next) else it }
                 haptic(HomeHaptic.SEGMENT_TICK)
             }
             .onFailure { haptic(HomeHaptic.REJECT) }
@@ -460,21 +459,12 @@ class HomeViewModel(
     private suspend fun logFeed(feedSheet: SheetModel.Feed, type: FeedType?, side: BreastSide?, amountMl: Int? = null) {
         val at = feedSheet.stamp + feedSheet.offsetMinutes * MINUTE_MILLIS
         closeSheet(committed = true)
-        val duringSleep = summary().runningSleep != null
         attempt { repository.logFeedChecked(type, at, side, amountMl) }
             .onSuccess { result ->
                 when (result) {
-                    is LogResult.Logged -> {
-                        openReceipt(
-                            ReceiptSpec.FeedLogged(result.entry.id, type, result.entry.breastSide, result.entry.amountMl),
-                            baseTime = feedSheet.stamp,
-                            offsetMinutes = feedSheet.offsetMinutes,
-                            duringSleep = duringSleep,
-                            undo = Undo.Delete(result.entry.id),
-                        )
-                        haptic(HomeHaptic.CONFIRM)
-                    }
-                    is LogResult.Duplicate -> showDuplicate(result.entry, duringSleep)
+                    // The sheet already picked the time: no receipt follows (the since-rows show the log).
+                    is LogResult.Logged -> haptic(HomeHaptic.CONFIRM)
+                    is LogResult.Duplicate -> showDuplicate(result.entry)
                 }
             }
             .onFailure { haptic(HomeHaptic.REJECT) }
@@ -500,7 +490,6 @@ class HomeViewModel(
         val diaper = sheet.value as? SheetModel.Diaper ?: return@act
         val at = diaper.stamp + diaper.offsetMinutes * MINUTE_MILLIS
         closeSheet(committed = true)
-        val duringSleep = summary().runningSleep != null
         attempt {
             repository.logDiaperChecked(
                 at = at,
@@ -512,18 +501,9 @@ class HomeViewModel(
         }
             .onSuccess { result ->
                 when (result) {
-                    is LogResult.Logged -> {
-                        val kind = result.entry.diaperKind ?: DiaperKind.PLAIN
-                        openReceipt(
-                            ReceiptSpec.DiaperLogged(result.entry.id, kind),
-                            baseTime = diaper.stamp,
-                            offsetMinutes = diaper.offsetMinutes,
-                            duringSleep = duringSleep,
-                            undo = Undo.Delete(result.entry.id),
-                        )
-                        haptic(HomeHaptic.CONFIRM)
-                    }
-                    is LogResult.Duplicate -> showDuplicate(result.entry, duringSleep)
+                    // The sheet already picked the time: no receipt follows (the since-rows show the log).
+                    is LogResult.Logged -> haptic(HomeHaptic.CONFIRM)
+                    is LogResult.Duplicate -> showDuplicate(result.entry)
                 }
             }
             .onFailure { haptic(HomeHaptic.REJECT) }
@@ -621,9 +601,7 @@ class HomeViewModel(
         offsetMinutes: Int = 0,
         duringSleep: Boolean = false,
         undo: Undo? = null,
-        dedupe: Entry? = null,
     ) {
-        messageJob?.cancel()
         val receipt = SheetModel.Receipt(
             stamp = baseTime,
             offsetMinutes = offsetMinutes,
@@ -631,18 +609,11 @@ class HomeViewModel(
             spec = spec,
             duringSleep = duringSleep,
             undo = undo,
-            dedupe = dedupe,
         )
         sheet.value = receipt
-        if (dedupe != null) {
-            messageJob = viewModelScope.launch {
-                delay(timings.messageMillis)
-                sheet.update { if (it is SheetModel.Receipt && it.key == receipt.key) it.copy(dedupe = null) else it }
-            }
-        }
     }
 
-    /** A 2 s notice in the whisper slot ("Undone", a guard). */
+    /** A 2 s notice in the whisper slot ("Undone", a guard, a repeat log). */
     private fun showCard(spec: CardSpec) {
         cardJob?.cancel()
         val model = CardModel(key = ++nextKey, spec = spec)
@@ -656,13 +627,9 @@ class HomeViewModel(
     /** "Already asleep since 14:32" / "Already awake since 14:40" in the whisper slot (DESIGN_SPEC §4.4). */
     private fun showGuard(kind: GuardKind, sinceMillis: Long) = showCard(CardSpec.Guard(kind, sinceMillis))
 
-    /** Dedupe: the receipt for the existing entry with "Already logged at …" for 2 s; no new entry. */
-    private fun showDuplicate(existing: Entry, duringSleep: Boolean) {
-        val spec = when (existing.kind) {
-            EntryKind.DIAPER -> ReceiptSpec.DiaperLogged(existing.id, existing.diaperKind ?: DiaperKind.PLAIN)
-            else -> ReceiptSpec.FeedLogged(existing.id, existing.feedType, existing.breastSide, existing.amountMl)
-        }
-        openReceipt(spec, baseTime = existing.startMillis, duringSleep = duringSleep, undo = Undo.Delete(existing.id), dedupe = existing)
+    /** Dedupe: "Already logged at …" for the existing entry in the whisper slot for 2 s; no new entry. */
+    private fun showDuplicate(existing: Entry) {
+        showCard(CardSpec.Duplicate(existing))
         haptic(HomeHaptic.REJECT)
     }
 

@@ -55,8 +55,8 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 | One-tap logging of Feed and Sleep start/stop; Diaper in 2 taps (Diaper → Pee / Poop / Both) | Phone Home, watch Main |
 | Feed and Diaper open the app's own sheets/screens (offset, type, side order, pee/poop, colour, texture); sleep toggles in one tap | Phone widgets (4×2, 3×1, Samsung cover screen), watch Tile |
 | Status at a glance: time since last feed, awake/asleep duration, last diaper | Phone Home, watch Main, Tile, complications, widget, Live Update |
-| Undo after every log | Phone receipt sheet, watch Logged screen, widget receipt, Tile title |
-| Backdating at log time and later editing | Diaper picker offsets, phone receipt-sheet offsets, Adjust start, phone edit sheet, watch Adjust screen |
+| Undo after every log | Phone receipt sheet (logs with no sheet of their own; a Feed or Diaper sheet log is undone from its since-row's edit sheet), watch Logged screen, widget receipt, Tile title |
+| Backdating at log time and later editing | Feed and Diaper sheet offsets, phone receipt-sheet offsets, Adjust start, phone edit sheet, watch Adjust screen |
 | History: day ribbon, counts, list | Phone History, watch Today list |
 | Phone-to-watch sync status | Phone top bar, watch Logged and Main list footer |
 | Automatic Night appearance (dark, low-blue, "lights-down" while asleep) | Phone, widget; the watch is always dark |
@@ -162,7 +162,8 @@ Under one minute: the phone hero shows "just now" (heroWord) with the sub-line "
 **Phone**
 
 ```
-Home ──Diaper──────────────▶ Diaper sheet ──Pee/Poop/Both──▶ Receipt sheet ──Done──▶ Home
+Home ──Diaper / Feed───────▶ Diaper / Feed sheet ──Save / a type──▶ Home (no receipt: the sheet set the time)
+ │ ├─Start sleep / Woke up──▶ Receipt sheet ──Done──▶ Home
  │ ├─since-row 1 / 2──────▶ Edit sheet (latest entry of that row)
  │ ├─Adjust start (Lamp)──▶ Adjust start sheet ──Edit──▶ Edit sheet (running sleep)
  │ ├─Receipt sheet ──Edit──▶ Edit sheet (that entry) · ──Undo──▶ Home + "Undone" notice
@@ -261,17 +262,17 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 
 **Whisper slot: Today grid** (default). The whole block is a link to History (r 20, padding 14 16). Header "Today" labelMedium onSurfaceVariant + `chevronRight` 16 outline. Below it, a 4-column equal grid (gap 8): number titleMedium onSurface over caption labelMedium onSurfaceVariant; the numbers share one baseline across the row, and so do the captions. 14:32: "5" feeds, "4" pee, "2" poop, "7h 57m" sleep. 03:12: "1" feed, "1" pee, "0" poop, "2h 42m" sleep (the caption is singular "feed" for 1). In lights-down the numbers are onSurfaceVariant.
 
-**Whisper slot: notice card** (replaces the grid, same slot, for 2 s). Card 350 × ≥120, r 28, surfaceContainerHighest, no border or shadow. Polite live region. Fades in over 150 ms with no slide. Row 1 (48): icon 20 + 8 + title titleMedium onSurface; for a guard, row 2 is the guard line in dataMedium SLEEP text. No buttons and no drain line.
+**Whisper slot: notice card** (replaces the grid, same slot, for 2 s). Card 350 × ≥120, r 28, surfaceContainerHighest, no border or shadow. Polite live region. Fades in over 150 ms with no slide. Row 1 (48): icon 20 + 8 + title titleMedium onSurface; for a guard, row 2 is the guard line in dataMedium SLEEP text; for a repeat log, "Already logged at 14:32". No buttons and no drain line.
 
 | Notice | Icon | Title | Row 2 |
 |---|---|---|---|
 | Guard, asleep (§4.4) | `sleep` SLEEP strong | "Asleep" | "Already asleep since 14:32" |
 | Guard, awake | `awake` SLEEP strong | "Awake" | "Already awake since 14:40" |
 | Undone (after Undo in a receipt) | `undo` onSurfaceVariant | "Undone" | — |
+| Repeat log (§4.4) | the entry's icon | "Formula" / "Pee" (the logged kind) | "Already logged at 14:32" dataMedium onSurfaceVariant |
 
-**Receipt sheet** (after every log: Feed, Diaper, Start sleep, Woke up, End sleep, a widget log opened in the app, and a delete in the edit sheet). A modal sheet like the logging sheets (§3.3.2), opened as the logging sheet closes. **No timeout**: it stays until Done, Undo, Edit or a dismiss (scrim, back, swipe), and the log stays as shown.
+**Receipt sheet** (after a log that had no sheet of its own: Start sleep, Woke up, End sleep, a widget log opened in the app, and a delete in the edit sheet). A modal sheet like the logging sheets (§3.3.2). A Feed or Diaper sheet already picks the time, so saving it just closes it: no receipt follows, and the since-row (tap → edit sheet, with Delete) is the correction path. **No timeout**: it stays until Done, Undo, Edit or a dismiss (scrim, back, swipe), and the log stays as shown.
 - Header (≥56): event icon 24 (event strong) + 12 · title titleLarge onSurface (time-free, as below) over the **effective time** in dataMedium onSurfaceVariant, joined with the sub-line ("14:27", "14:32 · Left → Right", "14:32 · Slept 1h 07m"); after a nudge "was 14:32" follows the time ("14:22 · was 14:32 · Left → Right"); the time line follows every chip tap and is a polite live region · Undo text button at the end (48 tall, r 24, `undo` 18 + 6 + "Undo" labelLarge, primary). The pane title is "Formula logged · 14:27".
-- Dedupe line (2 s): `feed` 18 FEED strong + "Already logged at 14:32" dataMedium onSurfaceVariant.
 - Nudge chips "−15m" "−10m" "−5m" "+5m" (one row, equal widths, never selected) when the receipt moves a time.
 - "End sleep" chip (`wake` 18, hugs its content) for a feed or diaper logged while a sleep still runs.
 - Bottom row: outlined "Edit" (56 tall, r 28, `edit` 20 + 8 + labelLarge) at the start when there is an entry to edit, and "Done" (the Save button style, `check`) at the end.
@@ -287,7 +288,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | Deleted (from the edit sheet) | the entry's icon | "Sleep deleted" / "Pee + poop deleted" | — | — (no Edit) |
 
 Receipt rules:
-- Nudges add up, like the edit sheet's: each tap moves the time by its minutes more (−5m twice is 10 minutes earlier; +5m steps back). The receipt's base time is the sheet's stamp for a log from a sheet, carrying that sheet's nudges; "was 14:32" shows it while the time differs. Each tap applies at once (event time, sleep start or sleep end) and plays `SegmentTick`.
+- Nudges add up, like the edit sheet's: each tap moves the time by its minutes more (−5m twice is 10 minutes earlier; +5m steps back). The receipt's base time is the logged time; "was 14:32" shows it while the time differs. Each tap applies at once (event time, sleep start or sleep end) and plays `SegmentTick`.
 - A chip is disabled if one more tap would put a sleep end before its start, or a start or end in the future ("+5m" while the time + 5 min > now).
 - "End sleep" ends the running sleep at the logged event's time. The receipt then becomes Woke up for that sleep.
 - Undo: feed/diaper → remove the entry. Sleep start → no running sleep. Woke up → the sleep is running again. Sleep cancelled → the sleep is running again. Deleted → the entry is back. The sheet closes and the "Undone" notice shows for 2 s. Haptic `Reject`.
@@ -317,12 +318,13 @@ Receipt rules:
 | State | Trigger | Visible change |
 |---|---|---|
 | Idle | no running sleep | FEED Lamp (Night glow / Day disc); rows Awake + last diaper; Today grid |
-| Just logged | any log or toggle | the receipt sheet (no timeout) |
+| Just logged | Feed or Diaper sheet saved | the sheet closes; the Lamp / since-rows show the log, `Confirm` |
+| Toggled | Start sleep, Woke up | the receipt sheet (no timeout) |
 | Running, Night = **lights-down** | Night active and a sleep running | "Noa", status icons and Settings in onSurfaceVariant; History pill unfilled with onSurfaceVariant label; glow 0.45 SLEEP + orbit; Today numbers onSurfaceVariant; toggle checked. Nothing else changes |
 | Running, Day | Day active and a sleep running | no dimming; SLEEP disc + track + cut-out ember |
 | Diaper sheet open | Diaper | scrim + sheet (P2) |
 | Guard | repeat toggle within 2 s | card row 2 guard line, `Reject` |
-| Dedupe | Feed again within 5 s | the Feed card for the existing entry (re-shown if replaced) with the dedupe line, `Reject`; no new entry |
+| Dedupe | Feed again within 5 s | the notice card "Already logged at 14:32" for the existing entry (2 s), `Reject`; no new entry |
 | Undone | Undo | "Undone" for 2 s |
 | Under a minute | feed < 1 min ago | hero "just now", sub-line "at 14:32" |
 | Sync states | §4.5 | status icon glyph and spoken sentence; error = retry button |
@@ -360,7 +362,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 | Bottom | empty sheet area over the gesture inset |
 
 - No "Last: …" line (the fact is already on Home).
-- Tile → log at stamp + offset, close the sheet, show the matching receipt on Home carrying the sheet's nudges (e.g. "Pee logged", "14:22 · was 14:32", since-row 2 "Pee 10m ago · 14:22"). If a sleep is running, card row 2 = running-sleep log. Haptic `Confirm`.
+- Tile → log at stamp + offset and close the sheet; no receipt follows (the sheet already picked the time). Home shows the log (e.g. since-row 2 "Pee 10m ago · 14:22"). Haptic `Confirm`.
 - Cancel or a scrim tap closes without logging.
 - **Cooldown**: chips and tiles ignore taps for 500 ms each time the sheet appears. They fade 0.6 → 1 over that time and are exposed as disabled until ready. Reason: the Diaper button lies 47 % under the Both tile and 21 % under Poop, so a double tap would log Both.
 
@@ -445,7 +447,7 @@ Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (
 
 **3×1** (reference 260 × 100, padding 12, minimum 160 wide): three equal buttons 76 tall, gap 8, r 20, content column (icon 24, label 14 sp, max 2 lines, never broken inside a word): Feed (`feed`, opens the Feed sheet); Diaper (`diaper`, DIAPER colours, opens the Diaper sheet); Sleep ("Start sleep", the toggle). When asleep, Sleep shows `wake` + "Woke up" with the checked style. Every widget offers all three: Feed, Diaper and Sleep. (It was a 2×1 with Feed and Sleep; the provider keeps its receiver so placed widgets survive.)
 
-**Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else. It is drawn at that one fixed size (`SizeMode.Single`): with the per-size RemoteViews of `SizeMode.Responsive` the widget stayed on its loading layout on a Flip's cover screen. Refreshes go to every placed widget by its provider's ids, so a widget the host never asked to update is still drawn. Feed and Diaper open the app's sheet on the cover screen; when that sheet closes (logged, or dismissed with Back) the app finishes and the cover screen shows the widget again, since Home has no room there. On the main screen Home stays, with its receipt sheet.
+**Cover screen (Samsung flip phones)**: the same 4×2 widget is offered on the Flex Window (Settings › Cover screen › Widgets) by a third provider with the `keyguard` category and Samsung's `sub_screen` metadata (352 × 339 dp minimum). Launchers only list `home_screen` widgets, so it never appears anywhere else. It is drawn at that one fixed size (`SizeMode.Single`): with the per-size RemoteViews of `SizeMode.Responsive` the widget stayed on its loading layout on a Flip's cover screen. Refreshes go to every placed widget by its provider's ids, so a widget the host never asked to update is still drawn. Feed and Diaper open the app's sheet on the cover screen; when that sheet closes (logged, or dismissed with Back) the app finishes and the cover screen shows the widget again, since Home has no room there. On the main screen Home stays.
 
 Breakpoints: §10.11.
 

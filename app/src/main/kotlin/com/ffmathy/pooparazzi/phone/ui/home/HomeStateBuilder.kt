@@ -78,6 +78,7 @@ internal object HomeStateBuilder {
         variant = when (val spec = model.spec) {
             is CardSpec.Guard -> NoticeVariant.Guard(spec.kind, spec.sinceMillis)
             CardSpec.Undone -> NoticeVariant.Undone
+            is CardSpec.Duplicate -> NoticeVariant.Duplicate(spec.existing)
         },
     )
 
@@ -115,7 +116,6 @@ internal object HomeStateBuilder {
             undoable = model.undo != null,
             editEntryId = entry?.id,
             endSleep = endSleep,
-            dedupe = model.dedupe,
         )
     }
 

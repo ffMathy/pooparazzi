@@ -49,7 +49,7 @@ class HomeLaunchTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun aWidgetSheetReportsItsCloseOnceItsReceiptIsDone() = homeTest { home ->
+    fun aWidgetSheetReportsItsCloseOnceItsLogIsSaved() = homeTest { home ->
         val closes = mutableListOf<Unit>()
         backgroundScope.launch { home.viewModel.launchedSheetClosed.collect { closes += it } }
         home.viewModel.onLaunch(HomeLaunch.Diaper)
@@ -58,14 +58,10 @@ class HomeLaunchTest : HomeViewModelTestBase() {
         home.viewModel.onDiaperSave()
         home.viewModel.onSheetClosed()
         home.settle()
-        assertTrue("the receipt is still open", closes.isEmpty())
+        assertNull("no receipt follows the sheet", home.settle().sheet)
+        assertEquals(1, closes.size)
         // The poop is written before the app may leave (the cover screen returns to the widget).
         assertTrue(home.entries().any { it.poop && it.startMillis == SampleData.NOW_1432 })
-
-        home.viewModel.onReceiptDone()
-        home.viewModel.onSheetClosed()
-        home.settle()
-        assertEquals(1, closes.size)
     }
 
     @Test
