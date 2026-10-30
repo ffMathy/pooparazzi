@@ -234,7 +234,13 @@
     <string name="account_status_deleted">Backup deleted · Back up now to start again</string>
     <string name="account_unavailable">Backup isn\'t set up in this build. Everything is saved on this phone.</string>
     <!-- Welcome (§3.1) and the signed-out Account screen -->
-    <string name="welcome_title">Your log stays on this phone</string>
+    <string name="welcome_title">No account needed</string>
+    <string name="welcome_intro">Pooparazzi works fully without an account. Choose where your log is kept. You can change your mind later.</string>
+    <string name="welcome_local_title">Only on this phone</string>
+    <string name="welcome_local_body">Everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.</string>
+    <string name="welcome_switch_later">You can switch to cloud backup at any time in Settings › Account. Everything logged until then is backed up as soon as you do.</string>
+    <string name="welcome_cloud_title">Back up to the cloud</string>
+    <string name="welcome_cloud_body">Sign in to back up your log and share it with your family.</string>
     <string name="welcome_body_local">Without an account, everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.</string>
     <string name="welcome_body_later">You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do, and you can share it with your family.</string>
     <string name="welcome_continue_without">Continue without an account</string>

@@ -166,7 +166,13 @@
     <string name="account_status_error">Kunne ikke tage backup · Tryk for at prøve igen</string>
     <string name="account_status_deleted">Backup slettet · Tag backup nu for at starte igen</string>
     <string name="account_unavailable">Backup er ikke sat op i denne version. Alt gemmes på denne telefon.</string>
-    <string name="welcome_title">Din log bliver på denne telefon</string>
+    <string name="welcome_title">Ingen konto nødvendig</string>
+    <string name="welcome_intro">Pooparazzi virker fuldt ud uden konto. Vælg, hvor din log skal gemmes. Du kan altid ombestemme dig.</string>
+    <string name="welcome_local_title">Kun på denne telefon</string>
+    <string name="welcome_local_body">Alt, hvad du registrerer, gemmes kun på denne telefon og dit ur. Hvis telefonen bliver væk eller nulstilles, forsvinder loggen med den.</string>
+    <string name="welcome_switch_later">Du kan når som helst skifte til backup i skyen under Indstillinger › Konto. Alt, hvad der er registreret indtil da, kommer med i backuppen, så snart du gør det.</string>
+    <string name="welcome_cloud_title">Backup i skyen</string>
+    <string name="welcome_cloud_body">Log ind for at tage backup af din log og dele den med din familie.</string>
     <string name="welcome_body_local">Uden en konto gemmes alt, hvad du registrerer, kun på denne telefon og dit ur. Hvis telefonen bliver væk eller nulstilles, forsvinder loggen med den.</string>
     <string name="welcome_body_later">Du kan oprette en konto når som helst under Indstillinger. Alt, hvad der er registreret indtil da, kommer med i backuppen, så snart du gør det, og du kan dele det med din familie.</string>
     <string name="welcome_continue_without">Fortsæt uden konto</string>
