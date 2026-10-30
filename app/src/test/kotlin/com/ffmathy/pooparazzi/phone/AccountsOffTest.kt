@@ -57,7 +57,7 @@ class AccountsOffTest {
     @Test
     fun noWelcomeAndSettingsSaysTheBackupIsNotSetUp() {
         compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 10_000)
-        compose.onNodeWithText("Your log stays on this phone").assertDoesNotExist()
+        compose.onNodeWithText("No account needed").assertDoesNotExist()
         compose.onNodeWithContentDescription("Settings").performClick()
         compose.waitUntilAtLeastOneExists(
             hasText("Backup isn't set up in this build. Everything is saved on this phone."),

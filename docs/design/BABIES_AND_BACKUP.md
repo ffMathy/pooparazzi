@@ -78,13 +78,21 @@ Two things span all babies, because a parent must not lose sight of a sleeping b
 
 The first time the phone app opens with accounts available and nobody signed in (also after updating to this version), a **Welcome** screen explains the choice before Home:
 
-> **Your log stays on this phone**
-> Without an account, everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.
-> You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do, and you can share it with your family.
+> **No account needed**
+> Pooparazzi works fully without an account. Choose where your log is kept. You can change your mind later.
+>
+> *(card, phone icon)* **Only on this phone**
+> Everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it.
+> *(cloud icon)* You can switch to cloud backup at any time in Settings › Account. Everything logged until then is backed up as soon as you do.
+> [Continue without an account] (filled)
+>
+> *(card, cloud icon)* **Back up to the cloud**
+> Sign in to back up your log and share it with your family.
 > [Continue with Google]
-> — or — Email · [Email me a sign-in link]
+> — or use email — Email · [Email me a sign-in link]
 > By continuing you agree to the privacy policy. (a link)
-> [Continue without an account]
+
+The two choices are equal cards, the one without an account first, so it is never hidden below the sign-in form.
 
 The sign-in choices are the Account screen's (§3.3). Signing in, or "Continue without an account" (Back counts as that), answers the Welcome, and a widget, notification or invite link that opened the app is followed after it; the answer is remembered on this phone only (excluded from backups and device transfers), and a phone that is already signed in never shows it. Builds without a Firebase configuration never show it, and neither do the unit tests (Firebase never starts in them).
 

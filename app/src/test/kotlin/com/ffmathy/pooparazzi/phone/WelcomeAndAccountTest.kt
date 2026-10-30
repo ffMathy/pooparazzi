@@ -55,7 +55,10 @@ class WelcomeAndAccountTest {
 
     @Test
     fun continuingWithoutAnAccountOpensHomeAndIsRemembered() {
-        compose.waitUntilAtLeastOneExists(hasText("Your log stays on this phone"), timeoutMillis = 10_000)
+        compose.waitUntilAtLeastOneExists(hasText("No account needed"), timeoutMillis = 10_000)
+        compose.onNodeWithText("Only on this phone").assertExists()
+        compose.onNodeWithText("You can switch to cloud backup at any time in Settings › Account.", substring = true).assertExists()
+        compose.onNodeWithText("Back up to the cloud").assertExists()
         compose.onNodeWithText("Continue with Google").assertExists()
         compose.onNodeWithText("or use email").assertExists()
         compose.onNodeWithText("Continue without an account").performScrollTo().performClick()
@@ -66,7 +69,7 @@ class WelcomeAndAccountTest {
 
     @Test
     fun backCountsAsContinuing() {
-        compose.waitUntilAtLeastOneExists(hasText("Your log stays on this phone"), timeoutMillis = 10_000)
+        compose.waitUntilAtLeastOneExists(hasText("No account needed"), timeoutMillis = 10_000)
         compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
         assertTrue(WelcomePrefs(app).seen)
@@ -74,7 +77,7 @@ class WelcomeAndAccountTest {
 
     @Test
     fun signingInOnTheWelcomeAsksForTheConsentThenOpensHome() {
-        compose.waitUntilAtLeastOneExists(hasText("Your log stays on this phone"), timeoutMillis = 10_000)
+        compose.waitUntilAtLeastOneExists(hasText("No account needed"), timeoutMillis = 10_000)
         compose.onNodeWithText("Continue with Google").performScrollTo().performClick()
         compose.waitUntilAtLeastOneExists(hasText("Back up to Google Firebase?"), timeoutMillis = 5_000)
         compose.onNodeWithText("What is uploaded").assertExists()
@@ -88,7 +91,7 @@ class WelcomeAndAccountTest {
 
     @Test
     fun theWelcomeOffersAnEmailLinkAndThePrivacyPolicy() {
-        compose.waitUntilAtLeastOneExists(hasText("Your log stays on this phone"), timeoutMillis = 10_000)
+        compose.waitUntilAtLeastOneExists(hasText("No account needed"), timeoutMillis = 10_000)
         compose.onNode(hasText("Email") and hasSetTextAction()).performTextInput("parent@example.com")
         compose.onNodeWithText("Email me a sign-in link").performScrollTo().performClick()
         compose.waitUntilAtLeastOneExists(hasText("Check your email"), timeoutMillis = 5_000)

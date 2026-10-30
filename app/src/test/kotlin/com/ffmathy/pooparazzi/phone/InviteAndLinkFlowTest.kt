@@ -85,7 +85,7 @@ class InviteSignedOutFlowTest : AppLinkFlowTestBase() {
     @Test
     fun signInThenConfirmThenJoined() {
         compose.waitUntilAtLeastOneExists(hasText("Sign in to join the family."), timeoutMillis = 10_000)
-        compose.onNodeWithText("Your log stays on this phone").assertExists()
+        compose.onNodeWithText("No account needed").assertExists()
         compose.onNodeWithText("Continue with Google").performScrollTo().performClick()
 
         // The consent comes first: nothing is checked or joined before it.

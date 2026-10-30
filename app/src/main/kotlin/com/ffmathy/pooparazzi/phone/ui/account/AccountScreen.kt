@@ -43,6 +43,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
@@ -68,6 +69,7 @@ import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
+import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
@@ -180,8 +182,8 @@ fun AccountScreen(
 }
 
 /**
- * The first-run Welcome (§3.1): where the log is without an account, the sign-in choices, and "Continue without an
- * account".
+ * The first-run Welcome (§3.1): "No account needed", then two equal choices: "Only on this phone" with "Continue without
+ * an account" and that cloud backup can be switched on later, and "Back up to the cloud" with the sign-in choices.
  */
 @Composable
 fun WelcomeScreen(
@@ -207,17 +209,36 @@ fun WelcomeScreen(
             color = colors.onSurface,
             modifier = Modifier.semantics { heading() },
         )
-        Spacer(Modifier.height(16.dp))
-        Explanation()
-        Spacer(Modifier.height(24.dp))
-        SignInForm(state, actions)
-        Spacer(Modifier.height(16.dp))
-        TextButton(
-            onClick = actions::onContinueWithout,
-            enabled = !state.busy,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.welcome_continue_without), style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
+        Spacer(Modifier.height(8.dp))
+        BodyText(stringResource(R.string.welcome_intro))
+        Spacer(Modifier.height(20.dp))
+        WelcomeChoice(XIcons.phone, stringResource(R.string.welcome_local_title)) {
+            BodyText(stringResource(R.string.welcome_local_body))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                XIcon(XIcons.synced, contentDescription = null, tint = colors.onSurface, size = 20.dp)
+                Text(stringResource(R.string.welcome_switch_later), style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+            }
+            PrimaryButton(stringResource(R.string.welcome_continue_without), onClick = actions::onContinueWithout, enabled = !state.busy)
+        }
+        Spacer(Modifier.height(12.dp))
+        WelcomeChoice(XIcons.synced, stringResource(R.string.welcome_cloud_title)) {
+            BodyText(stringResource(R.string.welcome_cloud_body))
+            SignInForm(state, actions)
+        }
+    }
+}
+
+/** One of the Welcome's two equal choices: a card with an icon, a heading and what choosing it means. */
+@Composable
+private fun WelcomeChoice(icon: ImageVector, title: String, content: @Composable () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    GroupRow(first = true, last = true) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                XIcon(icon, contentDescription = null, tint = colors.onSurface)
+                Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface, modifier = Modifier.semantics { heading() })
+            }
+            content()
         }
     }
 }
