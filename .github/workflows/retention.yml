@@ -1,4 +1,4 @@
-# The backup's retention (docs/PRIVACY.md §6; docs/BACKEND.md): every week, deletes the accounts nobody has used for two
+# The backup's retention (docs/PRIVACY.md §6; docs/BACKEND.md): every day, deletes the accounts nobody has used for two
 # years (taking them out of their family as the app does), the data left by accounts deleted in the console, and expired
 # invites. Run it by hand to try it first (dry run) or, once, to clear what was logged from deleted entries backed up by
 # older app versions.
@@ -6,7 +6,7 @@ name: Retention
 
 on:
   schedule:
-    - cron: "37 3 * * 1"
+    - cron: "37 3 * * *"
   workflow_dispatch:
     inputs:
       dry_run:

@@ -39,7 +39,7 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Home, Night | Home, Day | Asleep at night | Breast feed logged |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-home-night.png" width="200" alt="Home, Night theme"> | <img src="docs/screenshots/en/phone-home-day.png" width="200" alt="Home, Day theme"> | <img src="docs/screenshots/en/phone-home-asleep.png" width="200" alt="Home while asleep"> | <img src="docs/screenshots/en/phone-home-breast-logged.png" width="200" alt="Home right after logging a breast feed backdated by 15 minutes: Last fed 18m ago · 14:32 · L → R, with no receipt sheet"> |
+| <img src="docs/screenshots/en/phone-home-night.png" width="200" alt="Home, Night theme"> | <img src="docs/screenshots/en/phone-home-day.png" width="200" alt="Home, Day theme"> | <img src="docs/screenshots/en/phone-home-asleep.png" width="200" alt="Home while asleep"> | <img src="docs/screenshots/en/phone-home-breast-logged.png" width="200" alt="Home right after logging a breast feed backdated by 15 minutes: Last fed 18m ago · 14:32 · Left → Right, with no receipt sheet"> |
 
 | Receipt | Feed sheet | Breast: side order | Diaper sheet |
 |:---:|:---:|:---:|:---:|
