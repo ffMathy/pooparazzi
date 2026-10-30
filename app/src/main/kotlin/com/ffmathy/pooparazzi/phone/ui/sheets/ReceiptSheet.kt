@@ -58,9 +58,10 @@ internal class ReceiptSheetCallbacks(
 )
 
 /**
- * The receipt sheet after every log (DESIGN_SPEC §3.3.1): the event icon, "Formula logged" and below it the effective
- * time, which follows the chips ("14:27", "14:27 · Left → Right", "14:32 · Slept 1h 07m"), with Undo at the end; the
- * dedupe line; −15m · −10m · −5m · +5m, applied at once; "End sleep" for a feed or diaper logged during a running sleep; then "Edit" and "Done". It has
+ * The receipt sheet after a log with no sheet of its own (DESIGN_SPEC §3.3.1): the event icon, "Sleep started" and below
+ * it the effective time, which follows the chips ("14:27", "14:27 · Left → Right", "14:32 · Slept 1h 07m"), with Undo at
+ * the end; −15m · −10m · −5m · +5m, applied at once; "End sleep" for a feed or diaper logged during a running sleep;
+ * then "Edit" and "Done". It has
  * no timeout: it stays open until Done, Undo, Edit or a dismiss, and the log stays as shown.
  */
 @Composable
@@ -101,21 +102,6 @@ internal fun ReceiptSheetContent(sheet: HomeSheetUi.Receipt, zone: ZoneId, forma
                 }
             }
             if (sheet.undoable) UndoButton(enabled = readiness.ready, onClick = callbacks.onUndo, modifier = Modifier.alpha(readiness.alpha))
-        }
-        sheet.dedupe?.let { existing ->
-            val icon = entryIcon(existing, LocalXPalette.current.events)
-            Row(
-                Modifier.padding(top = 4.dp).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                XIcon(icon.icon, contentDescription = null, tint = icon.tint, size = 18.dp)
-                Text(
-                    stringResource(CoreR.string.guard_already_logged, formatters.clock.format(existing.startMillis, zone)),
-                    style = PhoneType.dataMedium,
-                    color = colors.onSurfaceVariant,
-                )
-            }
         }
         if (sheet.chips.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))

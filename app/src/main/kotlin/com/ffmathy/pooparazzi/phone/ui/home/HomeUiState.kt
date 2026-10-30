@@ -26,7 +26,7 @@ import java.time.ZoneId
  * @property row1 since-row 1: "Awake …" when idle, "Last fed …" while a sleep runs (each fact appears once per screen).
  * @property row2 since-row 2: the last diaper, kind first.
  * @property forecast what the last 7 days say comes next (V1_ADDITIONS §9), shown under the buttons.
- * @property card a brief notice in the whisper slot ("Undone", a guard); null shows the Today grid.
+ * @property card a brief notice in the whisper slot ("Undone", a guard, a repeat log); null shows the Today grid.
  * @property sheet the open sheet (logging, receipt or Adjust start), if any.
  * @property babies all babies, in order (BABIES_AND_BACKUP §2.1); with two or more the name is the switcher.
  * @property babyId the current baby's id, the one [babyName] belongs to.
@@ -99,6 +99,9 @@ sealed interface NoticeVariant {
 
     /** "Undone", after Undo in a receipt. */
     data object Undone : NoticeVariant
+
+    /** The logged entry's word ("Formula", "Pee") + "Already logged at 14:32": a repeat log found [existing]. */
+    data class Duplicate(val existing: Entry) : NoticeVariant
 }
 
 /** The guard lines (DESIGN_SPEC §4.4). */
@@ -186,8 +189,8 @@ sealed interface HomeSheetUi {
 
     /**
      * The receipt after a log (DESIGN_SPEC §3.3.1): [variant] with the effective [time] when [chips] move it, Undo when
-     * [undoable], the offset chips (applied at once), "End sleep" when [endSleep] is non-null (enabled or not), the
-     * dedupe line for [dedupe], and "Edit" for [editEntryId] beside Done. No timeout: it stays until Done or a dismiss.
+     * [undoable], the offset chips (applied at once), "End sleep" when [endSleep] is non-null (enabled or not), and "Edit" for
+     * [editEntryId] beside Done. No timeout: it stays until Done or a dismiss.
      */
     data class Receipt(
         override val stamp: Long,
@@ -198,7 +201,6 @@ sealed interface HomeSheetUi {
         val undoable: Boolean,
         val editEntryId: String?,
         val endSleep: Boolean? = null,
-        val dedupe: Entry? = null,
     ) : HomeSheetUi
 }
 

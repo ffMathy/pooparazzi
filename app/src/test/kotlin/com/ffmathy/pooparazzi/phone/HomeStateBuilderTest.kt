@@ -6,7 +6,6 @@ import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.sample.SampleData
-import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import com.ffmathy.pooparazzi.phone.ui.home.SinceRow
 import com.ffmathy.pooparazzi.phone.ui.preview.HomeSamples
@@ -60,8 +59,8 @@ class HomeStateBuilderTest {
         assertEquals(FeedType.BREAST, lamp.lastFeed!!.feedType)
         assertTrue(state.row1 is SinceRow.Awake)
         assertFalse(state.anythingRunning)
-        assertEquals(ReceiptVariant.FeedLogged(FeedType.BREAST, BreastSide.LEFT_THEN_RIGHT), state.receipt.variant)
-        assertEquals("the logged time, 14:47 − 15m", SampleData.at(14, 32), state.receipt.time)
+        assertEquals("the logged time, 14:47 − 15m", SampleData.at(14, 32), lamp.lastFeed!!.startMillis)
+        assertNull("no receipt follows a logging sheet", state.sheet)
     }
 
     @Test

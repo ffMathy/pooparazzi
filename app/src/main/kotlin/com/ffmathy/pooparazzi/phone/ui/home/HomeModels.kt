@@ -8,13 +8,16 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 
-/** The view model's record of the whisper slot's notice card (2 s): "Undone", or a guard with nothing else showing. */
+/** The view model's record of the whisper slot's notice card (2 s): "Undone", a guard or a repeat log. */
 internal data class CardModel(val key: Long, val spec: CardSpec)
 
 internal sealed interface CardSpec {
     /** "Asleep" + "Already asleep since 14:32" / "Awake" + "Already awake since 14:40" (DESIGN_SPEC §4.4). */
     data class Guard(val kind: GuardKind, val sinceMillis: Long) : CardSpec
     data object Undone : CardSpec
+
+    /** "Already logged at 14:32": a repeat log within 5 s found [existing] instead (DESIGN_SPEC §4.4). */
+    data class Duplicate(val existing: Entry) : CardSpec
 }
 
 /** What a receipt sheet confirms. Entry ids point at the entry that the offsets move. */
@@ -105,7 +108,6 @@ internal sealed interface SheetModel {
      *
      * @property key identity of the receipt: a new log gets a new key.
      * @property duringSleep the log happened while a sleep ran: the sheet offers "End sleep" while it still runs.
-     * @property dedupe "Already logged at …" for 2 s, when a repeat log found [dedupe] instead.
      */
     data class Receipt(
         override val stamp: Long,
@@ -114,7 +116,6 @@ internal sealed interface SheetModel {
         val spec: ReceiptSpec,
         val duringSleep: Boolean = false,
         val undo: Undo? = null,
-        val dedupe: Entry? = null,
     ) : SheetModel
 }
 
@@ -122,8 +123,6 @@ internal sealed interface SheetModel {
 data class HomeTimings(
     /** "Undone" and guard notices in the whisper slot. */
     val noticeMillis: Long = 2_000L,
-    /** The dedupe line in a receipt. */
-    val messageMillis: Long = 2_000L,
     /** Double-toggle guard after Start sleep / Woke up. */
     val toggleGuardMillis: Long = 2_000L,
     /** Feed, Diaper and the Sleep toggle ignore taps this long after a committed sheet finished closing. */

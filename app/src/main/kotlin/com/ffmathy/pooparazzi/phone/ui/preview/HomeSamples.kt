@@ -53,29 +53,18 @@ object HomeSamples {
     )
 
     /**
-     * 14:50, a breast feed (Left → Right) just logged for 14:32 with the −15m chip from the Feed sheet opened at 14:47:
-     * "Last fed 18m ago · 14:32 · Left → Right" and the receipt "Breast logged", "14:32 · was 14:47 · Left → Right".
+     * 14:50, a breast feed (Left → Right) just logged for 14:32 with the −15m chip from the Feed sheet opened at 14:47.
+     * No receipt follows a logging sheet: Home shows "Last fed 18m ago · 14:32 · Left → Right".
      */
-    fun breastLogged(): HomeUiState {
-        val feed = SampleData.recentBreastfeed(zone)
-        val stamp = SampleData.at(14, 47)
-        return build(
-            SampleData.scenarioWithRecentFeed(zone),
-            SampleData.NOW_1450,
-            sync = SyncStatus.Synced(SampleData.at(14, 49)),
-            sheet = SheetModel.Receipt(
-                stamp = stamp,
-                offsetMinutes = -15,
-                key = 1,
-                spec = ReceiptSpec.FeedLogged(feed.id, FeedType.BREAST, feed.breastSide),
-                undo = Undo.Delete(feed.id),
-            ),
-        )
-    }
+    fun breastLogged(): HomeUiState = build(
+        SampleData.scenarioWithRecentFeed(zone),
+        SampleData.NOW_1450,
+        sync = SyncStatus.Synced(SampleData.at(14, 49)),
+    )
 
     /**
-     * 14:32, Formula just logged from the Feed sheet: the receipt "Formula logged · 14:32" with Undo, the offset chips
-     * (+5m disabled: it would be in the future), Edit and Done. The log is on its way to the watch ("Syncing with
+     * 14:32, a receipt for a Formula logged at 14:32 (as a deep link to a feed's receipt shows it): "Formula logged ·
+     * 14:32" with Undo, the offset chips (+5m disabled: it would be in the future), Edit and Done. The log is on its way to the watch ("Syncing with
      * watch…").
      */
     fun justLogged(): HomeUiState = build(
@@ -101,6 +90,32 @@ object HomeSamples {
         sheet = SheetModel.Adjust(stamp = SampleData.at(2, 5), offsetMinutes = -15, entryId = SLEEP_0205),
     )
 
+    /**
+     * 14:32, Start sleep just tapped: the receipt "Sleep started · 14:32" with Undo, the offset chips (+5m disabled: it
+     * would be in the future), Edit and Done. The sleep is on its way to the watch ("Syncing with watch…").
+     */
+    fun sleepStarted(): HomeUiState {
+        val sleep = Entry.sleep(SampleData.NOW_1432, null, id = "sample-sleep-1432")
+        return build(
+            SampleData.scenario(zone) + sleep,
+            SampleData.NOW_1432,
+            sync = SyncStatus.Pending,
+            sheet = SheetModel.Receipt(
+                stamp = SampleData.NOW_1432,
+                key = 1,
+                spec = ReceiptSpec.SleepStarted(sleep.id),
+                undo = Undo.Delete(sleep.id),
+            ),
+        )
+    }
+
+    /** 14:32, a Formula logged again within 5 s of [formula1432]: the notice "Formula" + "Already logged at 14:32". */
+    fun duplicateNotice(): HomeUiState = build(
+        SampleData.scenario(zone) + formula1432,
+        SampleData.NOW_1432,
+        card = CardModel(key = 1, spec = CardSpec.Duplicate(formula1432)),
+    )
+
     /** 14:32, a toggle drawn before the sleep started elsewhere: the notice "Asleep" + "Already asleep since 14:30". */
     fun guardNotice(): HomeUiState = build(
         SampleData.scenario(zone) + Entry.sleep(SampleData.at(14, 30), null, id = "sample-sleep-1430"),
@@ -108,7 +123,7 @@ object HomeSamples {
         card = CardModel(key = 1, spec = CardSpec.Guard(GuardKind.ASLEEP, SampleData.at(14, 30))),
     )
 
-    /** 03:12, asleep since 02:05, a wet diaper just logged: the receipt also offers "End sleep". */
+    /** 03:12, asleep since 02:05, a wet diaper just logged on the widget: its receipt also offers "End sleep". */
     fun loggedDuringSleep(): HomeUiState {
         val pee = Entry.diaper(SampleData.NOW_0312, pee = true, poop = false, id = "sample-pee-0312")
         return build(

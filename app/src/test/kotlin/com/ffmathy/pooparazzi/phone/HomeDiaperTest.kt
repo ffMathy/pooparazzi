@@ -5,9 +5,9 @@ import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 import com.ffmathy.pooparazzi.core.sample.SampleData
-import com.ffmathy.pooparazzi.phone.ui.home.ReceiptVariant
 import com.ffmathy.pooparazzi.phone.ui.home.HomeHaptic
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
+import com.ffmathy.pooparazzi.phone.ui.home.NoticeVariant
 import com.ffmathy.pooparazzi.phone.ui.home.SinceRow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -36,7 +36,7 @@ class HomeDiaperTest : HomeViewModelTestBase() {
         val state = home.settle()
         val diaper = home.entries().single()
         assertFalse(diaper.pee || diaper.poop)
-        assertEquals(ReceiptVariant.DiaperLogged(DiaperKind.PLAIN), state.receipt.variant)
+        assertNull("no receipt follows the sheet", state.sheet)
         assertEquals(DiaperKind.PLAIN, (state.row2 as SinceRow.LastDiaper).kind)
         // A plain change counts in neither pee nor poop.
         assertEquals(0, state.today.pee)
@@ -53,7 +53,7 @@ class HomeDiaperTest : HomeViewModelTestBase() {
         assertTrue(diaper.pee)
         assertFalse(diaper.poop)
         assertEquals(SampleData.NOW_1432, diaper.startMillis)
-        assertEquals(ReceiptVariant.DiaperLogged(DiaperKind.PEE), state.receipt.variant)
+        assertNull("no receipt follows the sheet", state.sheet)
         assertEquals(DiaperKind.PEE, (state.row2 as SinceRow.LastDiaper).kind)
         assertEquals(HomeHaptic.CONFIRM, home.haptics.last())
     }
@@ -77,8 +77,7 @@ class HomeDiaperTest : HomeViewModelTestBase() {
         assertEquals(PoopColor.YELLOW, diaper.poopColor)
         assertEquals(PoopTexture.SEEDY, diaper.poopTexture)
         assertEquals(SampleData.NOW_1432 - 15 * MINUTE, diaper.startMillis)
-        assertEquals(ReceiptVariant.DiaperLogged(DiaperKind.BOTH), state.receipt.variant)
-        assertEquals("the sheet's offset carries over", -15, state.receipt.offsetMinutes)
+        assertNull("no receipt follows the sheet", state.sheet)
     }
 
     @Test
@@ -142,6 +141,7 @@ class HomeDiaperTest : HomeViewModelTestBase() {
         home.viewModel.onDiaperSave()
         val state = home.settle()
         assertEquals(1, home.entries().size)
-        assertEquals(home.entries().single(), state.receipt.dedupe)
+        assertNull("no sheet follows", state.sheet)
+        assertEquals(NoticeVariant.Duplicate(home.entries().single()), state.card!!.variant)
     }
 }
