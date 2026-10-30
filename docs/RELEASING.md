@@ -1,12 +1,13 @@
 # Releasing Pooparazzi
 
-Three GitHub Actions workflows build, ship and check the apps:
+Four GitHub Actions workflows build, ship and check the apps and the backend:
 
 | Workflow | When | What it does |
 |---|---|---|
 | [`ci.yml`](../.github/workflows/ci.yml) | Every pull request (and by hand) | Unit tests of `:core`, `:app` and `:wear`, and debug builds of both apps. Needs no secrets. |
 | [`release.yml`](../.github/workflows/release.yml) | Every push to `main` (a merged pull request), and by hand | Unit tests, signed release **app bundles** (AAB) and **APKs** of the phone and the watch app, a **GitHub Release** with both APKs for side-loading, and an upload of both bundles to Google Play. The bundles and R8 mapping files are also kept as a workflow artifact. |
 | [`rules.yml`](../.github/workflows/rules.yml) | Pull requests that change `firebase/` (and by hand) | The Firestore security rules' tests on the Firestore emulator ([BACKEND.md](BACKEND.md#testing-the-rules)). Needs no secrets. |
+| [`deploy.yml`](../.github/workflows/deploy.yml) | Every push to `main` that changes the rules, the indexes or the website in `firebase/` (and by hand) | The rules' tests, then a deploy of the Firestore rules and indexes and the website to Firebase. Needs the `FIREBASE_DEPLOY_SERVICE_ACCOUNT` secret ([BACKEND.md](BACKEND.md#4-deploy-the-rules-and-the-website)); without it, does nothing. |
 
 The phone app and the Wear OS app are one Play listing: both use the applicationId **`com.ffmathy.pooparazzi`** (the Wearable Data Layer only pairs apps with the same applicationId and signing key). The phone bundle goes to the phone track (`internal` by default) and the watch bundle to the matching **Wear OS form-factor track** (`wear:internal`), which is where Play expects Wear OS releases.
 
