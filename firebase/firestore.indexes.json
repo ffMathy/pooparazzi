@@ -1,13 +1,4 @@
 {
   "indexes": [],
-  "fieldOverrides": [
-    {
-      "collectionGroup": "invites",
-      "fieldPath": "expiresAt",
-      "ttl": true,
-      "indexes": [
-        { "order": "ASCENDING", "queryScope": "COLLECTION" }
-      ]
-    }
-  ]
+  "fieldOverrides": []
 }

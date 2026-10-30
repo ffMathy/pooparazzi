@@ -1,7 +1,7 @@
 # Data protection impact assessment (GDPR art. 35)
 
 **Scope:** Pooparazzi's accounts, backup and family sharing (Firebase Authentication, Cloud Firestore, Firebase Hosting), as designed in [BABIES_AND_BACKUP.md](../design/BABIES_AND_BACKUP.md) and set up in [BACKEND.md](../BACKEND.md).
-**Assessed:** 29 October 2026 by the controller (Mathias Lorenzen). **Review:** when the data, the backend or a processor changes, and at least every two years.
+**Assessed:** 30 October 2026 by the controller (Mathias Lorenzen). **Review:** when the data, the backend or a processor changes, and at least every two years.
 
 ## Why an assessment
 
@@ -24,7 +24,7 @@ The backend stores health data (feeds, sleep, diapers) about children, together 
 - **Consent first.** A separate consent screen names the data (the log, the babies' names, the email), who sees it, where it is kept and how to withdraw, with an explicit "I agree". Nothing is uploaded before it; signing in again asks again.
 - **Minimisation.** Only what a restore and the sharing need. A deleted entry keeps only what the family's other phones need to learn of the deletion.
 - **Rights built in.** Download my data (a ZIP file of JSON files, which Import data reads back), edit and delete entries, rename babies, leave the family, delete the account; email for the rest.
-- **Storage limitation.** Delete account and leave family in the app; the weekly retention job; TTL on invites.
+- **Storage limitation.** Delete account and leave family in the app; the daily retention job, which also deletes expired invites.
 
 ## Risks and measures
 
@@ -35,7 +35,7 @@ The backend stores health data (feeds, sleep, diapers) about children, together 
 | A former member keeps data | Likely · limited | What reached their phone stays there (stated in the policy); they see nothing new. Unavoidable for an offline-first app. | Accepted |
 | The log is linked to a named child | Certain within the family · significant | Names are shared only with the family the parent chose; nothing else about the child is stored. | Low |
 | A leaked service account key | Unlikely · significant | Only in a GitHub Actions secret, used only by the retention workflow; rotate on exposure (BREACH_RESPONSE.md). | Low |
-| Data kept after it is no longer wanted | Likely without measures · limited | Deletion in the app, tombstones without content, 2-year inactivity deletion, deletion of orphaned data, invite TTL. | Low |
+| Data kept after it is no longer wanted | Likely without measures · limited | Deletion in the app, tombstones without content, 2-year inactivity deletion, deletion of orphaned data and of expired invites, daily. | Low |
 | Account data processed in the US | Certain · limited | Only account data, not the log; SCCs and the Data Privacy Framework; disclosed in the policy. | Low |
 | Consent not informed | Possible · limited | Plain words on a separate screen, the policy one tap away, asked again on every new sign-in. | Low |
 

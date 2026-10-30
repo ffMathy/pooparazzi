@@ -46,7 +46,7 @@ users/{uid}/entries/{entryId}       { json, syncedAt }                          
 - **The old backup** (`users/{uid}/entries`) is read and deleted only by its owner, and never written.
 - Everything else is denied.
 
-What the rules cannot enforce, the app does: deleting the family's entries and babies only as the last member (checking again before each step), handing the family over when its creator leaves, taking back its own invites, and asking for consent before anything is uploaded. Expired invites are removed by a TTL policy (below, required).
+What the rules cannot enforce, the app does: deleting the family's entries and babies only as the last member (checking again before each step), handing the family over when its creator leaves, taking back its own invites, and asking for consent before anything is uploaded. Expired invites are deleted by the daily retention job (Retention, below, required).
 
 Families deleted by the earlier version of these rules (before the tombstones) have no family document left; their ids are 120 random bits that nobody outside the family knew, their data was deleted with them, and their old invites no longer work (the inviter is no longer a member).
 
@@ -56,7 +56,7 @@ Use the free **Spark** plan and do not add a billing account. A Spark project ca
 
 | Spark quota (per project) | Free | Pooparazzi's use |
 |---|---|---|
-| Firestore document reads | 50 000 a day | about 2 per sync with nothing new (entries and babies; every push pulls first), plus 1 per changed entry or baby, **plus 1 per request for the membership check** |
+| Firestore document reads | 50 000 a day | about 2 per sync with nothing new (entries and babies; every push pulls first), plus 1 per changed entry or baby, **plus 1 per request for the membership check**; the daily retention job about 2 per account (its member and users documents) plus 1 per expired invite |
 | Firestore document writes | 20 000 a day | 1 per logged, edited or deleted entry or changed baby; a few to create a family, invite or join |
 | Firestore deletes | 20 000 a day | joining, leaving, account deletion |
 | Firestore storage | 1 GiB | about 0.5 KB per entry: a year of logging is about 7 MB |
@@ -95,10 +95,9 @@ The app sends the link with `ActionCodeSettings`: `url = https://<project-id>.we
 ### 3. Create the database and its rules
 
 1. Build › **Firestore Database** › Create database, in **production mode**. Choose the location **`eur3` (Europe)**: the privacy policy says the data is stored in the EU. The location cannot be changed later; if your project uses another one, change [PRIVACY.md](PRIVACY.md) and [`firebase/hosting/privacy/index.html`](../firebase/hosting/privacy/index.html).
-2. Deploy the rules, the TTL policy and the website from this repository (next section).
-3. **Required:** check that the TTL policy is on. The Firebase console does not show TTL policies; open the [Google Cloud console](https://console.cloud.google.com/firestore/databases/-default-/ttl) for the same project (Firestore › **Time-to-live (TTL)**): it lists collection group `invites`, timestamp field `expiresAt`, as *Serving* (setting it up can take a few minutes, longer with many invites). Or run `gcloud firestore fields ttls list --project <your-project-id>`. Firestore then deletes unused invites (which hold the inviter's email address) after they expire, usually within a day, as the privacy policy promises. Invites cannot be listed by the app, and the phone that made one deletes it only when its maker leaves or deletes the account there, so nothing else removes them.
+2. Deploy the rules and the website from this repository (next section).
 
-   The policy comes from [`firestore.indexes.json`](../firebase/firestore.indexes.json) (`fieldOverrides`, `"ttl": true`, keeping the ascending index the retention job's `expiresAt <` query uses). Without the deploy, create it by hand on that Google Cloud page (Create policy: collection group `invites`, timestamp field `expiresAt`) or with `gcloud firestore fields ttls update expiresAt --collection-group=invites --enable-ttl --project <your-project-id>`. Failing all of that, delete expired invites by hand at least once a day (Firestore › `invites`, filter `expiresAt` < now) or change the privacy policy.
+Expired invites (which hold the inviter's email address) are deleted by the daily [Retention](#retention) job, within a day after they expire, as the privacy policy promises: invites cannot be listed by the app, and the phone that made one deletes it only when its maker leaves or deletes the account there. Firestore's own TTL policies would do it without the job, but they need billing enabled ("403: Project … has billing disabled" on Spark), so this project does not use them.
 
 ### 4. Deploy the rules and the website
 
@@ -111,7 +110,7 @@ npx firebase login
 npm run deploy -- --project <your-project-id>
 ```
 
-That deploys the Firestore rules, indexes and TTL policy, and the website in [`firebase/hosting/`](../firebase/hosting). Deploy again after changing either. Or, for the rules only, open Firestore › **Rules** in the console, paste the whole of [`firebase/firestore.rules`](../firebase/firestore.rules) and click Publish. (the TTL policy then has to be created by hand, §3).
+That deploys the Firestore rules (and indexes) and the website in [`firebase/hosting/`](../firebase/hosting). Deploy again after changing either. Or, for the rules only, open Firestore › **Rules** in the console, paste the whole of [`firebase/firestore.rules`](../firebase/firestore.rules) and click Publish.
 
 The website ([`firebase.json`](../firebase/firebase.json) › `hosting`), served at `https://<project-id>.web.app` and `https://<project-id>.firebaseapp.com`, is a few static pages with no scripts, no cookies and no external resources (`Content-Security-Policy: default-src 'none'`, `Referrer-Policy: no-referrer`, so an invite code never leaks to Google Play through the referrer). Those headers apply to the site's own paths only (`firebase.json` matches every path except those starting with `/__/`), so Firebase's reserved pages under `/__/` (the email link handler `/__/auth/links`, which runs scripts) keep their own:
 
@@ -177,22 +176,24 @@ Anyone with the app can create an account; a family is joined only with an invit
 
 ## Retention
 
-[`firebase/retention/`](../firebase/retention) deletes what the privacy policy (§6) says is not kept, and the [`Retention`](../.github/workflows/retention.yml) workflow runs it every Monday:
+[`firebase/retention/`](../firebase/retention) deletes what the privacy policy (§6) says is not kept, and the [`Retention`](../.github/workflows/retention.yml) workflow runs it every day at 03:37 UTC:
 
 - **Accounts unused for 2 years** (no sign-in and no token refresh, that is, the app not opened): each leaves its family exactly as "Delete account" does in the app (`FamilyExit`): with others left only its member document goes, and the family is handed over to the member who joined first if it was the creator; as the last member, the family's entries and babies go first and the family document stays as a tombstone. Then its invites, `users/{uid}` with the old backup under it, and the account itself.
 - **Data of accounts that no longer exist** (deleted under Authentication › Users, say): the same, without the account.
-- **Expired invites**: a backstop for the TTL policy (§3), which remains required, since the policy promises "usually within a day".
+- **Expired invites**: the only thing that removes the invites nobody used, which is why the job runs daily (the policy promises "within a day after it expires").
 
 The privacy, compliance and breach documents are in [privacy/](privacy): the records of processing (art. 30), the impact assessment and the breach plan with its log.
 
 One-time setup:
 
 1. Google Cloud console of the Firebase project › IAM & Admin › Service accounts › Create service account `retention`, with the roles **Cloud Datastore User** and **Firebase Authentication Admin**. Keys › Add key › JSON.
-2. Add the whole key file's content as the repository secret **`FIREBASE_SERVICE_ACCOUNT`**, then delete the file. Without the secret the workflow does nothing and says so.
+2. Add the whole key file's content as the repository secret **`FIREBASE_SERVICE_ACCOUNT`**, then delete the file. Without the secret the workflow does nothing and says so, and expired invites stay.
 3. Run the workflow by hand (Actions › Retention › Run workflow) with **dry run** on, and check the list it prints.
 4. Once, after the first release that uploads deleted entries as tombstones without their content, run it with **dry run** off and **clear deleted entries** on: it rewrites the deleted entries that older versions backed up in full (in every family and in the old per-account backups). It reads every entry, so on the Spark plan keep it to a day with read quota to spare.
 
 Run it locally with `GOOGLE_APPLICATION_CREDENTIALS=key.json FIREBASE_PROJECT_ID=<id> npm run retention -- --dry-run` in `firebase/`.
+
+GitHub turns off a scheduled workflow once the repository has had no commits for 60 days (it emails the owner first). Re-enable it under Actions › Retention, or the deletions the privacy policy promises stop.
 
 ## GDPR and Google Play checklist
 
@@ -202,9 +203,8 @@ Run it locally with `GOOGLE_APPLICATION_CREDENTIALS=key.json FIREBASE_PROJECT_ID
 - [ ] Hosting deployed, so **`https://<project-id>.web.app/privacy`** is live; the same URL in Play Console › App content › **Privacy policy** and in the store listing.
 - [ ] Play Console › App content › **Data safety**: collected and stored by the developer, encrypted in transit, deletable by the user: **email address** (account management, app functionality); **app activity / other user-generated content**: the log entries and the babies' names (app functionality), **shared with other users** of the family at the user's request (not "shared with third parties" in Play's sense, since that is a user-initiated transfer); not used for ads or analytics. Health-related? The log is feeding, diaper and sleep data about a baby: declare it as **Health info** if Play asks.
 - [ ] Data safety › Data deletion: in the app (Settings › Account › Delete account) and by email to **mathias.lorenzen@live.com** (the web address of the privacy policy explains both).
-- [ ] **Required:** TTL policy on `invites.expiresAt` *Serving* in the Google Cloud console › Firestore › Time-to-live (it is deployed with the rules; or deleting expired invites by hand daily); the privacy policy promises it.
 - [ ] Requests to the contact address answered within one month (access: export the family's documents from the console; erasure: "Removing someone" above).
-- [ ] **Retention**: the `FIREBASE_SERVICE_ACCOUNT` secret added and a dry run of the Retention workflow checked (Retention, above); the privacy policy promises the 2-year deletion.
+- [ ] **Required: Retention**: the `FIREBASE_SERVICE_ACCOUNT` secret added, a dry run of the Retention workflow checked, and the workflow enabled (Retention, above); the privacy policy promises the daily deletion of expired invites and the 2-year deletion.
 - [ ] When the data handled changes, update [PRIVACY.md](PRIVACY.md) and the `/privacy` page together, with a new date, and the records in [privacy/](privacy).
 
 ## Testing the rules
