@@ -2,7 +2,7 @@
 
 The controller's own record of what Pooparazzi's backend processes. The privacy policy ([../PRIVACY.md](../PRIVACY.md), and the hosted `/privacy` page) is the public side of it. Keep them in step, and review this record whenever the backend, the data or a processor changes.
 
-Last reviewed: 29 October 2026.
+Last reviewed: 30 October 2026.
 
 | | |
 |---|---|
@@ -21,7 +21,7 @@ Last reviewed: 29 October 2026.
 | Legal basis | Consent (art. 6(1)(a)) for the account, backup and sharing; explicit consent (art. 9(2)(a)) for the baby's log, both on the app's consent screen before anything is uploaded. Security and retention: legitimate interest (art. 6(1)(f)). |
 | Recipients | The other members of the parent's family, at the parent's choice. Google Ireland Limited / Google LLC (Firebase) as processor. No one else. |
 | Transfers outside the EU/EEA | Firebase Authentication may process account data in the US: Standard Contractual Clauses in the Firebase data processing terms, and the EU–US Data Privacy Framework (Google LLC is certified). Firestore is in the EU (`eur3`). |
-| Retention | Until the parent deletes it (entries, babies, leaving the family, deleting the account). Deleted entries: tombstones without content. Accounts unused for 2 years: deleted with their data, weekly (`firebase/retention/`). Data of accounts deleted otherwise: deleted weekly. Invites: deleted when used, by the TTL policy after expiry, and by the weekly job. A family everyone left: an empty tombstone document (id, last creator's uid, creation time). |
+| Retention | Until the parent deletes it (entries, babies, leaving the family, deleting the account). Deleted entries: tombstones without content. Accounts unused for 2 years: deleted with their data, daily (`firebase/retention/`). Data of accounts deleted otherwise: deleted daily. Invites: deleted when used, and by the daily job within a day after expiry. A family everyone left: an empty tombstone document (id, last creator's uid, creation time). |
 | Security (art. 32) | TLS in transit, encryption at rest (Google). Firestore rules: only members reach a family's data; joining needs a valid invite from a current member; verified emails for families and invites; fixed document shapes; tested in CI (`firebase/test/rules.test.js`). No passwords (Google or email link). No analytics or third-party SDKs. The retention job's service account key only as a GitHub Actions secret. |
 | Impact assessment | [DPIA.md](DPIA.md). |
 | Breaches | [BREACH_RESPONSE.md](BREACH_RESPONSE.md), with its log. |
