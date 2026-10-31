@@ -9,7 +9,7 @@ Four GitHub Actions workflows build, ship and check the apps and the backend:
 | [`rules.yml`](../.github/workflows/rules.yml) | Pull requests that change `firebase/` (and by hand) | The Firestore security rules' tests on the Firestore emulator ([BACKEND.md](BACKEND.md#testing-the-rules)). Needs no secrets. |
 | [`deploy.yml`](../.github/workflows/deploy.yml) | Every push to `main` that changes the rules, the indexes or the website in `firebase/` (and by hand) | The rules' tests, then a deploy of the Firestore rules and indexes and the website to Firebase. Needs the `FIREBASE_DEPLOY_SERVICE_ACCOUNT` secret ([BACKEND.md](BACKEND.md#4-deploy-the-rules-and-the-website)); without it, does nothing. |
 
-The phone app and the Wear OS app are one Play listing: both use the applicationId **`com.ffmathy.pooparazzi`** (the Wearable Data Layer only pairs apps with the same applicationId and signing key). The phone bundle goes to the phone track (`internal` by default) and the watch bundle to the matching **Wear OS form-factor track** (`wear:internal`), which is where Play expects Wear OS releases.
+The phone app and the Wear OS app are one Play listing: both use the applicationId **`com.ffmathy.pooparazzi`** (the Wearable Data Layer only pairs apps with the same applicationId and signing key). The phone bundle goes to the phone track (`alpha`, the default **Closed testing** track, by default) and the watch bundle to the matching **Wear OS form-factor track** (`wear:alpha`), which is where Play expects Wear OS releases.
 
 ## Version codes
 
@@ -85,7 +85,7 @@ Repository › Settings › Secrets and variables › Actions.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PLAY_TRACK` | `internal` | Play track for the phone bundle: `internal`, `alpha` (closed testing), `beta` (open testing) or `production` |
+| `PLAY_TRACK` | `alpha` | Play track for the phone bundle: `internal` (internal testing), `alpha` (closed testing), `beta` (open testing) or `production` |
 | `PLAY_WEAR_TRACK` | `wear:<PLAY_TRACK>` | Play track for the watch bundle |
 | `PLAY_RELEASE_STATUS` | `completed` | `completed` rolls the release out; use `draft` while the app has never been published (see below) |
 | `VERSION_CODE_OFFSET` | `100` | Added to the run number to make the version base |
@@ -100,7 +100,7 @@ Play App Signing is on by default for new apps (app bundles require it). When yo
 
 1. **Enable the Wear OS form factor** for the listing: Test and release › Advanced settings › Form factors › **Add form factor › Wear OS**, and opt in. Without it Play has no Wear OS tracks and the watch upload fails. Wear OS also needs its own screenshots in the store listing and goes through a separate Wear OS review.
 2. Build signed bundles without publishing: Actions › **Release** › **Run workflow**, with "Upload the bundles to Google Play" switched **off**. (This needs the four upload-key secrets; `PLAY_SERVICE_ACCOUNT_JSON` can come later.) Download the `bundles-<base>` artifact.
-3. In Play Console, create a release on **Internal testing** with `app-release.aab`, and one on the **Wear OS › Internal testing** track with `wear-release.aab`. Save them (rolling them out is optional).
+3. In Play Console, create a release on **Closed testing** (the default closed track, named "Closed testing - Alpha" in the API as `alpha`) with `app-release.aab`, and one on the **Wear OS › Closed testing** track with `wear-release.aab`. Add a testers list (email list or Google Group) to each track, then save them (rolling them out is optional).
 
 Later runs number their builds above this one, so the automatic uploads continue from there.
 
