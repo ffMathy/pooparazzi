@@ -196,7 +196,7 @@ jobs:
           packageName: ${{ env.PACKAGE_NAME }}
           releaseFiles: app/build/outputs/bundle/release/app-release.aab
           mappingFile: app/build/outputs/mapping/release/mapping.txt
-          track: ${{ vars.PLAY_TRACK || 'internal' }}
+          track: ${{ vars.PLAY_TRACK || 'alpha' }}
           status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.base }})
 
@@ -210,6 +210,6 @@ jobs:
           packageName: ${{ env.PACKAGE_NAME }}
           releaseFiles: wear/build/outputs/bundle/release/wear-release.aab
           mappingFile: wear/build/outputs/mapping/release/mapping.txt
-          track: ${{ vars.PLAY_WEAR_TRACK || format('wear:{0}', vars.PLAY_TRACK || 'internal') }}
+          track: ${{ vars.PLAY_WEAR_TRACK || format('wear:{0}', vars.PLAY_TRACK || 'alpha') }}
           status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.base }}) Wear OS
