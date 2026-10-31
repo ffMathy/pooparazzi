@@ -110,12 +110,13 @@ data class WidgetSnapshot(
 }
 
 /**
- * When a forecast next changes without any new data: once its time has passed, the week's stretches that are still
- * longer give a later estimate (or "soon").
+ * When a forecast next changes without any new data: an estimate stays put once it has passed, so only when the stretch
+ * has run so long that logging has probably stopped, and the forecast is dropped.
  */
 fun WidgetSnapshot.forecastExpiry(now: Long): Long? = listOfNotNull(sleepForecast, feedForecast, poopForecast)
-    .filter { !it.overdue && it.atMillis > now }
-    .minOfOrNull { it.atMillis }
+    .map { it.goneAtMillis }
+    .filter { it > now }
+    .minOrNull()
 
 /** When the widgets next change without any new data: the receipt or notice expiry, if any. */
 fun WidgetMemo.nextExpiry(now: Long): Long? =

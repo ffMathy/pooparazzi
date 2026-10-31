@@ -33,10 +33,16 @@ object HomeSamples {
 
     /**
      * 14:32, idle: "Last fed 2h 10m ago · 12:22 · Formula", Awake 1h 05m, Pee 48m ago, Today 5 · 4 · 2 · 7h 57m. The
-     * weeks of [SampleData.history] before it give the buttons their forecast: sleep in 55m, feed in 1h 05m (poop varies too
+     * weeks of [SampleData.history] before it give the buttons their forecast: sleep in 50m, feed in 1h (poop varies too
      * much to predict).
      */
     fun idle(): HomeUiState = build(SampleData.history(zone = zone), SampleData.NOW_1432)
+
+    /**
+     * [idle] at 15:55 with nothing logged since: both estimates have passed, so the buttons say how long ago they were
+     * due: feed "24m ago" (expected ~15:30), sleep "36m ago" (expected ~15:19).
+     */
+    fun forecastPassed(): HomeUiState = build(SampleData.history(zone = zone), SampleData.at(15, 55))
 
     /** 03:12, asleep 1h 07m since 02:05; last fed 1h 32m ago · 01:40 · L → R; expected to wake in 2h 15m. */
     fun asleep(): HomeUiState =

@@ -32,6 +32,7 @@ MASK_SUPERSAMPLE = 4
 PHONE = {
     "01-home-night.png": "home-night",
     "02-home-day.png": "home-day",
+    "02b-home-forecast-passed.png": "home-forecast-passed",
     "03-home-asleep-night.png": "home-asleep",
     "03-home-adjust-start.png": "adjust-start",
     "04-home-breast-logged.png": "home-breast-logged",
@@ -80,6 +81,7 @@ WATCH = {
     "02-main-asleep.png": "main-asleep",
     "03-main-after-breast.png": "main-after-breast",
     "04b-main-awake-forecast.png": "main-awake-forecast",
+    "04c-main-forecast-passed.png": "main-forecast-passed",
     "02b-main-asleep-forecast.png": "main-asleep-forecast",
     "02c-main-asleep-feed-forecast.png": "main-asleep-feed-forecast",
     "05-feed-type.png": "feed-type",

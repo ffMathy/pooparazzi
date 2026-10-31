@@ -116,7 +116,15 @@ abstract class WatchScreenshots(private val lang: String) {
         after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4) },
     ) { MainScreen(WearSamples.mainIdle(), MainActions()) }
 
-    /** Next feed and the Awake card with what the last week expects next: "Next sleep in 55m" (V1_ADDITIONS §9). */
+    /** Next feed and the Awake card once both estimates have passed: "24m ago · ~15:30", "Next sleep 36m ago". */
+    @Test
+    fun s04c_mainForecastPassed() = capture(
+        "04c-main-forecast-passed",
+        SampleData.at(15, 55),
+        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(2) },
+    ) { MainScreen(WearSamples.mainForecastPassed(), MainActions()) }
+
+    /** Next feed and the Awake card with what the last week expects next: "Next sleep in 50m" (V1_ADDITIONS §9). */
     @Test
     fun s04b_mainAwakeForecast() = capture(
         "04b-main-awake-forecast",
