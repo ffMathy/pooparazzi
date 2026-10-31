@@ -56,8 +56,8 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 | Feed and Diaper open the app's own sheets/screens (offset, type, side order, pee/poop, colour, texture); sleep toggles in one tap | Phone widgets (4×2, 3×1, Samsung cover screen), watch Tile |
 | Status at a glance: time since last feed, awake/asleep duration, last diaper | Phone Home, watch Main, Tile, complications, widget, Live Update |
 | Undo after every log | Phone receipt sheet (logs with no sheet of their own; a Feed or Diaper sheet log is undone from its since-row's edit sheet), watch Logged screen, widget receipt, Tile title |
-| Backdating at log time and later editing | Feed and Diaper sheet offsets, phone receipt-sheet offsets, phone edit sheet, watch Adjust screen |
-| History: day ribbon, counts, list | Phone History, watch Today list |
+| Backdating at log time and later editing | Feed and Diaper sheet offsets, phone receipt-sheet offsets, phone edit sheet |
+| History: day ribbon, counts, list | Phone History (the watch has none) |
 | Phone-to-watch sync status | Phone top bar, watch Logged and Main list footer |
 | Automatic Night appearance (dark, low-blue, "lights-down" while asleep) | Phone, widget; the watch is always dark |
 
@@ -107,9 +107,7 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 | Phone Night running (lights-down) | SLEEP glow, core alpha 0.45 | track `#2E3660`, ember + tail `#7C88C4` | `sleep` SLEEP strong + "Asleep" SLEEP text | "1h 07m" | "since 02:05" |
 | Phone Day idle | FEED disc `#FFE1C4` | none | as Night idle (Day tokens) | as above | as above |
 | Phone Day running | SLEEP disc `#E1E4F8` | track `#6A73B3`, ember + tail `#37418A`, ember cut out by a 2 dp ring of paper `#FBF6F0` | as Night running (Day tokens) | as above | as above |
-| Watch running | SLEEP glow, core alpha 0.60 | track `#2E3660`, ember + tail `#7C88C4` | `sleep` + "Asleep" | "1h 07m" | "since 02:05" |
-| Watch ambient | no glow, no track fill, no tail | 2 dp solid ring `#7C88C4` + static Ø6 dp dot | all text and icon `#B8A48E` | | |
-| Watch idle | **no Lamp** (status block instead, §3.5.1) | — | | | |
+| Watch | **no Lamp**: Main mirrors the Tile (§3.5.1) | — | | | |
 
 Under one minute: the phone hero shows "just now" (heroWord) with the sub-line "at 14:32" when idle. While running it keeps "since …". The watch shows "just now" (§3.5.1, §3.5.2).
 
@@ -137,6 +135,8 @@ Under one minute: the phone hero shows "just now" (heroWord) with the sub-line "
 **Hero composition**: number spans (heroNumeral 76/80 sp, weight 600, letter-spacing −0.005em) and unit spans (heroUnit 34/40 sp, weight 500), baseline-aligned. 4 dp after each number, 12 dp between groups, and no space characters. Measured: "2h 10m" = 213.8 dp, which fits the 223 dp usable chord. "10h 45m" needs autosize to 60/27 (209.7 dp). Autosize range 56–76 sp.
 
 ### 2.5 Watch Lamp geometry
+
+_Not used on Main any more (it mirrors the Tile, §3.5.1); kept for reference._
 
 | Item | Value |
 |---|---|
@@ -181,16 +181,13 @@ Main (idle | asleep) ──Diaper──▶ Diaper picker ──Earlier──▶ 
  │                                   └─Pee/Poop/Both──▶ Logged ──Undo──▶ Undone ──▶ Main
  ├─Feed──▶ Logged                         └─timeout / tap outside Undo──▶ Main
  ├─Start sleep / Woke up (EdgeButton) ──▶ Main (asleep) / Logged
- ├─list: Adjust start ──▶ Adjust ──choice──▶ Main
- ├─list: status card ──▶ Adjust (for that entry)
- └─list: History ──▶ Today ──row──▶ Adjust (+ "Set time" ──▶ 24 h time picker)
-                               └─"More on phone" ──▶ phone History (OpenOnPhoneDialog)
+ └─baby button (two or more babies) ──▶ Baby picker ──▶ Main
 Tile buttons ──▶ log in place · Tile background during the 10 s feedback ──▶ Logged (Undo active at once)
 Complication tap ──▶ the matching app screen (never logs)
 Ongoing Activity tap ──▶ the sleep screen (Main, asleep)
 ```
 
-Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adjust.
+Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Earlier.
 
 ### 3.2 Inventory
 
@@ -204,14 +201,12 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | P6 | Phone | Live Update (running sleep) | Status chip and an ongoing notification with "Woke up" |
 | P7 | Phone | Splash | System splash, dark at night and light by day |
 | P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day over a chosen range (the last 7, 30 or 90 days, all days or chosen dates; default the last 30 days), with a bar chart of one kind |
-| W1 | Watch | Main, idle | Status block, Feed / Diaper, "Start sleep"; scroll list below |
-| W2 | Watch | Main, asleep | Lamp, "Woke up"; scroll list with Adjust start |
+| W1 | Watch | Main, idle | As the Tile: name, Feed and Diaper rows with time since, "Start sleep"; History below |
+| W2 | Watch | Main, asleep | As the Tile: "Asleep 1h 07m", Feed and Diaper rows, "Woke up"; History below |
 | W3 | Watch | Diaper picker | Pee / Poop / Both; Earlier |
 | W4 | Watch | Earlier | Backdate a diaper (−5m / −10m / −15m) |
-| W5 | Watch | Adjust | Shift an entry (−15m / −5m / +5m) |
 | W6 | Watch | Logged | Confirmation plus a 5 s Undo |
 | W7 | Watch | Undone | Undo confirmation (1.5 s) |
-| W8 | Watch | Today | Today's entries; the path to Adjust / Set time |
 | W9 | Watch | Tile | One-tap logging and status from the tile carousel |
 | W10 | Watch | Complications | Time since feed, diaper, sleep on any watch face |
 | W11 | Watch | Ongoing Activity / Live Update | Running-sleep indicator |
@@ -484,26 +479,29 @@ Every app screen except Logged and Undone shows the system **TimeText** (15 sp, 
 
 #### 3.5.1 W1 Main, idle
 
-| Element | Spec (reference 228 dp, y from top) |
-|---|---|
-| Status block | label row y 30–46: `feed` 16 FEED strong + 4 + "Fed at 12:22" titleSmall FEED text. Numeral row y 46–82: "2h 10m" statusNumeral onSurface (units 18 sp, 2 after each number, 6 between groups) + 4 + "ago" bodyMedium onSurfaceVariant. Under 1 minute: "just now" (GSF weight 500, 28 sp, no "ago") |
-| ButtonGroup Feed \| Diaper | y 88–148; two buttons 98 × 60, gap 6, r 26. Content column: icon 26 + 2 + labelMedium. Feed: `#3B2715`, icon `#F2B577`, "Feed" `#FFDCBB`. Diaper: `#13312C`, icon `#62B3A5`, "Diaper" `#BFE9E0` |
-| EdgeButton **Medium** (pinned) | y 155–225, fill SLEEP container `#222844`, `sleep` 24 `#7C88C4` stacked over "Start sleep" labelMedium `#D6DBF6` |
-| Scroll list (below) | status card "Awake" / "1h 05m · since 13:27" (`awake` `#7C88C4`); status card "Pee" / "48m ago · 13:44"; compact "History" button; footer: the `phoneSynced` icon 20 (spoken "Synced with phone · 14:31") |
+Main looks like the Tile (§3.6): a title line, a Feed row and a Diaper row with the time since the last one, and the sleep toggle. Nothing else on the first screen; details (forecasts, the last diaper's kind, sync state) are on the phone.
 
-No Lamp and no glow when idle.
+| Element | Spec (reference 228 dp) |
+|---|---|
+| Title line | the baby's name, titleSmall onSurface (nothing when unnamed). With two or more babies: a compact button (`profile` + the baby's label) that opens the baby picker |
+| Feed row | full-width button, r 26, FEED container `#3B2715`: `feed` 24 `#F2B577`, "Feed" labelMedium + "2h 10m ago" labelSmall `#FFDCBB` ("No feeds yet" before the first). The two rows share the height between the title and the EdgeButton, 4 apart, side margins 7 % of the width |
+| Diaper row | the same in DIAPER: `#13312C`, `diaper` 26 `#62B3A5`, "Diaper" + "48m ago" `#BFE9E0` ("No diapers yet") |
+| EdgeButton | **Small** (ExtraSmall below 225 dp), pinned at the bottom; fill SLEEP container `#222844`, "Start sleep" labelMedium `#D6DBF6` on one line |
+| Scrolling | none: Main is one fixed screen, as the Tile |
+| Font scale | Main's text follows the font scale up to 1.3 (the EdgeButton label to 1.15) and steps down to fit its button where a row or the EdgeButton has less room; a row too short for two lines reads "Feed · 2h 10m ago" on one |
+
+No Lamp and no glow.
 
 #### 3.5.2 W2 Main, asleep
 
 | Element | Spec |
 |---|---|
-| Lamp | §2.5, live numeral, "since {start}", ember at elapsed × 6°. Under 1 minute the numeral reads "just now" (GSF 500, ROND 100, 20 sp) |
-| EdgeButton **Medium** (pinned) | fill SLEEP containerLit `#2E3660` with a 1.5 dp `#7C88C4` border; `wake` 24 `#7C88C4` over "Woke up" `#D6DBF6`. Full opacity immediately after the toggle (no fade-in) |
-| Scroll list | **"Adjust start"** first (tonal button 168 × 52, r 26, `#1E1914`, `clock` 26 + label labelMedium `#E8D8C3`), then the ButtonGroup, then status cards "Last fed" / "1h 32m ago · 01:40" and "Pee" / "1h 20m ago · 01:52" |
-| Scrolled state | Adjust start at y 30–82, ButtonGroup y 88–148, EdgeButton unchanged (pinned) |
-| Ambient | TimeText `#B8A48E`; ambient Lamp; EdgeButton no fill, 2 dp `#7C88C4` outline, icon and label `#B8A48E`; ≥ 85 % black pixels |
+| Title line | `sleep` 14 `#7C88C4` + 4 + "Asleep 1h 07m" titleSmall SLEEP text, as the Tile's title (spoken "Asleep, 1 hour 7 minutes, since 02:05"). With two or more babies it is the baby button's label |
+| Rows | Feed and Diaper as when idle |
+| EdgeButton | fill SLEEP containerLit `#2E3660` with a 1.5 dp `#7C88C4` border; "Woke up" `#D6DBF6`. Full opacity immediately after the toggle (no fade-in) |
+| Ambient | TimeText `#B8A48E`; rows and EdgeButton no fill, 2 dp outline in their strong colour, icon and label `#B8A48E`; ≥ 85 % black pixels |
 
-**Guard state of the EdgeButton**: a tap within 2 s of a toggle hides the icon and shows two centred lines in labelMedium `#D6DBF6` at full opacity: "Already" / "asleep" (after Woke up: "Already" / "awake"). It shows for 2000 ms with a `Reject` haptic and no state change. One line ("Already asleep") would be clipped by the ≈99 dp content width. The Lamp sub-line "since 14:32" completes the message.
+**Guard state of the EdgeButton**: a tap within 2 s of a toggle hides the icon and shows two centred lines in labelMedium `#D6DBF6` at full opacity: "Already" / "asleep" (after Woke up: "Already" / "awake"). It shows for 2000 ms with a `Reject` haptic and no state change. One line ("Already asleep") would be clipped by the ≈99 dp content width.
 
 #### 3.5.3 W3 Diaper picker
 
@@ -521,14 +519,9 @@ Tile → log at stamp + offset → Logged. Haptic `Confirm`.
 
 Three tonal buttons 150 × 52 (Wear button minimum height), r 26, `#1E1914`, labelMedium `#E8D8C3`, centred at y 32–84, 88–140, 144–196: "−5m · 14:27", "−10m · 14:22", "−15m · 14:17" (times = stamp − offset). A choice sets the offset and returns to the picker. 500 ms cooldown. Spoken: "5 minutes earlier, 14:27".
 
-#### 3.5.5 W5 Adjust
+#### 3.5.5 W5 Adjust (removed)
 
-Same layout as Earlier, relative to the entry's time: "−15m · 01:50", "−5m · 02:00", "+5m · 02:10". "+5m" is disabled (0.38) while time + 5 min > now. Opened from:
-- "Adjust start" (the running sleep's start; the timer keeps running, and the numeral, ember and since-line update at once);
-- a status card (Awake → the last sleep's end; Pee → the last diaper; Last fed → the last feed);
-- a Today row (adds a "Set time" CompactButton that opens the 24 h time picker).
-
-A choice applies, plays `SegmentTick`, and returns to the screen it came from. Swipe right cancels. 500 ms cooldown. **This is the watch's backdate path for feeds and wake times.**
+The watch no longer adjusts times: history and edits are on the phone.
 
 #### 3.5.6 W6 Logged
 
@@ -559,34 +552,22 @@ Undo removes the entry (wake and cancelled: the sleep is running again) → Undo
 
 No TimeText. `undo` 32 `#B8A48E` centred at y 66; "Undone" titleLarge y 106–130. Shows 1.5 s, then Main.
 
-#### 3.5.8 W8 Today (watch History)
+#### 3.5.8 W8 Today (removed)
 
-| Element | Spec |
-|---|---|
-| ListHeader | "Today" titleMedium, centred, y 30–48 |
-| Rows | buttons 188 × 60, r 26, gap 4, `#1E1914`; avatar 32 (outlined, §6.3) at +12; label labelMedium `#E8D8C3` over secondary labelSmall `#B8A48E` at +52. Rows narrow at the edges (TransformingLazyColumn morph) |
-| Copy | "Pee" / "13:44"; "Sleep · 47m" / "12:40–13:27"; "Fed" / "12:22" (absolute times only; watch ranges have no spaces) |
-| Row tap | Adjust for that entry + "Set time" (24 h time picker) |
-| Swipe | swipe-to-reveal Delete / Edit time |
-| "More on phone" | opens phone History via `OpenOnPhoneDialog` |
-| EdgeButton | the stock collapsing EdgeButton (collapsed at the top of the list) |
+The watch has no history list; History is on the phone.
 
-#### 3.5.9 Watch status card (scroll lists)
+#### 3.5.9 Watch status card (removed)
 
-A single pattern: button 156 × 52, r 26, `#1E1914`, padding 0 10 (content 136), centred.
-- Line 1: icon 18 (event strong) + 4 + lead word labelMedium `#E8D8C3`. No digits on this line.
-- Line 2: "{time-since or duration} · {clock}" labelSmall `#B8A48E`, one line, autosized down to 11 sp for values of 10 h or more.
-- "Awake 1h 05m" on line 1 would not fit, so the awake card reads "Awake" / "1h 05m · since 13:27".
+Main no longer shows status cards: it mirrors the Tile (§3.5.1).
 
 #### 3.5.10 Small watches (< 225 dp, e.g. 192 dp)
 
 | Screen | Rule |
 |---|---|
-| Idle Main | "Start sleep" uses EdgeButton **Small** (56); status numeral 30 sp; ButtonGroup 2 × (83 × 56). Budget 20 + 16 + 30 + 4 + 56 + 4 + 59 = 189 ≤ 192 |
-| Asleep | "Woke up" stays **Medium**. The Lamp extent is 93 (ring centreline r 42.5, track 4, ember Ø8), top at 21. The Lamp shows **the numeral only**, autosize 24–34 sp. "Asleep since 02:05" becomes the secondary label of the first list item, "Adjust start" |
+| Main | the sleep toggle uses EdgeButton **ExtraSmall**; the title is hidden (as on the Tile) unless two or more babies need the baby button |
 | Tile | the title is hidden (§3.6) |
 
-Font scale > 1.15: the ButtonGroup becomes two stacked 56 dp buttons. Layouts use percentage padding.
+Layouts use percentage padding.
 
 #### 3.5.11 Watch interactions summary
 
@@ -598,7 +579,7 @@ Font scale > 1.15: the ButtonGroup becomes two stacked 56 dp buttons. Layouts us
 | Start sleep | running; Main (asleep); 2 s guard | `ToggleOn` |
 | Woke up | < 1 min: Logged "Sleep cancelled"; else Logged wake | `ToggleOff` |
 | Toggle within the guard | two-line "Already / asleep" for 2 s | `Reject` |
-| Earlier / Adjust choice | shift the time | `SegmentTick` |
+| Earlier choice | shift the time | `SegmentTick` |
 | Undo | revert → Undone | `Reject` |
 | Double-pinch (Wear OS 7, Pixel Watch 3+) | bound only to the Start sleep / Woke up EdgeButton; never on the picker or Logged | as the button |
 
@@ -949,7 +930,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 
 | Where | Rule |
 |---|---|
-| Pickers: phone Diaper sheet chips and tiles; watch Pee / Poop / Both and Earlier; watch Earlier and Adjust buttons | ignore taps for **500 ms** each time the picker appears (including re-appearing after Earlier); fade 0.6 → 1; exposed as disabled until ready |
+| Pickers: phone Diaper sheet chips and tiles; watch Pee / Poop / Both and Earlier; watch Earlier buttons | ignore taps for **500 ms** each time the picker appears (including re-appearing after Earlier); fade 0.6 → 1; exposed as disabled until ready |
 | Phone Home after a sheet tile commits | Feed, Diaper and Sleep toggle ignore taps for **600 ms** after the sheet has finished closing (no haptic, no state change) |
 | Watch Logged | Undo **and** dismiss inert for **1000 ms** (not when opened from the Tile's undo path) |
 
@@ -1323,7 +1304,6 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 | Main idle | buttons become 2 dp outlines in their strong colour, no fills, text `#B8A48E` |
 | Diaper picker | outline tiles |
 | Logged | bezel arc hidden; Undo outlined; the 5 s window keeps running and expiry returns to Main |
-| Today | outline rows |
 | Main asleep | §3.5.2 ambient |
 
 ### 10.7 Dedupe, idempotency, guards, undo
@@ -1336,7 +1316,7 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 - When Logged opens from the tile's undo path (intent extra `fromTileUndo`), Undo and dismiss are active at once and the 5 s drain starts at open. The 1 s inert period only absorbs a double tap on an in-app log button.
 - Undo is never the only recovery path:
   - phone: the Lamp, since-rows and History rows open the edit sheet;
-  - watch: status cards and Today rows open Adjust (Today rows add "Set time").
+  - watch: Undo on Logged; anything older is edited on the phone.
 - Deletes are soft for 7 days, with an Undo receipt.
 
 ### 10.8 History swipe
@@ -1397,7 +1377,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 ### 10.14 Watch standalone and cross-device
 
-- Logging never needs the phone. Offline copy, the phone-missing screen (`RemoteActivityHelper`) and "More on phone" (`OpenOnPhoneDialog`) per §3.5.
+- Logging never needs the phone. Offline copy per §3.5.
 - Never a dead-end "check connection" screen.
 
 ### 10.15 Optional accelerators (not v1 unless testing asks)
@@ -1417,9 +1397,9 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 | Receipt titles are time-free | The phone receipt sheet puts the effective time on its own line under the title, following every chip tap. Exception: the watch Logged title keeps the time, since nothing else on that screen shows it |
 | Diaper stamps the time on the first tap | The picker title shows the stamp; backdate with chips (phone) or Earlier (watch) |
 | Lights-down keeps fills and positions | Muscle memory at 3 am; only the chrome and the glow dim |
-| The phone Lamp text opens the edit sheet of the entry it shows (the last feed, or the running sleep), like a since-row; on the watch "Adjust start" is a list item | The top fact is the first thing a parent wants to correct. The edit sheet writes nothing until Save, so a stray tap edits nothing |
-| Watch "Woke up" = pinned Medium EdgeButton | Large and always visible, at rest and while scrolling |
-| No "Earlier" on watch Logged | It would sit where Feed / Diaper just were (double-tap hazard). Backdating on the watch goes through status cards and Today rows → Adjust |
+| The phone Lamp text opens the edit sheet of the entry it shows (the last feed, or the running sleep), like a since-row; the watch has no edit path (the phone has) | The top fact is the first thing a parent wants to correct. The edit sheet writes nothing until Save, so a stray tap edits nothing |
+| Watch "Woke up" = Medium EdgeButton | Large and always visible: Main fits one screen, as the Tile |
+| No "Earlier" on watch Logged | It would sit where Feed / Diaper just were (double-tap hazard). Backdating a feed or wake time is done on the phone |
 | Input cooldowns and the 2 s guard | A double tap must never land on a different target or toggle a sleep twice |
 | Sleeps < 60 s are discarded | They are mis-taps; this removes junk entries without an extra control |
 | No ticking system durations | One grammar everywhere; no h:mm:ss beside the system clock |
@@ -1481,7 +1461,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 - Settings screen (§3.3.5).
 - Edit sheet for feed and diaper entries, and the "Add past entry" layout (behaviour in §3.3.4).
 - Whisper-slot cards: dimmer offer, "Screen dimmed for night", long-sleep prompt, "Sleep deleted".
-- Watch: 24 h "Set time" picker (system), "Phone app not installed" screen, ambient variants of Main idle, picker, Logged and Today (rules in §10.6), swipe-to-reveal on Today rows.
+- Watch: "Phone app not installed" screen, ambient variants of Main idle, picker and Logged (rules in §10.6).
 - Phone History for a previous day; a running sleep in the History list.
 
 **Deferred.**

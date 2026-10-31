@@ -6,16 +6,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.hasScrollToIndexAction
-import androidx.compose.ui.test.performScrollToIndex
-import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -24,7 +20,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.wear.compose.material3.AppScaffold
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.sample.SampleData
-import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
 import com.ffmathy.pooparazzi.wear.feed.SideActions
@@ -36,7 +31,6 @@ import com.ffmathy.pooparazzi.wear.main.MainScreen
 import com.ffmathy.pooparazzi.wear.sample.WearSamples
 import com.ffmathy.pooparazzi.wear.state.DiaperDraft
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
-import com.ffmathy.pooparazzi.wear.today.TodayScreen
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -69,7 +63,7 @@ class AccessibilityTest {
     @Test
     fun idleMainReadsTheLastFeedAndTheSleepToggle() {
         show { MainScreen(WearSamples.mainIdle(), MainActions()) }
-        compose.onNode(hasContentDescription("Last feed, formula, 2 hours 10 minutes ago, at 12:22")).assertExists()
+        compose.onNode(hasContentDescription("Feed. Last feed, formula, 2 hours 10 minutes ago, at 12:22")).assertExists()
         compose.onNodeWithContentDescription("Start sleep")
             .assert(hasStateDescription("Awake since 13:27"))
             .assertIsEnabled()
@@ -78,8 +72,6 @@ class AccessibilityTest {
     @Test
     fun theBabyButtonNamesTheBabyAndWhatItDoes() {
         show { MainScreen(WearSamples.mainIdleTwins(), MainActions()) }
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
-        compose.waitForIdle()
         compose.onNodeWithContentDescription("Noa. Switch baby")
             .assert(hasRole(Role.Button))
             .assertIsEnabled()
@@ -88,8 +80,6 @@ class AccessibilityTest {
     @Test
     fun withOneBabyThereIsNoBabyButton() {
         show { MainScreen(WearSamples.mainIdle(), MainActions()) }
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
-        compose.waitForIdle()
         compose.onNode(hasContentDescription("Switch baby", substring = true)).assertDoesNotExist()
     }
 
@@ -98,11 +88,11 @@ class AccessibilityTest {
         // As the phone: "Last feed, 2 hours 10 minutes ago, at 12:22", not "Last feed, feed, …".
         val idle = WearSamples.mainIdle()
         show { MainScreen(idle.copy(lastFeed = idle.lastFeed!!.copy(feedType = null)), MainActions()) }
-        compose.onNode(hasContentDescription("Last feed, 2 hours 10 minutes ago, at 12:22")).assertExists()
+        compose.onNode(hasContentDescription("Feed. Last feed, 2 hours 10 minutes ago, at 12:22")).assertExists()
     }
 
     @Test
-    fun asleepMainReadsTheLampOnceAndNamesWokeUp() {
+    fun asleepMainReadsTheSleepOnceAndNamesWokeUp() {
         show { MainScreen(WearSamples.mainAsleep(), MainActions()) }
         compose.onNode(hasContentDescription("Asleep, 1 hour 7 minutes, since 02:05")).assertExists()
         compose.onNodeWithContentDescription("Woke up, end sleep").assert(hasStateDescription("Asleep since 02:05"))
@@ -114,9 +104,8 @@ class AccessibilityTest {
     fun afterABreastFeedMainStaysIdle() {
         show { MainScreen(WearSamples.mainAfterBreastfeed(), MainActions()) }
         compose.onNodeWithContentDescription("Start sleep").assertIsEnabled()
-        // The breast order of the last feed, shown and read.
-        compose.onNodeWithText("Fed at 14:32 · L\u00A0→\u00A0R", useUnmergedTree = true).assertExists()
-        compose.onNode(hasContentDescription("Last feed, breast, left then right, 18 minutes ago, at 14:32")).assertExists()
+        // The breast order of the last feed, read.
+        compose.onNode(hasContentDescription("Feed. Last feed, breast, left then right, 18 minutes ago, at 14:32")).assertExists()
         compose.onAllNodes(hasContentDescription("End feed")).fetchSemanticsNodes().let { assert(it.isEmpty()) { "no End feed" } }
     }
 
@@ -159,14 +148,6 @@ class AccessibilityTest {
     }
 
     @Test
-    fun theMainFooterSyncIsAPhoneIcon() {
-        show { MainScreen(WearSamples.mainIdle().copy(sync = SyncStatus.Offline), MainActions()) }
-        val list = compose.onNode(hasScrollToIndexAction())
-        list.performScrollToNode(hasContentDescription("Saved on watch · will sync"))
-        compose.onNode(hasText("will sync", substring = true)).assertDoesNotExist()
-    }
-
-    @Test
     fun sidesAreCheckboxesReadWithTheirPlaceInTheOrder() {
         show { SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.RIGHT, Breast.LEFT)), SideActions()) }
         // Never "Right → Left" with an arrow (DESIGN_SPEC §9.4); the order matters.
@@ -194,23 +175,10 @@ class AccessibilityTest {
     }
 
     @Test
-    fun theLastDiaperCardReadsBothInWords() {
+    fun theDiaperRowReadsBothInWords() {
         val idle = WearSamples.mainIdle()
         show { MainScreen(idle.copy(lastDiaper = idle.lastDiaper?.copy(poop = true)), MainActions()) }
-        // Hero, Awake, then the last diaper.
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(2)
-        compose.onNode(hasContentDescription("Last diaper, pee and poop, 48 minutes ago, at 13:44")).assertExists()
-    }
-
-    @Test
-    fun todayRowsReadSidesAndRangesInWords() {
-        show { TodayScreen(WearSamples.today(), phoneAvailable = false, onRow = {}, onMoreOnPhone = {}) }
-        val rows = compose.onAllNodes(hasContentDescription("Adjust", substring = true)).fetchSemanticsNodes()
-            .mapNotNull { it.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull() }
-        // The newest rows are in view: a diaper and a sleep range.
-        assert(rows.any { it == "Pee, 13:44. Adjust" }) { rows.toString() }
-        assert(rows.any { it == "Sleep, 47 minutes, 12:40 to 13:27. Adjust" }) { rows.toString() }
-        assert(rows.none { it.contains("–") || it.contains("→") || it.contains("+") }) { rows.toString() }
+        compose.onNode(hasContentDescription("Diaper. Last diaper, pee and poop, 48 minutes ago, at 13:44")).assertExists()
     }
 
     @Test
@@ -239,7 +207,7 @@ class DanishAccessibilityTest {
     @Test
     fun idleMainReadsTheLastFeedInDanish() {
         compose.setContent { XWearTheme { AppScaffold { MainScreen(WearSamples.mainIdle(), MainActions()) } } }
-        compose.onNode(hasContentDescription("Sidste måltid, modermælkserstatning, 2 timer 10 minutter siden, kl. 12:22"))
+        compose.onNode(hasContentDescription("Måltid. Sidste måltid, modermælkserstatning, 2 timer 10 minutter siden, kl. 12:22"))
             .assertExists()
         compose.onNodeWithContentDescription("Start søvn").assert(
             SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Vågen siden kl. 13:27"),

@@ -10,9 +10,7 @@ import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
-import com.ffmathy.pooparazzi.core.model.isInterval
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
-import java.time.LocalDate
 import java.time.ZoneId
 
 /** What Main leads with (DESIGN_SPEC §3.5.1–2, V1_ADDITIONS §2.2). Only a sleep runs: feeds are instants. */
@@ -164,89 +162,6 @@ data class Receipt(
     val serial: Long = 0,
 )
 
-/** The time of an entry that Adjust can shift. */
-enum class TimeField { START, END }
-
-/** One Adjust choice: [minutes] from the base, landing at [at]. */
-@Immutable
-data class AdjustOption(val minutes: Int, val at: Long, val enabled: Boolean)
-
-/** One group of Adjust choices for a [field] whose current value is [base]. */
-@Immutable
-data class AdjustGroup(val field: TimeField, val base: Long, val options: List<AdjustOption>)
-
-/**
- * Adjust (DESIGN_SPEC §3.5.5): −15m / −5m / +5m for one or two times of [entry]. Options that would put a time in
- * the future or an end before its start are disabled.
- */
-@Immutable
-data class AdjustUiState(
-    val entry: Entry,
-    val now: Long,
-    val zone: ZoneId,
-    val groups: List<AdjustGroup>,
-    val allowSetTime: Boolean,
-) {
-    companion object {
-        /** The offsets of §3.5.5, in order. */
-        val OFFSETS: List<Int> = listOf(-15, -5, 5)
-
-        fun build(entry: Entry, fields: List<TimeField>, allowSetTime: Boolean, now: Long, zone: ZoneId): AdjustUiState {
-            val groups = fields.mapNotNull { field ->
-                val base = entry.timeOf(field) ?: return@mapNotNull null
-                AdjustGroup(
-                    field = field,
-                    base = base,
-                    options = OFFSETS.map { minutes ->
-                        val at = base + minutes * MINUTE_MILLIS
-                        AdjustOption(minutes, at, enabled = entry.withTime(field, at, now) != null)
-                    },
-                )
-            }
-            return AdjustUiState(entry, now, zone, groups, allowSetTime)
-        }
-    }
-}
-
-/** The 24 h "Set time" picker for one time of an entry. */
-@Immutable
-data class SetTimeUiState(val entry: Entry, val field: TimeField, val base: Long, val zone: ZoneId)
-
-/** What Adjust is opened for. */
-@Immutable
-data class AdjustRequest(val entryId: String, val fields: List<TimeField>, val allowSetTime: Boolean)
-
-/** Today (W8): today's entries, newest first. */
-@Immutable
-data class TodayUiState(val now: Long, val zone: ZoneId, val day: LocalDate, val entries: List<Entry>, val loaded: Boolean = true)
-
-/** The value of [field], or null when the entry has no such time (an instant's end, a running end). */
-fun Entry.timeOf(field: TimeField): Long? = when (field) {
-    TimeField.START -> startMillis
-    TimeField.END -> endMillis
-}
-
-/**
- * This entry with [field] moved to [at], or null when that is not allowed: in the future (after [now]), an end
- * before its start, a start after its end, or an end on an instant.
- */
-fun Entry.withTime(field: TimeField, at: Long, now: Long): Entry? {
-    if (at > now) return null
-    return when (field) {
-        TimeField.START -> {
-            val end = endMillis
-            if (end != null && at > end) null else copy(startMillis = at)
-        }
-        TimeField.END -> {
-            if (!isInterval || endMillis == null || at < startMillis) null else copy(endMillis = at)
-        }
-    }
-}
-
-/** The Adjust fields a Today row offers: start and end of a completed interval, otherwise the start (the time). */
-fun Entry.adjustableFields(): List<TimeField> =
-    if (isInterval && endMillis != null) listOf(TimeField.START, TimeField.END) else listOf(TimeField.START)
-
 /** Haptics the app plays (DESIGN_SPEC §5.11), mapped onto Compose `HapticFeedbackType` by the UI. */
 enum class XHaptic { CONFIRM, REJECT, TOGGLE_ON, TOGGLE_OFF, SEGMENT_TICK }
 
@@ -265,10 +180,4 @@ sealed interface WearEvent {
 
     /** Return to Main (closing pickers). */
     data object BackToMain : WearEvent
-
-    /**
-     * An Adjust or Set time choice was applied: close Adjust (and Set time above it), back to the screen that opened
-     * it. Popping by route makes a repeat harmless: once Adjust is gone there is nothing left to close.
-     */
-    data object CloseAdjust : WearEvent
 }

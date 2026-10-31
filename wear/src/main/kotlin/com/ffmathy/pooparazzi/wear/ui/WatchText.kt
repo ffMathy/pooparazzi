@@ -6,21 +6,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import com.ffmathy.pooparazzi.core.domain.localDate
-import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
-import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
 import com.ffmathy.pooparazzi.core.model.diaperKind
 import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.wear.R
-import java.time.Instant
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 import com.ffmathy.pooparazzi.core.R as CoreR
 
@@ -29,12 +23,6 @@ import com.ffmathy.pooparazzi.core.R as CoreR
  * durations in words (§9.5), never arrows, "+" or dashes, and are put together with resource templates
  * ([SpokenText]), so word order and punctuation belong to each language.
  */
-
-/** "Fed at 12:22", "Formula at 14:32", "Pee + poop at 14:32" (receipt_at_time). */
-@Composable
-@ReadOnlyComposable
-fun labelAtTime(label: String, millis: Long, f: Formatters): String =
-    stringResource(CoreR.string.receipt_at_time, label, f.clock.format(millis, f.zone))
 
 /** The feed type word ("Formula"), or "Feed" for a feed with no type; [compact] adds the soft hyphen for tight places. */
 @Composable
@@ -57,29 +45,6 @@ fun spokenFeedType(entry: Entry): String? {
 
 /** The breast order of a breastfeed, or null (none recorded, or not a breastfeed). */
 fun feedSide(entry: Entry): BreastSide? = entry.breastSide?.takeIf { entry.isBreastfeed }
-
-/** " · L → R" after a last-feed line when a breast order was recorded; empty otherwise. */
-@Composable
-@ReadOnlyComposable
-fun feedSideSuffix(entry: Entry): String = feedSide(entry)?.let { DOT_SEPARATOR + stringResource(Labels.sideShort(it)) } ?: ""
-
-/** Receipts and History: "Pee", "Poop", "Pee + poop", "Diaper" (a plain change). */
-@Composable
-@ReadOnlyComposable
-fun diaperLabel(entry: Entry): String = stringResource(Labels.diaperKind(entry.diaperKind ?: DiaperKind.PLAIN))
-
-/** Status surfaces (cards): "Pee", "Poop", "Both", "Diaper". */
-@Composable
-@ReadOnlyComposable
-fun diaperStatusLabel(entry: Entry): String = stringResource(Labels.diaperKindStatus(entry.diaperKind ?: DiaperKind.PLAIN))
-
-/** "48m ago · 13:44" (relative + absolute, §7). */
-fun Formatters.agoAndClock(fromMillis: Long, now: Long): String =
-    relative.ago(clockDurationMillis(fromMillis, now)) + DOT_SEPARATOR + clock.format(fromMillis, zone)
-
-/** "1h 05m · since 13:27". */
-fun Formatters.durationAndSince(fromMillis: Long, now: Long): String =
-    duration.format(clockDurationMillis(fromMillis, now)) + DOT_SEPARATOR + relative.since(fromMillis, zone)
 
 /**
  * The words TalkBack reads where the screen shows a symbol (DESIGN_SPEC §9.4): "Left then right" for "Left → Right",
@@ -111,24 +76,9 @@ class SpokenText(private val res: Resources) {
     /** Facts read in a row: "Last feed, formula, 2 hours 10 minutes ago, at 12:22". */
     fun all(facts: List<String>): String = facts.reduce(::pair)
 
-    /** "Awake 1 hour 5 minutes, since 13:27". */
-    fun statusSince(status: String, duration: String, since: String): String =
-        res.getString(R.string.spoken_status_since, status, duration, since)
-
     /** "Asleep, 1 hour 7 minutes, since 02:05". */
     fun running(status: String, duration: String, since: String): String =
         res.getString(R.string.spoken_running, status, duration, since)
-
-    /** "{what}. {action}": a row, then what a tap does. */
-    fun thenAction(what: String, action: String): String = res.getString(R.string.spoken_then_action, what, action)
-
-    /** "14:32 to 14:50"; "Sunday 22:40 to 01:35" for a range that starts before [day]. */
-    fun range(f: Formatters, startMillis: Long, endMillis: Long, day: LocalDate? = null): String {
-        val range = res.getString(R.string.spoken_range, f.clock.format(startMillis, f.zone), f.clock.format(endMillis, f.zone))
-        if (day == null || localDate(startMillis, f.zone) == day) return range
-        val weekday = DateTimeFormatter.ofPattern("EEEE", f.clock.locale).format(Instant.ofEpochMilli(startMillis).atZone(f.zone))
-        return res.getString(R.string.spoken_range_on_day, weekday, range)
-    }
 }
 
 /** [SpokenText] in the composition's language (follows configuration changes, as stringResource does). */
@@ -149,12 +99,6 @@ fun Formatters.spokenAgo(prefix: String, detail: String?, fromMillis: Long, now:
         ),
     )
 
-/** Spoken "{status} 1 hour 5 minutes, since 13:27" (a status card). */
-@Composable
-@ReadOnlyComposable
-fun Formatters.spokenDurationSince(status: String, fromMillis: Long, now: Long): String =
-    spokenText().statusSince(status, duration.spoken(clockDurationMillis(fromMillis, now)), relative.since(fromMillis, zone))
-
 /** Spoken "{status}, 1 hour 7 minutes, since 02:05" (a running sleep read on its own). */
 @Composable
 @ReadOnlyComposable
@@ -172,23 +116,6 @@ fun Formatters.spokenOffset(minutes: Int, atMillis: Long): String =
 @ReadOnlyComposable
 fun Formatters.statusSince(status: String, millis: Long): String =
     stringResource(R.string.status_since, status, relative.since(millis, zone))
-
-/** The title word of an entry for Adjust and Today rows ("Sleep", "Breast", "Formula", "Pee + poop"). */
-@Composable
-@ReadOnlyComposable
-fun entryWord(entry: Entry, compact: Boolean = false): String = when (entry.kind) {
-    EntryKind.SLEEP -> stringResource(CoreR.string.kind_sleep)
-    EntryKind.FEED -> feedTypeLabel(entry, compact)
-    EntryKind.DIAPER -> diaperLabel(entry)
-}
-
-/** [entryWord] as TalkBack reads it ("Pee and poop"). */
-@Composable
-@ReadOnlyComposable
-fun spokenEntryWord(entry: Entry): String = when (entry.kind) {
-    EntryKind.DIAPER -> stringResource(SpokenLabels.diaperKind(entry.diaperKind ?: DiaperKind.PLAIN))
-    else -> entryWord(entry)
-}
 
 /**
  * Keeps a two-side label ("Left → Right", "Venstre → Højre") on one line: a wrapping title then breaks after the

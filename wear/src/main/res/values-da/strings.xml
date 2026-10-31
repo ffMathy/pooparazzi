@@ -8,25 +8,16 @@
     <string name="edge_guard_already_awake">Allerede\nvågen</string>
 
     <string name="cd_woke_up_end_sleep">Vågnede, afslut søvn</string>
-    <string name="action_adjust">Juster</string>
 
     <string name="logged_already_logged">Allerede registreret</string>
     <string name="logged_dismiss">Luk</string>
 
-    <string name="adjust_start_at">Start · %1$s</string>
-    <string name="adjust_end_at">Slut · %1$s</string>
-    <string name="action_set_time">Indstil tid</string>
 
-    <string name="today_empty">Intet registreret i dag endnu</string>
-    <string name="action_more_on_phone">Mere på telefonen</string>
-    <string name="open_on_phone">Fortsæt på telefonen</string>
-    <string name="open_on_phone_failed">Kunne ikke åbne på telefonen</string>
 
     <string name="spoken_side_left_then_right">Venstre, så højre</string>
     <string name="spoken_side_right_then_left">Højre, så venstre</string>
     <string name="spoken_pee_and_poop">Tis og bæ</string>
     <string name="spoken_range">%1$s til %2$s</string>
-    <string name="spoken_range_on_day">%1$s %2$s</string>
     <string name="spoken_pair">%1$s, %2$s</string>
     <string name="spoken_status_since">%1$s %2$s, %3$s</string>
     <string name="spoken_running">%1$s, %2$s, %3$s</string>

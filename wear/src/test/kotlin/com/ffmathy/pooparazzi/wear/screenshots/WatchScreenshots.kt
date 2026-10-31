@@ -15,8 +15,6 @@ import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.format.ClockFormatter
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.sample.SampleData
-import com.ffmathy.pooparazzi.wear.adjust.AdjustActions
-import com.ffmathy.pooparazzi.wear.adjust.AdjustScreen
 import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
 import com.ffmathy.pooparazzi.wear.diaper.colourOptions
@@ -33,7 +31,6 @@ import com.ffmathy.pooparazzi.wear.state.Guard
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.state.GuardTarget
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
-import com.ffmathy.pooparazzi.wear.today.TodayScreen
 import com.ffmathy.pooparazzi.wear.ui.LocalBabyTimeText
 import com.ffmathy.pooparazzi.wear.ui.LocalFixedTimeText
 import com.ffmathy.pooparazzi.wear.ui.rememberBabyTimeText
@@ -103,50 +100,10 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s02_mainAsleep() = capture("02-main-asleep", SampleData.NOW_0312) { MainScreen(WearSamples.mainAsleep(), MainActions()) }
 
-    /** 18 minutes after the 14:32 breast feed: Main stays idle (a breast feed is an instant), "Last fed" · Breast. */
+    /** 18 minutes after the 14:32 breast feed: Main stays idle (a breast feed is an instant), Feed "18m ago". */
     @Test
     fun s03_mainAfterBreast() =
         capture("03-main-after-breast", SampleData.NOW_1450) { MainScreen(WearSamples.mainAfterBreastfeed(), MainActions()) }
-
-    @Test
-    fun s04_mainScrolled() = capture(
-        "04-main-scrolled",
-        SampleData.NOW_1432,
-        // The end of the list: status cards, History and the sync footer above the pinned EdgeButton.
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4) },
-    ) { MainScreen(WearSamples.mainIdle(), MainActions()) }
-
-    /** Next feed and the Awake card once both estimates have passed: "24m ago · ~15:30", "Next sleep 36m ago". */
-    @Test
-    fun s04c_mainForecastPassed() = capture(
-        "04c-main-forecast-passed",
-        SampleData.at(15, 55),
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(2) },
-    ) { MainScreen(WearSamples.mainForecastPassed(), MainActions()) }
-
-    /** Next feed and the Awake card with what the last week expects next: "Next sleep in 50m" (V1_ADDITIONS §9). */
-    @Test
-    fun s04b_mainAwakeForecast() = capture(
-        "04b-main-awake-forecast",
-        SampleData.NOW_1432,
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(2) },
-    ) { MainScreen(WearSamples.mainIdle(), MainActions()) }
-
-    /** Asleep, scrolled to Adjust start: "Wakes in 2h 15m" under it (V1_ADDITIONS §9). */
-    @Test
-    fun s02b_mainAsleepForecast() = capture(
-        "02b-main-asleep-forecast",
-        SampleData.NOW_0312,
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1) },
-    ) { MainScreen(WearSamples.mainAsleep(), MainActions()) }
-
-    /** Asleep, scrolled to Last fed: "Next feed in 2h 45m" as its third line (V1_ADDITIONS §9). */
-    @Test
-    fun s02c_mainAsleepFeedForecast() = capture(
-        "02c-main-asleep-feed-forecast",
-        SampleData.NOW_0312,
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3) },
-    ) { MainScreen(WearSamples.mainAsleep(), MainActions()) }
 
     @Test
     fun s05_feedType() = capture("05-feed-type", SampleData.NOW_1432) { FeedTypeScreen(WearSamples.feedDraft(), FeedTypeActions()) }
@@ -183,23 +140,7 @@ abstract class WatchScreenshots(private val lang: String) {
         LoggedScreen(WearSamples.receiptBreast(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
     }
 
-    @Test
-    fun s10_adjust() = capture("10-adjust", SampleData.NOW_0312) { AdjustScreen(WearSamples.adjustRunningSleep(), AdjustActions()) }
-
-    @Test
-    fun s11_today() = capture("11-today", SampleData.NOW_1432) {
-        TodayScreen(WearSamples.today(), phoneAvailable = true, onRow = {}, onMoreOnPhone = {})
-    }
-
     // ---- Beyond the tour: states worth checking by eye -----------------------------------------
-
-    /** The end of Today, where the collapsing "More on phone" EdgeButton has expanded. */
-    @Test
-    fun s11b_todayEnd() = capture(
-        "11b-today-end",
-        SampleData.NOW_1432,
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(WearSamples.today().entries.size) },
-    ) { TodayScreen(WearSamples.today(), phoneAvailable = true, onRow = {}, onMoreOnPhone = {}) }
 
     /** A tap within 2 s of a toggle: "Already / asleep" on the EdgeButton, no state change (DESIGN_SPEC §3.5.2). */
     @Test
@@ -214,21 +155,12 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s22_mainTwins() = capture("22-main-twins", SampleData.NOW_1432) { MainScreen(WearSamples.mainIdleTwins(), MainActions()) }
 
-    /** The baby button right after the hero. */
-    @Test
-    fun s22b_mainTwinsBabyButton() = capture(
-        "22b-main-twins-baby-button",
-        SampleData.NOW_1432,
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1) },
-    ) { MainScreen(WearSamples.mainIdleTwins(), MainActions()) }
-
     /** A long name at 200 %: cut with an ellipsis before the time, which stays whole; the button cuts it too. */
     @Test
     @Config(fontScale = 2.0f)
     fun s22c_mainTwinsLongNameHugeFont() = capture(
         "22c-main-twins-long-name-font-200",
         SampleData.NOW_1432,
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1) },
     ) { MainScreen(WearSamples.mainIdleTwins().withFirstName(LONG_NAME), MainActions()) }
 
     /** Every other screen names the baby too, its title clear of the longer line. */
