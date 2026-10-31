@@ -131,14 +131,14 @@ The website ([`firebase.json`](../firebase/firebase.json) › `hosting`), served
 
 ### 5. App Links: fill in assetlinks.json
 
-The invite links (`/join/<code>`) and the email sign-in links (`/__/auth/links`, `/signin`) open the app directly only once Android has **verified** that the site belongs to the app. Android checks `https://<host>/.well-known/assetlinks.json` for the package name and the **SHA-256** fingerprint of the certificate that signed the installed app. The file in this repository is a template: replace each placeholder with a fingerprint (uppercase hex pairs separated by colons, `AB:CD:…`, 32 pairs), delete the placeholders you do not use, and deploy.
+The invite links (`/join/<code>`) and the email sign-in links (`/__/auth/links`, `/signin`) open the app directly only once Android has **verified** that the site belongs to the app. Android checks `https://<host>/.well-known/assetlinks.json` for the package name and the **SHA-256** fingerprint of the certificate that signed the installed app. The file in this repository lists Pooparazzi's own two: the Play app signing key and the upload key. A copy of the project on another Play listing replaces them with its own (uppercase hex pairs separated by colons, `AB:CD:…`, 32 pairs) and deploys. A local debug key is not in the file, so locally built apps open the links through a chooser or the browser.
 
-| Placeholder | Which certificate | How to get its SHA-256 |
+| Key | Which certificate | How to get its SHA-256 |
 |---|---|---|
-| `REPLACE_WITH_PLAY_APP_SIGNING_KEY_SHA256` | Google Play's **app signing key**, which signs every install from Play | Play Console › Test and release › Setup › **App signing** › App signing key certificate › SHA-256. (The same page offers a ready "Digital Asset Links JSON" snippet.) |
-| `REPLACE_WITH_UPLOAD_KEY_SHA256` | The **upload key**, which signs the side-loadable APKs on GitHub Releases ([RELEASING.md](RELEASING.md)) | `keytool -list -v -keystore pooparazzi-upload.jks -alias upload` (the line "SHA256:"), or Play Console › App signing › Upload key certificate |
+| Play app signing key | Google Play's **app signing key**, which signs every install from Play | Play Console › Test and release › **App integrity** › Play app signing › Settings › App signing key certificate › SHA-256 (or search Play Console for "app signing"). (The same page offers a ready "Digital Asset Links JSON" snippet.) |
+| Upload key | The **upload key**, which signs the side-loadable APKs on GitHub Releases ([RELEASING.md](RELEASING.md)) | `keytool -list -v -keystore pooparazzi-upload.jks -alias upload` (the line "SHA256:"), or Play Console › App signing › Upload key certificate |
 | (optional, add a line) | The public **side-load test key** that signs releases until the upload key is set up ([RELEASING.md](RELEASING.md)); anyone can sign with it, so leave it out once the upload key is in use | `keytool -list -v -keystore keystores/sideload.jks -alias sideload -storepass pooparazzi-sideload` |
-| `REPLACE_WITH_DEBUG_KEY_SHA256` | Your **debug key**, for testing locally built apps (one per machine; add a line per developer, or drop it in production) | `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android` |
+| (optional, add a line) | Your **debug key**, for testing locally built apps (one per machine; leave it out of the deployed file) | `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android` |
 
 Add the same **SHA-256** fingerprints (and the SHA-1s, for Google sign-in, section 6) to the Android app in Firebase Project settings: email link sign-in needs them too.
 
@@ -155,7 +155,7 @@ The app's manifest declares `android:autoVerify="true"` intent filters for `http
 2. Google sign-in only works for apps whose signing certificate is registered. Under the Android app › **Add fingerprint**, add the SHA-1 **and** the SHA-256 of:
    - every debug key you build with: `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`;
    - the upload key, which signs the side-loadable APKs: `keytool -list -v -keystore pooparazzi-upload.jks -alias upload`;
-   - Google Play's app signing key, which signs Play installs: Play Console › Test and release › Setup › App signing.
+   - Google Play's app signing key, which signs Play installs: Play Console › Test and release › App integrity › Play app signing › Settings.
 
    Without a matching fingerprint, the Google button fails and the email link still works.
 3. Download **`google-services.json`** after enabling Google sign-in, because the file then carries the web client id the app needs. Download it again whenever you add fingerprints.
