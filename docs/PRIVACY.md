@@ -93,18 +93,3 @@ If this policy changes, the new version is published on its web page (linked fro
 ## 11. Contact
 
 Mathias Lorenzen · [mathias.lorenzen@live.com](mailto:mathias.lorenzen@live.com)
-
----
-
-## Kort fortalt på dansk
-
-- **Dataansvarlig:** Mathias Lorenzen, Danmark, [mathias.lorenzen@live.com](mailto:mathias.lorenzen@live.com).
-- **Uden konto** sendes intet til os: loggen er kun på din telefon og dit ur (og i din egen Android-backup, hvis du har slået den til).
-- **Med konto** gemmes din e-mail, din log, dine børns navne og din families medlemmer (deres e-mails) i Google Firebase, så du og din familie kan se dem. Databasen ligger i EU (`eur3`). Google er databehandler.
-- **Hvorfor:** med dit samtykke (GDPR art. 6(1)(a)) og, for oplysningerne om dit barn, dit udtrykkelige samtykke som forælder (art. 9(2)(a)). Appen beder om det på en særskilt skærm, før noget uploades (også før du kan blive medlem af en familie), og intet uploades, før du trykker "Jeg giver samtykke". Du trækker det tilbage ved at logge ud, forlade familien eller slette kontoen.
-- **Hvem ser det:** kun du og medlemmerne af din familie. Et medlem, der forlader familien eller fjernes, beholder det, der allerede er på deres telefon. Ingen reklamer, ingen analyse, intet sælges.
-- **Sletning:** slet kontoen i appen (Indstillinger › Konto), forlad familien (Indstillinger › Familie), eller skriv til os. Når det sidste medlem forlader familien, slettes familiens log og børn; kun en tom post om familien (dens id, hvem der sidst stod for den, og hvornår den blev oprettet) bliver, så ingen kan overtage den. Invitationer virker i 6 dage og slettes automatisk senest et døgn efter, at de er udløbet. En slettet registrering bliver kun som en markering uden tidspunkter og detaljer, og en konto, der ikke er brugt i 2 år, slettes automatisk.
-- **Dine rettigheder:** indsigt, berigtigelse, sletning, begrænsning, indsigelse, dataportabilitet og tilbagetrækning af samtykke. Indstillinger › Om › **Download mine data** gemmer loggen og børnene som en JSON-fil. Du kan klage til **Datatilsynet** (www.datatilsynet.dk).
-- **Børn:** appen er til forældre; oplysningerne om barnet indtastes af forælderen.
-
-Den fulde politik ovenfor (på engelsk) gælder.

@@ -125,7 +125,7 @@ The website ([`firebase.json`](../firebase/firebase.json) › `hosting`), served
 | `/.well-known/assetlinks.json` | [`hosting/.well-known/assetlinks.json`](../firebase/hosting/.well-known/assetlinks.json) | The App Links statement (next section) |
 | `/join/<code>` | [`hosting/join/index.html`](../firebase/hosting/join/index.html) (every `/join/…` path) | Shown only where the app does not open the link: "open this on your Android phone with Pooparazzi installed", with a Google Play link (EN + DA) |
 | `/signin` | [`hosting/signin/index.html`](../firebase/hosting/signin/index.html) (also `/signin/…`) | Where an email link lands without the app: the same advice for the sign-in link (EN + DA) |
-| `/privacy` | [`hosting/privacy/index.html`](../firebase/hosting/privacy/index.html) | The privacy policy, the same content as [PRIVACY.md](PRIVACY.md), with a Danish summary |
+| `/privacy` | [`hosting/privacy/index.html`](../firebase/hosting/privacy/index.html) | The privacy policy (in English), the same content as [PRIVACY.md](PRIVACY.md) |
 | `/` | [`hosting/index.html`](../firebase/hosting/index.html) | A one-line description and the Play link |
 | `/__/auth/links` | served by Firebase itself | The email sign-in link's handler |
 
