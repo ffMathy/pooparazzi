@@ -393,5 +393,6 @@
     <!-- Settings' footer, at the very bottom -->
     <string name="settings_made_by">Made with ❤️ by a father in Aarhus, Denmark</string>
     <string name="settings_open_source">Pooparazzi is open source</string>
-    <string name="settings_source_code">View the source code on GitHub</string>
+    <string name="cd_source_code">Source code on GitHub</string>
+    <string name="cd_linkedin">The maker on LinkedIn</string>
 </resources>

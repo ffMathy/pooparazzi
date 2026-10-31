@@ -127,8 +127,11 @@ interface SettingsActions {
     /** Settings › About › Privacy policy: opens it in the browser. */
     fun onOpenPrivacy() {}
 
-    /** Settings' footer › "View the source code on GitHub": opens the repository in the browser. */
+    /** Settings' footer › the GitHub logo: opens the repository in the browser. */
     fun onOpenSourceCode() {}
+
+    /** Settings' footer › the LinkedIn logo: opens the maker's profile in the browser. */
+    fun onOpenLinkedIn() {}
 
     /** Settings › About › "Download my data": asks where to save the ZIP file, then writes it ([SettingsViewModel.export]). */
     fun onExport() {}

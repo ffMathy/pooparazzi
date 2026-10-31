@@ -309,5 +309,6 @@
     <!-- Indstillingernes bund -->
     <string name="settings_made_by">Lavet med ❤️ af en far i Aarhus</string>
     <string name="settings_open_source">Pooparazzi er open source</string>
-    <string name="settings_source_code">Se kildekoden på GitHub</string>
+    <string name="cd_source_code">Kildekoden på GitHub</string>
+    <string name="cd_linkedin">Udvikleren på LinkedIn</string>
 </resources>
