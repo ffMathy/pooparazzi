@@ -12,7 +12,7 @@
     <color name="splash_day_background">#FBF6F0</color>
     <color name="splash_day_glyph">#3A332C</color>
 
-    <!-- Launcher icon: parchment lamp on the night background (amber would mean FEED). -->
+    <!-- Launcher icon: the parchment diaper glyph on the night background (amber would mean FEED). -->
     <color name="launcher_background">#0C0A08</color>
     <color name="launcher_glyph">#E8D8C3</color>
 

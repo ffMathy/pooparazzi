@@ -1,6 +1,6 @@
 # Pooparazzi — Design Specification
 
-Design: "Night Light" (final) · Spec date: Mon 26 Oct 2026 · Status: **approved**; later changes are in [`V1_ADDITIONS.md`](V1_ADDITIONS.md)
+Design: Night and Day themes (final) · Spec date: Mon 26 Oct 2026 · Status: **approved**; later changes are in [`V1_ADDITIONS.md`](V1_ADDITIONS.md)
 
 > **Several babies and the backup:** [`BABIES_AND_BACKUP.md`](BABIES_AND_BACKUP.md) adds several babies (a current baby per device) and an optional account that backs the log up; it wins where it differs from this document (one baby, "phone ↔ watch only").
 
@@ -22,7 +22,7 @@ Conventions
 ## Contents
 
 1. Product scope and core requirements
-2. Concept: "Night Light" and the Lamp
+2. Concept: the Night theme and the Lamp
 3. Navigation model and screen inventory
 4. Event and data model
 5. Design tokens
@@ -72,9 +72,9 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 
 ---
 
-## 2. Concept: "Night Light" and the Lamp
+## 2. Concept: the Night theme and the Lamp
 
-**One line:** the app is a nightlight that dims with the baby.
+**One line:** a calm, dim app for the night that dims further while the baby sleeps.
 
 ### 2.1 Principles
 
@@ -96,7 +96,7 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 - Orbit: one lap per hour. The ember starts at 12 o'clock at the sleep's start and moves clockwise. **Ember angle = (elapsed minutes mod 60) × 6°** (e.g. 1h 07m → 42°).
 - The ring is **never** used for progress, countdowns or idle states. The watch Undo countdown is a separate neutral bezel arc (§3.5.6).
 - No breathing. The glow is static. The ember steps once per minute with a 600 ms ease and is otherwise still.
-- The phone keeps a subtle static idle glow at night. It is the nightlight identity and gives the idle Lamp a form without a ring. Its core is L* 10 and every text pair on it passes contrast. Day uses a disc instead, because a glow on paper reads as a stain.
+- The phone keeps a subtle static idle glow at night. It gives the idle Lamp a form without a ring. Its core is L* 10 and every text pair on it passes contrast. Day uses a disc instead, because a glow on paper reads as a stain.
 - Lamp text is real text laid out over the canvas, never drawn into it. **The Lamp text (label, hero and sub-line) is one tap target**, like a since-row: idle it opens the edit sheet of the last feed (a 16 dp `chevronRight` in outline after the label marks it); while a sleep runs it opens the Adjust start sheet, as the chip does. Neither writes anything until Save. Before the first feed it is not a target.
 
 ### 2.3 Lamp states
@@ -613,7 +613,7 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 
 | Element | Spec (reference 228) |
 |---|---|
-| Header | `lamp` 24 `#E8D8C3`, y 11–35 (system app icon) |
+| Header | `diaper` 24 `#E8D8C3`, y 11–35 (system app icon: the tile's icon, the app's launcher glyph) |
 | Title (titleSlot) | y 37–53, titleSmall `#E8D8C3`, centred: **"Pee 48m ago"** (last diaper) |
 | Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; "Feed" labelMedium 15 sp `#FFDCBB` over "2h 10m ago" labelSmall `#FFDCBB`. Opens the app's Feed type screen |
 | Row B | Diaper button 184 × 52, r 26, DIAPER container `#13312C`: `diaper` 24 DIAPER strong at 16 from the start; "Diaper" labelMedium 15 sp `#BFE9E0` over "48m ago" (or "No diapers yet") labelSmall. Opens the app's Diaper screen, like Main's Diaper button; diapers are never logged from the tile |
@@ -1053,7 +1053,6 @@ Each quoted string is one path. All are stroked unless noted.
 | `chevronDown` | | `M6 9.5l6 6 6-6` |
 | `close` | X | `M6 6l12 12` `M18 6 6 18` |
 | `clock` | clock face (backdate, Adjust start, Earlier, time fields) | `M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17z` `M12 7.5V12l3 2` |
-| `lamp` | table lamp (brand glyph, tile header) | `M8.5 3.5h7l3.5 8h-14z` `M12 11.5v6.5` `M8.5 20.5h7` |
 | `awake` | sun with 8 rays | `M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z` `M12 2.5v2` `M12 19.5v2` `M2.5 12h2` `M19.5 12h2` `M5.3 5.3l1.4 1.4` `M17.3 17.3l1.4 1.4` `M5.3 18.7l1.4-1.4` `M17.3 6.7l1.4-1.4` |
 | `sleepRunning` | ring + filled crescent = "a sleep is running" on glance surfaces (widget, tile, complication, notification small icon). Static, no ember, so it cannot go stale | ring (stroked): `M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19z` + crescent (**filled**, no stroke): `M16 13.3A4.25 4.25 0 1 1 10.7 8a3.5 3.5 0 0 0 5.3 5.3z` |
 | `chart` | a baseline and three uneven bars (History's button to Statistics, P8) | `M3.5 20.5h17` `M7 17v-5` `M12 17V6` `M17 17v-8` |

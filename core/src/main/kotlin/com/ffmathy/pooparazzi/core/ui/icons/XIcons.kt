@@ -48,7 +48,6 @@ object XIcons {
     val chevronDown: ImageVector by lazy { XIconSpecs.chevronDown.toImageVector() }
     val close: ImageVector by lazy { XIconSpecs.close.toImageVector() }
     val clock: ImageVector by lazy { XIconSpecs.clock.toImageVector() }
-    val lamp: ImageVector by lazy { XIconSpecs.lamp.toImageVector() }
     val awake: ImageVector by lazy { XIconSpecs.awake.toImageVector() }
 
     /** Ring (stroked) + filled crescent: "a sleep is running" on glance surfaces. */
@@ -136,7 +135,7 @@ object XIcons {
             "both" to both, "history" to history, "edit" to edit, "undo" to undo, "delete" to delete, "profile" to profile,
             "settings" to settings, "phone" to phone, "synced" to synced, "pending" to pending, "offline" to offline,
             "check" to check, "plus" to plus, "back" to back, "chevronLeft" to chevronLeft, "chevronRight" to chevronRight,
-            "chevronDown" to chevronDown, "close" to close, "clock" to clock, "lamp" to lamp, "awake" to awake,
+            "chevronDown" to chevronDown, "close" to close, "clock" to clock, "awake" to awake,
             "sleepRunning" to sleepRunning, "breast" to breast, "food" to food, "sideLeft" to sideLeft,
             "sideRight" to sideRight, "sideLeftRight" to sideLeftRight, "sideRightLeft" to sideRightLeft,
             "checkbox" to checkbox, "checkboxChecked" to checkboxChecked, "info" to info, "chart" to chart,

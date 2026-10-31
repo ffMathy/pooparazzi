@@ -80,7 +80,6 @@ object XIconSpecs {
     val chevronDown = icon("chevronDown", "M6 9.5l6 6 6-6")
     val close = icon("close", "M6 6l12 12", "M18 6 6 18")
     val clock = icon("clock", "M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17z", "M12 7.5V12l3 2")
-    val lamp = icon("lamp", "M8.5 3.5h7l3.5 8h-14z", "M12 11.5v6.5", "M8.5 20.5h7")
     val awake = icon(
         "awake",
         "M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M12 2.5v2", "M12 19.5v2", "M2.5 12h2", "M19.5 12h2",
@@ -191,7 +190,7 @@ object XIconSpecs {
     /** Every icon, in the order of DESIGN_SPEC §6.2 followed by the v1 additions. */
     val all: List<XIconSpec> = listOf(
         sleep, wake, feed, diaper, pee, poop, both, history, edit, undo, delete, profile, settings, phone, synced, pending,
-        offline, check, plus, back, chevronLeft, chevronRight, chevronDown, close, clock, lamp, awake, sleepRunning,
+        offline, check, plus, back, chevronLeft, chevronRight, chevronDown, close, clock, awake, sleepRunning,
         breast, food, sideLeft, sideRight, sideLeftRight, sideRightLeft, checkbox, checkboxChecked, info, chart,
         watchSynced, watchPending, watchOffline, watchError, phoneSynced, phonePending, phoneOffline, cloudError,
     )

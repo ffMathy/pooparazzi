@@ -49,7 +49,7 @@ import kotlin.math.roundToInt
  * Two things differ from a watch, both because there is no tile host here:
  * - time-dependent text is rendered as its static value at the sample time (the renderer would otherwise evaluate the
  *   dynamic expressions against the real clock, not the scenario's 14:32);
- * - the header icon is drawn by the system on a watch; here the harness draws the app's `lamp` glyph into the icon
+ * - the header icon is drawn by the system on a watch; here the harness draws the app's `diaper` glyph into the icon
  *   slot the layout reserves for it.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -134,11 +134,11 @@ abstract class TileScreenshots(private val lang: String) {
         parent.captureRoboImage(filePath = "screenshots/$lang/$name.png", roborazziOptions = RoundWatch)
     }
 
-    /** The header icon the tile host draws above the title (DESIGN_SPEC §3.6: `lamp` 24, onSurface). */
+    /** The header icon the tile host draws above the title (DESIGN_SPEC §3.6: `diaper` 24, onSurface). */
     private fun addSystemIcon(activity: Context, parent: FrameLayout, sizeDp: Int, density: Float) {
         val iconPx = (ICON_DP * density).roundToInt()
         val icon = ImageView(activity).apply {
-            setImageResource(XDrawables.lamp)
+            setImageResource(XDrawables.diaper)
             setColorFilter(XTokens.Watch.onSurface.toArgb())
         }
         parent.addView(
