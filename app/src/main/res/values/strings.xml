@@ -389,4 +389,9 @@
     <string name="forecast_spoken_sleep_ago">expected to sleep again %1$s ago, around %2$s</string>
     <string name="forecast_spoken_feed_ago">next feed expected %1$s ago, around %2$s</string>
     <string name="forecast_spoken_poop_ago">next poop expected %1$s ago, around %2$s</string>
+
+    <!-- Settings' footer, at the very bottom -->
+    <string name="settings_made_by">Made with ❤️ by a father in Aarhus, Denmark</string>
+    <string name="settings_open_source">Pooparazzi is open source</string>
+    <string name="settings_source_code">View the source code on GitHub</string>
 </resources>
