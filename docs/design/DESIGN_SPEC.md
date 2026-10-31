@@ -56,7 +56,7 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 | Feed and Diaper open the app's own sheets/screens (offset, type, side order, pee/poop, colour, texture); sleep toggles in one tap | Phone widgets (4×2, 3×1, Samsung cover screen), watch Tile |
 | Status at a glance: time since last feed, awake/asleep duration, last diaper | Phone Home, watch Main, Tile, complications, widget, Live Update |
 | Undo after every log | Phone receipt sheet (logs with no sheet of their own; a Feed or Diaper sheet log is undone from its since-row's edit sheet), watch Logged screen, widget receipt, Tile title |
-| Backdating at log time and later editing | Feed and Diaper sheet offsets, phone receipt-sheet offsets, Adjust start, phone edit sheet, watch Adjust screen |
+| Backdating at log time and later editing | Feed and Diaper sheet offsets, phone receipt-sheet offsets, phone edit sheet, watch Adjust screen |
 | History: day ribbon, counts, list | Phone History, watch Today list |
 | Phone-to-watch sync status | Phone top bar, watch Logged and Main list footer |
 | Automatic Night appearance (dark, low-blue, "lights-down" while asleep) | Phone, widget; the watch is always dark |
@@ -97,14 +97,14 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 - The ring is **never** used for progress, countdowns or idle states. The watch Undo countdown is a separate neutral bezel arc (§3.5.6).
 - No breathing. The glow is static. The ember steps once per minute with a 600 ms ease and is otherwise still.
 - The phone keeps a subtle static idle glow at night. It gives the idle Lamp a form without a ring. Its core is L* 10 and every text pair on it passes contrast. Day uses a disc instead, because a glow on paper reads as a stain.
-- Lamp text is real text laid out over the canvas, never drawn into it. **The Lamp text (label, hero and sub-line) is one tap target**, like a since-row: idle it opens the edit sheet of the last feed (a 16 dp `chevronRight` in outline after the label marks it); while a sleep runs it opens the Adjust start sheet, as the chip does. Neither writes anything until Save. Before the first feed it is not a target.
+- Lamp text is real text laid out over the canvas, never drawn into it. **The Lamp text (label, hero and sub-line) is one tap target**, like a since-row: idle it opens the edit sheet of the last feed (a 16 dp `chevronRight` in outline after the label marks it); while a sleep runs it opens the edit sheet of the running sleep (the same chevron marks it). Neither writes anything until Save. Before the first feed it is not a target.
 
 ### 2.3 Lamp states
 
 | State | Body | Orbit | Label (icon + text) | Hero | Sub-line |
 |---|---|---|---|---|---|
 | Phone Night idle | FEED glow, core alpha 0.55 | none | `feed` FEED strong + "Last fed" FEED text | "2h 10m" | "ago · 12:22" |
-| Phone Night running (lights-down) | SLEEP glow, core alpha 0.45 | track `#2E3660`, ember + tail `#7C88C4` | `sleep` SLEEP strong + "Asleep" SLEEP text | "1h 07m" | "since 02:05", then the Adjust-start chip |
+| Phone Night running (lights-down) | SLEEP glow, core alpha 0.45 | track `#2E3660`, ember + tail `#7C88C4` | `sleep` SLEEP strong + "Asleep" SLEEP text | "1h 07m" | "since 02:05" |
 | Phone Day idle | FEED disc `#FFE1C4` | none | as Night idle (Day tokens) | as above | as above |
 | Phone Day running | SLEEP disc `#E1E4F8` | track `#6A73B3`, ember + tail `#37418A`, ember cut out by a 2 dp ring of paper `#FBF6F0` | as Night running (Day tokens) | as above | as above |
 | Watch running | SLEEP glow, core alpha 0.60 | track `#2E3660`, ember + tail `#7C88C4` | `sleep` + "Asleep" | "1h 07m" | "since 02:05" |
@@ -130,10 +130,9 @@ Under one minute: the phone hero shows "just now" (heroWord) with the sub-line "
 
 | Element | Idle | Running | Style |
 |---|---|---|---|
-| Label row: icon 20 + 8 + text (+ 8 + `chevronRight` 16 outline when idle with a feed) | 65–85 | 39–59 | labelLarge; colours per §2.3 |
-| Hero | 93–173 | 67–147 | heroNumeral + heroUnit in onSurface; "just now" in heroWord, centred in the 80 box |
-| Sub-line | 177–199 | 151–173 | dataMedium, onSurfaceVariant |
-| Adjust-start chip | — | visual 185–225 (target 181–229) | §3.3.1 |
+| Label row: icon 20 + 8 + text (+ 8 + `chevronRight` 16 outline when it opens an entry) | 65–85 | 65–85 | labelLarge; colours per §2.3 |
+| Hero | 93–173 | 93–173 | heroNumeral + heroUnit in onSurface; "just now" in heroWord, centred in the 80 box |
+| Sub-line | 177–199 | 177–199 | dataMedium, onSurfaceVariant |
 
 **Hero composition**: number spans (heroNumeral 76/80 sp, weight 600, letter-spacing −0.005em) and unit spans (heroUnit 34/40 sp, weight 500), baseline-aligned. 4 dp after each number, 12 dp between groups, and no space characters. Measured: "2h 10m" = 213.8 dp, which fits the 223 dp usable chord. "10h 45m" needs autosize to 60/27 (209.7 dp). Autosize range 56–76 sp.
 
@@ -165,7 +164,7 @@ Under one minute: the phone hero shows "just now" (heroWord) with the sub-line "
 Home ──Diaper / Feed───────▶ Diaper / Feed sheet ──Save / a type──▶ Home (no receipt: the sheet set the time)
  │ ├─Start sleep / Woke up──▶ Receipt sheet ──Done──▶ Home
  │ ├─since-row 1 / 2──────▶ Edit sheet (latest entry of that row)
- │ ├─Adjust start (Lamp)──▶ Adjust start sheet ──Edit──▶ Edit sheet (running sleep)
+ │ ├─Lamp text──────────▶ Edit sheet (last feed, or the running sleep)
  │ ├─Receipt sheet ──Edit──▶ Edit sheet (that entry) · ──Undo──▶ Home + "Undone" notice
  │ ├─History pill / Today grid ──▶ History ──row──▶ Edit sheet
  │ │                                        ├─Statistics icon──▶ Statistics (P8) ──range chip──▶ menu / date range dialog
@@ -247,7 +246,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 - History pill: 48 target / 40 visual, r 20, fill surfaceContainerHigh, padding start 12 / end 14, `history` 18 onSurfaceVariant + 6 + "History" labelLarge onSurface. Opens History.
 - Settings: 48 × 48 icon button, `settings` 24 onSurfaceVariant, content description "Settings".
 
-**Since-rows**: each is a full-width button 350 × 56 (min), r 12, padding 4 16, gap 12. Content: icon 20, then two lines — the title (titleMedium onSurface) over the detail (dataMedium onSurfaceVariant: elapsed time, then " · "-separated facts) — and `chevronRight` 16 in outline at the end. Each line is one line, ellipsized; from 130 % font scale each may take two. Text slot = **258 dp**.
+**Since-rows**: each is a full-width button 350 × 56 (min), r 12, padding 4 16, gap 12. Content: icon 40 (spanning both lines), then two lines — the title (titleMedium onSurface) over the detail (dataMedium onSurfaceVariant: elapsed time, then " · "-separated facts) — and `chevronRight` 16 in outline at the end. Each line is one line, ellipsized; from 130 % font scale each may take two. Text slot = **238 dp**.
 
 | State | Row 1 | Row 2 (kind-first) |
 |---|---|---|
@@ -293,8 +292,6 @@ Receipt rules:
 - Edit closes the sheet and opens the edit sheet for that entry. Done closes it (Home's 600 ms cooldown follows, as after a committed sheet).
 - Feed, Diaper and the Sleep toggle sit under the scrim while a receipt is open: the next log starts after Done or a dismiss.
 
-**Adjust start sheet** (from "Adjust start" on the running Lamp). Same sheet: header "Adjust start · 01:50" (the start Save writes) + Cancel; the same nudge chips, adding up from the start when the sheet opened, with "was 02:05" beside the title once moved; "Edit" and Save. Chips write nothing until Save (`Confirm`); the timer keeps running. Cancel, a scrim tap, back or a swipe move nothing. Edit saves the chosen offset, then opens the edit sheet for the sleep. No timeout.
-
 **Chip** (used in cards and sheets): a 48 dp tall button holding a 40 dp pill, r 20, labelLarge onSurface, 1 dp outline border, transparent fill.
 - Nudge chips (−15m, −10m, −5m, +5m) share one row in equal widths (content centred, padding 0 4). They are buttons (`Role.Button`), never selected. Other chips hug or fill their content, padding 0 12.
 - Selected: fill primaryContainer, label onPrimaryContainer, **outline border kept**, leading `check` 16 + 4 inside the same width.
@@ -309,7 +306,6 @@ Receipt rules:
 - Unchecked: r 48, SLEEP container, `sleep` 32 SLEEP strong + 12 + "Start sleep" headlineSmall SLEEP onContainer.
 - Checked: r 48 (the shape stays; fill, border and icon tell the state), SLEEP containerLit, 2 dp SLEEP strong border, `wake` 32 + "Woke up". Day has no containerLit: it uses SLEEP container + the border.
 
-**Adjust-start chip** (inside the running Lamp, under the sub-line, ≈147 wide): 48 target / 40 pill, r 20, padding start 12 / end 16, `clock` 18 onSurfaceVariant + 8 + "Adjust start" labelLarge onSurface, 1 dp outline border. Fill: Night surfaceContainerHigh, Day background. Opens the Adjust start sheet. The timer keeps running.
 
 **Home states**
 
@@ -343,7 +339,7 @@ Receipt rules:
 | Undo | revert; "Undone" | `Reject` |
 | Since-row | edit sheet of that latest entry | — |
 | History pill, Today grid | History | — |
-| Lamp text | idle: edit sheet of the last feed; running sleep: Adjust start sheet | — |
+| Lamp text | edit sheet of the last feed (idle) or of the running sleep | — |
 
 Input cooldowns apply (§5.9): after a sheet tile commits, Feed, Diaper and the Sleep toggle ignore taps for 600 ms after the sheet has finished closing.
 
@@ -391,7 +387,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 
 #### 3.3.4 P4 Edit sheet
 
-Only the **Edit sleep** form is drawn. It opens from History rows, since-row 1 and Edit in a receipt or Adjust start.
+Only the **Edit sleep** form is drawn. It opens from History rows, since-row 1, the running Lamp and Edit in a receipt.
 
 | Part (top → bottom) | Spec |
 |---|---|
@@ -759,7 +755,7 @@ Event colours are **not** M3 roles. They form a separate fixed palette (containe
 | surfaceContainerLowest | `#080706` | ribbon night bands |
 | surfaceContainerLow | `#14110E` | bottom sheets |
 | surfaceContainer | `#1C1713` | ribbon card, list rows, widget body |
-| surfaceContainerHigh | `#26201A` | History pill, time fields, Adjust-start chip |
+| surfaceContainerHigh | `#26201A` | History pill, time fields |
 | surfaceContainerHighest | `#312922` | notice card |
 | onSurface | `#E8D8C3` | |
 | onSurfaceVariant | `#B8A48E` | |
@@ -945,7 +941,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 
 - Spacing scale: 4 · 8 · 12 · 16 · 20 · 24 · 32 · 48.
 - Phone gutter 20 (sheets 24). Button row gap 12. Watch ButtonGroup gap 6.
-- **40 visual / 48 target pattern** (chips, History pill, Adjust-start chip, CompactButton): the clickable element is 48 tall and transparent; the visible pill inside it is 40 (watch CompactButton 32) and carries the fill, border and radius.
+- **40 visual / 48 target pattern** (chips, History pill, CompactButton): the clickable element is 48 tall and transparent; the visible pill inside it is 40 (watch CompactButton 32) and carries the fill, border and radius.
 - Minimum targets: 48 dp on phone, widget and watch; Wear tonal buttons ≥ 52 dp tall.
 - **Elevation: 0 everywhere. No shadows.** Modal layers use the scrim.
 
@@ -985,7 +981,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 
 | Constant | Value |
 |---|---|
-| Phone receipt and Adjust start sheets | no timeout |
+| Phone receipt sheet | no timeout |
 | Phone notices (Undone, guards) | 2 s |
 | Watch Logged window | 5 s (`getRecommendedTimeoutMillis`) |
 | Tile feedback | 10 s timeline entry |
@@ -1339,7 +1335,7 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 - Watch undo: 5 s via `getRecommendedTimeoutMillis`, drawn as `CircularProgressIndicator(progress = { remaining }, startAngle = 135f, endAngle = 45f, strokeWidth = 2.dp)` in outline (the 270° arc open around the Undo EdgeButton). Any tap outside Undo dismisses.
 - When Logged opens from the tile's undo path (intent extra `fromTileUndo`), Undo and dismiss are active at once and the 5 s drain starts at open. The 1 s inert period only absorbs a double tap on an in-app log button.
 - Undo is never the only recovery path:
-  - phone: since-rows and History rows open the edit sheet;
+  - phone: the Lamp, since-rows and History rows open the edit sheet;
   - watch: status cards and Today rows open Adjust (Today rows add "Set time").
 - Deletes are soft for 7 days, with an Undo receipt.
 
@@ -1421,7 +1417,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 | Receipt titles are time-free | The phone receipt sheet puts the effective time on its own line under the title, following every chip tap. Exception: the watch Logged title keeps the time, since nothing else on that screen shows it |
 | Diaper stamps the time on the first tap | The picker title shows the stamp; backdate with chips (phone) or Earlier (watch) |
 | Lights-down keeps fills and positions | Muscle memory at 3 am; only the chrome and the glow dim |
-| The Lamp text opens the edit sheet of the last feed (idle) or the Adjust start sheet (running); "Adjust start" is also a separate chip / list item | The top fact is the first thing a parent wants to correct. Both sheets write nothing until Save, so a stray tap edits nothing |
+| The phone Lamp text opens the edit sheet of the entry it shows (the last feed, or the running sleep), like a since-row; on the watch "Adjust start" is a list item | The top fact is the first thing a parent wants to correct. The edit sheet writes nothing until Save, so a stray tap edits nothing |
 | Watch "Woke up" = pinned Medium EdgeButton | Large and always visible, at rest and while scrolling |
 | No "Earlier" on watch Logged | It would sit where Feed / Diaper just were (double-tap hazard). Backdating on the watch goes through status cards and Today rows → Adjust |
 | Input cooldowns and the 2 s guard | A double tap must never land on a different target or toggle a sleep twice |
