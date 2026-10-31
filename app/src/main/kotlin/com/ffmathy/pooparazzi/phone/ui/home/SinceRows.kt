@@ -64,6 +64,9 @@ internal fun SinceRows(row1: SinceRow?, row2: SinceRow?, zone: ZoneId, formatter
 /** A since-row's minimum height: the title and detail lines plus a little air. */
 private val ROW_HEIGHT = 56.dp
 
+/** A since-row's leading icon: as tall as its two lines of text. */
+private val ICON_SIZE = 40.dp
+
 /** What a since-row shows and says. */
 private class SinceRowText(val icon: TintedIcon, val lead: String, val meta: String, val spoken: String)
 
@@ -87,7 +90,8 @@ private fun SinceRowItem(row: SinceRow, text: SinceRowText, maxLines: Int, onEdi
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        XIcon(text.icon.icon, contentDescription = null, tint = text.icon.tint, size = 20.dp)
+        // The icon spans both lines (title + detail), so each row reads as one item at a glance.
+        XIcon(text.icon.icon, contentDescription = null, tint = text.icon.tint, size = ICON_SIZE)
         Column(Modifier.weight(1f)) {
             Text(text.lead, style = PhoneType.titleMedium, color = colors.onSurface, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
             Text(text.meta, style = PhoneType.dataMedium, color = colors.onSurfaceVariant, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
