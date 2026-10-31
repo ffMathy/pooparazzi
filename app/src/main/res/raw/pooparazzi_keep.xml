@@ -3,7 +3,9 @@
     Resource shrinking (release builds) keeps these although no code refers to them by R field: the Google services
     plugin generates them from app/google-services.json only when the file exists, so FirebaseConfig looks them up by
     name. Without default_web_client_id a release build would hide "Continue with Google", and without project_id it would have no website for invites, sign-in links and the privacy policy. Names that a build without
-    the file does not have are ignored.
+    the file does not have are ignored. android_wear_capabilities (core's res/values/wear.xml) is read by Play Services,
+    never by our code: without it the watch and phone cannot see that the other has the app, and Settings says "No watch
+    connected" although data items still sync.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@string/default_web_client_id,@string/google_app_id,@string/project_id" />
+    tools:keep="@string/default_web_client_id,@string/google_app_id,@string/project_id,@array/android_wear_capabilities" />
