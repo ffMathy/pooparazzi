@@ -5,9 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.ffmathy.pooparazzi",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_PLAY_APP_SIGNING_KEY_SHA256",
-        "REPLACE_WITH_UPLOAD_KEY_SHA256",
-        "REPLACE_WITH_DEBUG_KEY_SHA256"
+        "F3:D3:5A:DF:36:6F:E8:E8:B2:EC:FB:0E:8D:33:C1:F3:C6:3B:26:56:EC:EA:9E:43:51:2D:12:E0:74:E4:C5:36",
+        "BE:19:59:C9:4D:5C:C0:A7:13:51:18:D8:90:AB:1B:29:29:D9:02:62:48:71:6D:90:B5:AD:22:A2:99:10:AF:C9"
       ]
     }
   }

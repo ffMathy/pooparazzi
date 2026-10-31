@@ -94,7 +94,7 @@ Repository › Settings › Secrets and variables › Actions.
 
 In [Play Console](https://play.google.com/console): **Create app**, name it Pooparazzi, and answer the declarations. The Google Play Developer API cannot create an app, and it cannot upload the **first** bundle of a new app either: that one has to be uploaded by hand (step 4).
 
-Play App Signing is on by default for new apps (app bundles require it). When you upload the first bundle, keep **"Let Google manage and protect your app signing key"**; the key that signed that first bundle becomes the registered **upload key**, so the first bundle must be signed with the key from step 1. You can check it later under Test and release › Setup › App signing.
+Play App Signing is on by default for new apps (app bundles require it). When you upload the first bundle, keep **"Let Google manage and protect your app signing key"**; the key that signed that first bundle becomes the registered **upload key**, so the first bundle must be signed with the key from step 1. You can check it later under Test and release › App integrity › Play app signing › Settings (or search Play Console for "app signing").
 
 ### 4. Enable Wear OS and upload the first bundles by hand
 
