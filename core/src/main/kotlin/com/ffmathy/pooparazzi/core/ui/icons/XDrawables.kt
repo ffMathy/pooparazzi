@@ -9,7 +9,7 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 /**
  * The icons as vector drawable resources (`R.drawable.x_<name>`), generated from [XIconSpecs] (DESIGN_SPEC §6.1),
  * for surfaces that take resource ids: Wear tiles, complication images, the Ongoing Activity and notification small
- * icon ([sleepRunning]), Glance widgets and the splash ([lamp]).
+ * icon ([sleepRunning]) and Glance widgets.
  *
  * They are drawn in **white** (strokes, and fills where the spec fills), so they work as-is as monochrome
  * complication images and notification icons; tint them everywhere else (tile `ColorFilter`, Glance
@@ -42,7 +42,6 @@ object XDrawables {
     @DrawableRes val chevronDown: Int = R.drawable.x_chevron_down
     @DrawableRes val close: Int = R.drawable.x_close
     @DrawableRes val clock: Int = R.drawable.x_clock
-    @DrawableRes val lamp: Int = R.drawable.x_lamp
     @DrawableRes val awake: Int = R.drawable.x_awake
     @DrawableRes val sleepRunning: Int = R.drawable.x_sleep_running
     @DrawableRes val breast: Int = R.drawable.x_breast
@@ -127,7 +126,6 @@ object XDrawables {
             "chevronDown" to chevronDown,
             "close" to close,
             "clock" to clock,
-            "lamp" to lamp,
             "awake" to awake,
             "sleepRunning" to sleepRunning,
             "breast" to breast,

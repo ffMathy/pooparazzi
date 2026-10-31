@@ -1,6 +1,6 @@
 # Pull requests (from this repository) and manual runs: re-record the Roborazzi screenshots on the runner's Android
-# SDK (app/screenshots, wear/screenshots), rebuild the README images from them (docs/screenshots) and push them to the
-# branch when they changed, so the screenshots always show the UI being merged. Pushes made with GITHUB_TOKEN do not
+# SDK (app/screenshots, wear/screenshots), rebuild the README images (docs/screenshots) and the Google Play images
+# (docs/play) from them and push them to the branch when they changed, so the screenshots always show the UI being merged. Pushes made with GITHUB_TOKEN do not
 # start other workflows, so this never loops.
 name: Screenshots
 
@@ -47,14 +47,15 @@ jobs:
       - name: Record the screenshots
         run: ./gradlew --console=plain :app:recordRoborazziDebug :wear:recordRoborazziDebug
 
-      - name: Rebuild the README images
+      - name: Rebuild the README and Google Play images
         run: |
           python3 -m pip install --quiet Pillow
           python3 scripts/readme_screenshots.py
+          python3 scripts/play_assets.py
 
       - name: Push them if they changed
         run: |
-          git add app/screenshots wear/screenshots docs/screenshots
+          git add app/screenshots wear/screenshots docs/screenshots docs/play
           if git diff --cached --quiet; then
             echo "The screenshots are up to date."
             exit 0

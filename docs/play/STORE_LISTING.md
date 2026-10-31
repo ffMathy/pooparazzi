@@ -171,7 +171,11 @@ Den første udgave af Pooparazzi: log søvn, måltider og bleskift på telefonen
 | Contact email | mathias.lorenzen@live.com |
 | Website | `https://<project-id>.web.app` |
 | Privacy policy | `https://<project-id>.web.app/privacy` |
-| Phone screenshots | 2 to 8, PNG or JPEG, each side 320 to 3 840 px, the long side at most twice the short one (9:16 is safe). The README images (`docs/screenshots/`, 360 × 779) are too tall for that: capture them from a device, or crop or pad them to 9:16 |
-| Wear OS screenshots | At least one, square (1:1), at least 384 × 384, the app's screen only, no watch frame. The README watch images (300 × 300) are too small |
-| Feature graphic | 1024 × 500, PNG or JPEG (required) |
-| App icon | 512 × 512, 32-bit PNG |
+| Phone screenshots | `docs/play/en/phone-01.png` … `phone-08.png` (Danish listing: `docs/play/da/`): 1080 × 1920, captioned |
+| Wear OS screenshots | `docs/play/en/watch-01.png` … `watch-06.png` (Danish: `docs/play/da/`): 454 × 454, square and opaque |
+| Feature graphic | `docs/play/en/feature-graphic.png` (Danish: `docs/play/da/feature-graphic.png`), 1024 × 500 |
+| App icon | `docs/play/icon-512.png`, 512 × 512 |
+
+`python3 scripts/play_assets.py` builds every image from the recorded screenshots (`app/screenshots/`,
+`wear/screenshots/`), and the [Screenshots](../../.github/workflows/screenshots.yml) workflow rebuilds them on every
+pull request, so they always show the current app. Captions, the tagline and which screens are shown are in the script.
