@@ -188,6 +188,29 @@ jobs:
             --title "Pooparazzi $VERSION_NAME ($VERSION_BASE)" \
             --notes "Phone and watch APKs built from $GITHUB_SHA. Install both from the same release so they sync; see docs/RELEASING.md#side-loading-the-apks."
 
+      # The watch bundle must go to a Wear OS form-factor track ("wear:<track>"): on a phone track Play rejects it
+      # (it requires android.hardware.type.watch) and it replaces the phone bundle in that track's draft. A
+      # PLAY_WEAR_TRACK given without the prefix (e.g. "alpha") gets it here.
+      - name: Resolve the Play tracks
+        id: tracks
+        if: steps.secrets.outputs.play == 'true'
+        env:
+          PLAY_TRACK: ${{ vars.PLAY_TRACK || 'alpha' }}
+          PLAY_WEAR_TRACK: ${{ vars.PLAY_WEAR_TRACK }}
+        run: |
+          wear="${PLAY_WEAR_TRACK:-$PLAY_TRACK}"
+          case "$wear" in
+            wear:*) ;;
+            *) [ -z "$PLAY_WEAR_TRACK" ] || echo "::warning::PLAY_WEAR_TRACK=$PLAY_WEAR_TRACK is not a Wear OS track; using wear:$wear"
+               wear="wear:$wear" ;;
+          esac
+          case "$PLAY_TRACK" in
+            wear:*) echo "::error::PLAY_TRACK=$PLAY_TRACK is a Wear OS track; the phone bundle needs a phone track"; exit 1 ;;
+          esac
+          echo "phone=$PLAY_TRACK" >> "$GITHUB_OUTPUT"
+          echo "wear=$wear" >> "$GITHUB_OUTPUT"
+          echo "Play tracks: phone $PLAY_TRACK, watch $wear" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload the phone bundle to Google Play
         if: steps.secrets.outputs.play == 'true'
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
@@ -196,12 +219,12 @@ jobs:
           packageName: ${{ env.PACKAGE_NAME }}
           releaseFiles: app/build/outputs/bundle/release/app-release.aab
           mappingFile: app/build/outputs/mapping/release/mapping.txt
-          track: ${{ vars.PLAY_TRACK || 'alpha' }}
+          track: ${{ steps.tracks.outputs.phone }}
           status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.base }})
 
-      # The watch bundle shares the package but goes to the Wear OS form-factor track ("wear:<track>"), which Play
-      # requires for Wear OS releases; the Wear OS form factor must be enabled for the listing first.
+      # The watch bundle shares the package but goes to the Wear OS form-factor track (resolved above); the Wear OS
+      # form factor must be enabled for the listing first.
       - name: Upload the watch bundle to Google Play
         if: steps.secrets.outputs.play == 'true'
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
@@ -210,6 +233,6 @@ jobs:
           packageName: ${{ env.PACKAGE_NAME }}
           releaseFiles: wear/build/outputs/bundle/release/wear-release.aab
           mappingFile: wear/build/outputs/mapping/release/mapping.txt
-          track: ${{ vars.PLAY_WEAR_TRACK || format('wear:{0}', vars.PLAY_TRACK || 'alpha') }}
+          track: ${{ steps.tracks.outputs.wear }}
           status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.base }}) Wear OS
