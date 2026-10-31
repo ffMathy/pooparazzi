@@ -148,4 +148,53 @@ class ForecastTest {
     fun oneDayOfLoggingIsNotEnough() {
         assertTrue(forecast(summarize(SampleData.scenario(), SampleData.NOW_1432, ZONE)).isEmpty)
     }
+
+    /** Feeds every 3 hours from day 0 to [until], each followed by a poop [delays] (cycled; null: no poop) later. */
+    private fun poopAfterFeeds(until: Long, delays: List<Int?>): List<Entry> = feedsEvery3h(until).flatMapIndexed { i, feed ->
+        val delay = delays[i % delays.size]
+        listOf(feed) + listOfNotNull(delay?.let { Entry.diaper(feed.startMillis + it * MINUTE, pee = true, poop = true, id = "p$i") })
+    }
+
+    @Test
+    fun poopAfterMostFeedsIsPredictedAfterTheLastFeed() {
+        // A poop 15–25 minutes after 3 in 4 feeds: the gaps between poops vary too much, the delay after a feed does not.
+        val entries = poopAfterFeeds(at(6, 11), listOf(15, 20, null, 25)).filter { it.startMillis <= at(6, 12) }
+        val now = at(6, 12, 5)
+        val poop = forecastAt(entries, now).poop!!
+        assertEquals(at(6, 12, 20), poop.atMillis)
+        assertEquals(at(6, 12, 50), poop.goneAtMillis)
+        assertEquals(15 * MINUTE, poop.remainingMillis(now))
+    }
+
+    @Test
+    fun noPoopAfterFeedOnceItHasBeenLogged() {
+        val entries = poopAfterFeeds(at(6, 12), listOf(15, 20, null, 25)).filter { it.startMillis <= at(6, 12, 30) }
+        assertTrue(entries.last().poop)
+        assertNull(forecastAt(entries, at(6, 12, 40)).poop)
+    }
+
+    @Test
+    fun noPoopAfterFeedOncePastTheLongestDelay() {
+        val entries = poopAfterFeeds(at(6, 11), listOf(15, 20, null, 25)).filter { it.startMillis <= at(6, 12) }
+        assertNull(forecastAt(entries, at(6, 12, 51)).poop)
+    }
+
+    @Test
+    fun poopAfterOnlySomeFeedsIsNotPredicted() {
+        val entries = poopAfterFeeds(at(6, 11), listOf(15, null, null, 25)).filter { it.startMillis <= at(6, 12) }
+        assertNull(forecastAt(entries, at(6, 12, 5)).poop)
+    }
+
+    @Test
+    fun poopLongAfterFeedsDoesNotCount() {
+        val entries = poopAfterFeeds(at(6, 11), listOf(100)).filter { it.startMillis <= at(6, 12) }
+        assertNull(forecastAt(entries, at(6, 12, 5)).poop)
+    }
+
+    @Test
+    fun regularPoopGapsWinOverPoopAfterFeeds() {
+        // A poop 20 minutes after every feed is also a poop every 3 hours: the gap forecast comes first.
+        val entries = poopAfterFeeds(at(6, 11), listOf(20)).filter { it.startMillis <= at(6, 12) }
+        assertEquals(at(6, 14, 20), forecastAt(entries, at(6, 12, 5)).poop!!.atMillis)
+    }
 }

@@ -38,7 +38,8 @@ data class Expected(val atMillis: Long, val goneAtMillis: Long, val samples: Int
 /**
  * What the past week says comes next (V1_ADDITIONS §9). [sleep] is the expected wake-up while a sleep runs and the
  * expected next sleep while awake. Each is null when the week has too few comparable stretches, or when they vary too
- * much to say anything useful (poop often does).
+ * much to say anything useful (poop often does). When the gaps between poops say nothing but the baby reliably poops
+ * soon after feeding, [poop] is the expected poop after the last feed instead (see [ForecastRules.AFTER_FEED_WINDOW_MILLIS]).
  */
 data class Forecast(val sleep: Expected?, val feed: Expected?, val poop: Expected?) {
     val isEmpty: Boolean get() = sleep == null && feed == null && poop == null
@@ -59,6 +60,8 @@ data class Forecast(val sleep: Expected?, val feed: Expected?, val poop: Expecte
  *     when the current stretch is already twice the longest of them (logging has probably stopped);
  *  4. adds their median to the current stretch's start. The estimate stays put as the stretch goes on, so a late one
  *     reads "24m ago" instead of moving on to a new guess.
+ *
+ * Poop that follows no gap falls back to [poopAfterFeed]: newborns often poop shortly after each feed.
  */
 fun forecast(summary: Summary): Forecast {
     val now = summary.now
@@ -79,6 +82,7 @@ fun forecast(summary: Summary): Forecast {
     val feed = feeds.lastOrNull()?.let { expect(gaps(feeds), it.startMillis, now, zone, byTimeOfDay = true) }
     val poop = (summary.entries.lastOrNull { it.kind == EntryKind.DIAPER && it.poop })
         ?.let { expect(gaps(poops), it.startMillis, now, zone, byTimeOfDay = false) }
+        ?: poopAfterFeed(feeds, poops, now, zone)
     return Forecast(sleep, feed, poop)
 }
 
@@ -104,6 +108,18 @@ object ForecastRules {
 
     /** Gaps over this are a forgotten log, not a stretch. */
     const val MAX_GAP_MILLIS = 12 * 60 * 60_000L
+
+    /**
+     * A poop logged within this long of a feed's start (and before the next feed) counts as following that feed. Long
+     * enough to cover a diaper changed a while after the poop itself.
+     */
+    const val AFTER_FEED_WINDOW_MILLIS = 90 * 60_000L
+
+    /** Poop is predicted after a feed only when at least this share of the week's feeds were followed by one. */
+    const val AFTER_FEED_MIN_SHARE = 0.7
+
+    /** The spread test's floor for poop after a feed: delays of a few minutes may differ by a few minutes. */
+    const val AFTER_FEED_MIN_SPREAD_BASE_MILLIS = 15 * 60_000L
 }
 
 /** A past stretch: it began at [startMillis] and lasted [lengthMillis]. */
@@ -135,6 +151,39 @@ private fun expect(stretches: List<Stretch>, startMillis: Long, now: Long, zone:
     val goneAt = startMillis + STALE_FACTOR * lengths.last()
     if (now > goneAt) return null
     return Expected(startMillis + median.toLong(), goneAtMillis = goneAt, samples = lengths.size)
+}
+
+/**
+ * The poop expected after the last feed, when most of the week's feeds were followed by a poop within
+ * [ForecastRules.AFTER_FEED_WINDOW_MILLIS] (the gastrocolic reflex; strongest in the first weeks, so this mostly fades
+ * as the baby grows). Feeds under [ForecastRules.MIN_GAP_MILLIS] after the previous one are the same feed. Null once a
+ * poop has been logged since the last feed, when too few feeds were followed by one (under [ForecastRules.MIN_SAMPLES]
+ * from [ForecastRules.MIN_DAYS] days, or under [ForecastRules.AFTER_FEED_MIN_SHARE] of them), when the delays vary
+ * too much, or once the window, or twice the longest delay, has passed.
+ */
+private fun poopAfterFeed(feeds: List<Entry>, poops: List<Entry>, now: Long, zone: ZoneId): Expected? {
+    val starts = feeds.map { it.startMillis }.sorted().fold(mutableListOf<Long>()) { kept, t ->
+        if (kept.isEmpty() || t - kept.last() >= ForecastRules.MIN_GAP_MILLIS) kept += t
+        kept
+    }
+    val current = starts.lastOrNull() ?: return null
+    if (poops.any { it.startMillis >= current }) return null
+    // Every earlier feed's window has closed: it ends at the next feed, or the window's length after the feed.
+    val followed = starts.zipWithNext { start, next ->
+        val end = minOf(start + ForecastRules.AFTER_FEED_WINDOW_MILLIS, next)
+        start to poops.firstOrNull { it.startMillis in start until end }?.let { it.startMillis - start }
+    }
+    val hits = followed.mapNotNull { (start, delay) -> delay?.let { Stretch(start, it) } }
+    if (hits.size < ForecastRules.MIN_SAMPLES) return null
+    if (hits.map { localDate(it.startMillis, zone) }.distinct().size < ForecastRules.MIN_DAYS) return null
+    if (hits.size < ForecastRules.AFTER_FEED_MIN_SHARE * followed.size) return null
+    val delays = hits.map { it.lengthMillis }.sorted()
+    val median = quantile(delays, 0.5)
+    val spreadBase = maxOf(median, ForecastRules.AFTER_FEED_MIN_SPREAD_BASE_MILLIS.toDouble())
+    if (quantile(delays, 0.75) - quantile(delays, 0.25) > ForecastRules.MAX_SPREAD * spreadBase) return null
+    val goneAt = current + minOf(STALE_FACTOR * delays.last(), ForecastRules.AFTER_FEED_WINDOW_MILLIS)
+    if (now > goneAt) return null
+    return Expected(current + median.toLong(), goneAtMillis = goneAt, samples = delays.size)
 }
 
 /** The [q] quantile of [sorted], interpolating between neighbours. */
