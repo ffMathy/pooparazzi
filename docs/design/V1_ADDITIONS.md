@@ -509,4 +509,13 @@ own last 7 days, which is recent enough to follow a growing baby:
    feed does not move it on to a new guess, it shows how long ago it was due ("24m ago") until the stretch ends or
    step 3 drops it.
 
-In the sample week (§6 history) poop comes about once a day at random hours, so Diaper shows no forecast.
+5. **Poop after a feed** (fallback when steps 1–4 give no poop forecast). Newborns often poop shortly after feeding
+   (the gastrocolic reflex), so poop that keeps no gap may still keep to the feeds. Each of the week's feeds (feeds
+   under 10 minutes apart are one) is followed by a poop if one is logged from its start until 90 minutes later or the
+   next feed, whichever comes first. With at least 5 such delays from at least 3 days, after at least 70 % of the feeds,
+   and an interquartile range of at most 1.5 × the median (or 1.5 × 15 minutes, if more), the expected poop is the last
+   feed's start plus the median delay. It reads like any poop forecast ("poop in 15m", "poop 5m ago") and is dropped
+   once a poop is logged after the feed, or 90 minutes after it (or twice the longest delay, if sooner). This fades on
+   its own as the baby grows and poops less often.
+
+In the sample week (§6 history) poop comes about once a day at random hours, and seldom right after a feed, so Diaper shows no forecast.
