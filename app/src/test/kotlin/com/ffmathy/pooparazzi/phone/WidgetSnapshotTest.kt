@@ -46,11 +46,12 @@ class WidgetSnapshotTest {
     fun theButtonsCarryTheWeeksForecast() {
         // V1_ADDITIONS §9: awake, the next sleep; asleep, the wake-up; both as clock times rounded to 5 minutes.
         val idle = WidgetSamples.idle(night = true)
-        assertEquals(SampleData.at(15, 25), idle.sleepForecast!!.roundedAtMillis)
-        assertEquals(SampleData.at(15, 35), idle.feedForecast!!.roundedAtMillis)
+        assertEquals(SampleData.at(15, 20), idle.sleepForecast!!.roundedAtMillis)
+        assertEquals(SampleData.at(15, 30), idle.feedForecast!!.roundedAtMillis)
         assertNull("poop varies too much in the sample week", idle.poopForecast)
-        // The first estimate to pass (the next sleep) refreshes the widget.
-        assertEquals(idle.sleepForecast!!.atMillis, idle.forecastExpiry(SampleData.NOW_1432))
+        // An estimate stays put once passed: the widget next refreshes when the first one is dropped as stale.
+        val forecasts = listOf(idle.sleepForecast!!, idle.feedForecast!!)
+        assertEquals(forecasts.minOf { it.goneAtMillis }, idle.forecastExpiry(SampleData.NOW_1432))
         val asleep = WidgetSamples.asleep()
         assertEquals(SampleData.at(5, 25), asleep.sleepForecast!!.roundedAtMillis)
         // One day of log is no pattern yet: no forecast, and no refresh for one.

@@ -140,11 +140,21 @@ class HomeSemanticsTest {
     fun theButtonsSayWhatTheWeekExpectsNext() {
         // V1_ADDITIONS §9: Feed and Start sleep carry the forecast; poop varies too much in the sample week to predict.
         show(HomeSamples.idle())
-        compose.onNodeWithText("in 1h 05m", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("in 55m", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("next feed in about 1 hour 5 minutes, around 15:35", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("sleeps again in about 55 minutes, around 15:23", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("in 1h 00m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("in 50m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("next feed in about 1 hour, around 15:30", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("sleeps again in about 50 minutes, around 15:19", useUnmergedTree = true).assertExists()
         compose.onNodeWithText("poop in", substring = true, useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun aPassedEstimateSaysHowLongAgoItWasDue() {
+        // V1_ADDITIONS §9: the estimate stays put; at 15:55 the feed expected ~15:30 is "24m ago", not a new guess.
+        show(HomeSamples.forecastPassed())
+        compose.onNodeWithText("24m ago", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("36m ago", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("next feed expected 24 minutes ago, around 15:30", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("expected to sleep again 36 minutes ago, around 15:19", useUnmergedTree = true).assertExists()
     }
 
     @Test

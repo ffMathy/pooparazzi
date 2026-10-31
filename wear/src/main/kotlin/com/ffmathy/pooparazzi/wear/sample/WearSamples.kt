@@ -41,6 +41,10 @@ object WearSamples {
     fun mainIdle(): MainUiState =
         MainUiState.from(summarize(SampleData.history(), SampleData.NOW_1432, zone), guard = null, sync = synced1431)
 
+    /** [mainIdle] at 15:55 with nothing logged since: "Next feed" "24m ago · ~15:30", "Next sleep 36m ago". */
+    fun mainForecastPassed(): MainUiState =
+        MainUiState.from(summarize(SampleData.history(), SampleData.at(15, 55), zone), guard = null, sync = synced1431)
+
     fun mainAsleep(): MainUiState =
         MainUiState.from(summarize(SampleData.historyAt0312(), SampleData.NOW_0312, zone), guard = null, sync = synced0311)
 

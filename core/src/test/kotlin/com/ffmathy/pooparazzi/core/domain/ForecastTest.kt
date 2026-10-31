@@ -5,7 +5,6 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sample.SampleData.ZONE
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,21 +29,31 @@ class ForecastTest {
         val now = at(6, 13)
         val f = forecastAt(feedsEvery3h(at(6, 12)), now).feed!!
         assertEquals(at(6, 15), f.atMillis)
-        assertFalse(f.overdue)
+        assertEquals(2 * HOUR, f.remainingMillis(now))
+        assertNull(f.agoMillis(now))
     }
 
     @Test
-    fun aStretchLongerThanEveryComparableOneIsDueNow() {
-        val now = at(6, 15, 30)
+    fun underFiveMinutesAwayIsSoon() {
+        val now = at(6, 14, 57)
         val f = forecastAt(feedsEvery3h(at(6, 12)), now).feed!!
-        assertTrue(f.overdue)
-        assertEquals(now, f.atMillis)
+        assertNull(f.remainingMillis(now))
+        assertNull(f.agoMillis(now))
     }
 
     @Test
-    fun theEstimateIsTheMedianOfTheStretchesThatLastedLongerThanThisOneSoFar() {
-        // Poops (no time of day to match) alternate 2 h, 3 h, 4 h apart: 2½ h after the last one, only the 3 h and 4 h
-        // gaps are still possible.
+    fun aPassedEstimateStaysPutAndSaysHowLongAgo() {
+        val now = at(6, 15, 24)
+        val f = forecastAt(feedsEvery3h(at(6, 12)), now).feed!!
+        assertEquals(at(6, 15), f.atMillis)
+        assertNull(f.remainingMillis(now))
+        assertEquals(24 * MINUTE, f.agoMillis(now))
+    }
+
+    @Test
+    fun theEstimateIsTheMedianOfTheComparableStretchesAndDoesNotMoveOn() {
+        // Poops (no time of day to match) alternate 2 h, 3 h, 4 h apart: the typical gap is 3 h, whether 30 minutes
+        // or 3½ hours have passed since the last one.
         val lengths = listOf(2, 3, 4)
         val poops = mutableListOf<Entry>()
         var t = at(0, 0)
@@ -55,10 +64,11 @@ class ForecastTest {
             i++
         }
         val last = poops.last().startMillis
-        val early = forecastAt(poops, last + 30 * MINUTE).poop!!
-        assertEquals(last + 3 * HOUR, early.atMillis)
-        val later = forecastAt(poops, last + 150 * MINUTE).poop!!
-        assertEquals(last + (3.5 * HOUR).toLong(), later.atMillis)
+        assertEquals(last + 3 * HOUR, forecastAt(poops, last + 30 * MINUTE).poop!!.atMillis)
+        val later = forecastAt(poops, last + 210 * MINUTE).poop!!
+        assertEquals(last + 3 * HOUR, later.atMillis)
+        assertEquals(30 * MINUTE, later.agoMillis(last + 210 * MINUTE))
+        assertEquals(last + 8 * HOUR, later.goneAtMillis)
     }
 
     @Test
@@ -130,7 +140,7 @@ class ForecastTest {
     fun theSampleWeekPredictsSleepAndFeedButNotPoop() {
         val f = forecast(summarize(SampleData.history(), SampleData.NOW_1432, ZONE))
         assertTrue(f.sleep!!.atMillis in SampleData.NOW_1432 + 45 * MINUTE..SampleData.NOW_1432 + 55 * MINUTE)
-        assertTrue(f.feed!!.atMillis in SampleData.NOW_1432 + 60 * MINUTE..SampleData.NOW_1432 + 65 * MINUTE)
+        assertTrue(f.feed!!.atMillis in SampleData.NOW_1432 + 55 * MINUTE..SampleData.NOW_1432 + 60 * MINUTE)
         assertNull(f.poop)
     }
 

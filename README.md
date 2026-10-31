@@ -41,6 +41,10 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-home-night.png" width="200" alt="Home, Night theme"> | <img src="docs/screenshots/en/phone-home-day.png" width="200" alt="Home, Day theme"> | <img src="docs/screenshots/en/phone-home-asleep.png" width="200" alt="Home while asleep"> | <img src="docs/screenshots/en/phone-home-breast-logged.png" width="200" alt="Home right after logging a breast feed backdated by 15 minutes: Last fed 18m ago · 14:32 · Left → Right, with no receipt sheet"> |
 
+| Forecast passed |
+|:---:|
+| <img src="docs/screenshots/en/phone-home-forecast-passed.png" width="200" alt="Home at 15:55 with nothing logged since: Feed 24m ago, Start sleep 36m ago"> |
+
 | Receipt | Feed sheet | Breast: side order | Diaper sheet |
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-home-receipt.png" width="200" alt="Receipt after Start sleep: Sleep started · 14:32 with Undo, offset chips, Edit and Done"> | <img src="docs/screenshots/en/phone-feed-sheet.png" width="200" alt="Feed sheet: Breast, Formula, Food, Just the time"> | <img src="docs/screenshots/en/phone-breast-sheet.png" width="200" alt="Feed sheet after Breast, with Right then Left ticked"> | <img src="docs/screenshots/en/phone-diaper-sheet.png" width="200" alt="Diaper sheet with poop colour and texture"> |
@@ -103,9 +107,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/watch-undone.png" width="140" alt="Watch undone"> | <img src="docs/screenshots/en/watch-today.png" width="140" alt="Watch today list"> | <img src="docs/screenshots/en/watch-tile.png" width="140" alt="Watch tile"> | <img src="docs/screenshots/en/watch-tile-asleep.png" width="140" alt="Watch tile while asleep"> | <img src="docs/screenshots/en/watch-complications.png" width="140" alt="Watch complications preview"> |
 
-| Next feed and sleep (scrolled) | Expected wake-up (scrolled, asleep) | Next feed (scrolled, asleep) |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/watch-main-awake-forecast.png" width="170" alt="Watch Next feed card, in 1h 05m, and the Awake card with Next sleep in 55m"> | <img src="docs/screenshots/en/watch-main-asleep-forecast.png" width="170" alt="Watch Adjust start with Wakes ~05:25"> | <img src="docs/screenshots/en/watch-main-asleep-feed-forecast.png" width="170" alt="Watch Last fed card with Next feed in 2h 45m"> |
+| Next feed and sleep (scrolled) | Estimates passed (scrolled) | Expected wake-up (scrolled, asleep) | Next feed (scrolled, asleep) |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/watch-main-awake-forecast.png" width="170" alt="Watch Next feed card, in 1h 00m, and the Awake card with Next sleep in 50m"> | <img src="docs/screenshots/en/watch-main-forecast-passed.png" width="170" alt="Watch Next feed card, 24m ago, and the Awake card with Next sleep 36m ago, once both estimates have passed"> | <img src="docs/screenshots/en/watch-main-asleep-forecast.png" width="170" alt="Watch Adjust start with Wakes ~05:25"> | <img src="docs/screenshots/en/watch-main-asleep-feed-forecast.png" width="170" alt="Watch Last fed card with Next feed in 2h 45m"> |
 
 | Main, two babies | Baby picker | Tile, second baby |
 |:---:|:---:|:---:|

@@ -7,26 +7,31 @@ import java.time.ZoneId
 import kotlin.math.abs
 
 /**
- * One expected moment ("wakes in about 40m"): [atMillis] is the estimate, never before the summary's now. [overdue]
- * means the current stretch has already outlasted every comparable one of the past week, so it is due any minute.
- * [samples] is how many past stretches the estimate rests on.
+ * One expected moment ("wakes in about 40m"): [atMillis] is the estimate, fixed for the whole stretch, so once it has
+ * passed it is "24m ago" rather than a new, later guess. [goneAtMillis] is when the current stretch has run so far past
+ * every comparable one that logging has probably stopped, and the forecast is dropped. [samples] is how many past
+ * stretches the estimate rests on.
  */
-data class Expected(val atMillis: Long, val overdue: Boolean, val samples: Int) {
+data class Expected(val atMillis: Long, val goneAtMillis: Long, val samples: Int) {
     /**
      * Time until it, rounded up to [STEP_MILLIS] ("in 55m": a week's typical gap, not a minute-exact promise); null
-     * when it is due ("soon"): overdue or under one step away.
+     * when it is due ("soon", under one step away) or past ([agoMillis]).
      */
     fun remainingMillis(now: Long): Long? {
         val left = atMillis - now
-        if (overdue || left < STEP_MILLIS) return null
+        if (left < STEP_MILLIS) return null
         return (left + STEP_MILLIS - 1) / STEP_MILLIS * STEP_MILLIS
     }
+
+    /** How long ago it should have happened ("24m ago"); null until a full minute after it (until then it is "soon"). */
+    fun agoMillis(now: Long): Long? = (now - atMillis).takeIf { it >= MINUTE_MILLIS }
 
     /** [atMillis] to the nearest [STEP_MILLIS], for surfaces that show a clock time ("~15:25"). */
     val roundedAtMillis: Long get() = (atMillis + STEP_MILLIS / 2) / STEP_MILLIS * STEP_MILLIS
 
     companion object {
         const val STEP_MILLIS = 5 * 60_000L
+        private const val MINUTE_MILLIS = 60_000L
     }
 }
 
@@ -52,9 +57,8 @@ data class Forecast(val sleep: Expected?, val feed: Expected?, val poop: Expecte
  *     the whole day, until there are enough), except for poop, which follows no clock;
  *  3. gives up when the stretches are too few (under 5, or from fewer than 3 days) or spread too widely (interquartile range over 1.5 × the median), or
  *     when the current stretch is already twice the longest of them (logging has probably stopped);
- *  4. keeps only the stretches that lasted longer than the current one has so far, and takes their median: the
- *     typical length *given* how long it has already been, so a long nap moves the estimate on instead of leaving it
- *     in the past.
+ *  4. adds their median to the current stretch's start. The estimate stays put as the stretch goes on, so a late one
+ *     reads "24m ago" instead of moving on to a new guess.
  */
 fun forecast(summary: Summary): Forecast {
     val now = summary.now
@@ -127,12 +131,10 @@ private fun expect(stretches: List<Stretch>, startMillis: Long, now: Long, zone:
     val lengths = comparable.map { it.lengthMillis }.sorted()
     val median = quantile(lengths, 0.5)
     if (quantile(lengths, 0.75) - quantile(lengths, 0.25) > ForecastRules.MAX_SPREAD * median) return null
-    val elapsed = now - startMillis
     // Far longer than any stretch of the week: logging has stopped (or this one was forgotten), so say nothing.
-    if (elapsed > STALE_FACTOR * lengths.last()) return null
-    val longer = lengths.filter { it > elapsed }
-    if (longer.isEmpty()) return Expected(now, overdue = true, samples = lengths.size)
-    return Expected(startMillis + quantile(longer, 0.5).toLong(), overdue = false, samples = lengths.size)
+    val goneAt = startMillis + STALE_FACTOR * lengths.last()
+    if (now > goneAt) return null
+    return Expected(startMillis + median.toLong(), goneAtMillis = goneAt, samples = lengths.size)
 }
 
 /** The [q] quantile of [sorted], interpolating between neighbours. */

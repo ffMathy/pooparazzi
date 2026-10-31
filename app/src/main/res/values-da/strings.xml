@@ -299,4 +299,10 @@
     <string name="forecast_spoken_sleep_soon">sover igen snart</string>
     <string name="forecast_spoken_feed_soon">næste måltid snart</string>
     <string name="forecast_spoken_poop_soon">næste bæ snart</string>
+    <string name="forecast_ago">%1$s siden</string>
+    <string name="forecast_poop_ago">bæ %1$s siden</string>
+    <string name="forecast_spoken_wake_ago">forventet at vågne for %1$s siden, omkring kl. %2$s</string>
+    <string name="forecast_spoken_sleep_ago">forventet at sove igen for %1$s siden, omkring kl. %2$s</string>
+    <string name="forecast_spoken_feed_ago">næste måltid forventet for %1$s siden, omkring kl. %2$s</string>
+    <string name="forecast_spoken_poop_ago">næste bæ forventet for %1$s siden, omkring kl. %2$s</string>
 </resources>

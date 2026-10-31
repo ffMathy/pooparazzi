@@ -382,4 +382,11 @@
     <string name="forecast_spoken_sleep_soon">sleeps again soon</string>
     <string name="forecast_spoken_feed_soon">next feed soon</string>
     <string name="forecast_spoken_poop_soon">next poop soon</string>
+    <!-- Once the estimate has passed: "24m ago"; TalkBack "next feed expected 24 minutes ago, around 15:35". -->
+    <string name="forecast_ago">%1$s ago</string>
+    <string name="forecast_poop_ago">poop %1$s ago</string>
+    <string name="forecast_spoken_wake_ago">expected to wake up %1$s ago, around %2$s</string>
+    <string name="forecast_spoken_sleep_ago">expected to sleep again %1$s ago, around %2$s</string>
+    <string name="forecast_spoken_feed_ago">next feed expected %1$s ago, around %2$s</string>
+    <string name="forecast_spoken_poop_ago">next poop expected %1$s ago, around %2$s</string>
 </resources>

@@ -588,23 +588,30 @@ private fun LampNumeral(elapsed: Long, f: Formatters, color: Color, spoken: Stri
 
 /**
  * What the last week expects next for sleep (V1_ADDITIONS §9): "Wakes in 2h 15m" while asleep, "Next sleep in 55m"
- * while awake, "… soon" when due; null when the week cannot predict it. [spoken] says the duration in words.
+ * while awake, "… soon" when due, "Next sleep 24m ago" once passed; null when the week cannot predict it. [spoken] says
+ * the duration in words.
  */
 @Composable
 private fun sleepForecastLine(state: MainUiState, f: Formatters, spoken: Boolean = false): String? {
     val expected = state.sleepForecast ?: return null
     val asleep = state.runningSleep != null
+    fun amount(millis: Long) = if (spoken) f.duration.spoken(millis) else f.duration.format(millis)
+    expected.agoMillis(state.now)?.let { ago ->
+        return stringResource(if (asleep) CoreR.string.forecast_wakes_ago else CoreR.string.forecast_next_sleep_ago, amount(ago))
+    }
     val remaining = expected.remainingMillis(state.now)
         ?: return stringResource(if (asleep) CoreR.string.forecast_wakes_soon else CoreR.string.forecast_next_sleep_soon)
-    val amount = if (spoken) f.duration.spoken(remaining) else f.duration.format(remaining)
-    return stringResource(if (asleep) CoreR.string.forecast_wakes_in else CoreR.string.forecast_next_sleep_in, amount)
+    return stringResource(if (asleep) CoreR.string.forecast_wakes_in else CoreR.string.forecast_next_sleep_in, amount(remaining))
 }
 
-/** "Wakes ~05:25" (or "Wakes soon") while asleep; null when the week cannot predict it. */
+/**
+ * "Wakes ~05:25" while asleep (a clock time, so the Danish fits on one line; it stays once passed), "Wakes soon" in the
+ * last minutes before it; null when the week cannot predict it.
+ */
 @Composable
 private fun wakeForecastClock(state: MainUiState, f: Formatters): String? {
     val expected = state.sleepForecast?.takeIf { state.runningSleep != null } ?: return null
-    if (expected.remainingMillis(state.now) == null) return stringResource(CoreR.string.forecast_wakes_soon)
+    if (expected.remainingMillis(state.now) == null && expected.atMillis > state.now) return stringResource(CoreR.string.forecast_wakes_soon)
     return stringResource(CoreR.string.forecast_wakes_at, f.clock.format(expected.roundedAtMillis, f.zone))
 }
 
@@ -727,7 +734,9 @@ private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
         state.lastFeed?.let { feed ->
             // The expected next feed as the card's third line (V1_ADDITIONS §9).
             val next = feedForecast?.let { expected ->
-                expected.remainingMillis(now)
+                expected.agoMillis(now)
+                    ?.let { stringResource(CoreR.string.forecast_next_feed_ago, f.duration.format(it)) to stringResource(CoreR.string.forecast_next_feed_ago, f.duration.spoken(it)) }
+                    ?: expected.remainingMillis(now)
                     ?.let { stringResource(CoreR.string.forecast_next_feed_in, f.duration.format(it)) to stringResource(CoreR.string.forecast_next_feed_in, f.duration.spoken(it)) }
                     ?: stringResource(CoreR.string.forecast_next_feed_soon).let { it to it }
             }
@@ -746,10 +755,13 @@ private fun statusCards(state: MainUiState, f: Formatters): List<CardModel> {
         if (feed != null && feedForecast != null) {
             val title = stringResource(CoreR.string.forecast_next_feed)
             val remaining = feedForecast.remainingMillis(now)
+            val ago = feedForecast.agoMillis(now)
             val clock = f.clock.format(feedForecast.roundedAtMillis, f.zone)
-            val detail = remaining?.let { stringResource(CoreR.string.forecast_in_at, f.duration.format(it), clock) }
+            val detail = ago?.let { stringResource(CoreR.string.forecast_ago_at, f.duration.format(it), clock) }
+                ?: remaining?.let { stringResource(CoreR.string.forecast_in_at, f.duration.format(it), clock) }
                 ?: stringResource(CoreR.string.forecast_soon_word)
-            val spoken = remaining?.let { stringResource(CoreR.string.forecast_next_feed_in, f.duration.spoken(it)) }
+            val spoken = ago?.let { stringResource(CoreR.string.forecast_next_feed_ago, f.duration.spoken(it)) }
+                ?: remaining?.let { stringResource(CoreR.string.forecast_next_feed_in, f.duration.spoken(it)) }
                 ?: stringResource(CoreR.string.forecast_next_feed_soon)
             cards += CardModel("next-feed", feed, TimeField.START, XIcons.feed, events.feed.strong, title, detail, spoken)
         }

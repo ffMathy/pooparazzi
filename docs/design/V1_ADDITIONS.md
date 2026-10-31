@@ -473,17 +473,20 @@ button's onContainer at 78 %, one line that shrinks to fit rather than wrap):
 | Start sleep | "in 55m" / "om 55m" | "sleeps again in about 55 minutes, around 15:23" |
 | Woke up (a sleep runs) | "in 2h 15m" / "om 2t 15m": the expected wake-up | "wakes up in about 2 hours 15 minutes, around 05:27" |
 
-Times are rounded up to 5 minutes (an estimate, not a promise); under 5 minutes, or past every comparable stretch, the
-line reads "soon" / "snart" ("poop soon" / "bæ snart"). A button the week cannot predict has no second line.
+Times are rounded up to 5 minutes (an estimate, not a promise); under 5 minutes the line reads "soon" / "snart" ("poop
+soon" / "bæ snart"). Once the estimate has passed it stays put and says how long ago it was due: "24m ago" / "24m
+siden" ("poop 24m ago" / "bæ 24m siden"); TalkBack "next feed expected 24 minutes ago, around 15:30". A button the week
+cannot predict has no second line.
 
 **The other surfaces** (one more line each where there is room):
 
 | Surface | Feed | Diaper | Sleep, awake | Sleep, asleep |
 |---|---|---|---|---|
 | 4×2 widget (and the cover screen), 11–13 sp; with the line, the face tightens to icon 20 + gap 2 | under the Feed label: "Next ~15:35" / "Næste ~15:35" | under Diaper, when poop is predictable: "Poop ~18:00" / "Bæ ~18:00" | under the status: "Next sleep ~15:25" / "Sover igen ~15:25" | "Wakes ~05:25" / "Vågner ~05:25" |
-| Watch Main, scrolled | idle: a "Next feed" card first, "in 1h 05m · ~15:35" (opens the last feed); asleep: the Last fed card's third line "Next feed in 2h 45m" | none | Awake card, third line: "Next sleep in 55m" / "Sover igen om 55m" | Adjust start's secondary line: "Wakes ~05:25" (small watches: under "Asleep since 02:05") |
+| Watch Main, scrolled | idle: a "Next feed" card first, "in 1h 00m · ~15:30", once passed "24m ago · ~15:30" (opens the last feed); asleep: the Last fed card's third line "Next feed in 2h 45m" / "Next feed 24m ago" | none | Awake card, third line: "Next sleep in 50m" / "Sover igen om 50m"; once passed "Next sleep 36m ago" / "Skulle sove for 36m siden" | Adjust start's secondary line: "Wakes ~05:25" (small watches: under "Asleep since 02:05"); it keeps the clock time once passed |
 
-The widget shows clock times only (it does not tick), rounded to 5 minutes, and refreshes once an estimate has passed.
+The widget shows clock times only (it does not tick), rounded to 5 minutes, kept once passed; it refreshes when a
+forecast is dropped (step 3).
 Feed and Diaper keep the same face: when either has a line, both reserve it, so the icons stay aligned; the compact
 (two-line label) face has no room and shows none. The watch's Adjust start line is a clock time too, so the Danish fits
 on one line. TalkBack: "Log feed, next feed expected around 15:35", "expected to wake around 05:25", "Next sleep in 55
@@ -502,7 +505,8 @@ own last 7 days, which is recent enough to follow a growing baby:
    3 different days. Poop follows no clock, so all poop gaps count.
 3. Too few (under 5, or from fewer than 3 days), too spread out (interquartile range over 1.5 × the median), or
    the current stretch already twice the longest of them (logging has stopped): no forecast.
-4. The median of the stretches that lasted **longer than the current one has so far**, added to its start. So a long
-   nap pushes the expected wake-up later instead of leaving it in the past; when none lasted longer, it is "soon".
+4. Their median, added to the current stretch's start. The estimate is **fixed for the stretch**: a long nap or a late
+   feed does not move it on to a new guess, it shows how long ago it was due ("24m ago") until the stretch ends or
+   step 3 drops it.
 
 In the sample week (§6 history) poop comes about once a day at random hours, so Diaper shows no forecast.
