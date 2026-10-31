@@ -34,7 +34,6 @@ PHONE = {
     "02-home-day.png": "home-day",
     "02b-home-forecast-passed.png": "home-forecast-passed",
     "03-home-asleep-night.png": "home-asleep",
-    "03-home-adjust-start.png": "adjust-start",
     "04-home-breast-logged.png": "home-breast-logged",
     "05-home-receipt.png": "home-receipt",
     "06-feed-sheet.png": "feed-sheet",

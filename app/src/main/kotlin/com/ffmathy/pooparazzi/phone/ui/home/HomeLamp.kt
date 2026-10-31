@@ -1,7 +1,5 @@
 package com.ffmathy.pooparazzi.phone.ui.home
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,10 +84,10 @@ internal object HomeLampDefaults {
 
 /**
  * The Lamp with its text (DESIGN_SPEC §2.3–2.4, V1_ADDITIONS §2.1): FEED glow/disc when idle with the last feed's
- * type icon and "Last fed"; a running sleep with its orbit, "since …" and "Adjust start".
+ * type icon and "Last fed"; a running sleep with its orbit and "since …".
  * The text is one TalkBack stop with a spoken form, never a live region. Like a since-row it is the one-tap correction
- * path: idle it opens the edit sheet of the last feed (a chevron after the label says so), and while a sleep runs it
- * opens the Adjust start sheet, as the chip does. Neither writes anything until Save.
+ * path: it opens the edit sheet of the entry it shows (the last feed, or the running sleep), and a chevron after the
+ * label says so. Nothing is written until Save.
  */
 @Composable
 internal fun HomeLamp(
@@ -97,7 +95,6 @@ internal fun HomeLamp(
     zone: ZoneId,
     size: Dp,
     formatters: Formatters,
-    onAdjustStart: () -> Unit,
     onEditEntry: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -109,7 +106,7 @@ internal fun HomeLamp(
             size = size,
             reducedMotion = rememberReducedMotion(),
         )
-        LampText(lamp, zone, size, formatters, onAdjustStart, onEditEntry)
+        LampText(lamp, zone, size, formatters, onEditEntry)
     }
 }
 
@@ -119,7 +116,6 @@ private fun LampText(
     zone: ZoneId,
     size: Dp,
     formatters: Formatters,
-    onAdjustStart: () -> Unit,
     onEditEntry: (String) -> Unit,
 ) {
     val events = LocalXPalette.current.events
@@ -127,70 +123,64 @@ private fun LampText(
     val text = lampTexts(lamp, zone, size, formatters)
     val open: (() -> Unit)? = when (lamp) {
         is LampState.FeedIdle -> lamp.lastFeed?.let { feed -> { onEditEntry(feed.id) } }
-        is LampState.SleepRunning -> onAdjustStart
+        is LampState.SleepRunning -> lamp.sleep.id.let { id -> { onEditEntry(id) } }
     }
-    val openLabel = stringResource(if (lamp is LampState.SleepRunning) CoreR.string.action_adjust_start else CoreR.string.action_edit)
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Column(
-            Modifier
-                .clip(RoundedCornerShape(24.dp))
-                .then(if (open != null) Modifier.clickable(onClickLabel = openLabel, role = Role.Button, onClick = open) else Modifier)
-                .clearAndSetSemantics {
-                    contentDescription = text.spoken
-                    if (open != null) {
-                        role = Role.Button
-                        onClick(label = openLabel) { open(); true }
-                    }
+    val openLabel = stringResource(CoreR.string.action_edit)
+    Column(
+        Modifier
+            .clip(RoundedCornerShape(24.dp))
+            .then(if (open != null) Modifier.clickable(onClickLabel = openLabel, role = Role.Button, onClick = open) else Modifier)
+            .clearAndSetSemantics {
+                contentDescription = text.spoken
+                if (open != null) {
+                    role = Role.Button
+                    onClick(label = openLabel) { open(); true }
                 }
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            }
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(
+            Modifier.heightIn(min = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(
-                Modifier.heightIn(min = 20.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                val sleep = lamp is LampState.SleepRunning
-                XIcon(text.labelIcon, contentDescription = null, tint = if (sleep) events.sleep.strong else events.feed.strong, size = 20.dp)
-                Text(
-                    text.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (sleep) events.sleep.text else events.feed.text,
-                    maxLines = 1,
-                )
-                if (open != null && !sleep) XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
-            }
-            Spacer(Modifier.height(8.dp))
-            // An 80 dp hero band (DESIGN_SPEC §2.4); it may grow only at large font scales.
-            val large = LocalDensity.current.fontScale >= LARGE_FONT_SCALE
-            val band = HomeLampDefaults.heroBand(size)
-            Box(if (large) Modifier.heightIn(min = band) else Modifier.height(band), contentAlignment = Alignment.Center) {
-                when {
-                    text.heroParts != null -> HeroDuration(text.heroParts, maxWidth = size * HomeLampDefaults.HERO_CHORD, color = colors.onSurface)
-                    // "just now" / "lige nu" shrinks to the chord rather than wrap or clip on a small Lamp.
-                    else -> BasicText(
-                        text.heroWord.orEmpty(),
-                        style = PhoneType.heroWord.copy(color = colors.onSurface, textAlign = TextAlign.Center),
-                        maxLines = 1,
-                        softWrap = false,
-                        autoSize = TextAutoSize.StepBased(minFontSize = 24.sp, maxFontSize = PhoneType.heroWord.fontSize, stepSize = 1.sp),
-                        modifier = Modifier.widthIn(max = size * HomeLampDefaults.HERO_CHORD),
-                    )
-                }
-            }
-            Spacer(Modifier.height(4.dp))
+            val sleep = lamp is LampState.SleepRunning
+            XIcon(text.labelIcon, contentDescription = null, tint = if (sleep) events.sleep.strong else events.feed.strong, size = 20.dp)
             Text(
-                text.sub,
-                style = PhoneType.dataMedium,
-                color = colors.onSurfaceVariant,
+                text.label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (sleep) events.sleep.text else events.feed.text,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
+            if (open != null) XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
         }
-        if (lamp !is LampState.FeedIdle) {
-            Spacer(Modifier.height(8.dp))
-            AdjustStartChip(onAdjustStart)
+        Spacer(Modifier.height(8.dp))
+        // An 80 dp hero band (DESIGN_SPEC §2.4); it may grow only at large font scales.
+        val large = LocalDensity.current.fontScale >= LARGE_FONT_SCALE
+        val band = HomeLampDefaults.heroBand(size)
+        Box(if (large) Modifier.heightIn(min = band) else Modifier.height(band), contentAlignment = Alignment.Center) {
+            when {
+                text.heroParts != null -> HeroDuration(text.heroParts, maxWidth = size * HomeLampDefaults.HERO_CHORD, color = colors.onSurface)
+                // "just now" / "lige nu" shrinks to the chord rather than wrap or clip on a small Lamp.
+                else -> BasicText(
+                    text.heroWord.orEmpty(),
+                    style = PhoneType.heroWord.copy(color = colors.onSurface, textAlign = TextAlign.Center),
+                    maxLines = 1,
+                    softWrap = false,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 24.sp, maxFontSize = PhoneType.heroWord.fontSize, stepSize = 1.sp),
+                    modifier = Modifier.widthIn(max = size * HomeLampDefaults.HERO_CHORD),
+                )
+            }
         }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text.sub,
+            style = PhoneType.dataMedium,
+            color = colors.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -354,33 +344,4 @@ private fun numberStyle(sp: Float): TextStyle =
 private fun unitStyle(numberSp: Float): TextStyle {
     val sp = numberSp * HomeLampDefaults.UNIT_RATIO
     return PhoneType.heroUnit.copy(fontSize = sp.sp, lineHeight = (sp * 40f / 34f).sp)
-}
-
-/** "Adjust start" inside the running Lamp: 48 target / 40 pill, `clock` 18 + 8 + labelLarge, 1 dp outline. */
-@Composable
-private fun AdjustStartChip(onClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    val night = LocalNightLight.current.isNight
-    val shape = RoundedCornerShape(20.dp)
-    Box(
-        Modifier
-            .height(48.dp)
-            .clip(shape)
-            .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(
-            Modifier
-                .height(40.dp)
-                .clip(shape)
-                .background(if (night) colors.surfaceContainerHigh else colors.background)
-                .border(1.dp, colors.outline, shape)
-                .padding(start = 12.dp, end = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            XIcon(XIcons.clock, contentDescription = null, tint = colors.onSurfaceVariant, size = 18.dp)
-            Text(stringResource(CoreR.string.action_adjust_start), style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
-        }
-    }
 }

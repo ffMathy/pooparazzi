@@ -95,7 +95,7 @@ class HomeSemanticsTest {
     }
 
     @Test
-    fun theLampOpensTheLastFeedOrAdjustStart() {
+    fun theLampOpensTheLastFeed() {
         show(HomeSamples.breastLogged())
         compose.onNodeWithContentDescription("Last feed, breast, left then right, 18 minutes ago, at 14:32")
             .assert(SemanticsMatcher("click label Edit") { it.config[SemanticsActions.OnClick].label == "Edit" })
@@ -104,12 +104,13 @@ class HomeSemanticsTest {
     }
 
     @Test
-    fun theRunningLampOpensAdjustStart() {
+    fun theRunningLampOpensTheSleepsEditSheet() {
         show(HomeSamples.asleep())
         compose.onNodeWithContentDescription("Asleep, 1 hour 7 minutes, since 02:05")
-            .assert(SemanticsMatcher("click label Adjust start") { it.config[SemanticsActions.OnClick].label == "Adjust start" })
+            .assert(SemanticsMatcher("click label Edit") { it.config[SemanticsActions.OnClick].label == "Edit" })
             .performClick()
-        assertEquals(listOf("adjust"), calls)
+        assertTrue(calls.single().startsWith("edit:"))
+        compose.onNodeWithText("Adjust start").assertDoesNotExist()
     }
 
     @Test
