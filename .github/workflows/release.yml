@@ -190,7 +190,8 @@ jobs:
 
       # The watch bundle must go to a Wear OS form-factor track ("wear:<track>"): on a phone track Play rejects it
       # (it requires android.hardware.type.watch) and it replaces the phone bundle in that track's draft. A
-      # PLAY_WEAR_TRACK given without the prefix (e.g. "alpha") gets it here.
+      # PLAY_WEAR_TRACK given without the prefix (e.g. "beta") gets it here. Wear OS has no "wear:alpha": its closed
+      # testing track is "wear:Closed - Wear OS", so the phone's "alpha" maps to that.
       - name: Resolve the Play tracks
         id: tracks
         if: steps.secrets.outputs.play == 'true'
@@ -199,6 +200,9 @@ jobs:
           PLAY_WEAR_TRACK: ${{ vars.PLAY_WEAR_TRACK }}
         run: |
           wear="${PLAY_WEAR_TRACK:-$PLAY_TRACK}"
+          case "$wear" in
+            alpha|wear:alpha) wear="wear:Closed - Wear OS" ;;
+          esac
           case "$wear" in
             wear:*) ;;
             *) [ -z "$PLAY_WEAR_TRACK" ] || echo "::warning::PLAY_WEAR_TRACK=$PLAY_WEAR_TRACK is not a Wear OS track; using wear:$wear"
