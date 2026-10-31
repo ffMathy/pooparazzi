@@ -86,7 +86,7 @@ Repository › Settings › Secrets and variables › Actions.
 | Variable | Default | Meaning |
 |---|---|---|
 | `PLAY_TRACK` | `alpha` | Play track for the phone bundle: `internal` (internal testing), `alpha` (closed testing), `beta` (open testing) or `production` |
-| `PLAY_WEAR_TRACK` | `wear:<PLAY_TRACK>` | Play track for the watch bundle |
+| `PLAY_WEAR_TRACK` | `wear:<PLAY_TRACK>` | Play track for the watch bundle. Always a Wear OS track: a value without the `wear:` prefix (e.g. `alpha`) is read as `wear:alpha`, because a watch bundle on a phone track is rejected and replaces the phone bundle in that track's draft |
 | `PLAY_RELEASE_STATUS` | `completed` | `completed` rolls the release out; use `draft` while the app has never been published (see below) |
 | `VERSION_CODE_OFFSET` | `100` | Added to the run number to make the version base |
 
