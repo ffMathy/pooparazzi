@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -78,13 +78,16 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
         SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets)
     }
 
-    /** Settings › About scrolled into view: the privacy policy, "Download my data" and "Import data" (BABIES_AND_BACKUP §3.2). */
+    /**
+     * Settings scrolled to the bottom: About with the privacy policy, "Download my data" and "Import data"
+     * (BABIES_AND_BACKUP §3.2), and the "Made with ❤️" footer with the GitHub and LinkedIn logo buttons.
+     */
     @Test fun settingsAbout() {
         compose.setContent {
             NightLightTheme(night = false) { SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets) }
         }
-        val importRow = ApplicationProvider.getApplicationContext<Application>().getString(R.string.settings_import)
-        compose.onNodeWithText(importRow).performScrollTo()
+        val linkedIn = ApplicationProvider.getApplicationContext<Application>().getString(R.string.cd_linkedin)
+        compose.onNodeWithContentDescription(linkedIn).performScrollTo()
         compose.onRoot().captureRoboImage(path("43-settings-about", tour = true))
     }
 

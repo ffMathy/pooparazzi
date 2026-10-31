@@ -29,6 +29,7 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
   - Phone: two **Glance widgets** (a 4×2 log widget and a 3×1 quick widget, both with Feed, Diaper and Sleep; Feed and Diaper open the same sheets as in the app, the sleep toggle works in place), the 4×2 also on the **cover screen of Samsung flip phones**, and an **ongoing notification** for a running sleep (promoted to a Live Update where Android supports it) showing how long it has run, the last feed and diaper, and today's counts. "Woke up" on it leaves a notification with −5m / −10m / −15m to move the wake-up time.
   - Watch: a **Tile** (Feed and Diaper open the watch app's own screens, the sleep toggle works in place), four **complications** (since last feed, last diaper, asleep/awake, sleep and last feed) and an **Ongoing Activity** while a sleep runs.
 - **Night and Day themes**: a dim, warm Night theme for the dark hours and a Day theme, chosen automatically (or fixed in Settings). Large targets, TalkBack descriptions in full words ("2 hours 10 minutes ago"), large-font and small-watch layouts.
+- **Open source**: made with ❤️ by a father in Aarhus, Denmark. The bottom of Settings says so, with a GitHub logo that opens this repository and a LinkedIn logo that opens the maker's profile.
 - **English and Danish**, with an in-app language choice (Settings › Language) that the widgets, notifications and the watch follow.
 
 ## Screenshots
@@ -91,7 +92,7 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Consent before the first upload | Removing a member | A deletion link asks again | Settings, About |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-consent.png" width="200" alt="Back up to Google Firebase? What is uploaded, who sees it, where, and changing your mind; I agree and Not now, sign out"> | <img src="docs/screenshots/en/phone-family-remove.png" width="200" alt="Remove partner@example.com? They'll stop seeing the family's log from now on; what's already on their phone stays there"> | <img src="docs/screenshots/en/phone-account-delete-link.png" width="200" alt="Delete account? This link deletes your account. Tap Delete to go ahead; Cancel and Delete"> | <img src="docs/screenshots/en/phone-settings-about.png" width="200" alt="Settings, About: the version, Privacy policy, Download my data, Import data and Font licences"> |
+| <img src="docs/screenshots/en/phone-consent.png" width="200" alt="Back up to Google Firebase? What is uploaded, who sees it, where, and changing your mind; I agree and Not now, sign out"> | <img src="docs/screenshots/en/phone-family-remove.png" width="200" alt="Remove partner@example.com? They'll stop seeing the family's log from now on; what's already on their phone stays there"> | <img src="docs/screenshots/en/phone-account-delete-link.png" width="200" alt="Delete account? This link deletes your account. Tap Delete to go ahead; Cancel and Delete"> | <img src="docs/screenshots/en/phone-settings-about.png" width="200" alt="Settings, About: the version, Privacy policy, Download my data, Import data and Font licences, then the footer: Made with ❤️ by a father in Aarhus, Denmark, Pooparazzi is open source, and GitHub and LinkedIn logo buttons"> |
 
 ### Watch
 

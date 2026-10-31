@@ -305,4 +305,10 @@
     <string name="forecast_spoken_sleep_ago">forventet at sove igen for %1$s siden, omkring kl. %2$s</string>
     <string name="forecast_spoken_feed_ago">næste måltid forventet for %1$s siden, omkring kl. %2$s</string>
     <string name="forecast_spoken_poop_ago">næste bæ forventet for %1$s siden, omkring kl. %2$s</string>
+
+    <!-- Indstillingernes bund -->
+    <string name="settings_made_by">Lavet med ❤️ af en far i Aarhus</string>
+    <string name="settings_open_source">Pooparazzi er open source</string>
+    <string name="cd_source_code">Kildekoden på GitHub</string>
+    <string name="cd_linkedin">Udvikleren på LinkedIn</string>
 </resources>

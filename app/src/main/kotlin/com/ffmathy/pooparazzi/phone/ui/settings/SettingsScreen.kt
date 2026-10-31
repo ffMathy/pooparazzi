@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
@@ -59,6 +61,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
@@ -139,6 +142,12 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
             override fun onOpenPrivacy() {
                 viewModel.state.value?.let { runCatching { uriHandler.openUri(it.privacyUrl) } }
             }
+            override fun onOpenSourceCode() {
+                runCatching { uriHandler.openUri(SOURCE_CODE_URL) }
+            }
+            override fun onOpenLinkedIn() {
+                runCatching { uriHandler.openUri(LINKEDIN_URL) }
+            }
             override fun onExport() = exporter.launch(LogExportFile.name(LocalDate.now()))
             override fun onImport() = importer.launch(LogExportFile.IMPORT_TYPES)
         }
@@ -161,8 +170,9 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
  * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the account and backup
  * (BABIES_AND_BACKUP §3.2), the babies, Appearance
  * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry, Notifications (the link
- * to the system's Live Update setting, §10.5) and About (version, font licences). Section headings are labelMedium;
- * grouped rows use the History list's r 20 / r 6 corners.
+ * to the system's Live Update setting, §10.5) and About (version, font licences), and at the bottom a footer: "Made with
+ * ❤️ by a father in Aarhus, Denmark", that Pooparazzi is open source, and GitHub and LinkedIn logo buttons. Section
+ * headings are labelMedium; grouped rows use the History list's r 20 / r 6 corners.
  *
  * @param notifications what the Notifications row offers; the route reads it from the system.
  */
@@ -227,6 +237,7 @@ fun SettingsScreen(
             Section(stringResource(R.string.settings_section_about)) {
                 AboutGroup(state.versionName, actions)
             }
+            MadeByFooter(actions)
         }
     }
 }
@@ -543,6 +554,49 @@ private fun AboutGroup(versionName: String, actions: SettingsActions) {
         }
         GroupRow(first = false, last = true) {
             LinkRow(stringResource(R.string.settings_font_licences), stringResource(R.string.settings_font_licences_summary), actions::onOpenLicences)
+        }
+    }
+}
+
+/** Where Pooparazzi's source code is read. */
+internal const val SOURCE_CODE_URL = "https://github.com/ffMathy/pooparazzi"
+
+/** The maker's LinkedIn profile. */
+internal const val LINKEDIN_URL = "https://www.linkedin.com/in/mathiaslorenzen/"
+
+/**
+ * The end of Settings, centred under About: "Made with ❤️ by a father in Aarhus, Denmark", "Pooparazzi is open source"
+ * and two logo buttons (48 dp targets): GitHub opens the source code, LinkedIn the maker's profile.
+ */
+@Composable
+private fun MadeByFooter(actions: SettingsActions) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            stringResource(R.string.settings_made_by),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            stringResource(R.string.settings_open_source),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            IconButton(onClick = actions::onOpenSourceCode) {
+                Icon(BrandIcons.gitHub, stringResource(R.string.cd_source_code), Modifier.size(24.dp), tint = colors.onSurfaceVariant)
+            }
+            IconButton(onClick = actions::onOpenLinkedIn) {
+                Icon(BrandIcons.linkedIn, stringResource(R.string.cd_linkedin), Modifier.size(24.dp), tint = colors.onSurfaceVariant)
+            }
         }
     }
 }
