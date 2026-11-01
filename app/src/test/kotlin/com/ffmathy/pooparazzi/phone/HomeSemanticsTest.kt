@@ -126,7 +126,7 @@ class HomeSemanticsTest {
     @Test
     fun theLampShowsTheBreastOrderOfTheLastFeed() {
         show(HomeSamples.breastLogged())
-        compose.onNodeWithText("ago · 14:32 · Left → Right", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("14:32 · Left → Right", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("Last feed, breast, left then right, 18 minutes ago, at 14:32").assertExists()
     }
 

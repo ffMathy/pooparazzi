@@ -95,10 +95,10 @@ data class Entry(
   - **"Log feed"** ("Registrér") bottom-right, always enabled (the amount is optional). It logs a formula feed at `stamp + offset` with the amount (at No amount: just the time) and closes the sheet; no receipt follows.
   - The amount shows in History's supporting line ("12:22 · 120 ml"; TalkBack "Formula, 12:22, 120 ml") and on the watch's Today list. The watch logs formula without an amount.
 - **Running sleep and a feed:** logging any feed (a breast feed included) while a sleep runs leaves the sleep running; it keeps the Lamp.
-- **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line: "ago · 12:22 · Formula". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, formula, 2 hours 10 minutes ago, at 12:22". A feed with no type shows the generic `feed` icon and no type word ("ago · 12:22"; TalkBack "Last feed, 2 hours 10 minutes ago, at 12:22").
+- **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line, after the `history` icon: "12:22 · Formula". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, formula, 2 hours 10 minutes ago, at 12:22". A feed with no type shows the generic `feed` icon and no type word ("12:22"; TalkBack "Last feed, 2 hours 10 minutes ago, at 12:22").
 - **Breast order on every last-feed line.** A breastfeed with a recorded side shows the order instead of the word "Breast", because it is what the next feed starts from:
-  - Lamp sub-line "ago · 14:32 · Left → Right". When that would exceed the chord it shortens to "ago · 14:32 · L → R", then "14:32 · L → R".
-  - Since-row 1 while asleep "Last fed 1h 32m ago · 01:40 · L → R" (short, so the row stays on one line).
+  - Lamp sub-line (after `history`) "14:32 · Left → Right". When that would exceed the chord it shortens to "14:32 · L → R".
+  - Since-row 1 while asleep "Last fed" / `history` "1h 32m · 01:40 · L → R" (short, so the row stays on one line).
   - Widget "Fed at 01:40 · L → R".
   - Watch status block "Fed at 12:22 · L → R" and the asleep status card "1h 32m ago · 01:40 · L → R".
   - TalkBack reads "Last feed, breast, left then right, …". Danish uses "Venstre → Højre" and "V → H".
@@ -491,9 +491,9 @@ cannot predict has no second line.
 | Surface | Feed | Diaper | Sleep, awake | Sleep, asleep |
 |---|---|---|---|---|
 | 4×2 widget (and the cover screen), in each button under its label, after `upcoming` as on Home | "55m", "soon", "24m ago" | "3h 10m", "soon", "24m ago" | "50m" | "2h 15m" |
-| Watch Main and Tile (one shared model, DESIGN_SPEC §3.5.1) | third row line: "Next in 55m" | third row line: "Next poop in 3h 10m" | under "Start sleep": "Next in 50m" | under "Woke up": "Next in 2h 15m" |
+| Watch Main and Tile (one shared model, DESIGN_SPEC §3.5.1), after `upcoming` | third row line: "55m" | third row line: "3h 10m" | under "Start sleep": "50m" | under "Woke up": "2h 15m" |
 
-Every surface (Home, the widgets, the watch) states the estimates by the same rules, relative to now (core `EstimateText`; Home and the 4×2 widget show the time alone after `upcoming`, the watch words it in full): rounded up to 5 minutes,
+Every surface (Home, the widgets, the watch) states the estimates by the same rules, relative to now (core `EstimateText`; Home, the 4×2 widget and the watch show the time alone after `upcoming`): rounded up to 5 minutes,
 "soon" under 5 minutes, then how long ago it was due. The widget does not tick: it is redrawn when the words change
 (every 5 minutes, then each minute once overdue, until the forecast is dropped). The Tile builds the same rules into a
 dynamic expression the renderer keeps current; the watch app re-words them each minute. Feed and Diaper keep the same

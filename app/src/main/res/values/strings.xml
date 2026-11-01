@@ -21,8 +21,6 @@
     <!-- Joins of localised parts -->
     <!-- Since-row lead: "Awake 1h 05m", "Pee 48m ago", "Last fed 1h 32m ago" -->
     <string name="join_space" translatable="false">%1$s %2$s</string>
-    <!-- A forecast line after its `upcoming` icon (Home's buttons, the 4×2 widget): the time alone, "55m". -->
-    <string name="forecast_time" translatable="false">%1$s</string>
     <!-- Sheet titles: "Diaper · 14:32", "Feed · 14:32" -->
     <string name="join_dot" translatable="false">%1$s · %2$s</string>
     <!-- TalkBack, two parts: "Last fed, No feeds yet" -->

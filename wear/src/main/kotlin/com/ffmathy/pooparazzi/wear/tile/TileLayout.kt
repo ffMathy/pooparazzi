@@ -49,7 +49,6 @@ import androidx.wear.protolayout.types.layoutString
 import androidx.wear.protolayout.types.stringLayoutConstraint
 import com.ffmathy.pooparazzi.core.domain.Expected
 import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
-import com.ffmathy.pooparazzi.core.format.Estimate
 import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.diaperKind
@@ -320,7 +319,7 @@ private class TileContent(
             text.template(SurfaceText.Template.of(res, R.string.tile_cd_feed), text.spokenAgo(it.startMillis, now))
         }?.withNext(next?.let(glanceText::nextFeedSpoken))
         val spokenStatic = spoken?.static ?: res.getString(R.string.tile_cd_feed_none)
-        val secondary = lastFeed?.let { text.ago(it.startMillis, now).layout(TEXT_ALIGN_START) }
+        val secondary = lastFeed?.let { text.since(it.startMillis, now).layout(TEXT_ALIGN_START) }
             ?: res.getString(R.string.status_no_feed_yet).layoutString
         val confirmed = (state.title as? TileTitle.Logged)?.feedback?.takeIf { confirmInRowA }?.let(::confirmation)
         val description = if (confirmed != null) {
@@ -341,7 +340,8 @@ private class TileContent(
         } ?: secondary
         sheetButton(
             events.feed, XDrawables.feed, res.getString(CoreR.string.kind_feed), shownSecondary,
-            next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let { estimate(Estimate.NEXT, it, TEXT_ALIGN_START) },
+            secondaryIcon = XDrawables.history.takeIf { confirmed == null && lastFeed != null },
+            next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let { estimate(it, TEXT_ALIGN_START) },
             description = description,
             onClick = openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
         )
@@ -358,20 +358,24 @@ private class TileContent(
             spoken?.static ?: res.getString(R.string.tile_cd_diaper_none),
             spoken?.dynamic?.takeIf { useDynamic },
         )
-        val secondary = lastDiaper?.let { text.ago(it.startMillis, now).layout(TEXT_ALIGN_START) }
+        val secondary = lastDiaper?.let { text.since(it.startMillis, now).layout(TEXT_ALIGN_START) }
             ?: res.getString(R.string.status_no_diaper_yet).layoutString
         sheetButton(
             events.diaper, XDrawables.diaper, res.getString(CoreR.string.kind_diaper), secondary,
-            next = next?.takeIf { lastDiaper != null && roomForEstimates }?.let { estimate(Estimate.POOP, it, TEXT_ALIGN_START) },
+            secondaryIcon = XDrawables.history.takeIf { lastDiaper != null },
+            next = next?.takeIf { lastDiaper != null && roomForEstimates }?.let { estimate(it, TEXT_ALIGN_START) },
             description = description,
             onClick = openApp(MainActivity.OPEN_DIAPER, CLICK_OPEN_DIAPER),
         )
     }
 
-    /** An estimate's line, kept current by the renderer ("Next in 55m" → "Next soon" → "Due 4m ago"), as on Main. */
-    private fun estimate(kind: Estimate, expected: Expected, alignment: Int): LayoutString {
-        val (ahead, soon, past) = glanceText.template(kind)
-        return text.estimate(expected.atMillis, glanceText.next(kind, expected, now), ahead, soon, past).layout(alignment)
+    /**
+     * An estimate's line after the `upcoming` icon, kept current by the renderer ("55m" → "soon" → "4m ago"), as on
+     * Main.
+     */
+    private fun estimate(expected: Expected, alignment: Int): LayoutString {
+        val (ahead, soon, past) = glanceText.shortTemplate()
+        return text.estimate(expected.atMillis, glanceText.nextShort(expected, now), ahead, soon, past).layout(alignment)
     }
 
     /** [this] read on with the estimate after it ("…, next feed expected around 15:30"). */
@@ -379,14 +383,16 @@ private class TileContent(
         if (nextSpoken == null) this else text.template(SurfaceText.Template(res.getString(R.string.spoken_pair, SurfaceText.Template.PLACEHOLDER, nextSpoken)), this)
 
     /**
-     * A full-width row that opens one of the app's logging screens: icon, label and the time since the last one, then
-     * the estimate of the next one ([next], "Next ~15:30") as Main's rows show it.
+     * A full-width row that opens one of the app's logging screens: icon, label and the time since the last one after
+     * [secondaryIcon] (`history`, "⟲ 2h 10m"), then the estimate of the next one after `upcoming` ([next], "⟳ 55m"), as
+     * Main's rows show it.
      */
     private fun MaterialScope.sheetButton(
         event: EventColors,
         @DrawableRes icon: Int,
         label: String,
         secondary: LayoutString,
+        @DrawableRes secondaryIcon: Int?,
         next: LayoutString?,
         description: LayoutModifier,
         onClick: Clickable,
@@ -396,11 +402,11 @@ private class TileContent(
         iconContent = { glyph(icon, event.strong, ROW_ICON) },
         labelContent = { plainText(label.layoutString, Typography.LABEL_MEDIUM, event.onContainer.layout, start = true) },
         secondaryLabelContent = {
-            val since = plainText(secondary, Typography.LABEL_SMALL, event.onContainer.layout, start = true)
+            val since = iconLine(secondaryIcon, secondary, Typography.LABEL_SMALL, event.onContainer, LINE_ICON, start = true)
             if (next == null) {
                 since
             } else {
-                column(since, plainText(next, Typography.LABEL_SMALL, event.onContainer.layout, start = true), horizontalAlignment = HORIZONTAL_ALIGN_START)
+                column(since, iconLine(XDrawables.upcoming, next, Typography.LABEL_SMALL, event.onContainer, LINE_ICON, start = true), horizontalAlignment = HORIZONTAL_ALIGN_START)
             }
         },
         width = expand(),
@@ -441,8 +447,12 @@ private class TileContent(
                 if (next == null) {
                     word
                 } else {
-                    // The smallest type: the EdgeButton's top is narrow ("Næste om 50m" must fit its width).
-                    column(word, plainText(estimate(Estimate.NEXT, next, TEXT_ALIGN_CENTER), Typography.BODY_EXTRA_SMALL, sleep.onContainer.layout), horizontalAlignment = HORIZONTAL_ALIGN_CENTER)
+                    // The smallest type: the EdgeButton's top is narrow ("⟳ 50m" must fit its width).
+                    column(
+                        word,
+                        iconLine(XDrawables.upcoming, estimate(next, TEXT_ALIGN_CENTER), Typography.BODY_EXTRA_SMALL, sleep.onContainer, EDGE_LINE_ICON),
+                        horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
+                    )
                 }
             },
         )
@@ -464,6 +474,19 @@ private class TileContent(
 
     private fun MaterialScope.glyph(@DrawableRes res: Int, tint: Color, size: Float): LayoutElement =
         icon(imageResource(androidImageResource(res)), width = dp(size), height = dp(size), tintColor = tint.layout)
+
+    /** [value] after [icon] (`history`, `upcoming`) at about the text's size, or the text alone with no icon. */
+    private fun MaterialScope.iconLine(
+        @DrawableRes icon: Int?,
+        value: LayoutString,
+        typography: Int,
+        color: Color,
+        iconSize: Float,
+        start: Boolean = false,
+    ): LayoutElement {
+        val line = plainText(value, typography, color.layout, start = start)
+        return if (icon == null) line else row(glyph(icon, color, iconSize), spacer(width = dp(3f)), line, verticalAlignment = VERTICAL_ALIGN_CENTER)
+    }
 
     private fun MaterialScope.plainText(
         value: LayoutString,
@@ -494,6 +517,10 @@ private class TileContent(
     companion object {
         const val TITLE_ICON = TileTextMeasure.TITLE_ICON_DP
         const val ROW_ICON = 24f
+
+        /** The `history` / `upcoming` icon before a row's labelSmall line, and before the EdgeButton's smallest line. */
+        const val LINE_ICON = 12f
+        const val EDGE_LINE_ICON = 10f
 
         /** The largest font scale at which a row's estimate still fits as its third line. */
         const val MAX_ESTIMATE_FONT_SCALE = 1.15f

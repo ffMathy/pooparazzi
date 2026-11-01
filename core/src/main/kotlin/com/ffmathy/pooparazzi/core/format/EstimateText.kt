@@ -34,6 +34,17 @@ class EstimateText(private val res: Resources, private val duration: DurationFor
         return res.getString(soonId)
     }
 
+    /**
+     * The line after an `upcoming` icon, which already says "next" (Home's buttons, the 4×2 widget, the watch's Main
+     * and Tile): the time alone, "55m", "soon", or "24m ago" once it was due.
+     */
+    fun formatShort(expected: Expected, now: Long): String =
+        format(R.string.estimate_time, R.string.estimate_soon, R.string.rel_ago_format, expected, now)
+
+    /** [formatShort]'s three words, for a surface that builds the line itself (the Tile's dynamic expression). */
+    fun shortTemplates(): Triple<String, String, String> =
+        Triple(res.getString(R.string.estimate_time), res.getString(R.string.estimate_soon), res.getString(R.string.rel_ago_format))
+
     /** [kind]'s three words, for a surface that builds the line itself (the Tile's dynamic expression). */
     fun templates(kind: Estimate): Triple<String, String, String> =
         Triple(res.getString(kind.inId), res.getString(kind.soonId), res.getString(kind.agoId))

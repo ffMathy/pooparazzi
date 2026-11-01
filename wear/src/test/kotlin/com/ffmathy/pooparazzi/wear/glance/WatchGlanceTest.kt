@@ -4,7 +4,6 @@ import android.content.Context
 import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.domain.summarize
-import com.ffmathy.pooparazzi.core.format.Estimate
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.sample.SampleData
@@ -42,11 +41,11 @@ class WatchGlanceTest {
         val glance = WatchGlance.from(summarize(SampleData.history(), SampleData.NOW_1432, SampleData.ZONE), SampleData.BABY_NAME)
         val words = GlanceText(context.resources, Formatters.from(context, SampleData.ZONE))
         val feed = assertNotNull(glance.nextFeed)
-        assertEquals("Next in 1h 00m", words.next(Estimate.NEXT, feed, glance.now))
-        assertEquals("Next in 50m", words.next(Estimate.NEXT, assertNotNull(glance.nextSleep), glance.now))
+        assertEquals("1h 00m", words.nextShort(feed, glance.now))
+        assertEquals("50m", words.nextShort(assertNotNull(glance.nextSleep), glance.now))
         // Under five minutes it is "soon"; a minute past it, how long ago.
-        assertEquals("Next soon", words.next(Estimate.NEXT, feed, feed.atMillis - 4 * 60_000L))
-        assertEquals("Due 24m ago", words.next(Estimate.NEXT, feed, feed.atMillis + 24 * 60_000L))
+        assertEquals("soon", words.nextShort(feed, feed.atMillis - 4 * 60_000L))
+        assertEquals("24m ago", words.nextShort(feed, feed.atMillis + 24 * 60_000L))
         assertEquals("expected to sleep again around 15:20", words.nextSleepSpoken(glance.nextSleep!!, asleep = false))
         assertEquals(GlanceTitle.Name(SampleData.BABY_NAME), glance.title)
     }
@@ -56,7 +55,7 @@ class WatchGlanceTest {
         val glance = WatchGlance.from(summarize(SampleData.historyAt0312(), SampleData.NOW_0312, SampleData.ZONE), SampleData.BABY_NAME)
         val words = GlanceText(context.resources, Formatters.from(context, SampleData.ZONE))
         assertTrue(glance.title is GlanceTitle.Asleep)
-        assertEquals("Next in 2h 15m", words.next(Estimate.NEXT, glance.nextSleep!!, glance.now))
+        assertEquals("2h 15m", words.nextShort(glance.nextSleep!!, glance.now))
         assertEquals("expected to wake around 05:25", words.nextSleepSpoken(glance.nextSleep!!, asleep = true))
     }
 
