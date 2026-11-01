@@ -65,7 +65,6 @@ PHONE = {
     "29-account-signed-in.png": "account-signed-in",
     "30-widget-twins.png": "widget-twins",
     "31-notification-twins.png": "notification-twins",
-    "34-statistics-twins.png": "statistics-twins",
     "37-settings-family.png": "settings-family",
     "38-join-family.png": "join-family",
     "39-account-link-sent.png": "account-link-sent",

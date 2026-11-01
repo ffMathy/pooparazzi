@@ -80,9 +80,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-home-twins.png" width="200" alt="Home with two babies: Noa with a chevron is the switcher, the watch and cloud status icons under it"> | <img src="docs/screenshots/en/phone-switch-baby.png" width="200" alt="Switch baby sheet with Noa selected and Ida"> | <img src="docs/screenshots/en/phone-history-twins.png" width="200" alt="History labelled Noa under the title"> | <img src="docs/screenshots/en/phone-widget-twins.png" width="200" alt="4x2 widgets with Noa at the start of the status row, and the 3x1"> |
 
-| Sleep notifications, two babies | Statistics, two babies | Removing a baby |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-notification-twins.png" width="200" alt="One sleep notification per baby: Noa is asleep and Ida is asleep, each with Woke up"> | <img src="docs/screenshots/en/phone-statistics-twins.png" width="200" alt="Statistics labelled Noa under the title: only Noa's log counts"> | <img src="docs/screenshots/en/phone-settings-remove-baby.png" width="200" alt="Remove Baby 3? Their log is deleted for everyone in your family and from your backup; Cancel and Remove"> |
+| Sleep notifications, two babies | Removing a baby |
+|:---:|:---:|
+| <img src="docs/screenshots/en/phone-notification-twins.png" width="200" alt="One sleep notification per baby: Noa is asleep and Ida is asleep, each with Woke up"> | <img src="docs/screenshots/en/phone-settings-remove-baby.png" width="200" alt="Remove Baby 3? Their log is deleted for everyone in your family and from your backup; Cancel and Remove"> |
 
 #### Families and passwordless sign-in
 

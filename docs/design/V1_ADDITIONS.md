@@ -432,7 +432,7 @@ Only whole days count: every window ends **yesterday**, and the **first logged d
 
 | Band | Content |
 |---|---|
-| Top bar | Back; "Statistics" titleLarge (a heading), with the baby's label under it when there are two or more babies. No subtitle and no action at the end |
+| Top bar | Back; "Statistics" titleLarge (a heading). No subtitle, no baby label and no action at the end |
 | Period header | the range chip, inset 16 like the rows' content, with its dates under it ("26 Sep – 25 Oct", dataSmall onSurfaceVariant) and a coverage line when it applies |
 | Rows | 4 grouped cards (gap 2, r 20 / r 6, surfaceContainer, padding 16 / 12 / 8): the kind's glyph 20 in its strong colour + name labelLarge + `chevronDown` 20 when closed; then the range's average (displaySmall), shrinking to 12 sp rather than clip |
 | Open row | adds its chart; the card grows with `animateContentSize` (left out with reduced motion) |

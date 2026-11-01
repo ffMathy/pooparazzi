@@ -57,7 +57,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -125,20 +124,6 @@ fun StatisticsScreen(
     val bottomInset = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
     val report = state.report
     var choosing by rememberSaveable { mutableStateOf(false) }
-    // With two or more babies, whose statistics these are (as on History, BABIES_AND_BACKUP §2.4).
-    val subtitle: (@Composable ColumnScope.() -> Unit)? = if (!state.hasSeveralBabies) {
-        null
-    } else {
-        {
-            Text(
-                formatters.labels.baby(state.baby, state.babies),
-                style = MaterialTheme.typography.titleMedium,
-                color = colors.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
     Column(
         modifier
             .fillMaxSize()
@@ -150,7 +135,6 @@ fun StatisticsScreen(
             navigationIcon = XIcons.back,
             navigationLabel = stringResource(R.string.cd_back),
             onNavigate = actions::onBack,
-            below = subtitle,
         )
         // The screen's only scrollable node (the menu and the date dialog are popups, outside it).
         Column(
