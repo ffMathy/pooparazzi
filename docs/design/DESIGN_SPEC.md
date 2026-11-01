@@ -168,8 +168,9 @@ Home ──Diaper / Feed───────▶ Diaper / Feed sheet ──Save 
  │ ├─Receipt sheet ──Edit──▶ Edit sheet (that entry) · ──Undo──▶ Home + "Undone" notice
  │ ├─History button / Today grid ──▶ History ──row──▶ Edit sheet
  │ │                                        ├─Statistics button▶ Statistics (P8) ──range chip──▶ menu / date range dialog
+ │ │                                        │                     └─History button──▶ History (back to it when it is right below)
  │ │                                        └─"Add entry" FAB──▶ Edit sheet ("Add past entry" mode)
- │ ├─`chart` button ────────▶ Statistics (P8)
+ │ ├─`chart` button ────────▶ Statistics (P8) ──History button──▶ History
  │ └─Settings ──────────────▶ Settings (not designed; Appendix B)
 Widget buttons ──▶ log in place (no app launch) · Widget background ──▶ Home with the receipt for the last widget log
 Live Update ──"Woke up" action──▶ ends the sleep

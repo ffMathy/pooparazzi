@@ -393,7 +393,7 @@ These names are what the apps code against.
 
 ## 8. Statistics (P8)
 
-**Placement.** Statistics is a destination over Home or History. Home's `chart` icon button (48, between History and Settings, TalkBack: "Statistics") and the "Statistics" button (`chart` 20 + "Statistics") at the end of History's top bar open it, so it is found without going through History first; Back, in the top bar or from the system, returns to where it was opened from (History with its day kept), and a second tap during the transition is dropped. There is no deep link or widget entry point; a widget or notification link still returns to Home. History's list, its single scrollable node and its single "Back" are unchanged: History stays "one day", Statistics is "many days".
+**Placement.** Statistics is a destination over Home or History. Home's `chart` icon button (48, between History and Settings, TalkBack: "Statistics") and the "Statistics" button (`chart` 20 + "Statistics") at the end of History's top bar open it, so it is found without going through History first; Back, in the top bar or from the system, returns to where it was opened from (History with its day kept), and a second tap during the transition is dropped. Statistics' own "History" button goes the other way. There is no deep link or widget entry point; a widget or notification link still returns to Home. History's list, its single scrollable node and its single "Back" are unchanged: History stays "one day", Statistics is "many days".
 
 **What it shows.** Averages per day of feeds · pee · poop · sleep (§4's order) over **one range**, chosen with the range chip: the **last 30 days** by default. Only that range is shown; there is no second column to compare with. The rows are a single-select accordion: the open row shows a bar chart of the range. Poop is open on every new visit.
 
@@ -432,7 +432,7 @@ Only whole days count: every window ends **yesterday**, and the **first logged d
 
 | Band | Content |
 |---|---|
-| Top bar | Back; "Statistics" titleLarge (a heading). No subtitle, no baby label and no action at the end |
+| Top bar | Back; "Statistics" titleLarge (a heading); at the end the "History" button: a 48 tall pill, `history` 20 + 6 + "History" labelLarge, both onSurfaceVariant (History's "Statistics" button mirrored). It returns to History when History is right below, otherwise opens History on top, so switching back and forth never piles up screens. No subtitle and no baby label |
 | Period header | the range chip, inset 16 like the rows' content, with its dates under it ("26 Sep – 25 Oct", dataSmall onSurfaceVariant) and a coverage line when it applies |
 | Rows | 4 grouped cards (gap 2, r 20 / r 6, surfaceContainer, padding 16 / 12 / 8): the kind's glyph 20 in its strong colour + name labelLarge + `chevronDown` 20 when closed; then the range's average (displaySmall), shrinking to 12 sp rather than clip |
 | Open row | adds its chart; the card grows with `animateContentSize` (left out with reduced motion) |

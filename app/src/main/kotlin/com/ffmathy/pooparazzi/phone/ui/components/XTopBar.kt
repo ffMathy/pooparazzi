@@ -95,8 +95,8 @@ internal fun IconTarget(
 }
 
 /**
- * A 48 dp tall pill button with an [XIcon] and its [label] (History's "Statistics"): `icon` 20 + 6 + labelLarge,
- * both onSurfaceVariant, 12 inside each end. The label is the button's name, so the icon is not read.
+ * A 48 dp tall pill button with an [XIcon] and its [label] (History's "Statistics", Statistics' "History"):
+ * `icon` 20 + 6 + labelLarge, both onSurfaceVariant, 12 inside each end. The label is the button's name, so the icon is not read.
  */
 @Composable
 internal fun LabelTarget(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {

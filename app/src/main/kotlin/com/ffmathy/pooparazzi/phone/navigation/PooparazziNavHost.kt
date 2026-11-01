@@ -5,6 +5,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -33,7 +34,7 @@ data object Home
 @Serializable
 data object History
 
-/** Statistics (P8), opened from Home's `chart` button or History's Statistics button. */
+/** Statistics (P8), opened from Home's `chart` button or History's Statistics button; its History button opens History. */
 @Serializable
 data object Statistics
 
@@ -125,6 +126,16 @@ fun PooparazziNavHost(
     links: AccountLinks = AccountLinks(),
 ) {
     fun open(route: Any) = navController.navigate(route) { launchSingleTop = true }
+
+    // History and Statistics open each other: back to the other one when it is right below, so switching between
+    // them never piles up the back stack; otherwise on top.
+    fun switchTo(route: Any) {
+        if (navController.previousBackStackEntry?.destination?.hasRoute(route::class) == true) {
+            navController.popBackStack()
+        } else {
+            open(route)
+        }
+    }
     // An email sign-in link: the Account screen takes it (signs in, or completes the account deletion).
     LaunchedEffect(links.emailLinkWaiting) {
         if (links.emailLinkWaiting) open(Account)
@@ -168,8 +179,8 @@ fun PooparazziNavHost(
                 onLaunchedSheetClosed = onLaunchedSheetClosed,
             )
         }
-        composable<History> { HistoryRoute(onBack = back, onOpenStatistics = { open(Statistics) }) }
-        composable<Statistics> { StatisticsRoute(onBack = back) }
+        composable<History> { HistoryRoute(onBack = back, onOpenStatistics = { switchTo(Statistics) }) }
+        composable<Statistics> { StatisticsRoute(onBack = back, onOpenHistory = { switchTo(History) }) }
         composable<Settings> {
             SettingsRoute(onBack = back, onOpenLicences = { open(Licences) }, onOpenAccount = { open(Account) })
         }

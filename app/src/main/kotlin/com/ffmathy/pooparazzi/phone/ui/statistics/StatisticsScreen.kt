@@ -76,6 +76,7 @@ import com.ffmathy.pooparazzi.core.ui.tokens.LocalXPalette
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.ui.components.ChipDefaults
+import com.ffmathy.pooparazzi.phone.ui.components.LabelTarget
 import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
 import com.ffmathy.pooparazzi.phone.ui.history.HistoryRowDefaults
 import com.ffmathy.pooparazzi.phone.ui.preview.StatisticsSamples
@@ -86,16 +87,18 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import com.ffmathy.pooparazzi.core.R as CoreR
 
-/** Statistics wired to its view model; Back returns to History. */
+/** Statistics wired to its view model; Back returns to where it was opened from, and [onOpenHistory] opens History. */
 @Composable
-fun StatisticsRoute(onBack: () -> Unit) {
+fun StatisticsRoute(onBack: () -> Unit, onOpenHistory: () -> Unit = {}) {
     val viewModel: StatisticsViewModel = viewModel(factory = StatisticsViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
     // Only while this screen is resumed: a second tap during the exit transition must not pop History as well.
     val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
+    val history by rememberUpdatedState(dropUnlessResumed(block = onOpenHistory))
     val actions = remember(viewModel) {
         object : StatisticsActions by viewModel {
             override fun onBack() = back()
+            override fun onOpenHistory() = history()
         }
     }
     val loaded = state
@@ -135,6 +138,7 @@ fun StatisticsScreen(
             navigationIcon = XIcons.back,
             navigationLabel = stringResource(R.string.cd_back),
             onNavigate = actions::onBack,
+            actions = { LabelTarget(XIcons.history, stringResource(CoreR.string.nav_history), actions::onOpenHistory) },
         )
         // The screen's only scrollable node (the menu and the date dialog are popups, outside it).
         Column(
