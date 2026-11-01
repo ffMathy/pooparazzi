@@ -174,15 +174,23 @@ private fun LampText(
             }
         }
         Spacer(Modifier.height(4.dp))
-        Text(
-            text.sub,
-            style = PhoneType.dataMedium,
-            color = colors.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        // `history` says the hero is time since, so the line needs no "ago" / "since": "⟲ 12:22 · Formula".
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SUB_ICON_GAP)) {
+            XIcon(XIcons.history, contentDescription = null, tint = colors.onSurfaceVariant, size = SUB_ICON)
+            Text(
+                text.sub,
+                style = PhoneType.dataMedium,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
+
+/** The sub-line's leading `history` icon and its gap. */
+private val SUB_ICON = 18.dp
+private val SUB_ICON_GAP = 4.dp
 
 /** The Lamp's words for [lamp]. Exactly one of [heroParts] and [heroWord] is set. */
 private class LampTexts(
@@ -215,27 +223,17 @@ private fun lampTexts(lamp: LampState, zone: ZoneId, size: Dp, formatters: Forma
                 val spokenDetail = spokenFeedDetail(feed, clock.locale)
                 val time = clock.format(feed.startMillis, zone)
                 val under = DurationFormatter.isUnderAMinute(since)
-                val sub = if (under) {
-                    relative.at(feed.startMillis, zone)
+                // After the `history` icon: "12:22 · Formula", or the breast order "12:22 · Left → Right". When that
+                // would exceed the Lamp chord the order shortens to "L → R" (it is what the next feed starts from); a
+                // type word is simply dropped. A feed logged with just its time has neither.
+                val sub = if (detail == null) {
+                    time
                 } else {
-                    // "ago · 12:22 · Formula", or the breast order "ago · 12:22 · Left → Right". When that would exceed
-                    // the Lamp chord the order shortens to "L → R", then drops "ago" (the order is what the next feed
-                    // starts from); a type word is simply dropped. A feed logged with just its time has neither.
-                    val base = relative.agoWord + DOT_SEPARATOR + time
-                    if (detail == null) {
-                        base
-                    } else {
-                        fitFirst(
-                            listOfNotNull(
-                                base + DOT_SEPARATOR + detail,
-                                shortDetail?.let { base + DOT_SEPARATOR + it },
-                                shortDetail?.let { time + DOT_SEPARATOR + it },
-                                base,
-                            ),
-                            PhoneType.dataMedium,
-                            size * HomeLampDefaults.SUB_CHORD,
-                        )
-                    }
+                    fitFirst(
+                        listOfNotNull(time + DOT_SEPARATOR + detail, shortDetail?.let { time + DOT_SEPARATOR + it }, time),
+                        PhoneType.dataMedium,
+                        size * HomeLampDefaults.SUB_CHORD - SUB_ICON - SUB_ICON_GAP,
+                    )
                 }
                 LampTexts(
                     labelIcon = XIcons.forFeedType(type),
@@ -289,7 +287,8 @@ private fun runningTexts(
         label = label,
         heroParts = if (under) null else formatters.duration.parts(elapsedMillis),
         heroWord = if (under) formatters.relative.justNow else null,
-        sub = since,
+        // After the `history` icon, the start alone: "02:05".
+        sub = formatters.clock.format(startMillis, zone),
         spoken = stringResource(R.string.spoken_running, label, formatters.duration.spoken(elapsedMillis), since),
     )
 }

@@ -6,7 +6,6 @@ import com.ffmathy.pooparazzi.core.domain.Expected
 import com.ffmathy.pooparazzi.core.domain.Forecast
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.forecast
-import com.ffmathy.pooparazzi.core.format.Estimate
 import com.ffmathy.pooparazzi.core.format.EstimateText
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -96,11 +95,11 @@ class GlanceText(private val res: Resources, private val formatters: Formatters)
 
     private fun time(expected: Expected): String = formatters.clock.format(expected.roundedAtMillis, formatters.zone)
 
-    /** [kind]'s line at [now]: "Next in 55m", "Next soon" or "Due 24m ago". */
-    fun next(kind: Estimate, expected: Expected, now: Long): String = estimates.format(kind, expected, now)
+    /** After the `upcoming` icon, which says "next": "55m", "soon" or "24m ago" (Main's rows and sleep toggle). */
+    fun nextShort(expected: Expected, now: Long): String = estimates.formatShort(expected, now)
 
-    /** [kind]'s words, for a surface that builds the line itself (the Tile's dynamic expression). */
-    fun template(kind: Estimate): Triple<String, String, String> = estimates.templates(kind)
+    /** [nextShort]'s words, for a surface that builds the line itself (the Tile's dynamic expression). */
+    fun shortTemplate(): Triple<String, String, String> = estimates.shortTemplates()
 
     /** TalkBack: "expected to wake around 05:25" / "expected to sleep again around 15:20". */
     fun nextSleepSpoken(expected: Expected, asleep: Boolean): String =

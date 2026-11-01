@@ -214,4 +214,6 @@
     <string name="estimate_poop_ago">Poop due %1$s ago</string>
     <!-- The 4×2 widget's forecast line after its `upcoming` icon, where the time alone is "in 55m". -->
     <string name="estimate_soon">soon</string>
+    <!-- The same line's time alone, "55m" (the icon says it is next). -->
+    <string name="estimate_time" translatable="false">%1$s</string>
 </resources>

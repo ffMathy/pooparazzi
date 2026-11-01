@@ -136,8 +136,7 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
      * After the `upcoming` icon, under Feed, Diaper (the next poop) and the sleep toggle (the next sleep, or the wake-up
      * while asleep): "55m", "soon", "24m ago", by the same rules as everywhere else (core [EstimateText]).
      */
-    fun forecast(expected: Expected, now: Long): String =
-        estimates.format(R.string.forecast_time, CoreR.string.estimate_soon, CoreR.string.rel_ago_format, expected, now)
+    fun forecast(expected: Expected, now: Long): String = estimates.formatShort(expected, now)
 
     /** TalkBack: "next feed expected around 15:35" / "next poop expected around 18:00". */
     fun feedForecastSpoken(expected: Expected): String = string(CoreR.string.spoken_forecast_feed_at, time(expected.roundedAtMillis))

@@ -47,7 +47,7 @@ internal fun forecastText(expected: Expected?, kind: ForecastKind, now: Long, zo
     }
     val remaining = expected.remainingMillis(now) ?: return ForecastText(stringResource(CoreR.string.estimate_soon), stringResource(kind.spokenSoon))
     return ForecastText(
-        shown = stringResource(R.string.forecast_time, formatters.duration.format(remaining)),
+        shown = stringResource(CoreR.string.estimate_time, formatters.duration.format(remaining)),
         spoken = stringResource(kind.spokenFormat, formatters.duration.spoken(remaining), clock),
     )
 }

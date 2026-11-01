@@ -69,7 +69,7 @@ class TileLayoutTest {
         val proto = build(WearSamples.tileIdle())
         assertTrue(proto.has("Noa"))
         assertTrue(proto.has("Feed"))
-        assertTrue(proto.has("2h 10m ago"))
+        assertTrue(proto.has("2h 10m"))
         assertTrue(proto.has("Feed. Last feed 2 hours 10 minutes ago"))
         // "Start sleep" says what it showed, so a stale tap cannot end a sleep started elsewhere.
         assertTrue(proto.contains("sleep_start#5"))
@@ -79,7 +79,7 @@ class TileLayoutTest {
         assertTrue(proto.contains(MainActivity.OPEN_FEED_TYPE))
         assertTrue(proto.contains("open_diaper"))
         assertTrue(proto.has("Diaper"))
-        assertTrue(proto.has("48m ago"))
+        assertTrue(proto.has("48m"))
         assertTrue(proto.has("Diaper. Last diaper 48 minutes ago"))
         assertFalse(proto.contains("log_"))
         // No background action outside the confirmation.
@@ -97,7 +97,7 @@ class TileLayoutTest {
     fun afterABreastFeedRowAIsStillFeed() {
         val proto = build(WearSamples.tileAfterBreastfeed())
         assertTrue(proto.has("Feed"))
-        assertTrue(proto.has("18m ago"))
+        assertTrue(proto.has("18m"))
         assertFalse(proto.has("End feed"))
         assertTrue(proto.contains(MainActivity.OPEN_FEED_TYPE))
     }
@@ -108,7 +108,7 @@ class TileLayoutTest {
         assertTrue(proto.has("Asleep 1h 07m"))
         assertTrue(proto.has("Woke up"))
         assertTrue(proto.has("Woke up, end sleep"))
-        assertTrue(proto.has("1h 32m ago"))
+        assertTrue(proto.has("1h 32m"))
         // "Woke up" names the sleep it showed.
         assertTrue(proto.contains("sleep_end#5#sample-sleep-0205"))
         assertFalse(proto.contains("sleep_start"))
@@ -142,7 +142,7 @@ class TileLayoutTest {
     @Test
     fun dynamicTextKeepsTheStaticValueAsFallback() {
         val proto = build(WearSamples.tileIdle(), dynamic = true)
-        assertTrue(proto.has("2h 10m ago"))
+        assertTrue(proto.has("2h 10m"))
         assertTrue(proto.contains("ConcatStringOp"))
     }
 
@@ -257,7 +257,7 @@ class TileLayoutTest {
         assertTrue(proto, proto.has("Woke up · Undo") || proto.has("Woke up 14:32 · Undo") || proto.has("Woke up 14:32"))
         assertTrue(proto.contains("Woke up at 14:32. Tap the tile to undo. Feed."))
         // Without a confirmation Row A says the time since the last feed.
-        assertTrue(build(WearSamples.tileIdle(), sizeDp = 192).has("2h 10m ago"))
+        assertTrue(build(WearSamples.tileIdle(), sizeDp = 192).has("2h 10m"))
     }
 
     @Test

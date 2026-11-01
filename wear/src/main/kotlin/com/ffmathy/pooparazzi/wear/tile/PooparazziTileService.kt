@@ -96,7 +96,7 @@ fun MaterialScope.tile(state: TileUiState, text: SurfaceText, token: Long, dynam
         .build()
 }
 
-private const val RESOURCES_VERSION = "1"
+private const val RESOURCES_VERSION = "2"
 private const val STATIC_REFRESH_MILLIS = 60_000L
 
 /** Dynamic text and conditions arrived with renderer schema 1.200 (Wear OS 4). */

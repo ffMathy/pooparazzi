@@ -9,6 +9,7 @@ import androidx.wear.protolayout.expression.DynamicBuilders.DynamicDuration
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicInstant
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicInt32
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicString
+import com.ffmathy.pooparazzi.core.format.DurationFormatter
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
 import java.time.Instant
@@ -53,6 +54,18 @@ class SurfaceText(
             static,
             words.ago.wrap(agoBody(fromMillis), justNow(fromMillis)),
             longestOf(static, words.ago.fill(widestDuration), formatters.relative.justNow),
+        )
+    }
+
+    /** "2h 10m" since [fromMillis], "just now" under a minute: the time after a `history` icon, which says "ago". */
+    fun since(fromMillis: Long, now: Long): TimeText {
+        val elapsed = clockDurationMillis(fromMillis, now)
+        val static = if (DurationFormatter.isUnderAMinute(elapsed)) formatters.relative.justNow else formatters.duration.format(elapsed)
+        val (underAMinute, word) = justNow(fromMillis)
+        return TimeText(
+            static,
+            DynamicString.onCondition(underAMinute).use(DynamicString.constant(word)).elseUse(agoBody(fromMillis)),
+            longestOf(static, widestDuration, word),
         )
     }
 

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.model.FeedType
+import com.ffmathy.pooparazzi.core.format.DurationFormatter
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
@@ -43,8 +44,8 @@ internal const val LARGE_FONT_SCALE = 1.3f
 
 /**
  * The two since-rows (DESIGN_SPEC §3.3.1): the one-tap correction path into the edit sheet. Each row is a title ("Last
- * fed", "Pee", "Awake") over a quieter detail line ("1h 32m ago · 01:40 · L → R"). Each line keeps to one line, and
- * takes a second only at a large font.
+ * fed", "Pee", "Awake") over a quieter detail line: the `history` icon, which says it is time since, then "1h 32m ·
+ * 01:40 · L → R" with no "ago" / "since". Each line keeps to one line, and takes a second only at a large font.
  */
 @Composable
 internal fun SinceRows(row1: SinceRow?, row2: SinceRow?, zone: ZoneId, formatters: Formatters, onEdit: (String) -> Unit, modifier: Modifier = Modifier) {
@@ -94,7 +95,10 @@ private fun SinceRowItem(row: SinceRow, text: SinceRowText, maxLines: Int, onEdi
         XIcon(text.icon.icon, contentDescription = null, tint = text.icon.tint, size = ICON_SIZE)
         Column(Modifier.weight(1f)) {
             Text(text.lead, style = PhoneType.titleMedium, color = colors.onSurface, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
-            Text(text.meta, style = PhoneType.dataMedium, color = colors.onSurfaceVariant, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                XIcon(XIcons.history, contentDescription = null, tint = colors.onSurfaceVariant, size = 18.dp)
+                Text(text.meta, style = PhoneType.dataMedium, color = colors.onSurfaceVariant, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+            }
         }
         XIcon(XIcons.chevronRight, contentDescription = null, tint = colors.outline, size = 16.dp)
     }
@@ -116,14 +120,14 @@ private fun sinceRowText(row: SinceRow, zone: ZoneId, formatters: Formatters): S
         )
         is SinceRow.LastFed -> {
             val type = row.feed.feedType
-            // The breast order rides after the time ("1h 32m ago · 01:40 · L → R"), short so the line stays on one line:
+            // The breast order rides after the time ("1h 32m · 01:40 · L → R"), short so the line stays on one line:
             // it is what the next feed starts from.
             val side = row.feed.breastSide?.takeIf { type == FeedType.BREAST }?.let { stringResource(Labels.sideShort(it)) }
             val spokenDetail = spokenFeedDetail(row.feed, clock.locale)
             SinceRowText(
                 icon = TintedIcon(XIcons.forFeedType(type), events.feed.strong),
                 lead = stringResource(CoreR.string.status_last_fed),
-                meta = relative.ago(row.elapsedMillis) + dotted(clock.format(row.feed.startMillis, zone)) + (side?.let(::dotted) ?: ""),
+                meta = sinceText(row.elapsedMillis, formatters) + dotted(clock.format(row.feed.startMillis, zone)) + (side?.let(::dotted) ?: ""),
                 spoken = if (spokenDetail == null) {
                     stringResource(
                         R.string.spoken_running,
@@ -145,7 +149,7 @@ private fun sinceRowText(row: SinceRow, zone: ZoneId, formatters: Formatters): S
         is SinceRow.LastDiaper -> SinceRowText(
             icon = diaperIcon(row.kind, events),
             lead = diaperStatusLabel(row.kind),
-            meta = relative.ago(row.elapsedMillis) + dotted(clock.format(row.diaper.startMillis, zone)),
+            meta = sinceText(row.elapsedMillis, formatters) + dotted(clock.format(row.diaper.startMillis, zone)),
             spoken = if (row.kind == DiaperKind.PLAIN) {
                 // "Last diaper, 48 minutes ago, at 13:44": a plain change has no kind to name.
                 stringResource(
@@ -180,7 +184,12 @@ private fun statusRow(
     return SinceRowText(
         icon = icon,
         lead = status,
-        meta = formatters.duration.format(elapsedMillis) + dotted(since),
+        // "1h 05m · 13:27" after the `history` icon.
+        meta = formatters.duration.format(elapsedMillis) + dotted(formatters.clock.format(sinceMillis, zone)),
         spoken = stringResource(R.string.spoken_status_since, status, formatters.duration.spoken(elapsedMillis), since),
     )
 }
+
+/** The time since, after the `history` icon: "1h 32m", or "just now" under a minute. */
+private fun sinceText(elapsedMillis: Long, formatters: Formatters): String =
+    if (DurationFormatter.isUnderAMinute(elapsedMillis)) formatters.relative.justNow else formatters.duration.format(elapsedMillis)
