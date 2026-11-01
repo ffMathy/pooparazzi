@@ -51,6 +51,9 @@ data class StatisticsUiState(
 interface StatisticsActions {
     fun onBack() {}
 
+    /** The "History" button in the top bar: History (P3). */
+    fun onOpenHistory() {}
+
     /** A row tap: open that row's chart (one row is open at a time; tapping the open row changes nothing). */
     fun onMetric(metric: StatsMetric) {}
 

@@ -19,7 +19,7 @@ import org.robolectric.annotation.Config
 
 /**
  * The real app: [PooparazziApp] builds the core graph (Room, DataStore, sync without Play Services), [MainActivity]
- * waits for the appearance inputs, then Home opens History and Settings and comes back, and History opens Statistics.
+ * waits for the appearance inputs, then Home opens History and Settings and comes back, and History and Statistics open each other.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -82,6 +82,30 @@ class AppNavigationTest {
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
         compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText(STATISTICS_EMPTY)).fetchSemanticsNodes().isEmpty() }
+    }
+
+    /** Statistics' History button returns to the History below it, so Back from there goes Home. */
+    @Test
+    fun statisticsHistoryButtonReturnsToHistoryBelow() {
+        openStatistics()
+        compose.onNodeWithText("History").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText(STATISTICS_EMPTY)).fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
+    }
+
+    /** From Home's `chart` button, Statistics' History button opens History on top; Back returns to Statistics. */
+    @Test
+    fun statisticsFromHomeOpensHistoryOnTop() {
+        compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
+        compose.onNodeWithContentDescription("Statistics").performClick()
+        compose.waitUntilAtLeastOneExists(hasText(STATISTICS_EMPTY), timeoutMillis = 5_000)
+        compose.onNodeWithText("History").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText(STATISTICS_EMPTY)).fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitUntilAtLeastOneExists(hasText(STATISTICS_EMPTY), timeoutMillis = 5_000)
     }
 
     /** A second Back tap while Statistics is still animating out must not pop History as well (back on Home). */
