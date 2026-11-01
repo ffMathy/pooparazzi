@@ -40,7 +40,8 @@ object BigButtonDefaults {
 
     /** On a short screen (the Lamp already at its minimum size) the buttons give up 16 dp each before Home scrolls. */
     val CompactHeight: Dp = 80.dp
-    val PillRadius: Dp = 48.dp
+    /** Rounded rectangle, not a full pill: a 48 dp pill curves in so far that the label and forecast crowd its edge. */
+    val Radius: Dp = 28.dp
     val IconSize: Dp = 32.dp
 }
 
@@ -63,7 +64,7 @@ fun BigButton(
     container: Color,
     labelColor: Color,
     modifier: Modifier = Modifier,
-    radius: Dp = BigButtonDefaults.PillRadius,
+    radius: Dp = BigButtonDefaults.Radius,
     border: BorderStroke? = null,
     onClickLabel: String? = null,
     semantics: (SemanticsPropertyReceiver.() -> Unit)? = null,
