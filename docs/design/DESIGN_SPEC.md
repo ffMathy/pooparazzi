@@ -297,7 +297,7 @@ Receipt rules:
 
 **Feed and Diaper buttons**: 169 × 96, r 28 (pressed or not: the ripple shows the press). Fill FEED / DIAPER container. Content row: icon 32 (event strong) + 12 + headlineSmall "Feed" / "Diaper" (event onContainer). **Unchanged in lights-down.**
 
-**Forecast line**: under the label of Feed, Diaper and the Sleep toggle, what the last 7 days expect next, worded as on the widgets and the watch ("Next in 1h 05m"; Diaper "Next poop in 3h 10m", or, when poop keeps to the feeds rather than a gap, the poop expected after the last feed; Woke up the expected wake-up), and once that has passed, how long ago it was due ("Due 24m ago"). The label and the forecast line are start-aligned 12 dp after the icon; icon and text are centred in the button as one group. See V1_ADDITIONS §9, which also puts the estimates on the 4×2 widget and the watch.
+**Forecast line**: under the label of Feed, Diaper and the Sleep toggle, what the last 7 days expect next, as the 4×2 widget shows it: `upcoming` 16 + 4 + the time alone ("1h 05m", "soon"; Diaper the next poop, or, when poop keeps to the feeds rather than a gap, the poop expected after the last feed; Woke up the expected wake-up), and once that has passed, how long ago it was due ("24m ago"). The icon says it is what comes next, so the line stays short enough for one line in Danish too. The label and the forecast line are start-aligned 12 dp after the icon; icon and text are centred in the button as one group. See V1_ADDITIONS §9, which also puts the estimates on the 4×2 widget and the watch.
 
 **Sleep toggle**: 350 × 96, a button whose name changes with its state (it exposes no separate on/off state; §9.4).
 - Unchecked: r 28, SLEEP container, `sleep` 32 SLEEP strong + 12 + "Start sleep" headlineSmall SLEEP onContainer.
@@ -426,14 +426,14 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
 
-Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (§8.5) and the device font (no tnum). They show **relative times**, as the watch does ("Fed 2h 10m ago", "Asleep 1h 07m", "Next in 55m"), and are redrawn every minute by a non-waking alarm (a phone that sleeps redraws as it wakes); receipts keep their clock time ("Sleep started at 14:32"). The sleep toggle logs in place without launching the app; Feed and Diaper open the app on the same Feed and Diaper sheets as Home's buttons, so the optional details (feed type and breast order, pee/poop, colour, texture) are asked for exactly as in the app.
+Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (§8.5) and the device font (no tnum). They show **relative times**, as the watch does, each after an icon that says what it is (`history` "2h 10m", `sleep` "1h 07m", `upcoming` "55m"), and are redrawn every minute by a non-waking alarm (a phone that sleeps redraws as it wakes); receipts keep their clock time ("Sleep started at 14:32"). The sleep toggle logs in place without launching the app; Feed and Diaper open the app on the same Feed and Diaper sheets as Home's buttons, so the optional details (feed type and breast order, pee/poop, colour, texture) are asked for exactly as in the app.
 
 **4×2** (reference 358 × 208, system corner radius (reference r 24), surfaceContainer, padding 12)
 
 | Row | Idle | Asleep | Just logged |
 |---|---|---|---|
 | 1 (24) | the baby's name, labelLarge 15 sp onSurface (nothing when unnamed); with two or more babies the widget's baby switcher: a pill (surfaceContainerHigh, r 18, 36 tall) with the name and `chevronDown` 16, a tap moves this widget to the next baby (BABIES_AND_BACKUP §2.4). The times are in their buttons | as idle | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
-| 2 (the rest) | 3 equal buttons side by side, gap 8, r 20, as the 3×1 but taller: icon 24 over the label 15 sp, then two lines of 12 sp (11 sp on the compact face) that wrap between their parts, never inside "1h 32m" or "L → R". Feed (FEED colours, opens the Feed sheet): "2h 10m ago" (+ " · L → R"), "Next in 55m". Diaper (DIAPER colours, opens the Diaper sheet): "48m ago", "Next poop in 3h 10m". Sleep toggle (SLEEP container, toggles in place): "Start sleep", "Awake 1h 05m", "Next in 50m" | Feed and Diaper as idle; the toggle checked: SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"), "Asleep 1h 07m", "Next in 2h 15m" | unchanged |
+| 2 (the rest) | 3 equal buttons side by side, gap 8, r 20, as the 3×1 but taller: icon 24 over the label 15 sp, then two lines of 12 sp (11 sp on the compact face), each after a 12 dp icon (+ 3) that says what its time is, so the words need not: `history` the time since the last one, `upcoming` what the week expects next ("55m", "soon", "24m ago"), `awake` / `sleep` how long awake or asleep. A line wraps between its parts, never inside "1h 32m" or "L → R", with the icon by its first line. Feed (FEED colours, opens the Feed sheet): `history` "2h 10m" (+ " · L → R"), `upcoming` "55m". Diaper (DIAPER colours, opens the Diaper sheet): `history` "48m", `upcoming` "3h 10m" (the next poop). Sleep toggle (SLEEP container, toggles in place): "Start sleep", `awake` "1h 05m", `upcoming` "50m" | Feed and Diaper as idle; the toggle checked: SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"), `sleep` "1h 07m", `upcoming` "2h 15m" | unchanged |
 
 - Just logged: nothing else changes. No button moves, relabels or changes colour, and Undo never sits where a log button is. The receipt reverts on the next log or after 10 s.
 - The widget background (outside the buttons) opens the app with the receipt for the last widget log.
@@ -483,7 +483,7 @@ Every app screen except Logged and Undone shows the system **TimeText** (15 sp, 
 
 Main looks like the Tile (§3.6), and both are built from one model (`WatchGlance`, worded by `GlanceText`), so they always say the same: a title line, a Feed row and a Diaper row with the time since the last one and the estimate of the next one, and the sleep toggle with the estimated next sleep or wake-up. Nothing else; history, editing and sync state are on the phone.
 
-The estimates are worded as on the phone's widgets (V1_ADDITIONS §9, core `EstimateText`): relative, rounded up to 5 minutes ("Next in 55m"), "soon" under 5 minutes, then how long ago they were due ("Due 24m ago"); only when the past week allows one. Main re-words them each minute; the Tile's are dynamic expressions the renderer keeps current. TalkBack reads the clock time.
+The estimates follow the same rules as on the phone (V1_ADDITIONS §9, core `EstimateText`), worded in full where the phone has an `upcoming` icon: relative, rounded up to 5 minutes ("Next in 55m"), "soon" under 5 minutes, then how long ago they were due ("Due 24m ago"); only when the past week allows one. Main re-words them each minute; the Tile's are dynamic expressions the renderer keeps current. TalkBack reads the clock time.
 
 | Element | Spec (reference 228 dp) |
 |---|---|
@@ -1020,6 +1020,7 @@ Each quoted string is one path. All are stroked unless noted.
 | `poop` | three soft tiers with curl | `M6.5 20.5h11a2.5 2.5 0 0 0 0-5h-2.25a2.25 2.25 0 0 0 0-4.5H13a2 2 0 0 0 0-4c0-1.2-.6-2.3-1.8-3L11 7a2 2 0 0 0 0 4H8.75a2.25 2.25 0 0 0 0 4.5H6.5a2.5 2.5 0 0 0 0 5z` |
 | `both` | droplet (path 1, PEE strong) + small mound (path 2, POOP strong) | `M7.5 3C5.6 5.6 4 7.6 4 9.9a3.5 3.5 0 0 0 7 0C11 7.6 9.4 5.6 7.5 3z` `M13 20.5h6a2 2 0 0 0 0-4h-.2A2.8 2.8 0 0 0 16.6 13c0-.9-.4-1.7-1.2-2.3l-.4 2.3a2.8 2.8 0 0 0-1.8 3.5H13a2 2 0 0 0 0 4z` |
 | `history` | clock with back arrow | `M3.5 12a8.5 8.5 0 1 0 2.5-6` `M3.5 3.5V8H8` `M12 7.5V12l3 2` |
+| `upcoming` | `history` mirrored: clock with forward arrow ("expected next", on Home's buttons and the 4×2 widget) | `M20.5 12a8.5 8.5 0 1 1-2.5-6` `M20.5 3.5V8H16` `M12 7.5V12l3 2` |
 | `edit` | pencil | `M5 19l.9-3.9L16.1 4.9a2.05 2.05 0 0 1 2.9 2.9L8.8 18.1z` `M14.5 6.5l3 3` |
 | `undo` | hooked arrow | `M9 14 4 9l5-5` `M4 9h10.5a5.5 5.5 0 0 1 0 11H11` |
 | `delete` | bin | `M4 6.5h16` `M9.5 6.5v-2h5v2` `M6.5 6.5l.9 12.6a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9l.9-12.6` `M10 10.5v6` `M14 10.5v6` |

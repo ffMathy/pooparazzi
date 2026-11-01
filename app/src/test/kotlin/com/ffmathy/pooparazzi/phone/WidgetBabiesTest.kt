@@ -68,7 +68,7 @@ class WidgetBabiesTest {
         val texts = twins.texts()
         assertEquals("the row starts with the name", "Noa", texts.first())
         // The times are in their buttons, as on the watch: never repeated in the row above.
-        assertEquals("Feed and its time since: $texts", listOf("Feed", "2h 10m ago"), texts.subList(1, 3))
+        assertEquals("Feed and its time since: $texts", listOf("Feed", "2h 10m"), texts.subList(1, 3))
 
         val one = render(DpSize(358.dp, 208.dp)) { LogWidgetContent(WidgetSamples.idle(night = true)) }
         assertEquals("one baby: the row names the baby, as the watch's title", "Noa", one.texts().first())
@@ -80,8 +80,9 @@ class WidgetBabiesTest {
         val texts = narrow.texts()
         assertEquals("Noa", texts.first())
         // The sleep status stays in the sleep toggle, under its label, not up in the row.
-        assertTrue(texts.toString(), texts.indexOf("Awake 1h 05m") > texts.indexOf("Start sleep"))
-        assertEquals(texts.toString(), 1, texts.count { it == "Awake 1h 05m" })
+        // Its `awake` icon says what "1h 05m" is, so the line is the time alone.
+        assertTrue(texts.toString(), texts.indexOf("1h 05m") > texts.indexOf("Start sleep"))
+        assertEquals(texts.toString(), 1, texts.count { it == "1h 05m" })
     }
 
     @Test

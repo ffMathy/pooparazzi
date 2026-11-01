@@ -10,43 +10,28 @@ import java.time.ZoneId
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
- * A Home button's second line (V1_ADDITIONS §9), worded as on the widgets and the watch (core `EstimateText`): "Next in
- * 1h 05m" and, for TalkBack, "next feed in about 1 hour 5 minutes, around 15:35"; once the estimate has passed, "Due
- * 24m ago".
+ * A Home button's second line (V1_ADDITIONS §9), after the `upcoming` icon that says it is what comes next, so it is
+ * the time alone, as on the 4×2 widget: "1h 05m", "soon", and once the estimate has passed "24m ago". TalkBack says it
+ * in full: "next feed in about 1 hour 5 minutes, around 15:35".
  */
 internal class ForecastText(val shown: String, val spoken: String)
 
 /** What the forecast line of each Home button says. */
 internal enum class ForecastKind(
-    @param:StringRes val inFormat: Int,
-    @param:StringRes val soon: Int,
     @param:StringRes val spokenFormat: Int,
     @param:StringRes val spokenSoon: Int,
-    @param:StringRes val agoFormat: Int,
     @param:StringRes val spokenAgoFormat: Int,
 ) {
-    FEED(
-        CoreR.string.estimate_next_in, CoreR.string.estimate_next_soon, R.string.forecast_spoken_feed, R.string.forecast_spoken_feed_soon,
-        CoreR.string.estimate_next_ago, R.string.forecast_spoken_feed_ago,
-    ),
+    FEED(R.string.forecast_spoken_feed, R.string.forecast_spoken_feed_soon, R.string.forecast_spoken_feed_ago),
 
-    /** Under Diaper: only poop is worth predicting, so it is named ("Next poop in 3h 10m"). */
-    POOP(
-        CoreR.string.estimate_poop_in, CoreR.string.estimate_poop_soon, R.string.forecast_spoken_poop, R.string.forecast_spoken_poop_soon,
-        CoreR.string.estimate_poop_ago, R.string.forecast_spoken_poop_ago,
-    ),
+    /** Under Diaper: only poop is worth predicting, so TalkBack names it ("next poop in about 3 hours 10 minutes"). */
+    POOP(R.string.forecast_spoken_poop, R.string.forecast_spoken_poop_soon, R.string.forecast_spoken_poop_ago),
 
     /** Under Start sleep. */
-    SLEEP(
-        CoreR.string.estimate_next_in, CoreR.string.estimate_next_soon, R.string.forecast_spoken_sleep, R.string.forecast_spoken_sleep_soon,
-        CoreR.string.estimate_next_ago, R.string.forecast_spoken_sleep_ago,
-    ),
+    SLEEP(R.string.forecast_spoken_sleep, R.string.forecast_spoken_sleep_soon, R.string.forecast_spoken_sleep_ago),
 
     /** Under Woke up, while a sleep runs. */
-    WAKE(
-        CoreR.string.estimate_next_in, CoreR.string.estimate_next_soon, R.string.forecast_spoken_wake, R.string.forecast_spoken_wake_soon,
-        CoreR.string.estimate_next_ago, R.string.forecast_spoken_wake_ago,
-    ),
+    WAKE(R.string.forecast_spoken_wake, R.string.forecast_spoken_wake_soon, R.string.forecast_spoken_wake_ago),
 }
 
 /** The forecast line for [expected], or null when the week predicts nothing for it. */
@@ -56,13 +41,13 @@ internal fun forecastText(expected: Expected?, kind: ForecastKind, now: Long, zo
     val clock = formatters.clock.format(expected.atMillis, zone)
     expected.agoMillis(now)?.let { ago ->
         return ForecastText(
-            shown = stringResource(kind.agoFormat, formatters.duration.format(ago)),
+            shown = stringResource(CoreR.string.rel_ago_format, formatters.duration.format(ago)),
             spoken = stringResource(kind.spokenAgoFormat, formatters.duration.spoken(ago), clock),
         )
     }
-    val remaining = expected.remainingMillis(now) ?: return ForecastText(stringResource(kind.soon), stringResource(kind.spokenSoon))
+    val remaining = expected.remainingMillis(now) ?: return ForecastText(stringResource(CoreR.string.estimate_soon), stringResource(kind.spokenSoon))
     return ForecastText(
-        shown = stringResource(kind.inFormat, formatters.duration.format(remaining)),
+        shown = stringResource(R.string.forecast_time, formatters.duration.format(remaining)),
         spoken = stringResource(kind.spokenFormat, formatters.duration.spoken(remaining), clock),
     )
 }

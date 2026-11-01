@@ -25,6 +25,7 @@ object XDrawables {
     @DrawableRes val poop: Int = R.drawable.x_poop
     @DrawableRes val both: Int = R.drawable.x_both
     @DrawableRes val history: Int = R.drawable.x_history
+    @DrawableRes val upcoming: Int = R.drawable.x_upcoming
     @DrawableRes val edit: Int = R.drawable.x_edit
     @DrawableRes val undo: Int = R.drawable.x_undo
     @DrawableRes val delete: Int = R.drawable.x_delete
@@ -109,6 +110,7 @@ object XDrawables {
             "poop" to poop,
             "both" to both,
             "history" to history,
+            "upcoming" to upcoming,
             "edit" to edit,
             "undo" to undo,
             "delete" to delete,

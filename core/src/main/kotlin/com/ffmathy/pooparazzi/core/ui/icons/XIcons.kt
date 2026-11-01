@@ -31,6 +31,7 @@ object XIcons {
     /** Single-colour form of `both` (follows the tint). For the two-tone form use [bothTwoTone]. */
     val both: ImageVector by lazy { XIconSpecs.both.toImageVector() }
     val history: ImageVector by lazy { XIconSpecs.history.toImageVector() }
+    val upcoming: ImageVector by lazy { XIconSpecs.upcoming.toImageVector() }
     val edit: ImageVector by lazy { XIconSpecs.edit.toImageVector() }
     val undo: ImageVector by lazy { XIconSpecs.undo.toImageVector() }
     val delete: ImageVector by lazy { XIconSpecs.delete.toImageVector() }
@@ -132,7 +133,7 @@ object XIcons {
     val all: Map<String, ImageVector>
         get() = linkedMapOf(
             "sleep" to sleep, "wake" to wake, "feed" to feed, "diaper" to diaper, "pee" to pee, "poop" to poop,
-            "both" to both, "history" to history, "edit" to edit, "undo" to undo, "delete" to delete, "profile" to profile,
+            "both" to both, "history" to history, "upcoming" to upcoming, "edit" to edit, "undo" to undo, "delete" to delete, "profile" to profile,
             "settings" to settings, "phone" to phone, "synced" to synced, "pending" to pending, "offline" to offline,
             "check" to check, "plus" to plus, "back" to back, "chevronLeft" to chevronLeft, "chevronRight" to chevronRight,
             "chevronDown" to chevronDown, "close" to close, "clock" to clock, "awake" to awake,

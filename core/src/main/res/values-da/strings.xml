@@ -179,4 +179,6 @@
     <string name="estimate_poop_in">Næste bæ om %1$s</string>
     <string name="estimate_poop_soon">Næste bæ snart</string>
     <string name="estimate_poop_ago">Bæ ventet for %1$s siden</string>
+    <!-- The 4×2 widget's forecast line after its `upcoming` icon, where the time alone is "in 55m". -->
+    <string name="estimate_soon">snart</string>
 </resources>

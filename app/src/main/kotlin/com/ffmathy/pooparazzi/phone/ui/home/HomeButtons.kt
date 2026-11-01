@@ -58,6 +58,7 @@ internal fun HomeButtons(
                 minHeight = minHeight,
                 sublabel = feedForecast?.shown,
                 sublabelSpoken = feedForecast?.spoken,
+                sublabelIcon = XIcons.upcoming,
             )
             BigButton(
                 onClick = actions::onDiaper,
@@ -70,6 +71,7 @@ internal fun HomeButtons(
                 minHeight = minHeight,
                 sublabel = poopForecast?.shown,
                 sublabelSpoken = poopForecast?.spoken,
+                sublabelIcon = XIcons.upcoming,
             )
         }
         SleepToggle(state, formatters, actions, minHeight)
@@ -101,6 +103,7 @@ private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: Hom
             onClickLabel = startLabel,
             sublabel = forecast?.shown,
             sublabelSpoken = forecast?.spoken,
+            sublabelIcon = XIcons.upcoming,
             semantics = { description?.let { stateDescription = it } },
         )
     } else {
@@ -123,6 +126,7 @@ private fun SleepToggle(state: HomeUiState, formatters: Formatters, actions: Hom
             onClickLabel = stringResource(CoreR.string.action_end_sleep),
             sublabel = forecast?.shown,
             sublabelSpoken = forecast?.spoken,
+            sublabelIcon = XIcons.upcoming,
             semantics = {
                 contentDescription = name
                 stateDescription = description

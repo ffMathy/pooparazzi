@@ -144,19 +144,19 @@ class HomeSemanticsTest {
     fun theButtonsSayWhatTheWeekExpectsNext() {
         // V1_ADDITIONS §9: Feed and Start sleep carry the forecast; poop varies too much in the sample week to predict.
         show(HomeSamples.idle())
-        compose.onNodeWithText("Next in 1h 00m", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("Next in 50m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("1h 00m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("50m", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("next feed in about 1 hour, around 15:30", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("sleeps again in about 50 minutes, around 15:19", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("Next poop in", substring = true, useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("next poop", substring = true, useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
     fun aPassedEstimateSaysHowLongAgoItWasDue() {
-        // V1_ADDITIONS §9: the estimate stays put; at 15:55 the feed expected ~15:30 is "Due 24m ago", not a new guess.
+        // V1_ADDITIONS §9: the estimate stays put; at 15:55 the feed expected ~15:30 is "24m ago", not a new guess.
         show(HomeSamples.forecastPassed())
-        compose.onNodeWithText("Due 24m ago", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("Due 36m ago", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("24m ago", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("36m ago", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("next feed expected 24 minutes ago, around 15:30", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("expected to sleep again 36 minutes ago, around 15:19", useUnmergedTree = true).assertExists()
     }
@@ -164,7 +164,7 @@ class HomeSemanticsTest {
     @Test
     fun wokeUpSaysWhenTheBabyIsExpectedToWake() {
         show(HomeSamples.asleep())
-        compose.onNodeWithText("Next in 2h 15m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("2h 15m", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("wakes up in about 2 hours 15 minutes, around 05:27", useUnmergedTree = true).assertExists()
     }
 
