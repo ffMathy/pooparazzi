@@ -89,7 +89,7 @@ class SurfaceUpdater(
             override fun update(summary: Summary, settings: Settings) {
                 PooparazziTileService.requestUpdate(context)
                 XComplicationService.requestUpdateAll(context)
-                // The Ongoing Activity names the baby when there are two or more ("Noa · Asleep since 02:05").
+                // The Ongoing Activity names the baby when there are two or more ("Noa · Asleep · feed in 2h 05m").
                 val baby = if (settings.hasSeveralBabies) LabelFormatter(context).currentBaby(settings) else null
                 running.sync(summary, baby)
             }

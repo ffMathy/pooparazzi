@@ -1,10 +1,5 @@
 package com.ffmathy.pooparazzi.wear.tile
 
-import com.ffmathy.pooparazzi.core.domain.Expected
-import com.ffmathy.pooparazzi.core.format.Estimate
-import androidx.wear.protolayout.LayoutElementBuilders.HORIZONTAL_ALIGN_START
-import com.ffmathy.pooparazzi.wear.glance.GlanceTitle
-import com.ffmathy.pooparazzi.wear.glance.GlanceText
 import android.content.ComponentName
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
@@ -16,6 +11,7 @@ import androidx.wear.protolayout.DimensionBuilders.expand
 import androidx.wear.protolayout.DimensionBuilders.weight
 import androidx.wear.protolayout.LayoutElementBuilders.FontSetting
 import androidx.wear.protolayout.LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER
+import androidx.wear.protolayout.LayoutElementBuilders.HORIZONTAL_ALIGN_START
 import androidx.wear.protolayout.LayoutElementBuilders.LayoutElement
 import androidx.wear.protolayout.LayoutElementBuilders.TEXT_ALIGN_CENTER
 import androidx.wear.protolayout.LayoutElementBuilders.TEXT_ALIGN_START
@@ -51,7 +47,9 @@ import androidx.wear.protolayout.types.LayoutString
 import androidx.wear.protolayout.types.argb
 import androidx.wear.protolayout.types.layoutString
 import androidx.wear.protolayout.types.stringLayoutConstraint
+import com.ffmathy.pooparazzi.core.domain.Expected
 import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
+import com.ffmathy.pooparazzi.core.format.Estimate
 import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.diaperKind
@@ -60,6 +58,8 @@ import com.ffmathy.pooparazzi.core.ui.tokens.EventColors
 import com.ffmathy.pooparazzi.core.ui.tokens.XTokens
 import com.ffmathy.pooparazzi.wear.MainActivity
 import com.ffmathy.pooparazzi.wear.R
+import com.ffmathy.pooparazzi.wear.glance.GlanceText
+import com.ffmathy.pooparazzi.wear.glance.GlanceTitle
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.surface.SurfaceText
 import com.ffmathy.pooparazzi.wear.surface.TimeText
@@ -341,7 +341,7 @@ private class TileContent(
         } ?: secondary
         sheetButton(
             events.feed, XDrawables.feed, res.getString(CoreR.string.kind_feed), shownSecondary,
-            next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let { estimate(Estimate.FEED, it, TEXT_ALIGN_START) },
+            next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let { estimate(Estimate.NEXT, it, TEXT_ALIGN_START) },
             description = description,
             onClick = openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
         )
@@ -441,7 +441,8 @@ private class TileContent(
                 if (next == null) {
                     word
                 } else {
-                    column(word, plainText(estimate(Estimate.SLEEP_SHORT, next, TEXT_ALIGN_CENTER), Typography.LABEL_SMALL, sleep.onContainer.layout), horizontalAlignment = HORIZONTAL_ALIGN_CENTER)
+                    // The smallest type: the EdgeButton's top is narrow ("Næste om 50m" must fit its width).
+                    column(word, plainText(estimate(Estimate.NEXT, next, TEXT_ALIGN_CENTER), Typography.BODY_EXTRA_SMALL, sleep.onContainer.layout), horizontalAlignment = HORIZONTAL_ALIGN_CENTER)
                 }
             },
         )

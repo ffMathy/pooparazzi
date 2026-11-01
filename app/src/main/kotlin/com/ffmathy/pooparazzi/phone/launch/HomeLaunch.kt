@@ -63,7 +63,10 @@ object DeepLinks {
     private const val DIAPER = "diaper"
     private const val RECEIPT = "receipt"
 
-    fun uri(launch: HomeLaunch): Uri {
+    /** `?baby=<id>`: the baby a widget is for, made the app's current baby as it opens (two or more babies). */
+    private const val BABY = "baby"
+
+    fun uri(launch: HomeLaunch, babyId: String? = null): Uri {
         if (launch == HomeLaunch.History) return Uri.Builder().scheme(SCHEME).authority(HISTORY_HOST).build()
         val builder = Uri.Builder().scheme(SCHEME).authority(HOST)
         when (launch) {
@@ -72,8 +75,13 @@ object DeepLinks {
             HomeLaunch.Diaper -> builder.appendPath(DIAPER)
             is HomeLaunch.Receipt -> builder.appendPath(RECEIPT).appendPath(launch.kind.path).appendPath(launch.entryId)
         }
+        if (babyId != null) builder.appendQueryParameter(BABY, babyId)
         return builder.build()
     }
+
+    /** The baby a link asks the app to make current (a widget for another baby than the current one), if any. */
+    fun babyOf(uri: Uri?): String? =
+        uri?.takeIf { it.scheme == SCHEME && it.authority == HOST }?.getQueryParameter(BABY)?.takeIf { it.isNotBlank() }
 
     /** The launch a link asks for; null for anything that is not one of the app's links. */
     fun parse(uri: Uri?): HomeLaunch? {
@@ -99,8 +107,8 @@ object DeepLinks {
      * An explicit intent for [MainActivity] carrying [launch]. An existing Home is brought forward and receives it in
      * `onNewIntent` instead of a second activity being stacked on top.
      */
-    fun intent(context: Context, launch: HomeLaunch): Intent =
-        Intent(Intent.ACTION_VIEW, uri(launch), context, MainActivity::class.java)
+    fun intent(context: Context, launch: HomeLaunch, babyId: String? = null): Intent =
+        Intent(Intent.ACTION_VIEW, uri(launch, babyId), context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
     /** [intent] as an immutable PendingIntent (notifications). Links differ by URI, so each gets its own. */

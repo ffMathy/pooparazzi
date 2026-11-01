@@ -92,7 +92,10 @@ interface EntryRepository {
     suspend fun logFeedChecked(type: FeedType?, at: Long, side: BreastSide? = null, amountMl: Int? = null): LogResult
 
     /** Starts a sleep at [at]. Fails with [AlreadyRunningException] while one of the current baby's runs. */
-    suspend fun startSleep(at: Long): Result<Entry>
+    suspend fun startSleep(at: Long): Result<Entry> = startSleep(at, babyId = null)
+
+    /** [startSleep] for [babyId] (a widget set to a baby other than the current one); null is the current baby. */
+    suspend fun startSleep(at: Long, babyId: String?): Result<Entry>
 
     /** Ends the running sleep [id] at [at]: [EndResult.Ended], or [EndResult.Discarded] under 60 s. */
     suspend fun endSleep(id: String, at: Long): EndResult

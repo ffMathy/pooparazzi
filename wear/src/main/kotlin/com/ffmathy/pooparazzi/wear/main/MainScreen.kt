@@ -3,66 +3,62 @@ package com.ffmathy.pooparazzi.wear.main
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import com.ffmathy.pooparazzi.core.format.Estimate
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.foundation.layout.height
-import com.ffmathy.pooparazzi.wear.glance.WatchGlance
-import com.ffmathy.pooparazzi.core.format.Labels
-import com.ffmathy.pooparazzi.wear.glance.GlanceTitle
-import com.ffmathy.pooparazzi.wear.glance.GlanceText
-import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.AnnotatedString
-import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import androidx.wear.compose.material3.Text
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.runtime.CompositionLocalProvider
-import com.ffmathy.pooparazzi.wear.ui.WatchShapes
-import androidx.wear.compose.material3.Button
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.EdgeButtonSize
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.Text
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
+import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
+import com.ffmathy.pooparazzi.core.format.Estimate
 import com.ffmathy.pooparazzi.core.format.Formatters
+import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -72,6 +68,9 @@ import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.tokens.EventColors
 import com.ffmathy.pooparazzi.wear.R
+import com.ffmathy.pooparazzi.wear.glance.GlanceText
+import com.ffmathy.pooparazzi.wear.glance.GlanceTitle
+import com.ffmathy.pooparazzi.wear.glance.WatchGlance
 import com.ffmathy.pooparazzi.wear.sample.WearSamples
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.state.MainMode
@@ -81,6 +80,7 @@ import com.ffmathy.pooparazzi.wear.theme.XWearTheme
 import com.ffmathy.pooparazzi.wear.theme.isAmbient
 import com.ffmathy.pooparazzi.wear.ui.AutoSizeLine
 import com.ffmathy.pooparazzi.wear.ui.SpokenLabels
+import com.ffmathy.pooparazzi.wear.ui.WatchShapes
 import com.ffmathy.pooparazzi.wear.ui.XCompactButton
 import com.ffmathy.pooparazzi.wear.ui.XTimeText
 import com.ffmathy.pooparazzi.wear.ui.ambientBorder
@@ -161,7 +161,7 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                     spoken = lastFeed?.let {
                         f.spokenAgo(stringResource(CoreR.string.spoken_last_feed), spokenFeedType(it), it.startMillis, state.now)
                     },
-                    next = nextFeed?.let { words.next(Estimate.FEED, it, glance.now) },
+                    next = nextFeed?.let { words.next(Estimate.NEXT, it, glance.now) },
                     nextSpoken = nextFeed?.let(words::nextFeedSpoken),
                     loaded = state.loaded,
                     onClick = actions.onFeed,
@@ -470,9 +470,14 @@ private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: Edge
             // One line of "Start sleep" must clear the button's curve: the label steps down to fit its width.
             val labelWidth = if (size == EdgeButtonSize.ExtraSmall) EDGE_LABEL_WIDTH_EXTRA_SMALL else EDGE_LABEL_WIDTH
             val style = MaterialTheme.typography.labelMedium
-            val fit = if (guardText != null) EDGE_MAX_FONT_SCALE else minOf(EDGE_MAX_FONT_SCALE, widthScale(AnnotatedString(label), style, labelWidth))
-            CappedFontScale(fit.coerceAtLeast(MIN_FIT_FONT_SCALE)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val nextText = next?.takeIf { guardText == null }?.let { words.next(Estimate.NEXT, it, state.now) }
+            val nextStyle = MaterialTheme.typography.labelSmall
+            // Each line steps down on its own until it fits the button's width ("Start sleep", "Næste om 50m"); the
+            // second sits lower, where the button's curve leaves less room.
+            val labelFit = if (guardText != null) EDGE_MAX_FONT_SCALE else minOf(EDGE_MAX_FONT_SCALE, widthScale(AnnotatedString(label), style, labelWidth))
+            val nextFit = nextText?.let { minOf(EDGE_MAX_FONT_SCALE, widthScale(AnnotatedString(it), nextStyle, labelWidth - EDGE_LOWER_LINE_INSET)) }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CappedFontScale(labelFit.coerceAtLeast(MIN_FIT_FONT_SCALE)) {
                     Text(
                         guardText ?: label,
                         style = style,
@@ -482,8 +487,10 @@ private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: Edge
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.widthIn(max = if (guardText != null) EDGE_GUARD_WIDTH else labelWidth + 8.dp),
                     )
-                    if (guardText == null && next != null) {
-                        Text(words.next(Estimate.SLEEP_SHORT, next, state.now), style = MaterialTheme.typography.labelSmall, color = content, maxLines = 1)
+                }
+                if (nextText != null && nextFit != null) {
+                    CappedFontScale(nextFit.coerceAtLeast(MIN_FIT_FONT_SCALE)) {
+                        Text(nextText, style = nextStyle, color = content, maxLines = 1)
                     }
                 }
             }
@@ -506,6 +513,9 @@ private fun sleepStateDescription(state: MainUiState, f: Formatters): String? {
 
 /** The EdgeButton's content width at its top, where the label sits. */
 private val EDGE_LABEL_WIDTH = 84.dp
+
+/** How much narrower the EdgeButton is at its second line than at its first (its curve). */
+private val EDGE_LOWER_LINE_INSET = 16.dp
 
 /** The two-line guard ("Already / asleep") may use the button's full content width. */
 private val EDGE_GUARD_WIDTH = 96.dp

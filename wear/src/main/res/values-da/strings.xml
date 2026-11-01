@@ -54,7 +54,15 @@
     <string name="ongoing_channel_name">Igangværende tidtagning</string>
     <string name="ongoing_channel_description">Viser igangværende søvn på urskiven.</string>
     <string name="ongoing_asleep_since">Sover siden kl. #start#</string>
-    <string name="ongoing_asleep_for">Sover #elapsed#</string>
+    <string name="ongoing_feed_in">måltid om %1$s</string>
+    <string name="ongoing_feed_soon">måltid snart</string>
+    <string name="ongoing_feed_ago">måltid ventet for %1$s siden</string>
+    <string name="ongoing_poop_in">bæ om %1$s</string>
+    <string name="ongoing_poop_soon">bæ snart</string>
+    <string name="ongoing_poop_ago">bæ ventet for %1$s siden</string>
+    <string name="ongoing_wake_in">vågner om %1$s</string>
+    <string name="ongoing_wake_soon">vågner snart</string>
+    <string name="ongoing_wake_ago">skulle vågne for %1$s siden</string>
     <string name="spoken_side_first">først</string>
     <string name="spoken_side_second">bagefter</string>
 </resources>

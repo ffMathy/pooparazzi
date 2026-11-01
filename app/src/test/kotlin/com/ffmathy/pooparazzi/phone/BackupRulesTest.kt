@@ -10,6 +10,7 @@ import com.ffmathy.pooparazzi.phone.account.LinkPurpose
 import com.ffmathy.pooparazzi.phone.account.SentLink
 import com.ffmathy.pooparazzi.phone.account.WelcomePrefs
 import com.ffmathy.pooparazzi.phone.system.SurfacePrefs
+import com.ffmathy.pooparazzi.phone.widget.PrefsWidgetBabies
 import com.ffmathy.pooparazzi.phone.widget.PrefsWidgetMemoStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -71,7 +72,7 @@ class BackupRulesTest {
         assertTrue(prefsFile("${ConsentPrefs.FILE}.xml").exists())
 
         val local = setOf(
-            "${SurfacePrefs.FILE}.xml", "${PrefsWidgetMemoStore.FILE}.xml", "${WelcomePrefs.FILE}.xml",
+            "${SurfacePrefs.FILE}.xml", "${PrefsWidgetMemoStore.FILE}.xml", "${PrefsWidgetBabies.FILE}.xml", "${WelcomePrefs.FILE}.xml",
             "${EmailLinkPrefs.FILE}.xml", "${FamilyPrefs.FILE}.xml", "${ConsentPrefs.FILE}.xml",
         )
         val rules = excludedPrefs(R.xml.data_extraction_rules)

@@ -295,7 +295,7 @@ Receipt rules:
 
 **Feed and Diaper buttons**: 169 × 96, r 28 (pressed or not: the ripple shows the press). Fill FEED / DIAPER container. Content row: icon 32 (event strong) + 12 + headlineSmall "Feed" / "Diaper" (event onContainer). **Unchanged in lights-down.**
 
-**Forecast line**: under the label of Feed, Diaper and the Sleep toggle, what the last 7 days expect next ("in 1h 05m"; Diaper "poop in 3h", or, when poop keeps to the feeds rather than a gap, the poop expected after the last feed; Woke up the expected wake-up), and once that has passed, how long ago it was due ("24m ago"). The label and the forecast line are start-aligned 12 dp after the icon; icon and text are centred in the button as one group. See V1_ADDITIONS §9, which also puts the estimates on the 4×2 widget and the watch.
+**Forecast line**: under the label of Feed, Diaper and the Sleep toggle, what the last 7 days expect next, worded as on the widgets and the watch ("Next in 1h 05m"; Diaper "Next poop in 3h 10m", or, when poop keeps to the feeds rather than a gap, the poop expected after the last feed; Woke up the expected wake-up), and once that has passed, how long ago it was due ("Due 24m ago"). The label and the forecast line are start-aligned 12 dp after the icon; icon and text are centred in the button as one group. See V1_ADDITIONS §9, which also puts the estimates on the 4×2 widget and the watch.
 
 **Sleep toggle**: 350 × 96, a button whose name changes with its state (it exposes no separate on/off state; §9.4).
 - Unchecked: r 28, SLEEP container, `sleep` 32 SLEEP strong + 12 + "Start sleep" headlineSmall SLEEP onContainer.
@@ -429,9 +429,8 @@ Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (
 
 | Row | Idle | Asleep | Just logged |
 |---|---|---|---|
-| 1 (24, not a separate target) | `feed` 16 + 6 + "Fed 2h 10m ago" labelLarge 15 sp onSurface; 16 gap; `pee` 16 + "Pee 48m ago" | "Fed 1h 32m ago", "Pee 1h 20m ago" | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
-| 2 (68) | 2 equal buttons, gap 8, r 20; icon 24 at +10, label 15 sp at +40: Feed (FEED colours, opens the Feed sheet), Diaper (DIAPER colours, `diaper`, opens the Diaper sheet) | unchanged | unchanged |
-| 3 (68) | Sleep toggle, full width, r 20 (as every widget button), SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake 1h 05m" dataSmall | checked: r 20, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned "Asleep 1h 07m" (no icon) | unchanged |
+| 1 (24) | the baby's name, labelLarge 15 sp onSurface (nothing when unnamed); with two or more babies the widget's baby switcher: a pill (surfaceContainerHigh, r 18, 36 tall) with the name and `chevronDown` 16, a tap moves this widget to the next baby (BABIES_AND_BACKUP §2.4). The times are in their buttons | as idle | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
+| 2 (the rest) | 3 equal buttons side by side, gap 8, r 20, as the 3×1 but taller: icon 24 over the label 15 sp, then two lines of 12 sp (11 sp on the compact face) that wrap between their parts, never inside "1h 32m" or "L → R". Feed (FEED colours, opens the Feed sheet): "2h 10m ago" (+ " · L → R"), "Next in 55m". Diaper (DIAPER colours, opens the Diaper sheet): "48m ago", "Next poop in 3h 10m". Sleep toggle (SLEEP container, toggles in place): "Start sleep", "Awake 1h 05m", "Next in 50m" | Feed and Diaper as idle; the toggle checked: SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"), "Asleep 1h 07m", "Next in 2h 15m" | unchanged |
 
 - Just logged: nothing else changes. No button moves, relabels or changes colour, and Undo never sits where a log button is. The receipt reverts on the next log or after 10 s.
 - The widget background (outside the buttons) opens the app with the receipt for the last widget log.
@@ -487,8 +486,8 @@ The estimates are worded as on the phone's widgets (V1_ADDITIONS §9, core `Esti
 |---|---|
 | Title line | the baby's name, titleSmall onSurface; unnamed, the last diaper ("Pee 48m ago", as the Tile). With two or more babies: a compact button (`profile` + the baby's label) that opens the baby picker |
 | Feed row | full-width button, r 26, FEED container `#3B2715`: `feed` 24 `#F2B577`, "Feed" labelMedium + "2h 10m ago" labelSmall + "Next in 55m" labelSmall (the expected next feed) `#FFDCBB` ("No feeds yet" before the first). The two rows share the height between the title and the EdgeButton, 4 apart, side margins 7 % of the width |
-| Diaper row | the same in DIAPER: `#13312C`, `diaper` 24 `#62B3A5`, "Diaper" + "48m ago" + "Poop in 3h 10m" (the expected next poop) `#BFE9E0` ("No diapers yet") |
-| EdgeButton | **Small** (ExtraSmall below 225 dp), pinned at the bottom; fill SLEEP container `#222844`, "Start sleep" labelMedium `#D6DBF6` on one line, and under it the expected next sleep "in 50m" labelSmall (read "Start sleep, expected to sleep again around 15:20") |
+| Diaper row | the same in DIAPER: `#13312C`, `diaper` 24 `#62B3A5`, "Diaper" + "48m ago" + "Next poop in 3h 10m" (the expected next poop) `#BFE9E0` ("No diapers yet") |
+| EdgeButton | **Small** (ExtraSmall below 225 dp), pinned at the bottom; fill SLEEP container `#222844`, "Start sleep" labelMedium `#D6DBF6` on one line, and under it the expected next sleep "Next in 50m" labelSmall (read "Start sleep, expected to sleep again around 15:20") |
 | Scrolling | none: Main is one fixed screen, as the Tile |
 | Font scale | Main's text follows the font scale up to 1.3 (the EdgeButton label to 1.15) and steps down to fit where a row or the EdgeButton has less room; both rows use the same size. A row too short for the estimate drops it (TalkBack still reads it); one too short for two lines reads "Feed · 2h 10m ago" on one |
 
@@ -500,7 +499,7 @@ No Lamp and no glow.
 |---|---|
 | Title line | `sleep` 14 `#7C88C4` + 4 + "Asleep 1h 07m" titleSmall SLEEP text, as the Tile's title (spoken "Asleep, 1 hour 7 minutes, since 02:05"). With two or more babies it is the baby button's label |
 | Rows | Feed and Diaper as when idle |
-| EdgeButton | "Woke up" with the expected wake-up "in 2h 15m" under it |
+| EdgeButton | "Woke up" with the expected wake-up "Next in 2h 15m" under it |
 | EdgeButton | fill SLEEP containerLit `#2E3660` with a 1.5 dp `#7C88C4` border; "Woke up" `#D6DBF6`. Full opacity immediately after the toggle (no fade-in) |
 | Ambient | TimeText `#B8A48E`; rows and EdgeButton no fill, 2 dp outline in their strong colour, icon and label `#B8A48E`; ≥ 85 % black pixels |
 
@@ -597,8 +596,8 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 | Header | `diaper` 24 `#E8D8C3`, y 11–35 (system app icon: the tile's icon, the app's launcher glyph) |
 | Title (titleSlot) | y 37–53, titleSmall `#E8D8C3`, centred: the baby's name; unnamed, **"Pee 48m ago"** (last diaper). The same title as Main's (§3.5.1) |
 | Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; "Feed" labelMedium 15 sp `#FFDCBB` over "2h 10m ago" and "Next in 55m" (the expected next feed, as on Main, kept current by a dynamic expression) labelSmall `#FFDCBB`. Opens the app's Feed type screen |
-| Row B | Diaper button 184 × 52, r 26, DIAPER container `#13312C`: `diaper` 24 DIAPER strong at 16 from the start; "Diaper" labelMedium 15 sp `#BFE9E0` over "48m ago" (or "No diapers yet") and "Poop in 3h 10m" (the expected next poop) labelSmall. Opens the app's Diaper screen, like Main's Diaper button; diapers are never logged from the tile |
-| EdgeButton | drawn 46 tall (y 179–225), 48 dp hit box, 9 dp below Row B; fill `#222844`, "Start sleep" labelMedium 15 sp `#D6DBF6` over the expected next sleep "in 50m" labelSmall (asleep: "Woke up" over the expected wake-up) |
+| Row B | Diaper button 184 × 52, r 26, DIAPER container `#13312C`: `diaper` 24 DIAPER strong at 16 from the start; "Diaper" labelMedium 15 sp `#BFE9E0` over "48m ago" (or "No diapers yet") and "Next poop in 3h 10m" (the expected next poop) labelSmall. Opens the app's Diaper screen, like Main's Diaper button; diapers are never logged from the tile |
+| EdgeButton | drawn 46 tall (y 179–225), 48 dp hit box, 9 dp below Row B; fill `#222844`, "Start sleep" labelMedium 15 sp `#D6DBF6` over the expected next sleep "Next in 50m" labelSmall (asleep: "Woke up" over the expected wake-up) |
 
 | State | Title | Other changes |
 |---|---|---|
@@ -628,7 +627,7 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 
 ### 3.8 W11 Ongoing Activity / Live Update (watch)
 
-Static white `sleepRunning` icon. Status "Asleep 1:07:23", how long the sleep has run, kept current by the system (a stopwatch; the app need not run). The notification behind it shows "Asleep" with a chronometer from the start. TalkBack reads "Asleep since 02:05". Tap → the sleep screen. Dismissed on both devices when the sleep ends on either one. API details: §10.6.
+Static white `sleepRunning` icon. Status: how the baby is and what comes next, relative to now: "Asleep · feed in 2h 05m" (the earliest of the week's estimates: the next feed, the next poop or the expected wake-up; "feed soon", "feed due 5m ago"), or "Asleep · 1h 07m" when the week predicts nothing. Redrawn every minute by a non-waking alarm, so it is current whenever the watch is awake. TalkBack reads clock times ("Asleep since 02:05, expected to wake around 05:25"). Tap → the sleep screen. Dismissed on both devices when the sleep ends on either one. API details: §10.6.
 
 ---
 
@@ -1097,7 +1096,7 @@ One grammar everywhere the app renders text, including the tile and complication
 
 **No ticking durations.** No seconds, no chronometer anywhere:
 - Phone Live Update chip: "Asleep" (no chronometer). Its text shows whole minutes ("1h 07m · since 02:05"), re-rendered once a minute, and its Android 17 metrics use the system's TimeDifference.
-- Wear Ongoing Activity / Live Update: "Asleep 1:07:23" (spoken "Asleep since 02:05").
+- Wear Ongoing Activity / Live Update: "Asleep · feed in 2h 05m" (spoken "Asleep since 02:05, next feed expected around 15:30").
 - Tile and complications format their own dynamic text in this grammar.
 - **The only exemption**: the pre-Wear OS 4 complication fallback `TimeDifferenceComplicationText` with `SHORT_DUAL_UNIT` (system format "1h 5m").
 
@@ -1297,7 +1296,7 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 
 - **Ongoing Activity** (Wear OS ≤ 6) / **Live Update** (Wear OS 7+):
   - static white `sleepRunning` vector icon, `CATEGORY_STOPWATCH`;
-  - status template "Asleep #elapsed#" with `Status.StopwatchPart(start)` on the elapsed-realtime clock; the notification uses a chronometer (`setUsesChronometer`, `setWhen(start)`). The Wear OS 7 Live Update uses the same text;
+  - status text "Asleep · feed in 2h 05m" (core `EstimateText` rules), redrawn each minute by a non-waking `AlarmManager.RTC` alarm (`OngoingTickReceiver`) while a sleep runs. The Wear OS 7 Live Update uses the same text;
   - touch intent to the sleep screen.
 - Deduplicate the phone-bridged Live Update against the watch one by sleep-session UUID. When the sleep ends on either device, dismiss both.
 - Double-pinch (`Modifier.oneHandedGesture`, Wear OS 7, Pixel Watch 3+) is bound only to the Woke up / Start sleep EdgeButton.
@@ -1350,18 +1349,19 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 - 4×2 and 3×1 with `SizeMode.Responsive`. A 2×2 falls back to the 4×2 content without the status row.
 - `actionRunCallback` for the sleep toggle and Undo (no app launch), idempotent writes; Feed and Diaper start the app on their sheet (`pooparazzi://home/feed`, `pooparazzi://home/diaper`). 48 dp targets. System corner radius. Generated previews (Glance 1.2 `providePreview`).
-- Absolute clock times only: RemoteViews cannot tick a relative "ago" in the app grammar, and the update budget would leave it stale.
+- Relative times, as the watch: RemoteViews cannot tick them, so a non-waking alarm redraws the widgets every minute (a phone that sleeps redraws as it wakes).
 - Update the widget on every log and every sleep change.
 - **Palette**: build every colour as a single-value `ColorProvider` chosen at update time from the NIGHT / DAY token sets. No day/night pairs and no `GlanceTheme` dynamic colours. Call `updateAll()` at sunset, at sunrise, on an Appearance change and on every sleep start/stop.
 - **Type**: device font (`FontFamily.SansSerif`, sizes in sp as drawn). No ROND, opsz or tnum.
 - **Checked toggle stroke**: `GlanceModifier` has no border, so the 2 dp stroke is a background drawable (a shape with a 2 dp stroke and the button's own corners) set through `GlanceModifier.background(ImageProvider)`.
 - **Receipt and Undo**: after a widget log, row 1 shows the receipt and an in-widget "Undo" (48 dp target, `actionRunCallback(UndoLast)` for that event UUID, no app launch) until the next log or for 10 s (one-time WorkManager work). Undo never sits where a log button is.
-- **Background tap**: opens the app with the receipt for the last widget log. Row 1 is not a separate target (it is only 24 dp tall).
+- **Background tap**: opens the app with the receipt for the last widget log. With two or more babies row 1 is the baby switcher (its own target).
 - **Breakpoints**:
 
 | Condition | Change |
 |---|---|
-| 4×2 narrower than 320 dp, or font scale ≥ 1.3 | hide the end-aligned "Awake 1h 05m" / "Asleep 1h 07m" in row 3. While asleep, show "Asleep 1h 07m" in row 1 instead. (The guideline 4×2 is 276 dp wide, 252 inside the padding, against the 294 dp row 3 needs) |
+| 4×2 where a label does not fit its third on one line (narrow, large font, "Start sleep") | the compact face: icon 20 over two lines of 13 sp, the times in 11 sp |
+| 4×2 280 dp tall or more (a Samsung flip's cover screen, 352 × 339) | the three buttons stacked, each a full-width row: icon 24 at the start, the label 16 sp over its lines in 13 sp |
 | 3×1 where a word of "Start sleep" does not fit its button | label "Sleep" (unchecked) / "Woke up" (checked) |
 | 3×1 where any label still does not fit | icon-only buttons with content descriptions "Log feed" / "Log diaper" / "Start sleep" |
 | 3×1 narrower than 180 dp (an old 2×1) | padding 8, gaps 4, so the three 24 dp icons still fit |

@@ -15,8 +15,8 @@ import kotlinx.serialization.json.Json
 /**
  * The receipt of the last log made on a widget (DESIGN_SPEC §3.3.6, §10.11): row 1 shows "Poop logged at 14:32" with
  * Undo until the next log or [expiresAtMillis]. [previousJson] is the entry before the log, for Undo of "Woke up" and
- * "Sleep cancelled" (which bring the sleep back). [babyId] is the baby it was made for: the receipt stands only while
- * that baby is the current one (BABIES_AND_BACKUP §2.4); receipts stored before several babies belong to the first.
+ * "Sleep cancelled" (which bring the sleep back). [babyId] is the baby it was made for: the receipt shows on that
+ * baby's widgets only (BABIES_AND_BACKUP §2.4); receipts stored before several babies belong to the first.
  */
 @Serializable
 data class WidgetReceipt(
@@ -45,8 +45,10 @@ enum class NoticeType { ALREADY_ASLEEP, ALREADY_AWAKE, UNDONE }
 data class WidgetMemo(
     val receipt: WidgetReceipt? = null,
     val notice: WidgetNotice? = null,
-    /** Clock time of the last sleep toggle on a widget, for the 2 s double-toggle guard. */
+    /** Clock time of the last sleep toggle on a widget from before the guard was per baby (any baby); now unused. */
     val lastToggleAtMillis: Long? = null,
+    /** Clock time of each baby's last sleep toggle on a widget, for the 2 s double-toggle guard (per baby). */
+    val lastToggles: Map<String, Long> = emptyMap(),
 )
 
 /** Where [WidgetMemo] lives. An interface so the commands can be tested without SharedPreferences. */

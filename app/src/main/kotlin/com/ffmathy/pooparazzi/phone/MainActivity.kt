@@ -15,9 +15,9 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.ffmathy.pooparazzi.core.Core
+import com.ffmathy.pooparazzi.phone.account.AppAccounts
 import com.ffmathy.pooparazzi.phone.app.AppLocales
 import com.ffmathy.pooparazzi.phone.app.AppViewModel
-import com.ffmathy.pooparazzi.phone.account.AppAccounts
 import com.ffmathy.pooparazzi.phone.launch.AppLinks
 import com.ffmathy.pooparazzi.phone.launch.DeepLinks
 import com.ffmathy.pooparazzi.phone.navigation.AccountLinks
@@ -95,7 +95,8 @@ class MainActivity : AppCompatActivity() {
         val data = intent?.data
         val launch = DeepLinks.parse(data)
         if (launch != null) {
-            appViewModel.request(launch)
+            // A widget set to another baby opens the app for that baby: its sheets log for it.
+            appViewModel.request(launch, DeepLinks.babyOf(data))
         } else {
             AppLinks.parse(data, AppAccounts.accounts.hostingDomain)?.let(appViewModel::openLink)
         }

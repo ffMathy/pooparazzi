@@ -25,8 +25,8 @@ import kotlinx.coroutines.sync.withLock
  * [RECEIPT_MILLIS]; guards, duplicates and "Undone" leave a [NOTICE_MILLIS] line instead.
  *
  * Feed and Diaper are not here: they open the app on its Feed and Diaper sheets, which ask for the details.
- * Commands run one at a time (two quick taps are applied in order). They log for the phone's current baby
- * ([settings]); a receipt remembers its baby, and its Undo does nothing once another baby is the current one.
+ * Commands run one at a time (two quick taps are applied in order). They log for the widget's baby (its own choice,
+ * else the phone's current baby, [settings]); a receipt remembers its baby and shows on that baby's widgets.
  */
 class WidgetCommands(
     private val repository: EntryRepository,
@@ -34,12 +34,17 @@ class WidgetCommands(
     private val clock: Clock,
     private val settings: SettingsRepository,
 ) {
-    /** Start sleep / Woke up, with the 2 s double-toggle guard ("Already asleep since 02:05"). */
-    suspend fun toggleSleep() = lock.withLock {
+    /**
+     * Start sleep / Woke up for [babyId] (null: the current baby), with the 2 s double-toggle guard ("Already asleep
+     * since 02:05"). The guard is the baby's own: twins' widgets can be toggled one right after the other.
+     */
+    suspend fun toggleSleep(babyId: String? = null) = lock.withLock {
         val now = clock.now()
-        val entries = repository.observeEntries().first()
+        val baby = babyId ?: settings.current().selectedBaby.id
+        val entries = repository.observeAllEntries().first().filter { it.babyId == baby }
         val running = entries.firstOrNull { it.isSleep && it.isRunning }
-        val last = store.memo.value.lastToggleAtMillis
+        val memo = store.memo.value
+        val last = memo.lastToggles[baby] ?: memo.lastToggleAtMillis
         if (last != null && now - last in 0 until GUARD_MILLIS) {
             if (running != null) {
                 notice(NoticeType.ALREADY_ASLEEP, running.startMillis, now)
@@ -49,9 +54,9 @@ class WidgetCommands(
             }
             return@withLock
         }
-        store.update { it.copy(lastToggleAtMillis = now) }
+        store.update { it.copy(lastToggleAtMillis = null, lastToggles = it.lastToggles + (baby to now)) }
         if (running == null) {
-            val started = attempt { repository.startSleep(now) } ?: return@withLock
+            val started = attempt { repository.startSleep(now, baby) } ?: return@withLock
             started
                 .onSuccess { receipt(ReceiptKind.SLEEP_STARTED, it, it.startMillis, now) }
                 .onFailure { e -> if (e is AlreadyRunningException) notice(NoticeType.ALREADY_ASLEEP, e.running.startMillis, now) }
@@ -66,12 +71,12 @@ class WidgetCommands(
 
     /**
      * Undo of the receipt for [entryId]: a diaper or sleep start is removed, a Woke up or Sleep cancelled brings the
-     * sleep back. A stale Undo (expired, replaced by a newer log, or for another baby than the current one) does nothing.
+     * sleep back. A stale Undo (expired or replaced by a newer log) does nothing. The receipt shows only on its baby's
+     * widgets, so its Undo is that baby's whichever baby the phone has current.
      */
     suspend fun undo(entryId: String) = lock.withLock {
         val now = clock.now()
         val receipt = store.memo.value.receipt?.takeIf { it.entryId == entryId && it.expiresAtMillis > now } ?: return@withLock
-        if (receipt.babyId != settings.current().selectedBaby.id) return@withLock
         try {
             when (receipt.kind) {
                 ReceiptKind.LOGGED, ReceiptKind.SLEEP_STARTED -> repository.delete(entryId)
@@ -86,6 +91,7 @@ class WidgetCommands(
                     notice = WidgetNotice(NoticeType.UNDONE, now, now + NOTICE_MILLIS),
                     // Undo resets the toggle guard, as in the app.
                     lastToggleAtMillis = null,
+                    lastToggles = emptyMap(),
                 )
             }
         } catch (e: CancellationException) {

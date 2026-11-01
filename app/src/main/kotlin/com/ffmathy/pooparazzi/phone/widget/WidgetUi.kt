@@ -35,14 +35,14 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.ffmathy.pooparazzi.core.domain.Expected
 import com.ffmathy.pooparazzi.core.format.ClockFormatter
-import com.ffmathy.pooparazzi.core.format.Formatters
-import com.ffmathy.pooparazzi.core.model.clockDurationMillis
+import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
 import com.ffmathy.pooparazzi.core.format.Estimate
 import com.ffmathy.pooparazzi.core.format.EstimateText
+import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.LabelFormatter
-import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
+import com.ffmathy.pooparazzi.core.model.clockDurationMillis
 import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
 import com.ffmathy.pooparazzi.core.ui.tokens.EventColors
@@ -62,6 +62,7 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 internal class WidgetColors(val night: Boolean) {
     private val palette = if (night) XPalette.Night else XPalette.Day
     val surface: Color = palette.colors.surfaceContainer
+    val surfaceHigh: Color = palette.colors.surfaceContainerHigh
     val onSurface: Color = palette.colors.onSurface
     val onSurfaceVariant: Color = palette.colors.onSurfaceVariant
     val primary: Color = palette.colors.primary
@@ -105,36 +106,37 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     private fun atTime(label: String, millis: Long): String = string(CoreR.string.receipt_at_time, label, time(millis))
 
     /**
-     * The last occurrences relative to [now], as the watch shows them: "Fed 2h 10m ago", "Pee 48m ago", "Asleep 1h 07m",
-     * "Awake 1h 05m". The widget does not tick: [WidgetUpdater] redraws it every minute.
+     * The last occurrences relative to [now], as the watch shows them: "2h 10m ago" in the Feed and Diaper buttons,
+     * "Asleep 1h 07m" / "Awake 1h 05m" in the sleep toggle. The widget does not tick: [WidgetUpdater] redraws it every
+     * minute.
      */
-    private fun ago(label: String, millis: Long, now: Long): String =
-        string(R.string.join_space, label, relative.ago(clockDurationMillis(millis, now)))
+    fun ago(millis: Long, now: Long): String = relative.ago(clockDurationMillis(millis, now))
+
+    /** TalkBack: "last feed 2 hours 10 minutes ago" ([label] is the spoken lead, "last feed"). */
+    fun agoSpoken(@StringRes label: Int, millis: Long, now: Long): String =
+        string(R.string.join_space, string(label), relative.agoSpoken(clockDurationMillis(millis, now)))
 
     private fun lasting(label: String, millis: Long, now: Long): String =
         string(R.string.join_space, label, duration.format(clockDurationMillis(millis, now)))
 
-    /** "Fed 2h 10m ago", plus the breast order " · L → R" when one was recorded. */
-    fun fedAgo(feed: Entry, now: Long): String = ago(string(CoreR.string.status_fed), feed.startMillis, now) +
+    /** In the Feed button: "2h 10m ago", plus the breast order " · L → R" when one was recorded. */
+    fun fedAgo(feed: Entry, now: Long): String = ago(feed.startMillis, now) +
         (feed.breastSide?.takeIf { feed.isBreastfeed }?.let { DOT_SEPARATOR + labels.sideShort(it) } ?: "")
-    fun diaperAgo(kind: DiaperKind, millis: Long, now: Long): String = ago(labels.diaperKindStatus(kind), millis, now)
-    fun noFeeds(): String = string(R.string.lamp_no_feed)
     fun asleepFor(millis: Long, now: Long): String = lasting(string(CoreR.string.status_asleep), millis, now)
     fun awakeFor(millis: Long, now: Long): String = lasting(string(CoreR.string.status_awake), millis, now)
 
     private val estimates = EstimateText(context)
 
     /**
-     * "Wakes in 2h 15m" while asleep, "Next sleep in 50m" while awake (V1_ADDITIONS §9), relative to [now] as on the
-     * watch. The widget does not tick: [WidgetUpdater] redraws it every minute.
+     * Under "Start sleep" or "Woke up", which say what is next: "Next in 50m" (the expected next sleep, or the wake-up
+     * while asleep), as on the watch. The widget does not tick: [WidgetUpdater] redraws it every minute.
      */
-    fun sleepForecast(expected: Expected, asleep: Boolean, now: Long): String =
-        estimates.format(if (asleep) Estimate.WAKE else Estimate.NEXT_SLEEP, expected, now)
+    fun sleepForecast(expected: Expected, now: Long): String = estimates.format(Estimate.NEXT, expected, now)
 
     /** Under Feed: "Next in 55m", "Next soon", "Due 24m ago". */
-    fun feedForecast(expected: Expected, now: Long): String = estimates.format(Estimate.FEED, expected, now)
+    fun feedForecast(expected: Expected, now: Long): String = estimates.format(Estimate.NEXT, expected, now)
 
-    /** Under Diaper: "Poop in 2h 10m", "Poop soon", "Poop due 24m ago". */
+    /** Under Diaper: "Next poop in 3h 10m", "Next poop soon", "Poop due 24m ago". */
     fun poopForecast(expected: Expected, now: Long): String = estimates.format(Estimate.POOP, expected, now)
 
     /** TalkBack: "next feed expected around 15:35" / "next poop expected around 18:00". */
@@ -251,6 +253,8 @@ internal fun WidgetButton(
 @Composable
 internal fun SheetButton(
     launch: HomeLaunch,
+    /** The widget's baby, made the app's current one as the sheet opens (null with one baby). */
+    babyId: String?,
     event: EventColors,
     description: String,
     modifier: GlanceModifier,
@@ -261,7 +265,7 @@ internal fun SheetButton(
         modifier = modifier,
         fill = event.container,
         radius = 20.dp,
-        action = actionStartActivity(DeepLinks.intent(context, launch)),
+        action = actionStartActivity(DeepLinks.intent(context, launch, babyId)),
         description = description,
         content = face,
     )
@@ -272,11 +276,11 @@ internal fun SheetButton(
  * opens the app (with the receipt for the last widget log, DESIGN_SPEC §3.3.6).
  */
 @Composable
-internal fun WidgetSurface(colors: WidgetColors, launch: HomeLaunch, modifier: GlanceModifier = GlanceModifier, content: @Composable () -> Unit) {
+internal fun WidgetSurface(colors: WidgetColors, launch: HomeLaunch, babyId: String?, modifier: GlanceModifier = GlanceModifier, content: @Composable () -> Unit) {
     val context = LocalContext.current
     var surface = GlanceModifier.fillMaxSize().appWidgetBackground().background(colors.surface.provider())
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) surface = surface.cornerRadius(android.R.dimen.system_app_widget_background_radius)
-    Box(surface.clickable(actionStartActivity(DeepLinks.intent(context, launch))).then(modifier)) { content() }
+    Box(surface.clickable(actionStartActivity(DeepLinks.intent(context, launch, babyId))).then(modifier)) { content() }
 }
 
 private val BorderWidth = 2.dp

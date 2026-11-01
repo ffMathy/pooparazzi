@@ -51,8 +51,11 @@ data class WidgetSnapshot(
     /** Two or more babies: the status row starts with the baby's label and TalkBack names it (BABIES_AND_BACKUP §2.4). */
     val hasSeveralBabies: Boolean get() = babies.size > 1
 
-    /** The current baby, the one the widgets log for. */
+    /** The widget's baby, the one it shows and logs for. */
     val baby: Baby get() = babies.firstOrNull { it.id == babyId } ?: babies.first()
+
+    /** The baby the app is opened for from this widget (null with one baby: the links stay as they were). */
+    val launchBabyId: String? get() = babyId.takeIf { hasSeveralBabies }
 
     /** What a tap on the widget background opens: Home with the receipt sheet, or Home. */
     val backgroundLaunch: HomeLaunch
@@ -60,9 +63,9 @@ data class WidgetSnapshot(
 
     companion object {
         /**
-         * The snapshot at [now] of the current baby's [entries]. Receipts and notices are dropped once expired, and a
-         * receipt also when its log no longer stands (undone or edited away in the app or on the watch) or was made for
-         * another baby than the current one. Auto dims for naps while any baby is asleep ([allEntries], every baby's
+         * The snapshot at [now] of [babyId]'s [entries] (the widget's baby: its own choice, else the phone's current
+         * baby). Receipts and notices are dropped once expired, and a receipt also when its log no longer stands (undone
+         * or edited away in the app or on the watch) or was made for another baby than this widget's. Auto dims for naps while any baby is asleep ([allEntries], every baby's
          * log; BABIES_AND_BACKUP §2.3), as the app does.
          */
         fun of(
@@ -73,6 +76,7 @@ data class WidgetSnapshot(
             zone: ZoneId,
             systemDark: Boolean,
             allEntries: List<Entry> = entries,
+            babyId: String = settings.selectedBaby.id,
         ): WidgetSnapshot {
             val summary = summarize(entries, now, zone)
             val week = forecast(summary)
@@ -87,11 +91,11 @@ data class WidgetSnapshot(
                 runningSleepStart = sleep?.startMillis,
                 awakeSinceMillis = if (sleep == null) summary.lastSleepEnd else null,
                 receipt = memo.receipt?.takeIf {
-                    it.expiresAtMillis > now && it.babyId == settings.selectedBaby.id && it.stillStands(entries)
+                    it.expiresAtMillis > now && it.babyId == babyId && it.stillStands(entries)
                 },
                 notice = memo.notice?.takeIf { it.expiresAtMillis > now },
                 babies = settings.babies,
-                babyId = settings.selectedBaby.id,
+                babyId = babyId,
                 sleepForecast = week.sleep,
                 feedForecast = week.feed,
                 poopForecast = week.poop,

@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.provideContent
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.CoreGraph
@@ -27,37 +29,47 @@ internal class WidgetSource(
     private val context: Context,
     private val graph: CoreGraph,
     private val store: WidgetMemoStore,
+    private val babies: WidgetBabies,
 ) {
-    fun snapshots(): Flow<WidgetSnapshot> = combine(
+    /** The snapshots of the widget [widgetId] (null: one that has no id yet, which shows the current baby). */
+    fun snapshots(widgetId: Int?): Flow<WidgetSnapshot> = combine(
         graph.repository.observeCurrentLog(graph.settings.settings),
         store.memo,
+        babies.chosen,
         WidgetUpdater.refreshes,
-    ) { log, memo, _ -> build(log, memo) }
+    ) { log, memo, chosen, _ -> build(log, memo, chosen, widgetId) }
         .distinctUntilChanged()
 
-    suspend fun current(): WidgetSnapshot = build(graph.repository.observeCurrentLog(graph.settings.settings).first(), store.memo.value)
+    suspend fun current(widgetId: Int? = null): WidgetSnapshot =
+        build(graph.repository.observeCurrentLog(graph.settings.settings).first(), store.memo.value, babies.chosen.value, widgetId)
 
-    private fun build(log: CurrentLog, memo: WidgetMemo): WidgetSnapshot = WidgetSnapshot.of(
-        log.entries,
-        log.settings,
-        memo,
-        graph.clock.now(),
-        ZoneId.systemDefault(),
-        context.applicationContext.systemDarkTheme,
-        allEntries = log.allEntries,
-    )
+    /** The widget's own baby ([WidgetBabies]), else the current one; its log is cut from every baby's. */
+    private fun build(log: CurrentLog, memo: WidgetMemo, chosen: Map<Int, String>, widgetId: Int?): WidgetSnapshot {
+        val baby = WidgetBabies.babyOf(chosen, widgetId, log.settings)
+        return WidgetSnapshot.of(
+            log.allEntries.filter { it.babyId == baby.id },
+            log.settings,
+            memo,
+            graph.clock.now(),
+            ZoneId.systemDefault(),
+            context.applicationContext.systemDarkTheme,
+            allEntries = log.allEntries,
+            babyId = baby.id,
+        )
+    }
 
     companion object {
         fun from(context: Context): WidgetSource =
-            WidgetSource(context.applicationContext, Core.ensureInitialized(context), PrefsWidgetMemoStore.get(context))
+            WidgetSource(context.applicationContext, Core.ensureInitialized(context), PrefsWidgetMemoStore.get(context), PrefsWidgetBabies.get(context))
     }
 }
 
 /** Every widget's [GlanceAppWidget.provideGlance]: [content] for the current snapshot, recomposed as it changes. */
-internal suspend fun GlanceAppWidget.provideSnapshots(context: Context, content: @Composable (WidgetSnapshot) -> Unit): Nothing {
+internal suspend fun GlanceAppWidget.provideSnapshots(context: Context, id: GlanceId, content: @Composable (WidgetSnapshot) -> Unit): Nothing {
     val source = WidgetSource.from(context)
-    val initial = source.current()
-    val snapshots = source.snapshots()
+    val widgetId = runCatching { GlanceAppWidgetManager(context).getAppWidgetId(id) }.getOrNull()
+    val initial = source.current(widgetId)
+    val snapshots = source.snapshots(widgetId)
     provideContent {
         val snapshot by snapshots.collectAsState(initial)
         content(snapshot)

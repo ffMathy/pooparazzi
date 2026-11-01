@@ -297,10 +297,6 @@
     <string name="settings_import_none">Intet nyt at importere</string>
     <string name="settings_import_failed">Kunne ikke læse filen. Vælg en ZIP-fil fra Download mine data.</string>
 
-    <string name="forecast_in">om %1$s</string>
-    <string name="forecast_soon">snart</string>
-    <string name="forecast_poop_in">bæ om %1$s</string>
-    <string name="forecast_poop_soon">bæ snart</string>
     <string name="forecast_spoken_wake">vågner om cirka %1$s, omkring kl. %2$s</string>
     <string name="forecast_spoken_sleep">sover igen om cirka %1$s, omkring kl. %2$s</string>
     <string name="forecast_spoken_feed">næste måltid om cirka %1$s, omkring kl. %2$s</string>
@@ -309,8 +305,6 @@
     <string name="forecast_spoken_sleep_soon">sover igen snart</string>
     <string name="forecast_spoken_feed_soon">næste måltid snart</string>
     <string name="forecast_spoken_poop_soon">næste bæ snart</string>
-    <string name="forecast_ago">%1$s siden</string>
-    <string name="forecast_poop_ago">bæ %1$s siden</string>
     <string name="forecast_spoken_wake_ago">forventet at vågne for %1$s siden, omkring kl. %2$s</string>
     <string name="forecast_spoken_sleep_ago">forventet at sove igen for %1$s siden, omkring kl. %2$s</string>
     <string name="forecast_spoken_feed_ago">næste måltid forventet for %1$s siden, omkring kl. %2$s</string>

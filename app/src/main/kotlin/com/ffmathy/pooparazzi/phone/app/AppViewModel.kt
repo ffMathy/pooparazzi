@@ -43,7 +43,7 @@ data class AppearanceInputs(val appearance: Appearance, val sleepRunning: Boolea
  */
 class AppViewModel(
     repository: EntryRepository,
-    settings: SettingsRepository,
+    private val settings: SettingsRepository,
     private val accounts: Accounts = NoAccounts,
     private val welcomeSeen: WelcomeStore = WelcomeStore.Seen,
     private val links: AppLinkInbox = AppLinkInbox(),
@@ -113,6 +113,18 @@ class AppViewModel(
 
     fun request(launch: HomeLaunch) {
         pendingLaunch.value = launch
+    }
+
+    /**
+     * [launch] for [babyId] (a widget set to another baby than the current one): that baby becomes the current one
+     * first, so Home and the sheet it opens are that baby's from the start.
+     */
+    fun request(launch: HomeLaunch, babyId: String?) {
+        if (babyId == null) return request(launch)
+        viewModelScope.launch {
+            if (settings.current().babies.any { it.id == babyId }) settings.selectBaby(babyId)
+            request(launch)
+        }
     }
 
     /** Home has handled [launch] (a newer request is kept). */

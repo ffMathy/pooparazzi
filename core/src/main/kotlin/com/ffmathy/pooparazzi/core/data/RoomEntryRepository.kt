@@ -13,9 +13,9 @@ import com.ffmathy.pooparazzi.core.model.InvalidEntryException
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 import com.ffmathy.pooparazzi.core.model.isInterval
-import com.ffmathy.pooparazzi.core.model.normalized
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.model.isSleep
+import com.ffmathy.pooparazzi.core.model.normalized
 import com.ffmathy.pooparazzi.core.model.requireValid
 import com.ffmathy.pooparazzi.core.model.validate
 import com.ffmathy.pooparazzi.core.sync.EntrySync
@@ -111,8 +111,8 @@ class RoomEntryRepository(
 
     // ---- Sleep --------------------------------------------------------------------------------
 
-    override suspend fun startSleep(at: Long): Result<Entry> {
-        val babyId = currentBaby()
+    override suspend fun startSleep(at: Long, babyId: String?): Result<Entry> {
+        val babyId = babyId?.takeIf { it.isNotBlank() } ?: currentBaby()
         return startInterval(at, running = { dao.runningSleeps(babyId) }) { stamp ->
             Entry.sleep(at, updatedAtMillis = stamp, babyId = babyId)
         }

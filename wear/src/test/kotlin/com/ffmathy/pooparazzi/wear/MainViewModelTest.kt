@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.wear
 
+import android.app.Application
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.initializer
@@ -8,8 +9,8 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.data.EndResult
 import com.ffmathy.pooparazzi.core.data.FixedClock
-import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
 import com.ffmathy.pooparazzi.core.data.PooparazziDatabase
+import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
 import com.ffmathy.pooparazzi.core.domain.epochMillis
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.Baby
@@ -23,13 +24,13 @@ import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
 import com.ffmathy.pooparazzi.wear.state.GuardKind
-import com.ffmathy.pooparazzi.wear.testing.FakeSettingsRepository
 import com.ffmathy.pooparazzi.wear.state.MainMode
 import com.ffmathy.pooparazzi.wear.state.MainUiState
 import com.ffmathy.pooparazzi.wear.state.ReceiptKind
 import com.ffmathy.pooparazzi.wear.state.Undo
 import com.ffmathy.pooparazzi.wear.state.WearEvent
 import com.ffmathy.pooparazzi.wear.state.XHaptic
+import com.ffmathy.pooparazzi.wear.testing.FakeSettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -65,7 +66,9 @@ import java.util.Collections
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+// A plain Application: WearApp would start the surface updater, whose work on Dispatchers.Main races the test's
+// setMain ("Dispatchers.Main is used concurrently with setting it").
+@Config(sdk = [36], application = Application::class)
 class MainViewModelTest {
     private lateinit var db: PooparazziDatabase
     private lateinit var clock: FixedClock

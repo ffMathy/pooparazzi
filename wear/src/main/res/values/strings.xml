@@ -98,8 +98,16 @@
     <string name="ongoing_channel_description">Shows a running sleep on the watch face.</string>
     <!-- TalkBack for the Ongoing Activity: "Asleep since 02:05". Keep the #start# token. -->
     <string name="ongoing_asleep_since">Asleep since #start#</string>
-    <!-- "Asleep 1:07:23": the system fills in #elapsed#, how long the sleep has run, and keeps it current. Keep the token. -->
-    <string name="ongoing_asleep_for">Asleep #elapsed#</string>
+    <!-- The Ongoing Activity after "Asleep · ": the earliest of the week's estimates, relative ("feed in 2h 05m"). -->
+    <string name="ongoing_feed_in">feed in %1$s</string>
+    <string name="ongoing_feed_soon">feed soon</string>
+    <string name="ongoing_feed_ago">feed due %1$s ago</string>
+    <string name="ongoing_poop_in">poop in %1$s</string>
+    <string name="ongoing_poop_soon">poop soon</string>
+    <string name="ongoing_poop_ago">poop due %1$s ago</string>
+    <string name="ongoing_wake_in">wakes in %1$s</string>
+    <string name="ongoing_wake_soon">wakes soon</string>
+    <string name="ongoing_wake_ago">wake-up due %1$s ago</string>
     <!-- TalkBack, the place of a ticked side checkbox: "Left, first, checkbox, checked" -->
     <string name="spoken_side_first">first</string>
     <string name="spoken_side_second">second</string>

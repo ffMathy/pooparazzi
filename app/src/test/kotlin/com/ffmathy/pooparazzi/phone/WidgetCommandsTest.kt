@@ -10,12 +10,15 @@ import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.Appearance
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import com.ffmathy.pooparazzi.phone.launch.ReceiptKind
+import com.ffmathy.pooparazzi.phone.widget.InMemoryWidgetBabies
 import com.ffmathy.pooparazzi.phone.widget.InMemoryWidgetMemoStore
 import com.ffmathy.pooparazzi.phone.widget.NoticeType
+import com.ffmathy.pooparazzi.phone.widget.WidgetBabies
 import com.ffmathy.pooparazzi.phone.widget.WidgetCommands
 import com.ffmathy.pooparazzi.phone.widget.WidgetSnapshot
 import com.ffmathy.pooparazzi.phone.widget.WidgetSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runCurrent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -137,7 +140,7 @@ class WidgetCommandsTest : CoreTestBase() {
         assertEquals(HomeLaunch.Home, snapshot(rig).backgroundLaunch)
     }
 
-    /** BABIES_AND_BACKUP §2.4: the widgets log for the current baby, and a receipt belongs to the baby it was made for. */
+    /** BABIES_AND_BACKUP §2.4: a widget logs for its baby, and a receipt shows only on that baby's widgets. */
     @Test
     fun aReceiptNoLongerStandsOnceAnotherBabyIsCurrent() = coreTest { rig ->
         rig.settings.ensureBabies(listOf(SampleData.TWIN_ID))
@@ -152,9 +155,6 @@ class WidgetCommandsTest : CoreTestBase() {
         runCurrent()
         assertNull("Ida's widget shows no receipt for Noa's log", snapshot(rig).receipt)
         assertEquals(HomeLaunch.Home, snapshot(rig).backgroundLaunch)
-        commands(rig).undo(receipt.entryId)
-        runCurrent()
-        assertNotNull("Undo does nothing for another baby", rig.entry(receipt.entryId)?.takeUnless { it.deleted })
 
         rig.settings.selectBaby(Baby.FIRST_ID)
         runCurrent()
@@ -196,7 +196,7 @@ class WidgetCommandsTest : CoreTestBase() {
     fun underAutoTheWidgetsDimWhileAnyBabyIsAsleep() = coreTest { rig ->
         rig.settings.setAppearance(Appearance.AUTO)
         rig.settings.ensureBabies(listOf(SampleData.TWIN_ID))
-        val source = WidgetSource(ApplicationProvider.getApplicationContext(), Core.graph, store)
+        val source = WidgetSource(ApplicationProvider.getApplicationContext(), Core.graph, store, InMemoryWidgetBabies())
         assertFalse(source.current().night)
         commands(rig).toggleSleep()
         runCurrent()
@@ -212,12 +212,70 @@ class WidgetCommandsTest : CoreTestBase() {
     @Test
     fun aSwitchNeverPairsTheNewBabyWithTheOtherBabysFacts() = coreTest { rig ->
         rig.settings.ensureBabies(listOf(SampleData.TWIN_ID))
-        val seen = rig.collect(WidgetSource(ApplicationProvider.getApplicationContext(), Core.graph, store).snapshots())
+        val seen = rig.collect(WidgetSource(ApplicationProvider.getApplicationContext(), Core.graph, store, InMemoryWidgetBabies()).snapshots(null))
         assertNotNull("Noa's last feed", seen.last().lastFeed)
         rig.settings.selectBaby(SampleData.TWIN_ID)
         runCurrent()
         val ida = seen.filter { it.babyId == SampleData.TWIN_ID }
         assertTrue(ida.isNotEmpty())
         assertTrue("never Noa's feed under Ida's name: $ida", ida.all { it.lastFeed == null && it.lastDiaper == null })
+    }
+
+    /** Twins: a widget set to Ida starts Ida's sleep, whichever baby the phone has current, and keeps its own guard. */
+    @Test
+    fun aWidgetForAnotherBabyLogsForItWithItsOwnGuard() = coreTest { rig ->
+        rig.settings.ensureBabies(listOf(SampleData.TWIN_ID))
+        commands(rig).toggleSleep(SampleData.TWIN_ID)
+        runCurrent()
+        suspend fun running() = rig.repository.observeAllEntries().first().filter { it.isSleep && it.isRunning }
+        val ida = running()
+        assertEquals(listOf(SampleData.TWIN_ID), ida.map { it.babyId })
+        assertEquals("the phone keeps its current baby", Baby.FIRST_ID, rig.settings.current().selectedBaby.id)
+
+        // Within 2 s, Noa's widget still starts Noa's sleep: the guard is per baby.
+        rig.clock.advanceBy(500)
+        commands(rig).toggleSleep(Baby.FIRST_ID)
+        runCurrent()
+        assertEquals(setOf(Baby.FIRST_ID, SampleData.TWIN_ID), running().map { it.babyId }.toSet())
+
+        // A second tap on Ida's widget within 2 s is guarded, as before.
+        commands(rig).toggleSleep(SampleData.TWIN_ID)
+        runCurrent()
+        assertEquals(2, running().size)
+    }
+
+    /** A widget with its own baby shows that baby's log and receipt; one without follows the phone's current baby. */
+    @Test
+    fun eachWidgetShowsItsOwnBaby() = coreTest { rig ->
+        rig.settings.ensureBabies(listOf(SampleData.TWIN_ID))
+        val babies = InMemoryWidgetBabies(mapOf(7 to SampleData.TWIN_ID))
+        val source = WidgetSource(ApplicationProvider.getApplicationContext(), Core.graph, store, babies)
+        commands(rig).toggleSleep(SampleData.TWIN_ID)
+        runCurrent()
+
+        val idas = source.current(7)
+        assertEquals(SampleData.TWIN_ID, idas.baby.id)
+        assertTrue("Ida's widget shows her sleep", idas.asleep)
+        assertEquals(SampleData.TWIN_ID, idas.receipt?.babyId)
+        assertEquals(SampleData.TWIN_ID, idas.launchBabyId)
+
+        val noas = source.current(8)
+        assertEquals("no choice: the phone's current baby", Baby.FIRST_ID, noas.baby.id)
+        assertFalse(noas.asleep)
+        assertNull("Ida's receipt is not on Noa's widget", noas.receipt)
+
+        // A removed baby falls back to the current one.
+        babies.choose(7, "gone")
+        assertEquals(Baby.FIRST_ID, source.current(7).baby.id)
+    }
+
+    @Test
+    fun theBabyButtonMovesOnToTheNextBabyAndWrapsAround() = coreTest { rig ->
+        rig.settings.ensureBabies(listOf(SampleData.TWIN_ID, "third"))
+        val settings = rig.settings.current()
+        val (noa, ida, third) = settings.babies
+        assertEquals(ida, WidgetBabies.next(noa, settings))
+        assertEquals(third, WidgetBabies.next(ida, settings))
+        assertEquals(noa, WidgetBabies.next(third, settings))
     }
 }
