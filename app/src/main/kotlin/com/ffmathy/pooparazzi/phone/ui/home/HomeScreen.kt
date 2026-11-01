@@ -165,8 +165,8 @@ private enum class UpperSlot { TOP, LAMP, BELOW }
  * toggle, plus the logging sheets. Laid out from [windowInsets] (edge to edge): the area above the button block
  * scrolls when it does not fit (200 % font scale), and the button block stays pinned above the navigation inset.
  *
- * Lights-down (Night and something running) dims only the chrome: the name, status icons, Settings, the History pill
- * and the Today numbers (§8.2).
+ * Lights-down (Night and something running) dims only the chrome: the name (the status icons and the History, Statistics and Settings buttons
+ * are always onSurfaceVariant) and the Today numbers (§8.2).
  */
 @Composable
 fun HomeScreen(

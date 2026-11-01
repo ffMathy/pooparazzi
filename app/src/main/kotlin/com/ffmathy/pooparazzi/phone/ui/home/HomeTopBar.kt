@@ -1,10 +1,7 @@
 package com.ffmathy.pooparazzi.phone.ui.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,27 +10,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.format.Formatters
@@ -41,21 +34,19 @@ import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
-import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.ui.components.SyncGlyphs
 import com.ffmathy.pooparazzi.phone.ui.components.SyncIcon
 import com.ffmathy.pooparazzi.phone.ui.components.SyncIcons
 import com.ffmathy.pooparazzi.phone.ui.components.SyncTargets
 import com.ffmathy.pooparazzi.phone.ui.components.syncIcons
-import com.ffmathy.pooparazzi.phone.ui.components.syncIconsWidth
 import java.time.ZoneId
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
  * Home's top bar (DESIGN_SPEC §3.3.1): the baby's name, the status icons under it (the watch, and the cloud while
- * signed in; an icon in its error state is a retry button), the History pill, the `chart` button to Statistics and Settings. In lights-down the text and
- * icons use onSurfaceVariant and the pill loses its fill.
+ * signed in; an icon in its error state is a retry button), the History, Statistics and Settings icon buttons. In lights-down the name and
+ * icons use onSurfaceVariant.
  *
  * With two or more [babies] (BABIES_AND_BACKUP §2.4) the name is the current baby's label on a 48 dp button with a
  * chevron that opens the Switch baby sheet; the icons' retry targets then sit under it instead of over the name.
@@ -77,9 +68,8 @@ internal fun HomeTopBar(
     val chrome = if (lightsDown) colors.onSurfaceVariant else colors.onSurface
     val several = babies.size > 1
     val icons = syncIcons(sync, cloud, zone, formatters, actions::onRetrySync, actions::onRetryBackup)
-    BoxWithConstraints(modifier.fillMaxWidth()) {
-        val pill = historyPillStyle(icons, maxWidth)
-        // Top-aligned: the name sits on History and Settings' centre line (32 dp down) and the status icons hang below it.
+    Box(modifier.fillMaxWidth()) {
+        // Top-aligned: the name sits on the icon buttons' centre line (32 dp down) and the status icons hang below it.
         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.Top) {
             Box(
                 Modifier
@@ -99,7 +89,7 @@ internal fun HomeTopBar(
                 } else {
                     Column(Modifier.padding(start = 20.dp, end = TopBarGap, top = 12.dp, bottom = 4.dp)) {
                         val name = babyName.ifBlank { stringResource(CoreR.string.baby_name_hint) }
-                        // 40 dp, centred: the same box as the History pill's visual, so the name shares its centre line.
+                        // 40 dp, centred: the name shares the icon buttons' centre line.
                         Box(Modifier.heightIn(min = 40.dp), contentAlignment = Alignment.CenterStart) {
                             Text(
                                 name,
@@ -119,18 +109,9 @@ internal fun HomeTopBar(
                     SyncTargets(icons, Modifier.align(Alignment.BottomStart).padding(start = 20.dp))
                 }
             }
-            HistoryPill(pill, lightsDown, actions::onOpenHistory, Modifier.padding(top = 8.dp))
+            TopBarIcon(XIcons.history, stringResource(CoreR.string.nav_history), actions::onOpenHistory)
             // Statistics one tap from Home, so it is found without going through History first.
-            Box(
-                Modifier
-                    .padding(start = TopBarGap, top = 8.dp)
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .clickable(role = Role.Button, onClick = actions::onOpenStatistics),
-                contentAlignment = Alignment.Center,
-            ) {
-                XIcon(XIcons.chart, contentDescription = stringResource(R.string.statistics_title), tint = colors.onSurfaceVariant, size = 24.dp)
-            }
+            TopBarIcon(XIcons.chart, stringResource(R.string.statistics_title), actions::onOpenStatistics)
             Box(
                 Modifier
                     .padding(start = TopBarGap, end = 12.dp, top = 8.dp)
@@ -192,77 +173,17 @@ private fun SwitcherColumn(
     }
 }
 
-/** How much of the History pill fits beside the status icons. */
-private enum class PillStyle { FULL, TEXT, ICON }
-
-/**
- * The full pill ("History" with its icon) unless the status icons would not fit beside it: on a narrow phone at a large
- * font scale the pill first drops its icon and then its label (TalkBack still reads "History"). The name ellipsizes.
- */
+/** A 48 dp icon button of the top bar (History, Statistics): the [icon] 24 in onSurfaceVariant, named [label]. */
 @Composable
-private fun historyPillStyle(icons: List<SyncIcon>, maxWidth: Dp): PillStyle {
-    if (icons.isEmpty()) return PillStyle.FULL
-    val measurer = rememberTextMeasurer()
-    val density = LocalDensity.current
-    val label = stringResource(CoreR.string.nav_history)
-    val sync = syncIconsWidth(icons)
-    return remember(sync, label, maxWidth, density) {
-        with(density) {
-            val text = measurer.measure(label, PhoneType.labelLarge, maxLines = 1).size.width.toDp()
-            // Start 20, the gaps either side of the pill, Statistics 48 and its gap, Settings 48 and its 12 end margin.
-            val left = maxWidth - 20.dp - TopBarGap * 3 - 48.dp * 2 - 12.dp
-            when {
-                left - (12.dp + 18.dp + 6.dp + text + 14.dp) >= sync -> PillStyle.FULL
-                left - (14.dp + text + 14.dp) >= sync -> PillStyle.TEXT
-                else -> PillStyle.ICON
-            }
-        }
-    }
-}
-
-/** The History pill: 48 target / 40 visual, r 20, `history` 18 + 6 + "History" (narrower when [style] says so). */
-@Composable
-private fun HistoryPill(style: PillStyle, lightsDown: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val colors = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(20.dp)
-    val label = stringResource(CoreR.string.nav_history)
+private fun TopBarIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
     Box(
-        modifier
-            .height(48.dp)
-            .widthIn(min = 48.dp)
-            .clip(shape)
-            .clickable(role = Role.Button, onClick = onClick)
-            .then(if (style == PillStyle.ICON) Modifier.semantics { contentDescription = label } else Modifier),
+        Modifier
+            .padding(start = TopBarGap, top = 8.dp)
+            .size(48.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Row(
-            Modifier
-                .height(40.dp)
-                .widthIn(min = 40.dp)
-                .clip(shape)
-                .background(if (lightsDown) Color.Transparent else colors.surfaceContainerHigh)
-                .padding(
-                    start = when (style) {
-                        PillStyle.FULL -> 12.dp
-                        PillStyle.TEXT -> 14.dp
-                        PillStyle.ICON -> 0.dp
-                    },
-                    end = if (style == PillStyle.ICON) 0.dp else 14.dp,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-        ) {
-            if (style != PillStyle.TEXT) {
-                XIcon(XIcons.history, contentDescription = null, tint = colors.onSurfaceVariant, size = 18.dp)
-            }
-            if (style != PillStyle.ICON) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (lightsDown) colors.onSurfaceVariant else colors.onSurface,
-                    maxLines = 1,
-                )
-            }
-        }
+        XIcon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.onSurfaceVariant, size = 24.dp)
     }
 }
