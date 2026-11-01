@@ -66,26 +66,28 @@ class WidgetBabiesTest {
         val twins = render(DpSize(358.dp, 208.dp)) { LogWidgetContent(WidgetSamples.twins(night = true)) }
         val texts = twins.texts()
         assertEquals("the row starts with the name", "Noa", texts.first())
-        assertTrue("the feed still fits beside it: $texts", texts.any { it.startsWith("Fed 2h 10m ago") })
+        // The times are in their buttons, as on the watch: never repeated in the row above.
+        assertEquals("Feed and its time since: $texts", listOf("Feed", "2h 10m ago"), texts.subList(1, 3))
 
         val one = render(DpSize(358.dp, 208.dp)) { LogWidgetContent(WidgetSamples.idle(night = true)) }
-        assertFalse("one baby: no name in the row", "Noa" in one.texts())
+        assertEquals("one baby: the row names the baby, as the watch's title", "Noa", one.texts().first())
     }
 
     @Test
-    fun aNarrowWidgetDropsFactsBeforeTheName() {
+    fun aNarrowWidgetKeepsTheTimesInTheirButtons() {
         val narrow = render(DpSize(250.dp, 190.dp)) { LogWidgetContent(WidgetSamples.twins(night = false)) }
         val texts = narrow.texts()
         assertEquals("Noa", texts.first())
-        assertFalse("no room for the diaper beside the name and the feed: $texts", texts.any { it.startsWith("Pee ") })
+        // The sleep status goes under "Start sleep" in the toggle, not up into the row.
+        assertEquals(texts.toString(), listOf("Start sleep", "Awake 1h 05m"), texts.takeLast(2))
     }
 
     @Test
     fun bothWidgetsNameTheBabyToTalkBack() {
         val log = render(DpSize(358.dp, 208.dp)) { LogWidgetContent(WidgetSamples.twins(night = true)) }.descriptions()
-        assertTrue(log.toString(), "Log diaper for Noa" in log)
-        // The feed button goes on with what the week expects next (V1_ADDITIONS §9).
-        assertTrue(log.toString(), log.any { it.startsWith("Log feed for Noa") })
+        // Each button goes on with the time since the last one and what the week expects next (V1_ADDITIONS §9).
+        assertTrue(log.toString(), "Log diaper for Noa, Last diaper 48 minutes ago" in log)
+        assertTrue(log.toString(), "Log feed for Noa, Last feed 2 hours 10 minutes ago, next feed expected around 15:30" in log)
         assertTrue(log.toString(), log.any { it.startsWith("Start sleep for Noa") })
 
         val quick = render(DpSize(171.dp, 100.dp)) { QuickWidgetContent(WidgetSamples.twins(night = true)) }.descriptions()

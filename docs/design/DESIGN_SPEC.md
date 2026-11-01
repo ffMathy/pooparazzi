@@ -429,8 +429,8 @@ Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (
 
 | Row | Idle | Asleep | Just logged |
 |---|---|---|---|
-| 1 (24, not a separate target) | `feed` 16 + 6 + "Fed 2h 10m ago" labelLarge 15 sp onSurface; 16 gap; `pee` 16 + "Pee 48m ago" | "Fed 1h 32m ago", "Pee 1h 20m ago" | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
-| 2 (68) | 2 equal buttons, gap 8, r 20; icon 24 at +10, label 15 sp at +40: Feed (FEED colours, opens the Feed sheet), Diaper (DIAPER colours, `diaper`, opens the Diaper sheet) | unchanged | unchanged |
+| 1 (24, not a separate target) | the baby's name, labelLarge 15 sp onSurface (nothing when unnamed); the times are in their buttons | as idle | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
+| 2 (68) | 2 equal buttons, gap 8, r 20; icon 24 at +10, label 15 sp at +40: Feed (FEED colours, opens the Feed sheet), Diaper (DIAPER colours, `diaper`, opens the Diaper sheet). Under the label, as the watch's rows: "2h 10m ago" (Feed adds " · L → R") and the estimate "Next in 55m" / "Poop in 3h 10m", 11 sp; with two lines the face tightens to icon 18, label 14 sp | unchanged | unchanged |
 | 3 (68) | Sleep toggle, full width, r 20 (as every widget button), SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake 1h 05m" dataSmall | checked: r 20, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned "Asleep 1h 07m" (no icon) | unchanged |
 
 - Just logged: nothing else changes. No button moves, relabels or changes colour, and Undo never sits where a log button is. The receipt reverts on the next log or after 10 s.
@@ -1361,7 +1361,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 | Condition | Change |
 |---|---|
-| 4×2 narrower than 320 dp, or font scale ≥ 1.3 | hide the end-aligned "Awake 1h 05m" / "Asleep 1h 07m" in row 3. While asleep, show "Asleep 1h 07m" in row 1 instead. (The guideline 4×2 is 276 dp wide, 252 inside the padding, against the 294 dp row 3 needs) |
+| 4×2 narrower than 320 dp, or font scale ≥ 1.3 | the end-aligned "Awake 1h 05m" / "Asleep 1h 07m" in row 3 moves under the toggle's label (still in the toggle). (The guideline 4×2 is 276 dp wide, 252 inside the padding, against the 294 dp row 3 needs) |
 | 3×1 where a word of "Start sleep" does not fit its button | label "Sleep" (unchecked) / "Woke up" (checked) |
 | 3×1 where any label still does not fit | icon-only buttons with content descriptions "Log feed" / "Log diaper" / "Start sleep" |
 | 3×1 narrower than 180 dp (an old 2×1) | padding 8, gaps 4, so the three 24 dp icons still fit |

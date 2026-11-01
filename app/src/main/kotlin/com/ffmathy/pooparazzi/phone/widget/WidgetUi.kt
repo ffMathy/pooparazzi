@@ -105,20 +105,22 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     private fun atTime(label: String, millis: Long): String = string(CoreR.string.receipt_at_time, label, time(millis))
 
     /**
-     * The last occurrences relative to [now], as the watch shows them: "Fed 2h 10m ago", "Pee 48m ago", "Asleep 1h 07m",
-     * "Awake 1h 05m". The widget does not tick: [WidgetUpdater] redraws it every minute.
+     * The last occurrences relative to [now], as the watch shows them: "2h 10m ago" in the Feed and Diaper buttons,
+     * "Asleep 1h 07m" / "Awake 1h 05m" in the sleep toggle. The widget does not tick: [WidgetUpdater] redraws it every
+     * minute.
      */
-    private fun ago(label: String, millis: Long, now: Long): String =
-        string(R.string.join_space, label, relative.ago(clockDurationMillis(millis, now)))
+    fun ago(millis: Long, now: Long): String = relative.ago(clockDurationMillis(millis, now))
+
+    /** TalkBack: "last feed 2 hours 10 minutes ago" ([label] is the spoken lead, "last feed"). */
+    fun agoSpoken(@StringRes label: Int, millis: Long, now: Long): String =
+        string(R.string.join_space, string(label), relative.agoSpoken(clockDurationMillis(millis, now)))
 
     private fun lasting(label: String, millis: Long, now: Long): String =
         string(R.string.join_space, label, duration.format(clockDurationMillis(millis, now)))
 
-    /** "Fed 2h 10m ago", plus the breast order " · L → R" when one was recorded. */
-    fun fedAgo(feed: Entry, now: Long): String = ago(string(CoreR.string.status_fed), feed.startMillis, now) +
+    /** In the Feed button: "2h 10m ago", plus the breast order " · L → R" when one was recorded. */
+    fun fedAgo(feed: Entry, now: Long): String = ago(feed.startMillis, now) +
         (feed.breastSide?.takeIf { feed.isBreastfeed }?.let { DOT_SEPARATOR + labels.sideShort(it) } ?: "")
-    fun diaperAgo(kind: DiaperKind, millis: Long, now: Long): String = ago(labels.diaperKindStatus(kind), millis, now)
-    fun noFeeds(): String = string(R.string.lamp_no_feed)
     fun asleepFor(millis: Long, now: Long): String = lasting(string(CoreR.string.status_asleep), millis, now)
     fun awakeFor(millis: Long, now: Long): String = lasting(string(CoreR.string.status_awake), millis, now)
 

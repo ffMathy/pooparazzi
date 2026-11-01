@@ -152,66 +152,20 @@ private fun StatusRow(
         when {
             notice != null -> NoticeLine(notice, strings, colors)
             receipt != null -> ReceiptLine(receipt, baby, strings, colors, layout, measure)
-            else -> StatusFacts(snapshot, baby, strings, colors, layout, measure)
+            else -> StatusTitle(snapshot, baby, colors)
         }
     }
 }
 
 /**
- * Idle and asleep: "Fed 2h 10m ago" and "Pee 48m ago" (the diaper only when both fit). With two or more babies the row
- * starts with the [baby]'s label, and the facts that no longer fit beside it are dropped.
+ * Idle and asleep: the baby's name, as the watch's title (the label with two or more babies; nothing when unnamed). The
+ * times sit in the buttons they belong to, as on the watch: "2h 10m ago" in Feed and Diaper, "Awake 1h 05m" in the
+ * sleep toggle.
  */
 @Composable
-private fun RowScope.StatusFacts(
-    snapshot: WidgetSnapshot,
-    baby: String?,
-    strings: WidgetStrings,
-    colors: WidgetColors,
-    layout: LogLayout,
-    measure: WidgetMeasure,
-) {
-    fun factWidth(text: String) = FactIconWidth + measure.width(text, FactSize)
-    val sleepStart = snapshot.runningSleepStart
-    val lastFeed = snapshot.lastFeed
-    var room = layout.rowWidth
-    if (baby != null) {
-        BabyLabel(baby, colors)
-        room -= measure.width(baby, FactSize) + FactGap
-        Spacer(GlanceModifier.width(FactGap))
-    }
-    when {
-        // Narrow: the toggle row has no room for "Asleep 1h 07m", so it moves up here (DESIGN_SPEC §10.11).
-        sleepStart != null && !layout.wide -> {
-            val text = strings.asleepFor(sleepStart, snapshot.now)
-            if (baby == null || factWidth(text) <= room) Fact(XDrawables.sleepRunning, colors.sleep.strong, text, colors)
-        }
-        else -> {
-            val feedText = lastFeed?.let { strings.fedAgo(it, snapshot.now) } ?: strings.noFeeds()
-            // Without a name the feed fact always shows (as before several babies); beside one only when it fits.
-            val feedShown = baby == null || factWidth(feedText) <= room
-            if (feedShown) {
-                Fact(XDrawables.forFeedType(lastFeed?.feedType), colors.feed.strong, feedText, colors)
-                room -= factWidth(feedText) + FactGap
-            }
-            val diaper = snapshot.lastDiaper
-            val kind = diaper?.let { DiaperKind.of(it.pee, it.poop) }
-            if (feedShown && diaper != null && kind != null) {
-                val diaperText = strings.diaperAgo(kind, diaper.startMillis, snapshot.now)
-                if (factWidth(diaperText) <= room) {
-                    Spacer(GlanceModifier.width(FactGap))
-                    val icon = if (kind == DiaperKind.BOTH) colors.bothIcon else XDrawables.forDiaperKind(kind)
-                    Fact(icon, if (kind == DiaperKind.BOTH) null else colors.diaper(kind).strong, diaperText, colors)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Fact(icon: Int, color: Color?, text: String, colors: WidgetColors) {
-    WidgetIcon(icon, color, 16.dp)
-    Spacer(GlanceModifier.width(6.dp))
-    WidgetText(text, colors.onSurface, FactSize)
+private fun StatusTitle(snapshot: WidgetSnapshot, baby: String?, colors: WidgetColors) {
+    val name = baby ?: snapshot.baby.name.trim().takeIf { it.isNotEmpty() } ?: return
+    BabyLabel(name, colors)
 }
 
 /** The current baby's label at the start of the status row (two or more babies), in the facts' type (as measured). */
@@ -304,23 +258,40 @@ private fun LogButtons(
         listOf(feedLabel, diaperLabel).all { measure.fits(it, LabelSize, layout.buttonWidth - 8.dp) } -> FaceStyle.Regular
         else -> FaceStyle.Compact
     }
-    // What the last week expects next (V1_ADDITIONS §9), under the label of the regular face only. When either button
-    // has a line, both keep its room, so the icons stay aligned.
-    val feedNext = snapshot.feedForecast?.takeIf { style == FaceStyle.Regular }
-    val poopNext = snapshot.poopForecast?.takeIf { style == FaceStyle.Regular }
-    val sub = feedNext != null || poopNext != null
-    fun described(@StringRes name: Int, spoken: String?) =
-        strings.forBaby(strings.string(name), baby).let { if (spoken == null) it else strings.string(R.string.spoken_pair, it, spoken) }
+    // Under the label of the regular face, as the watch's rows: the time since the last one ("2h 10m ago") and what the
+    // last week expects next ("Next in 55m", V1_ADDITIONS §9). Both buttons keep the same number of lines, so their icons
+    // stay aligned.
+    val regular = style == FaceStyle.Regular
+    val lastFeed = snapshot.lastFeed?.takeIf { regular }
+    val lastDiaper = snapshot.lastDiaper?.takeIf { regular }
+    val feedNext = snapshot.feedForecast?.takeIf { regular }
+    val poopNext = snapshot.poopForecast?.takeIf { regular }
+    val feedLines = listOfNotNull(lastFeed?.let { strings.fedAgo(it, snapshot.now) }, feedNext?.let { strings.feedForecast(it, snapshot.now) })
+    val diaperLines = listOfNotNull(lastDiaper?.let { strings.ago(it.startMillis, snapshot.now) }, poopNext?.let { strings.poopForecast(it, snapshot.now) })
+    val lines = maxOf(feedLines.size, diaperLines.size)
+    fun padded(sub: List<String>) = sub + List(lines - sub.size) { "\u00A0" }
+    fun described(@StringRes name: Int, vararg spoken: String?) =
+        spoken.filterNotNull().fold(strings.forBaby(strings.string(name), baby)) { said, part -> strings.string(R.string.spoken_pair, said, part) }
     Row(modifier) {
         val cell = GlanceModifier.defaultWeight().fillMaxHeight()
         val feed = colors.feed
-        SheetButton(HomeLaunch.Feed, feed, described(R.string.widget_cd_log_feed, feedNext?.let(strings::feedForecastSpoken)), cell) {
-            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style, sub = feedNext?.let { strings.feedForecast(it, snapshot.now) } ?: "\u00A0".takeIf { sub })
+        val feedSaid = described(
+            R.string.widget_cd_log_feed,
+            lastFeed?.let { strings.agoSpoken(CoreR.string.spoken_last_feed, it.startMillis, snapshot.now) },
+            feedNext?.let(strings::feedForecastSpoken),
+        )
+        SheetButton(HomeLaunch.Feed, feed, feedSaid, cell) {
+            ButtonFace(XDrawables.forFeedType(snapshot.lastFeed?.feedType), feed.strong, feedLabel, feed.onContainer, style, sub = padded(feedLines))
         }
         Spacer(GlanceModifier.width(8.dp))
         val diaper = colors.diaper
-        SheetButton(HomeLaunch.Diaper, diaper, described(R.string.widget_cd_log_diaper, poopNext?.let(strings::poopForecastSpoken)), cell) {
-            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style, sub = poopNext?.let { strings.poopForecast(it, snapshot.now) } ?: "\u00A0".takeIf { sub })
+        val diaperSaid = described(
+            R.string.widget_cd_log_diaper,
+            lastDiaper?.let { strings.agoSpoken(CoreR.string.spoken_last_diaper, it.startMillis, snapshot.now) },
+            poopNext?.let(strings::poopForecastSpoken),
+        )
+        SheetButton(HomeLaunch.Diaper, diaper, diaperSaid, cell) {
+            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style, sub = padded(diaperLines))
         }
     }
 }
@@ -339,22 +310,28 @@ private val CompactTopSpace = 10.dp
  * the regular face's.
  */
 @Composable
-private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle, sub: String? = null) {
+private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle, sub: List<String> = emptyList()) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
         if (style == FaceStyle.Compact) Spacer(GlanceModifier.height(CompactTopSpace))
-        // With the forecast line the face tightens (icon 20, gap 2), so the three lines keep their padding in the button.
-        WidgetIcon(icon, iconColor, if (style == FaceStyle.Compact || sub != null) 20.dp else 24.dp)
+        // With lines under the label the face tightens (icon 20 then 18, gap 2 then 0, label 14 sp with two), so every
+        // line keeps its padding in the button.
+        val iconSize = when {
+            sub.size >= 2 -> 18.dp
+            style == FaceStyle.Compact || sub.isNotEmpty() -> 20.dp
+            else -> 24.dp
+        }
+        WidgetIcon(icon, iconColor, iconSize)
         if (style != FaceStyle.IconOnly) {
-            Spacer(GlanceModifier.height(if (style == FaceStyle.Compact) 0.dp else if (sub != null) 2.dp else 6.dp))
+            Spacer(GlanceModifier.height(if (style == FaceStyle.Compact || sub.size >= 2) 0.dp else if (sub.isNotEmpty()) 2.dp else 6.dp))
             WidgetText(
                 text = label,
                 color = labelColor,
-                size = if (style == FaceStyle.Compact) 13.sp else LabelSize,
+                size = if (style == FaceStyle.Compact) 13.sp else if (sub.size >= 2) 14.sp else LabelSize,
                 maxLines = 2,
                 align = TextAlign.Center,
                 modifier = GlanceModifier.padding(horizontal = 4.dp),
             )
-            if (sub != null) WidgetText(sub, labelColor, 11.sp, maxLines = 1, align = TextAlign.Center)
+            sub.forEach { WidgetText(it, labelColor, 11.sp, maxLines = 1, align = TextAlign.Center, modifier = GlanceModifier.padding(horizontal = 4.dp)) }
         }
     }
 }
@@ -408,7 +385,16 @@ private fun SleepToggleRow(icon: Int, label: String, status: String?, forecast: 
     ) {
         WidgetIcon(icon, sleep.strong, 24.dp)
         Spacer(GlanceModifier.width(10.dp))
-        WidgetText(label, sleep.onContainer, 16.sp)
+        if (!layout.wide && status != null) {
+            // Narrow: no room at the end, so the status goes under the label (still in the toggle, as Feed's and
+            // Diaper's times are in theirs).
+            Column {
+                WidgetText(label, sleep.onContainer, 16.sp)
+                WidgetText(status, sleep.onContainer, 13.sp, maxLines = 1)
+            }
+        } else {
+            WidgetText(label, sleep.onContainer, 16.sp)
+        }
         if (layout.wide && status != null) {
             Spacer(GlanceModifier.width(12.dp))
             Spacer(GlanceModifier.defaultWeight())
