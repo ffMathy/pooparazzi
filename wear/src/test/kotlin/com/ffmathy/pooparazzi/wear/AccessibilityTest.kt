@@ -63,8 +63,8 @@ class AccessibilityTest {
     @Test
     fun idleMainReadsTheLastFeedAndTheSleepToggle() {
         show { MainScreen(WearSamples.mainIdle(), MainActions()) }
-        compose.onNode(hasContentDescription("Feed. Last feed, formula, 2 hours 10 minutes ago, at 12:22")).assertExists()
-        compose.onNodeWithContentDescription("Start sleep")
+        compose.onNode(hasContentDescription("Feed. Last feed, formula, 2 hours 10 minutes ago, at 12:22, next feed expected around 15:30")).assertExists()
+        compose.onNodeWithContentDescription("Start sleep, expected to sleep again around 15:20")
             .assert(hasStateDescription("Awake since 13:27"))
             .assertIsEnabled()
     }
@@ -88,14 +88,14 @@ class AccessibilityTest {
         // As the phone: "Last feed, 2 hours 10 minutes ago, at 12:22", not "Last feed, feed, …".
         val idle = WearSamples.mainIdle()
         show { MainScreen(idle.copy(lastFeed = idle.lastFeed!!.copy(feedType = null)), MainActions()) }
-        compose.onNode(hasContentDescription("Feed. Last feed, 2 hours 10 minutes ago, at 12:22")).assertExists()
+        compose.onNode(hasContentDescription("Feed. Last feed, 2 hours 10 minutes ago, at 12:22, next feed expected around 15:30")).assertExists()
     }
 
     @Test
     fun asleepMainReadsTheSleepOnceAndNamesWokeUp() {
         show { MainScreen(WearSamples.mainAsleep(), MainActions()) }
         compose.onNode(hasContentDescription("Asleep, 1 hour 7 minutes, since 02:05")).assertExists()
-        compose.onNodeWithContentDescription("Woke up, end sleep").assert(hasStateDescription("Asleep since 02:05"))
+        compose.onNodeWithContentDescription("Woke up, end sleep, expected to wake around 05:25").assert(hasStateDescription("Asleep since 02:05"))
         // The numeral is never read as "1h 07m".
         compose.onAllNodes(hasText("07")).fetchSemanticsNodes().let { assert(it.isEmpty()) { "numeral exposed as text" } }
     }
@@ -103,9 +103,9 @@ class AccessibilityTest {
     @Test
     fun afterABreastFeedMainStaysIdle() {
         show { MainScreen(WearSamples.mainAfterBreastfeed(), MainActions()) }
-        compose.onNodeWithContentDescription("Start sleep").assertIsEnabled()
+        compose.onNodeWithContentDescription("Start sleep, expected to sleep again around 15:20").assertIsEnabled()
         // The breast order of the last feed, read.
-        compose.onNode(hasContentDescription("Feed. Last feed, breast, left then right, 18 minutes ago, at 14:32")).assertExists()
+        compose.onNode(hasContentDescription("Feed. Last feed, breast, left then right, 18 minutes ago, at 14:32, next feed expected around 17:45")).assertExists()
         compose.onAllNodes(hasContentDescription("End feed")).fetchSemanticsNodes().let { assert(it.isEmpty()) { "no End feed" } }
     }
 
@@ -207,9 +207,9 @@ class DanishAccessibilityTest {
     @Test
     fun idleMainReadsTheLastFeedInDanish() {
         compose.setContent { XWearTheme { AppScaffold { MainScreen(WearSamples.mainIdle(), MainActions()) } } }
-        compose.onNode(hasContentDescription("Måltid. Sidste måltid, modermælkserstatning, 2 timer 10 minutter siden, kl. 12:22"))
+        compose.onNode(hasContentDescription("Måltid. Sidste måltid, modermælkserstatning, 2 timer 10 minutter siden, kl. 12:22, næste måltid forventes omkring kl. 15:30"))
             .assertExists()
-        compose.onNodeWithContentDescription("Start søvn").assert(
+        compose.onNodeWithContentDescription("Start søvn, forventes at sove igen omkring kl. 15:20").assert(
             SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Vågen siden kl. 13:27"),
         )
     }

@@ -4,6 +4,8 @@ import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.format.LabelFormatter
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.settings.Settings
+import com.ffmathy.pooparazzi.wear.glance.GlanceTitle
+import com.ffmathy.pooparazzi.wear.glance.WatchGlance
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import java.time.ZoneId
 
@@ -53,48 +55,34 @@ sealed interface TileTitle {
     /** A rejected toggle (2 s). */
     data class Guard(val kind: GuardKind) : TileTitle
 
-    /** The last tile log (10 s): "Woke up 14:32 · Undo". Wins over [Asleep] (§3.6). */
+    /** The last tile log (10 s): "Woke up 14:32 · Undo". Wins over the glance's "Asleep" (§3.6). */
     data class Logged(val feedback: TileFeedback) : TileTitle
 
-    /** A sleep runs: "Asleep 1h 07m". */
-    data class Asleep(val sleep: Entry) : TileTitle
-
-    /**
-     * The baby's name, synced from the phone's settings. With two or more babies, the current baby's label, so an
-     * unnamed one shows too ("Baby 2", see [TileUiState.titleName]).
-     */
-    data class Name(val name: String) : TileTitle
-
-    /** No name set: the last diaper, kind first ("Pee 48m ago"), as the approved mockup shows. */
-    data class LastDiaper(val diaper: Entry) : TileTitle
-
-    /** Nothing to say yet (no name, no diapers). */
-    data object None : TileTitle
+    /** What Main's title line shows too ([WatchGlance.title]): asleep, the baby's name, or the last diaper. */
+    data class Glance(val title: GlanceTitle) : TileTitle
 }
 
 /**
- * Everything the tile layout shows at [now] (DESIGN_SPEC §3.6, V1_ADDITIONS §2.2). Domain values only; the layout
- * formats them with the shared formatters.
+ * Everything the tile shows at [now] (DESIGN_SPEC §3.6, V1_ADDITIONS §2.2): the [glance] it shares with the app's Main,
+ * plus the tile's own feedback and guard. Domain values only; the layout formats them with the shared formatters.
  */
 data class TileUiState(
-    val now: Long,
-    val zone: ZoneId,
-    val babyName: String,
-    val lastFeed: Entry?,
-    val lastDiaper: Entry?,
-    val runningSleep: Entry?,
+    val glance: WatchGlance,
     val feedback: TileFeedback? = null,
     val guard: TileGuard? = null,
 ) {
-    /** Guard, then the just-logged confirmation, then asleep, then the name, then the last diaper. */
+    val now: Long get() = glance.now
+    val zone: ZoneId get() = glance.zone
+    val lastFeed: Entry? get() = glance.lastFeed
+    val lastDiaper: Entry? get() = glance.lastDiaper
+    val runningSleep: Entry? get() = glance.runningSleep
+
+    /** Guard, then the just-logged confirmation, then the glance's own title (asleep, the name, the last diaper). */
     val title: TileTitle
         get() = when {
             guard != null && guard.untilMillis > now -> TileTitle.Guard(guard.kind)
             feedback != null && feedback.untilMillis > now -> TileTitle.Logged(feedback)
-            runningSleep != null -> TileTitle.Asleep(runningSleep)
-            babyName.isNotBlank() -> TileTitle.Name(babyName)
-            lastDiaper != null -> TileTitle.LastDiaper(lastDiaper)
-            else -> TileTitle.None
+            else -> TileTitle.Glance(glance.title)
         }
 
     /** The background opens Logged (with Undo) for this entry, while its confirmation shows. */
@@ -105,7 +93,7 @@ data class TileUiState(
      * The same tile at [time]: the timeline entry that starts then. Feedback and guard expire on their own; every
      * duration on the tile is a dynamic expression, so the entries differ only in their title.
      */
-    fun at(time: Long): TileUiState = copy(now = time)
+    fun at(time: Long): TileUiState = copy(glance = glance.copy(now = time))
 
     /** The moments the title changes after [now] (feedback and guard expiry), in order. */
     val changes: List<Long>
@@ -130,12 +118,7 @@ data class TileUiState(
          * for another baby (made before a switch) is dropped.
          */
         fun from(summary: Summary, babyName: String, feedback: TileFeedback?, guard: TileGuard?, babyId: String? = null) = TileUiState(
-            now = summary.now,
-            zone = summary.zone,
-            babyName = babyName.trim(),
-            lastFeed = summary.lastFeed,
-            lastDiaper = summary.lastDiaper,
-            runningSleep = summary.runningSleep,
+            glance = WatchGlance.from(summary, babyName),
             feedback = feedback?.takeIf { it.untilMillis > summary.now && it.forBaby(babyId) && it.stillStands(summary) },
             guard = guard?.takeIf { it.untilMillis > summary.now },
         )

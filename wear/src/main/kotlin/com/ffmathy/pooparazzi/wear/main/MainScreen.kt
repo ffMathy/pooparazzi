@@ -3,6 +3,14 @@ package com.ffmathy.pooparazzi.wear.main
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.foundation.layout.height
+import com.ffmathy.pooparazzi.wear.glance.WatchGlance
+import com.ffmathy.pooparazzi.core.format.Labels
+import com.ffmathy.pooparazzi.wear.glance.GlanceTitle
+import com.ffmathy.pooparazzi.wear.glance.GlanceText
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -113,6 +121,12 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
     val babyTime = rememberBabyTimeText(babyLabel)
     val edgeSize = if (small) EdgeButtonSize.ExtraSmall else EdgeButtonSize.Small
     val events = events()
+    val glance = state.glance
+    val resources = LocalResources.current
+    val words = remember(resources, f) { GlanceText(resources, f) }
+    // Each row's largest fitting font scale: both rows use the smaller, so Feed and Diaper read alike.
+    val rowFits = remember { mutableStateMapOf<String, Float>() }
+    val rowScale = rowFits.values.minOrNull()
     // As on the Tile, small watches drop the title, unless it is the only way to switch babies.
     val showTitle = !small || babyLabel != null
     // The system TimeText grows with the font scale (it is not capped): the content moves down with it.
@@ -134,8 +148,9 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(ROW_GAP),
             ) {
-                if (showTitle) Title(state, f, babyLabel, actions)
-                val lastFeed = state.lastFeed
+                if (showTitle) Title(state, f, words, babyLabel, actions)
+                val lastFeed = glance.lastFeed
+                val nextFeed = glance.nextFeed?.takeIf { lastFeed != null }
                 EventRow(
                     label = stringResource(CoreR.string.kind_feed),
                     icon = XIcons.feed,
@@ -145,11 +160,16 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                     spoken = lastFeed?.let {
                         f.spokenAgo(stringResource(CoreR.string.spoken_last_feed), spokenFeedType(it), it.startMillis, state.now)
                     },
+                    next = nextFeed?.let(words::nextFeed),
+                    nextSpoken = nextFeed?.let(words::nextFeedSpoken),
                     loaded = state.loaded,
                     onClick = actions.onFeed,
+                    sharedScale = rowScale,
+                    onFit = { rowFits["feed"] = it },
                     modifier = Modifier.weight(1f),
                 )
-                val lastDiaper = state.lastDiaper
+                val lastDiaper = glance.lastDiaper
+                val nextPoop = glance.nextPoop?.takeIf { lastDiaper != null }
                 EventRow(
                     label = stringResource(CoreR.string.kind_diaper),
                     icon = XIcons.diaper,
@@ -161,12 +181,16 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                         val kind = it.diaperKind ?: DiaperKind.PLAIN
                         f.spokenAgo(stringResource(CoreR.string.spoken_last_diaper), stringResource(SpokenLabels.diaperKind(kind)), it.startMillis, state.now)
                     },
+                    next = nextPoop?.let(words::nextPoop),
+                    nextSpoken = nextPoop?.let(words::nextPoopSpoken),
                     loaded = state.loaded,
                     onClick = actions.onDiaper,
+                    sharedScale = rowScale,
+                    onFit = { rowFits["diaper"] = it },
                     modifier = Modifier.weight(1f),
                 )
             }
-            SleepEdgeButton(state, actions, edgeSize, f, Modifier.align(Alignment.BottomCenter))
+            SleepEdgeButton(state, actions, edgeSize, f, words, Modifier.align(Alignment.BottomCenter))
         } }
     }
 }
@@ -186,7 +210,7 @@ private fun CappedFontScale(max: Float, content: @Composable () -> Unit) {
 private const val MAX_FONT_SCALE = 1.3f
 
 /** The smallest font scale a row's text steps down to on a crowded screen (two babies on a small watch). */
-private const val MIN_ROW_FONT_SCALE = 0.85f
+private const val MIN_ROW_FONT_SCALE = 0.8f
 
 /** The smallest font scale any text on Main steps down to; below it, it is cut with an ellipsis instead. */
 private const val MIN_FIT_FONT_SCALE = 0.7f
@@ -227,40 +251,57 @@ private val EdgeButtonSize.height: Dp
 // ---- Title -----------------------------------------------------------------------------------
 
 /**
- * The title line, as on the Tile: "Asleep 1h 07m" while a sleep runs, otherwise the baby's name (nothing when unnamed).
- * With two or more babies it is a compact button that opens the baby picker.
+ * The title line, from the glance the Tile shows too ([WatchGlance.title]): "Asleep 1h 07m" while a sleep runs,
+ * otherwise the baby's name, or the last diaper when the baby has none ("Pee 48m ago"). With two or more babies it is
+ * a compact button that opens the baby picker.
  */
 @Composable
-private fun Title(state: MainUiState, f: Formatters, babyLabel: String?, actions: MainActions) {
-    val running = state.runningSleep
-    if (babyLabel != null) {
-        val asleepText = running?.let { asleepTitle(it, state.now, f) }
-        XCompactButton(
-            label = asleepText ?: babyLabel,
-            icon = if (running != null) XIcons.sleep else XIcons.profile,
-            onClick = actions.onBaby,
-            contentDescription = stringResource(CoreR.string.cd_baby_switch, babyLabel),
-        )
-        return
-    }
-    if (running != null) {
-        AsleepLine(running, state.now, f)
-        return
-    }
-    val name = state.baby.name.trim()
-    // Keeps the rows where they are whether or not a name shows.
-    Box(Modifier.heightIn(min = TITLE_HEIGHT), contentAlignment = Alignment.Center) {
-        if (name.isNotEmpty()) {
-            val ambient = isAmbient()
-            AutoSizeLine(
-                name,
-                MaterialTheme.typography.titleSmall,
-                if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurface,
-                minSize = 11,
-                modifier = Modifier.widthIn(max = TITLE_MAX_WIDTH),
+private fun Title(state: MainUiState, f: Formatters, words: GlanceText, babyLabel: String?, actions: MainActions) {
+    val glance = state.glance
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        if (babyLabel != null) {
+            val running = glance.runningSleep
+            XCompactButton(
+                label = running?.let { asleepTitle(it, glance.now, f) } ?: babyLabel,
+                icon = if (running != null) XIcons.sleep else XIcons.profile,
+                onClick = actions.onBaby,
+                contentDescription = stringResource(CoreR.string.cd_baby_switch, babyLabel),
             )
+        } else {
+            // Keeps the rows where they are whether or not the title says anything.
+            Box(Modifier.heightIn(min = TITLE_HEIGHT), contentAlignment = Alignment.Center) {
+                when (val title = glance.title) {
+                    is GlanceTitle.Asleep -> AsleepLine(title.sleep, glance.now, f)
+                    is GlanceTitle.Name -> TitleText(title.name, spoken = null)
+                    is GlanceTitle.LastDiaper -> {
+                        val kind = title.diaper.diaperKind ?: DiaperKind.PLAIN
+                        val ago = f.relative.ago(clockDurationMillis(title.diaper.startMillis, glance.now))
+                        TitleText(
+                            stringResource(R.string.tile_title_last_diaper, stringResource(Labels.diaperKindStatus(kind)), ago),
+                            spoken = stringResource(
+                                R.string.tile_cd_last_diaper,
+                                stringResource(SpokenLabels.diaperKind(kind)).lowercase(f.clock.locale),
+                                f.relative.agoSpoken(clockDurationMillis(title.diaper.startMillis, glance.now)),
+                            ),
+                        )
+                    }
+                    GlanceTitle.None -> Unit
+                }
+            }
         }
     }
+}
+
+/** The baby's name or the last diaper, in the title line. */
+@Composable
+private fun TitleText(text: String, spoken: String?) {
+    AutoSizeLine(
+        text,
+        MaterialTheme.typography.titleSmall,
+        if (isAmbient()) WatchAmbient.content else MaterialTheme.colorScheme.onSurface,
+        minSize = 11,
+        modifier = Modifier.widthIn(max = TITLE_MAX_WIDTH).then(if (spoken != null) Modifier.clearAndSetSemantics { contentDescription = spoken } else Modifier),
+    )
 }
 
 @Composable
@@ -274,7 +315,7 @@ private fun AsleepLine(running: Entry, now: Long, f: Formatters) {
     val sleep = events().sleep
     val spoken = f.spokenRunning(stringResource(CoreR.string.status_asleep), running.startMillis, now)
     Row(
-        Modifier.heightIn(min = TITLE_HEIGHT).clearAndSetSemantics { contentDescription = spoken },
+        Modifier.clearAndSetSemantics { contentDescription = spoken },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -308,14 +349,20 @@ private fun EventRow(
     since: String?,
     none: String,
     spoken: String?,
+    next: String?,
+    nextSpoken: String?,
     loaded: Boolean,
     onClick: () -> Unit,
+    /** The font scale both rows use (the smaller of their [onFit]s); null until both are measured. */
+    sharedScale: Float?,
+    /** Reports the largest font scale at which this row's text fits. */
+    onFit: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val ambient = isAmbient()
     // Before the first read the row says nothing rather than flashing "No feeds yet".
     val secondary = since ?: none.takeIf { loaded }
-    val description = listOfNotNull(label, spoken ?: secondary).joinToString(". ")
+    val description = listOfNotNull(label, listOfNotNull(spoken ?: secondary, nextSpoken).joinToString(", ").ifEmpty { null }).joinToString(". ")
     val text = if (ambient) WatchAmbient.content else colors.onContainer
     val density = LocalDensity.current
     var rowSize by remember { mutableStateOf(DpSize.Zero) }
@@ -334,32 +381,44 @@ private fun EventRow(
             XIcon(icon, null, tint = if (ambient) WatchAmbient.content else colors.strong, size = 24.dp)
             Spacer(Modifier.width(10.dp))
             val labelStyle = MaterialTheme.typography.labelMedium
-            val secondaryStyle = MaterialTheme.typography.labelSmall
-            val oneLine = buildAnnotatedString {
-                append(label)
-                if (secondary != null) withStyle(secondaryStyle.toSpanStyle()) { append(DOT_SEPARATOR + secondary) }
-            }
-            // The rows share the screen's height: their text takes the largest font scale that fits, on two lines or,
-            // where two would be too small (two babies on a small watch), on one ("Feed · 2h 10m ago").
+            val smallStyle = MaterialTheme.typography.labelSmall
+            // The rows share the screen's height: their text takes the largest font scale that fits. In order of
+            // preference: label, time since and estimate on three lines; without the estimate on two; or, where two
+            // would be too small (two babies on a small watch), "Feed · 2h 10m ago" on one.
             val known = rowSize.height > 0.dp
             val height = (rowSize.height - ROW_PADDING * 2).value
             val width = rowSize.width - ROW_TEXT_INSET
-            val twoLines = if (!known) 1f else minOf(
-                height / (labelStyle.lineHeight.value + secondaryStyle.lineHeight.value),
-                widthScale(AnnotatedString(label), labelStyle, width),
-                secondary?.let { widthScale(AnnotatedString(it), secondaryStyle, width) } ?: Float.MAX_VALUE,
-            )
+            val lines = listOfNotNull(label to labelStyle, secondary?.let { it to smallStyle }, next?.let { it to smallStyle })
+            val layouts = buildList {
+                add(lines)
+                if (next != null) add(lines.dropLast(1))
+            }.map { candidate ->
+                val fit = if (!known) 1f else minOf(
+                    height / candidate.sumOf { (_, style) -> style.lineHeight.value.toDouble() }.toFloat(),
+                    candidate.minOf { (line, style) -> widthScale(AnnotatedString(line), style, width) },
+                )
+                candidate to fit
+            }
+            val oneLine = buildAnnotatedString {
+                append(label)
+                if (secondary != null) withStyle(smallStyle.toSpanStyle()) { append(DOT_SEPARATOR + secondary) }
+            }
             val single = if (!known) 1f else minOf(height / labelStyle.lineHeight.value, widthScale(oneLine, labelStyle, width))
-            val useOneLine = secondary != null && twoLines < MIN_ROW_FONT_SCALE && single > twoLines
+            val chosen = layouts.firstOrNull { it.second >= MIN_ROW_FONT_SCALE }
+            val useLines = chosen != null || secondary == null || single <= layouts.last().second
+            val (shown, fit) = chosen ?: layouts.last()
+            val ownFit = if (useLines) fit else single
+            SideEffect { onFit(ownFit) }
             Column(Modifier.weight(1f)) {
-                CappedFontScale((if (useOneLine) single else twoLines).coerceAtLeast(MIN_FIT_FONT_SCALE)) {
-                    if (useOneLine) {
-                        Text(oneLine, style = labelStyle, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    } else {
-                        Text(label, style = labelStyle, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (secondary != null) {
-                            Text(secondary, style = secondaryStyle, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (useLines) {
+                    CappedFontScale(minOf(fit, sharedScale ?: fit).coerceAtLeast(MIN_FIT_FONT_SCALE)) {
+                        shown.forEach { (line, style) ->
+                            Text(line, style = style, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
+                    }
+                } else {
+                    CappedFontScale(minOf(single, sharedScale ?: single).coerceAtLeast(MIN_FIT_FONT_SCALE)) {
+                        Text(oneLine, style = labelStyle, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -374,12 +433,15 @@ private fun EventRow(
  * collapsing EdgeButton. A rejected toggle shows two centred lines ("Already / asleep") instead of the label for 2 s.
  */
 @Composable
-private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: EdgeButtonSize, f: Formatters, modifier: Modifier) {
+private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: EdgeButtonSize, f: Formatters, words: GlanceText, modifier: Modifier) {
     val ambient = isAmbient()
     val asleep = state.mode == MainMode.ASLEEP
     val colors = events().sleep
     val label = stringResource(if (asleep) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
-    val name = if (asleep) stringResource(R.string.cd_woke_up_end_sleep) else label
+    val next = state.glance.nextSleep
+    val action = if (asleep) stringResource(R.string.cd_woke_up_end_sleep) else label
+    // Under the word, as on the Tile: the expected wake-up or next sleep ("~05:25").
+    val name = next?.let { stringResource(R.string.spoken_pair, action, words.nextSleepSpoken(it, asleep)) } ?: action
     val guardText = state.sleepGuard?.let { stringResource(it.edgeText()) }
     val sleepState = sleepStateDescription(state, f)
     val container = when {
@@ -409,15 +471,20 @@ private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: Edge
             val style = MaterialTheme.typography.labelMedium
             val fit = if (guardText != null) EDGE_MAX_FONT_SCALE else minOf(EDGE_MAX_FONT_SCALE, widthScale(AnnotatedString(label), style, labelWidth))
             CappedFontScale(fit.coerceAtLeast(MIN_FIT_FONT_SCALE)) {
-                Text(
-                    guardText ?: label,
-                    style = style,
-                    color = content,
-                    textAlign = TextAlign.Center,
-                    maxLines = if (guardText != null) 2 else 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = if (guardText != null) EDGE_GUARD_WIDTH else labelWidth + 8.dp),
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        guardText ?: label,
+                        style = style,
+                        color = content,
+                        textAlign = TextAlign.Center,
+                        maxLines = if (guardText != null) 2 else 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = if (guardText != null) EDGE_GUARD_WIDTH else labelWidth + 8.dp),
+                    )
+                    if (guardText == null && next != null) {
+                        Text(words.nextSleep(next), style = MaterialTheme.typography.labelSmall, color = content, maxLines = 1)
+                    }
+                }
             }
         }
     }

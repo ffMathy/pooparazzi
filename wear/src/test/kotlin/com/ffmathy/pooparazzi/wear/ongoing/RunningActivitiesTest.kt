@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.wear.ongoing
 import android.Manifest
 import android.app.Application
 import android.app.NotificationManager
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.test.core.app.ApplicationProvider
@@ -42,18 +43,25 @@ class RunningActivitiesTest {
     fun tearDown() = RunningActivities.invalidate()
 
     @Test
-    fun aRunningSleepShowsAsleepSinceItsStartWithoutAStopwatch() {
-        RunningActivities(app).sync(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, SampleData.ZONE))
+    fun aRunningSleepShowsHowLongItHasRun() {
+        RunningActivities(app, wallClock = { SampleData.NOW_0312 }).sync(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, SampleData.ZONE))
         val notification = shadowOf(notifications).getNotification(1001)
         assertNotNull(notification)
-        assertEquals("Asleep since 02:05", notification.extras.getString(NotificationCompat.EXTRA_TITLE))
+        // The title, with a chronometer from the sleep's start next to it.
+        assertEquals("Asleep", notification.extras.getString(NotificationCompat.EXTRA_TITLE))
+        assertEquals(true, notification.extras.getBoolean(NotificationCompat.EXTRA_SHOW_CHRONOMETER))
+        assertEquals(SampleData.at(2, 5), notification.`when`)
         assertEquals(NotificationCompat.CATEGORY_STOPWATCH, notification.category)
         assertTrue(notification.flags and android.app.Notification.FLAG_ONGOING_EVENT != 0)
-        assertEquals(false, notification.extras.getBoolean(NotificationCompat.EXTRA_SHOW_CHRONOMETER))
         val activity = OngoingActivity.recoverOngoingActivity(app, 1001)
         assertNotNull(activity)
         assertEquals(XDrawables.sleepRunning, activity?.staticIcon?.resId)
-        assertEquals("Asleep since 02:05", activity?.status?.getText(app, 0L).toString())
+        // On the watch face: the time asleep, from 02:05 to 03:12, kept current by the system.
+        val elapsedNow = SystemClock.elapsedRealtime()
+        assertEquals("Asleep 1:07:00", activity?.status?.getText(app, elapsedNow).toString())
+        assertEquals("Asleep 1:08:00", activity?.status?.getText(app, elapsedNow + 60_000L).toString())
+        // TalkBack cannot follow a ticking value: it reads the start.
+        assertEquals("Asleep since 02:05", activity?.contentDescription)
         val touch = shadowOf(activity?.touchIntent).savedIntent
         assertEquals(MainActivity.OPEN_MAIN, touch.getStringExtra(MainActivity.EXTRA_OPEN))
         // Nothing else runs.
@@ -81,21 +89,22 @@ class RunningActivitiesTest {
 
     @Test
     fun withSeveralBabiesTheActivityNamesTheCurrentBabyAndFollowsASwitch() {
-        val activities = RunningActivities(app)
+        val activities = RunningActivities(app, wallClock = { SampleData.NOW_0312 })
         activities.sync(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, SampleData.ZONE), baby = "Noa")
         fun title() = shadowOf(notifications).getNotification(1001)?.extras?.getString(NotificationCompat.EXTRA_TITLE)
-        assertEquals("Noa · Asleep since 02:05", title())
-        assertEquals("Noa · Asleep since 02:05", OngoingActivity.recoverOngoingActivity(app, 1001)?.status?.getText(app, 0L).toString())
+        assertEquals("Noa · Asleep", title())
+        assertEquals("Noa · Asleep 1:07:00", OngoingActivity.recoverOngoingActivity(app, 1001)?.status?.getText(app, SystemClock.elapsedRealtime()).toString())
         assertEquals("Noa, asleep since 02:05", OngoingActivity.recoverOngoingActivity(app, 1001)?.contentDescription)
 
         // Switched to Ida, asleep too: the activity is hers.
         val ida = Entry.sleep(SampleData.at(2, 30), null, id = "ida-sleep", babyId = SampleData.TWIN_ID)
         activities.sync(summarize(listOf(ida), SampleData.NOW_0312, SampleData.ZONE), baby = "Ida")
-        assertEquals("Ida · Asleep since 02:30", title())
+        assertEquals("Ida · Asleep", title())
+        assertEquals("Ida, asleep since 02:30", OngoingActivity.recoverOngoingActivity(app, 1001)?.contentDescription)
 
         // Renamed on the phone: posted again with the new name.
         activities.sync(summarize(listOf(ida), SampleData.NOW_0312, SampleData.ZONE), baby = "Ida Marie")
-        assertEquals("Ida Marie · Asleep since 02:30", title())
+        assertEquals("Ida Marie · Asleep", title())
 
         // Switched to an awake baby: no activity.
         activities.sync(summarize(emptyList(), SampleData.NOW_0312, SampleData.ZONE), baby = "Noa")

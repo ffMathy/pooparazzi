@@ -94,20 +94,20 @@ object WearSamples {
 
     /** Idle at 14:32 with the baby's name in the title. */
     fun tileIdle(babyName: String = SampleData.BABY_NAME): TileUiState =
-        TileUiState.from(summarize(SampleData.scenario(), SampleData.NOW_1432, zone), babyName, feedback = null, guard = null)
+        TileUiState.from(summarize(SampleData.history(), SampleData.NOW_1432, zone), babyName, feedback = null, guard = null)
 
     /** Asleep at 03:12: "Asleep 1h 07m", Woke up on the edge. */
     fun tileAsleep(): TileUiState =
-        TileUiState.from(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, zone), SampleData.BABY_NAME, feedback = null, guard = null)
+        TileUiState.from(summarize(SampleData.historyAt0312(), SampleData.NOW_0312, zone), SampleData.BABY_NAME, feedback = null, guard = null)
 
     /** 14:50, after the 14:32 breast feed: Row A is "Feed · 18m ago" with nothing running. */
     fun tileAfterBreastfeed(): TileUiState =
-        TileUiState.from(summarize(SampleData.scenarioWithRecentFeed(), SampleData.NOW_1450, zone), SampleData.BABY_NAME, feedback = null, guard = null)
+        TileUiState.from(summarize(SampleData.history() + SampleData.recentBreastfeed(), SampleData.NOW_1450, zone), SampleData.BABY_NAME, feedback = null, guard = null)
 
     /** Woke up on the tile at 14:32 (a nap since 13:50): "Woke up 14:32 · Undo" for 10 s. */
     fun tileJustLogged(): TileUiState {
         val nap = Entry.sleep(SampleData.at(13, 50), SampleData.NOW_1432, id = "sample-nap-1350")
-        val summary = summarize(SampleData.scenario() + nap, SampleData.NOW_1432, zone)
+        val summary = summarize(SampleData.history() + nap, SampleData.NOW_1432, zone)
         val feedback = TileFeedback(TileFeedbackKind.WOKE_UP, nap.id, SampleData.NOW_1432, SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS)
         return TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null)
     }

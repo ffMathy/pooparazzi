@@ -201,8 +201,8 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Earlier.
 | P6 | Phone | Live Update (running sleep) | Status chip and an ongoing notification with "Woke up" |
 | P7 | Phone | Splash | System splash, dark at night and light by day |
 | P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day over a chosen range (the last 7, 30 or 90 days, all days or chosen dates; default the last 30 days), with a bar chart of one kind |
-| W1 | Watch | Main, idle | As the Tile: name, Feed and Diaper rows with time since, "Start sleep"; History below |
-| W2 | Watch | Main, asleep | As the Tile: "Asleep 1h 07m", Feed and Diaper rows, "Woke up"; History below |
+| W1 | Watch | Main, idle | As the Tile: name, Feed and Diaper rows with time since and next estimate, "Start sleep" with the next sleep |
+| W2 | Watch | Main, asleep | As the Tile: "Asleep 1h 07m", Feed and Diaper rows, "Woke up" with the expected wake-up |
 | W3 | Watch | Diaper picker | Pee / Poop / Both; Earlier |
 | W4 | Watch | Earlier | Backdate a diaper (−5m / −10m / −15m) |
 | W6 | Watch | Logged | Confirmation plus a 5 s Undo |
@@ -479,16 +479,18 @@ Every app screen except Logged and Undone shows the system **TimeText** (15 sp, 
 
 #### 3.5.1 W1 Main, idle
 
-Main looks like the Tile (§3.6): a title line, a Feed row and a Diaper row with the time since the last one, and the sleep toggle. Nothing else on the first screen; details (forecasts, the last diaper's kind, sync state) are on the phone.
+Main looks like the Tile (§3.6), and both are built from one model (`WatchGlance`, worded by `GlanceText`), so they always say the same: a title line, a Feed row and a Diaper row with the time since the last one and the estimate of the next one, and the sleep toggle with the estimated next sleep or wake-up. Nothing else; history, editing and sync state are on the phone.
+
+The estimates are the phone widget's (V1_ADDITIONS §9): a clock time ("~15:30"), never a ticking "in 55m", and only when the past week allows one.
 
 | Element | Spec (reference 228 dp) |
 |---|---|
-| Title line | the baby's name, titleSmall onSurface (nothing when unnamed). With two or more babies: a compact button (`profile` + the baby's label) that opens the baby picker |
-| Feed row | full-width button, r 26, FEED container `#3B2715`: `feed` 24 `#F2B577`, "Feed" labelMedium + "2h 10m ago" labelSmall `#FFDCBB` ("No feeds yet" before the first). The two rows share the height between the title and the EdgeButton, 4 apart, side margins 7 % of the width |
-| Diaper row | the same in DIAPER: `#13312C`, `diaper` 26 `#62B3A5`, "Diaper" + "48m ago" `#BFE9E0` ("No diapers yet") |
-| EdgeButton | **Small** (ExtraSmall below 225 dp), pinned at the bottom; fill SLEEP container `#222844`, "Start sleep" labelMedium `#D6DBF6` on one line |
+| Title line | the baby's name, titleSmall onSurface; unnamed, the last diaper ("Pee 48m ago", as the Tile). With two or more babies: a compact button (`profile` + the baby's label) that opens the baby picker |
+| Feed row | full-width button, r 26, FEED container `#3B2715`: `feed` 24 `#F2B577`, "Feed" labelMedium + "2h 10m ago" labelSmall + "Next ~15:30" labelSmall (the expected next feed) `#FFDCBB` ("No feeds yet" before the first). The two rows share the height between the title and the EdgeButton, 4 apart, side margins 7 % of the width |
+| Diaper row | the same in DIAPER: `#13312C`, `diaper` 24 `#62B3A5`, "Diaper" + "48m ago" + "Poop ~18:00" (the expected next poop) `#BFE9E0` ("No diapers yet") |
+| EdgeButton | **Small** (ExtraSmall below 225 dp), pinned at the bottom; fill SLEEP container `#222844`, "Start sleep" labelMedium `#D6DBF6` on one line, and under it the expected next sleep "~15:20" labelSmall (read "Start sleep, expected to sleep again around 15:20") |
 | Scrolling | none: Main is one fixed screen, as the Tile |
-| Font scale | Main's text follows the font scale up to 1.3 (the EdgeButton label to 1.15) and steps down to fit its button where a row or the EdgeButton has less room; a row too short for two lines reads "Feed · 2h 10m ago" on one |
+| Font scale | Main's text follows the font scale up to 1.3 (the EdgeButton label to 1.15) and steps down to fit where a row or the EdgeButton has less room; both rows use the same size. A row too short for the estimate drops it (TalkBack still reads it); one too short for two lines reads "Feed · 2h 10m ago" on one |
 
 No Lamp and no glow.
 
@@ -498,6 +500,7 @@ No Lamp and no glow.
 |---|---|
 | Title line | `sleep` 14 `#7C88C4` + 4 + "Asleep 1h 07m" titleSmall SLEEP text, as the Tile's title (spoken "Asleep, 1 hour 7 minutes, since 02:05"). With two or more babies it is the baby button's label |
 | Rows | Feed and Diaper as when idle |
+| EdgeButton | "Woke up" with the expected wake-up "~05:25" under it |
 | EdgeButton | fill SLEEP containerLit `#2E3660` with a 1.5 dp `#7C88C4` border; "Woke up" `#D6DBF6`. Full opacity immediately after the toggle (no fade-in) |
 | Ambient | TimeText `#B8A48E`; rows and EdgeButton no fill, 2 dp outline in their strong colour, icon and label `#B8A48E`; ≥ 85 % black pixels |
 
@@ -592,10 +595,10 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 | Element | Spec (reference 228) |
 |---|---|
 | Header | `diaper` 24 `#E8D8C3`, y 11–35 (system app icon: the tile's icon, the app's launcher glyph) |
-| Title (titleSlot) | y 37–53, titleSmall `#E8D8C3`, centred: **"Pee 48m ago"** (last diaper) |
-| Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; "Feed" labelMedium 15 sp `#FFDCBB` over "2h 10m ago" labelSmall `#FFDCBB`. Opens the app's Feed type screen |
-| Row B | Diaper button 184 × 52, r 26, DIAPER container `#13312C`: `diaper` 24 DIAPER strong at 16 from the start; "Diaper" labelMedium 15 sp `#BFE9E0` over "48m ago" (or "No diapers yet") labelSmall. Opens the app's Diaper screen, like Main's Diaper button; diapers are never logged from the tile |
-| EdgeButton | drawn 46 tall (y 179–225), 48 dp hit box, 9 dp below Row B; fill `#222844`, "Start sleep" labelMedium 15 sp `#D6DBF6` |
+| Title (titleSlot) | y 37–53, titleSmall `#E8D8C3`, centred: the baby's name; unnamed, **"Pee 48m ago"** (last diaper). The same title as Main's (§3.5.1) |
+| Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; "Feed" labelMedium 15 sp `#FFDCBB` over "2h 10m ago" and "Next ~15:30" (the expected next feed, as on Main) labelSmall `#FFDCBB`. Opens the app's Feed type screen |
+| Row B | Diaper button 184 × 52, r 26, DIAPER container `#13312C`: `diaper` 24 DIAPER strong at 16 from the start; "Diaper" labelMedium 15 sp `#BFE9E0` over "48m ago" (or "No diapers yet") and "Poop ~18:00" (the expected next poop) labelSmall. Opens the app's Diaper screen, like Main's Diaper button; diapers are never logged from the tile |
+| EdgeButton | drawn 46 tall (y 179–225), 48 dp hit box, 9 dp below Row B; fill `#222844`, "Start sleep" labelMedium 15 sp `#D6DBF6` over the expected next sleep "~15:20" labelSmall (asleep: "Woke up" over the expected wake-up) |
 
 | State | Title | Other changes |
 |---|---|---|
@@ -608,6 +611,7 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 - **No button ever relabels or moves.** Undo is reached through the background tap, never in a log button's place.
 - The tile title keeps "Fed 14:32" without "at": with "at" it would exceed the ≈168 dp title chord.
 - Below 225 dp the title is hidden. Feedback is then the secondary-label change plus the background-tap undo path.
+- Above a 1.15 font scale the rows keep to two lines (tile text cannot step down to fit); the estimates are still read.
 
 ### 3.7 W10 Complications
 
@@ -624,7 +628,7 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 
 ### 3.8 W11 Ongoing Activity / Live Update (watch)
 
-Static white `sleepRunning` icon. Status "Asleep since 02:05" (no ticking duration). Tap → the sleep screen. Dismissed on both devices when the sleep ends on either one. API details: §10.6.
+Static white `sleepRunning` icon. Status "Asleep 1:07:23", how long the sleep has run, kept current by the system (a stopwatch; the app need not run). The notification behind it shows "Asleep" with a chronometer from the start. TalkBack reads "Asleep since 02:05". Tap → the sleep screen. Dismissed on both devices when the sleep ends on either one. API details: §10.6.
 
 ---
 
@@ -1093,7 +1097,7 @@ One grammar everywhere the app renders text, including the tile and complication
 
 **No ticking durations.** No seconds, no chronometer anywhere:
 - Phone Live Update chip: "Asleep" (no chronometer). Its text shows whole minutes ("1h 07m · since 02:05"), re-rendered once a minute, and its Android 17 metrics use the system's TimeDifference.
-- Wear Ongoing Activity / Live Update: "Asleep since 02:05".
+- Wear Ongoing Activity / Live Update: "Asleep 1:07:23" (spoken "Asleep since 02:05").
 - Tile and complications format their own dynamic text in this grammar.
 - **The only exemption**: the pre-Wear OS 4 complication fallback `TimeDifferenceComplicationText` with `SHORT_DUAL_UNIT` (system format "1h 5m").
 
@@ -1293,7 +1297,7 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 
 - **Ongoing Activity** (Wear OS ≤ 6) / **Live Update** (Wear OS 7+):
   - static white `sleepRunning` vector icon, `CATEGORY_STOPWATCH`;
-  - status template "Asleep since #start#" with `Status.TextPart("02:05")`. No `StopwatchPart`. The Wear OS 7 Live Update uses the same text;
+  - status template "Asleep #elapsed#" with `Status.StopwatchPart(start)` on the elapsed-realtime clock; the notification uses a chronometer (`setUsesChronometer`, `setWhen(start)`). The Wear OS 7 Live Update uses the same text;
   - touch intent to the sleep screen.
 - Deduplicate the phone-bridged Live Update against the watch one by sleep-session UUID. When the sleep ends on either device, dismiss both.
 - Double-pinch (`Modifier.oneHandedGesture`, Wear OS 7, Pixel Watch 3+) is bound only to the Woke up / Start sleep EdgeButton.

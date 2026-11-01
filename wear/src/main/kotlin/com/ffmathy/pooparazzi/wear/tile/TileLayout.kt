@@ -1,5 +1,8 @@
 package com.ffmathy.pooparazzi.wear.tile
 
+import androidx.wear.protolayout.LayoutElementBuilders.HORIZONTAL_ALIGN_START
+import com.ffmathy.pooparazzi.wear.glance.GlanceTitle
+import com.ffmathy.pooparazzi.wear.glance.GlanceText
 import android.content.ComponentName
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
@@ -157,6 +160,13 @@ private class TileContent(
     private val res = context.resources
     private val events = TileTheme.events
     private val now = state.now
+    private val glanceText = GlanceText(res, text.formatters)
+
+    /**
+     * Whether the rows have room for a third line, the estimate ("Next ~15:30"). Tile text cannot step down to fit, so
+     * at a large font scale the rows keep to the time since; TalkBack still reads the estimate.
+     */
+    private val roomForEstimates = scope.deviceConfiguration.fontScale <= MAX_ESTIMATE_FONT_SCALE
 
     // ---- Title ---------------------------------------------------------------------------------
 
@@ -174,7 +184,11 @@ private class TileContent(
             }
         }
         is TileTitle.Logged -> { { loggedTitle(title.feedback) } }
-        is TileTitle.Asleep -> {
+        is TileTitle.Glance -> glanceTitle(title.title)
+    }
+
+    private fun glanceTitle(title: GlanceTitle): (MaterialScope.() -> LayoutElement)? = when (title) {
+        is GlanceTitle.Asleep -> {
             {
                 val asleep = text.template(SurfaceText.Template.of(res, R.string.tile_title_asleep), text.duration(title.sleep.startMillis, now))
                 val spoken = text.template(SurfaceText.Template.of(res, R.string.tile_cd_asleep), text.spokenDuration(title.sleep.startMillis, now))
@@ -188,8 +202,8 @@ private class TileContent(
                 )
             }
         }
-        is TileTitle.Name -> { { scope.text(title.name.layoutString, typography = Typography.TITLE_SMALL, color = TileTheme.onSurface) } }
-        is TileTitle.LastDiaper -> {
+        is GlanceTitle.Name -> { { scope.text(title.name.layoutString, typography = Typography.TITLE_SMALL, color = TileTheme.onSurface) } }
+        is GlanceTitle.LastDiaper -> {
             {
                 val diaper = title.diaper
                 val kind = diaper.diaperKind ?: DiaperKind.PLAIN
@@ -209,7 +223,7 @@ private class TileContent(
                 )
             }
         }
-        TileTitle.None -> null
+        GlanceTitle.None -> null
     }
 
     /** What a just-logged confirmation says: its glyph, word, time (none for "Sleep cancelled") and spoken form. */
@@ -299,9 +313,10 @@ private class TileContent(
      */
     private fun rowA(withTitle: Boolean): LayoutElement = with(scope) {
         val lastFeed = state.lastFeed
+        val next = state.glance.nextFeed
         val spoken = lastFeed?.let {
             text.template(SurfaceText.Template.of(res, R.string.tile_cd_feed), text.spokenAgo(it.startMillis, now))
-        }
+        }?.withNext(next?.let(glanceText::nextFeedSpoken))
         val spokenStatic = spoken?.static ?: res.getString(R.string.tile_cd_feed_none)
         val secondary = lastFeed?.let { text.ago(it.startMillis, now).layout(TEXT_ALIGN_START) }
             ?: res.getString(R.string.status_no_feed_yet).layoutString
@@ -323,17 +338,20 @@ private class TileContent(
             ).layoutString
         } ?: secondary
         sheetButton(
-            events.feed, XDrawables.feed, res.getString(CoreR.string.kind_feed), shownSecondary, description,
-            openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
+            events.feed, XDrawables.feed, res.getString(CoreR.string.kind_feed), shownSecondary,
+            next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let(glanceText::nextFeed),
+            description = description,
+            onClick = openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
         )
     }
 
     /** Row B: Diaper opens the app's Diaper screen (pee, poop, colour, texture); diapers are never logged from the tile. */
     private fun rowB(): LayoutElement = with(scope) {
         val lastDiaper = state.lastDiaper
+        val next = state.glance.nextPoop
         val spoken = lastDiaper?.let {
             text.template(SurfaceText.Template.of(res, R.string.tile_cd_diaper), text.spokenAgo(it.startMillis, now))
-        }
+        }?.withNext(next?.let(glanceText::nextPoopSpoken))
         val description = LayoutModifier.contentDescription(
             spoken?.static ?: res.getString(R.string.tile_cd_diaper_none),
             spoken?.dynamic?.takeIf { useDynamic },
@@ -341,17 +359,27 @@ private class TileContent(
         val secondary = lastDiaper?.let { text.ago(it.startMillis, now).layout(TEXT_ALIGN_START) }
             ?: res.getString(R.string.status_no_diaper_yet).layoutString
         sheetButton(
-            events.diaper, XDrawables.diaper, res.getString(CoreR.string.kind_diaper), secondary, description,
-            openApp(MainActivity.OPEN_DIAPER, CLICK_OPEN_DIAPER),
+            events.diaper, XDrawables.diaper, res.getString(CoreR.string.kind_diaper), secondary,
+            next = next?.takeIf { lastDiaper != null && roomForEstimates }?.let(glanceText::nextPoop),
+            description = description,
+            onClick = openApp(MainActivity.OPEN_DIAPER, CLICK_OPEN_DIAPER),
         )
     }
 
-    /** A full-width row that opens one of the app's logging screens: icon, label and the time since the last one. */
+    /** [this] read on with the estimate after it ("…, next feed expected around 15:30"). */
+    private fun TimeText.withNext(nextSpoken: String?): TimeText =
+        if (nextSpoken == null) this else text.template(SurfaceText.Template(res.getString(R.string.spoken_pair, SurfaceText.Template.PLACEHOLDER, nextSpoken)), this)
+
+    /**
+     * A full-width row that opens one of the app's logging screens: icon, label and the time since the last one, then
+     * the estimate of the next one ([next], "Next ~15:30") as Main's rows show it.
+     */
     private fun MaterialScope.sheetButton(
         event: EventColors,
         @DrawableRes icon: Int,
         label: String,
         secondary: LayoutString,
+        next: String?,
         description: LayoutModifier,
         onClick: Clickable,
     ): LayoutElement = button(
@@ -359,7 +387,14 @@ private class TileContent(
         modifier = description,
         iconContent = { glyph(icon, event.strong, ROW_ICON) },
         labelContent = { plainText(label.layoutString, Typography.LABEL_MEDIUM, event.onContainer.layout, start = true) },
-        secondaryLabelContent = { plainText(secondary, Typography.LABEL_SMALL, event.onContainer.layout, start = true) },
+        secondaryLabelContent = {
+            val since = plainText(secondary, Typography.LABEL_SMALL, event.onContainer.layout, start = true)
+            if (next == null) {
+                since
+            } else {
+                column(since, plainText(next.layoutString, Typography.LABEL_SMALL, event.onContainer.layout, start = true), horizontalAlignment = HORIZONTAL_ALIGN_START)
+            }
+        },
         width = expand(),
         height = weight(1f),
         colors = ButtonColors(
@@ -379,7 +414,10 @@ private class TileContent(
         val sleep = events.sleep
         val asleep = state.runningSleep != null
         val label = res.getString(if (asleep) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
-        val description = res.getString(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep)
+        // Under the word, as on Main: the expected wake-up or next sleep ("~05:25"), when there is one.
+        val next = state.glance.nextSleep
+        val action = res.getString(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep)
+        val description = next?.let { res.getString(R.string.spoken_pair, action, glanceText.nextSleepSpoken(it, asleep)) } ?: action
         val modifier = LayoutModifier.contentDescription(description)
         // The tap says what it showed: "Woke up" for this sleep, or "Start sleep" (see TileActions).
         val clickId = state.runningSleep?.let { TileAction.SLEEP_END.clickId(token, it.id) } ?: TileAction.SLEEP_START.clickId(token)
@@ -390,7 +428,14 @@ private class TileContent(
                 containerColor = (if (asleep) sleep.containerLit else sleep.container).layout,
                 labelColor = sleep.onContainer.layout,
             ),
-            labelContent = { plainText(label.layoutString, Typography.LABEL_MEDIUM, sleep.onContainer.layout) },
+            labelContent = {
+                val word = plainText(label.layoutString, Typography.LABEL_MEDIUM, sleep.onContainer.layout)
+                if (next == null) {
+                    word
+                } else {
+                    column(word, plainText(glanceText.nextSleep(next).layoutString, Typography.LABEL_SMALL, sleep.onContainer.layout), horizontalAlignment = HORIZONTAL_ALIGN_CENTER)
+                }
+            },
         )
     }
 
@@ -440,6 +485,9 @@ private class TileContent(
     companion object {
         const val TITLE_ICON = TileTextMeasure.TITLE_ICON_DP
         const val ROW_ICON = 24f
+
+        /** The largest font scale at which a row's estimate still fits as its third line. */
+        const val MAX_ESTIMATE_FONT_SCALE = 1.15f
         const val ROW_GAP = 6f
         const val ROW_START_PADDING = 16f
         const val LIT_BORDER = 1.5f
