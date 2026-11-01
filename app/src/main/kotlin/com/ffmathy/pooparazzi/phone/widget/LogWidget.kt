@@ -315,12 +315,12 @@ private fun LogButtons(
         val cell = GlanceModifier.defaultWeight().fillMaxHeight()
         val feed = colors.feed
         SheetButton(HomeLaunch.Feed, feed, described(R.string.widget_cd_log_feed, feedNext?.let(strings::feedForecastSpoken)), cell) {
-            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style, sub = feedNext?.let(strings::feedForecast) ?: "\u00A0".takeIf { sub })
+            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style, sub = feedNext?.let { strings.feedForecast(it, snapshot.now) } ?: "\u00A0".takeIf { sub })
         }
         Spacer(GlanceModifier.width(8.dp))
         val diaper = colors.diaper
         SheetButton(HomeLaunch.Diaper, diaper, described(R.string.widget_cd_log_diaper, poopNext?.let(strings::poopForecastSpoken)), cell) {
-            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style, sub = poopNext?.let(strings::poopForecast) ?: "\u00A0".takeIf { sub })
+            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style, sub = poopNext?.let { strings.poopForecast(it, snapshot.now) } ?: "\u00A0".takeIf { sub })
         }
     }
 }
@@ -361,7 +361,7 @@ private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: 
 
 /**
  * The sleep toggle: "Start sleep" with "Awake since 13:27" at the end, or the checked "Woke up" (lit fill, 2 dp
- * strong border) with "Asleep since 02:05". Under it, what the last week expects: "Next sleep ~15:25" or "Wakes ~05:30"
+ * strong border) with "Asleep since 02:05". Under it, what the last week expects: "Next sleep in 50m" or "Wakes in 2h 15m"
  * (V1_ADDITIONS §9). The end text wraps rather than clips when alone, and is dropped when narrow.
  */
 @Composable
@@ -375,7 +375,7 @@ private fun SleepToggle(snapshot: WidgetSnapshot, strings: WidgetStrings, colors
         awakeSince != null -> strings.awakeSince(awakeSince)
         else -> null
     }
-    val forecast = snapshot.sleepForecast?.let { strings.sleepForecast(it, sleepStart != null) }
+    val forecast = snapshot.sleepForecast?.let { strings.sleepForecast(it, sleepStart != null, snapshot.now) }
     val forecastSpoken = snapshot.sleepForecast?.let { strings.sleepForecastSpoken(it, sleepStart != null) }
     val name = strings.forBaby(
         strings.string(if (sleepStart != null) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep),

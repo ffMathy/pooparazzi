@@ -27,7 +27,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Keeps the placed widgets current (DESIGN_SPEC §10.11): re-renders them on every log and sleep change (the app scope
- * observes the entries, see `SystemSurfaces`), after every widget command, when a receipt or notice expires, and at the
+ * observes the entries, see `SystemSurfaces`), after every widget command, when a receipt or notice expires, when an
+ * estimate's relative words change ("Next in 55m" → "Next in 50m": every five minutes, each minute once overdue), and at the
  * night-window boundaries while the Appearance is Auto (Night ↔ Day). The timed refreshes are one-time WorkManager work,
  * so they also happen when the process has died.
  */
@@ -71,7 +72,10 @@ object WidgetUpdater {
         val zone = ZoneId.systemDefault()
         val work = WorkManager.getInstance(context)
         PrefsWidgetMemoStore.get(context).memo.value.nextExpiry(now)?.let { at -> work.refreshAt(context, "expiry", at, now) }
-        WidgetSource.from(context).current().forecastExpiry(now)?.let { at -> work.refreshAt(context, "forecast", at, now) }
+        val snapshot = WidgetSource.from(context).current()
+        snapshot.forecastExpiry(now)?.let { at -> work.refreshAt(context, "forecast", at, now) }
+        // The estimates are relative ("Next in 55m"): redraw when their words change.
+        snapshot.forecastTextChange(now)?.let { at -> work.refreshAt(context, "estimate", at, now) }
         if (graph.settings.current().appearance == Appearance.AUTO) {
             work.refreshAt(context, "night", nextNightBoundary(now, zone), now)
         }

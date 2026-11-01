@@ -200,4 +200,22 @@ class ForecastTest {
         val entries = feedsEvery3h(at(6, 9)).flatMap { listOf(it, Entry.diaper(it.startMillis + 20 * MINUTE, pee = true, poop = true, id = "p${it.id}")) }
         assertEquals(at(6, 12, 20), forecastAt(entries, at(6, 9, 30)).poop!!.atMillis)
     }
+
+    /** Widgets redraw when an estimate's relative words change: each five-minute step, "soon", then every minute. */
+    @Test
+    fun theWordsChangeAtEachStepThenEachMinute() {
+        val minute = 60_000L
+        val at = 100 * minute
+        val e = Expected(atMillis = at, goneAtMillis = at + 60 * minute, samples = 5)
+        // 53m away reads "in 55m" until it is 50m away, then "in 50m".
+        assertEquals(at - 50 * minute, e.nextTextChange(at - 53 * minute))
+        assertEquals(50 * minute, e.remainingMillis(at - 50 * minute))
+        // At 5m sharp it reads "in 5m"; a millisecond later "soon".
+        assertEquals(at - 5 * minute + 1, e.nextTextChange(at - 5 * minute))
+        assertNull(e.remainingMillis(at - 5 * minute + 1))
+        // "Soon" until a minute past it, then "1m ago", "2m ago", ...
+        assertEquals(at + minute, e.nextTextChange(at - 2 * minute))
+        assertEquals(at + 2 * minute, e.nextTextChange(at + minute))
+        assertEquals(at + 25 * minute, e.nextTextChange(at + 24 * minute + 30_000L))
+    }
 }

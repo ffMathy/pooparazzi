@@ -27,6 +27,7 @@ import java.time.ZoneId
  * @property sleepForecast the expected wake-up while asleep, else the expected next sleep (V1_ADDITIONS §9); null when
  *   the last week cannot predict it.
  * @property feedForecast the expected next feed; [poopForecast] the expected next poop, when poop is regular enough.
+ * @property now when the snapshot was taken: the estimates are worded relative to it ("Next in 55m").
  */
 data class WidgetSnapshot(
     val night: Boolean,
@@ -43,6 +44,7 @@ data class WidgetSnapshot(
     val sleepForecast: Expected? = null,
     val feedForecast: Expected? = null,
     val poopForecast: Expected? = null,
+    val now: Long = 0L,
 ) {
     val asleep: Boolean get() = runningSleepStart != null
 
@@ -93,6 +95,7 @@ data class WidgetSnapshot(
                 sleepForecast = week.sleep,
                 feedForecast = week.feed,
                 poopForecast = week.poop,
+                now = now,
             )
         }
 
@@ -116,6 +119,15 @@ data class WidgetSnapshot(
 fun WidgetSnapshot.forecastExpiry(now: Long): Long? = listOfNotNull(sleepForecast, feedForecast, poopForecast)
     .map { it.goneAtMillis }
     .filter { it > now }
+    .minOrNull()
+
+/**
+ * When the estimates' words next change without any new data ("Next in 55m" → "Next in 50m" → "Next soon" → "Due 1m
+ * ago"), while they still show (until [forecastExpiry]).
+ */
+fun WidgetSnapshot.forecastTextChange(now: Long): Long? = listOfNotNull(sleepForecast, feedForecast, poopForecast)
+    .filter { it.goneAtMillis > now }
+    .map { it.nextTextChange(now) }
     .minOrNull()
 
 /** When the widgets next change without any new data: the receipt or notice expiry, if any. */

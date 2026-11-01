@@ -57,8 +57,6 @@
     <string name="tile_title_logged" translatable="false">%1$s %2$s</string>
     <!-- Title while a sleep runs: "Asleep 1h 07m". %1$s is a duration. -->
     <string name="tile_title_asleep">Asleep %1$s</string>
-    <!-- In the sleep toggle, under "Woke up" / "Start sleep": the expected wake-up or next sleep ("~05:25"). -->
-    <string name="glance_sleep_estimate" translatable="false">~%1$s</string>
     <!-- Title idle without a baby name: the last diaper, kind first: "Pee 48m ago". %1$s Pee/Poop/Both, %2$s "48m ago". -->
     <string name="tile_title_last_diaper" translatable="false">%1$s %2$s</string>
     <!-- Guard titles (one line on the tile) -->

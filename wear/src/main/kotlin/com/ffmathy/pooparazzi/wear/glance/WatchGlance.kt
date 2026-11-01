@@ -6,9 +6,10 @@ import com.ffmathy.pooparazzi.core.domain.Expected
 import com.ffmathy.pooparazzi.core.domain.Forecast
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.forecast
+import com.ffmathy.pooparazzi.core.format.Estimate
+import com.ffmathy.pooparazzi.core.format.EstimateText
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.model.Entry
-import com.ffmathy.pooparazzi.wear.R
 import java.time.ZoneId
 import com.ffmathy.pooparazzi.core.R as CoreR
 
@@ -84,23 +85,22 @@ sealed interface GlanceTitle {
 }
 
 /**
- * The words of a [WatchGlance]'s estimates, shared by the Tile and Main, and the same as on the phone's widget
- * (V1_ADDITIONS §9): a clock time, never a ticking "in 55m", so a surface that is not redrawn every minute stays right.
+ * The words of a [WatchGlance], shared by the Tile and Main. The estimates are relative ("Next in 55m"), worded by
+ * core's [EstimateText] as on the phone's widgets; Main re-words them every minute, and the Tile builds the same rules
+ * into a `SurfaceText` expression that the renderer keeps current.
+ *
+ * TalkBack reads the clock time ("next feed expected around 15:30"): a ticking value cannot be read.
  */
 class GlanceText(private val res: Resources, private val formatters: Formatters) {
+    private val estimates = EstimateText(res, formatters.duration)
+
     private fun time(expected: Expected): String = formatters.clock.format(expected.roundedAtMillis, formatters.zone)
 
-    /**
-     * In the sleep toggle, under "Woke up" or "Start sleep": "~05:25", the expected wake-up while asleep, the expected
-     * next sleep while awake. The button's own word says which.
-     */
-    fun nextSleep(expected: Expected): String = res.getString(R.string.glance_sleep_estimate, time(expected))
+    /** [kind]'s line at [now]: "Next in 55m", "Next soon" or "Due 24m ago". */
+    fun next(kind: Estimate, expected: Expected, now: Long): String = estimates.format(kind, expected, now)
 
-    /** Under Feed: "Next ~15:30". */
-    fun nextFeed(expected: Expected): String = res.getString(CoreR.string.forecast_feed_at, time(expected))
-
-    /** Under Diaper: "Poop ~18:00". */
-    fun nextPoop(expected: Expected): String = res.getString(CoreR.string.forecast_poop_at, time(expected))
+    /** [kind]'s words, for a surface that builds the line itself (the Tile's dynamic expression). */
+    fun template(kind: Estimate): Triple<String, String, String> = estimates.templates(kind)
 
     /** TalkBack: "expected to wake around 05:25" / "expected to sleep again around 15:20". */
     fun nextSleepSpoken(expected: Expected, asleep: Boolean): String =

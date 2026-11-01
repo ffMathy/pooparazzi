@@ -482,16 +482,16 @@ cannot predict has no second line.
 
 | Surface | Feed | Diaper | Sleep, awake | Sleep, asleep |
 |---|---|---|---|---|
-| 4×2 widget (and the cover screen), 11–13 sp; with the line, the face tightens to icon 20 + gap 2 | under the Feed label: "Next ~15:35" / "Næste ~15:35" | under Diaper, when poop is predictable: "Poop ~18:00" / "Bæ ~18:00" | under the status: "Next sleep ~15:25" / "Sover igen ~15:25" | "Wakes ~05:25" / "Vågner ~05:25" |
-| Watch Main, scrolled | idle: a "Next feed" card first, "in 1h 00m · ~15:30", once passed "24m ago · ~15:30" (opens the last feed); asleep: the Last fed card's third line "Next feed in 2h 45m" / "Next feed 24m ago" | none | Awake card, third line: "Next sleep in 50m" / "Sover igen om 50m"; once passed "Next sleep 36m ago" / "Skulle sove for 36m siden" | Adjust start's secondary line: "Wakes ~05:25" (small watches: under "Asleep since 02:05"); it keeps the clock time once passed |
+| 4×2 widget (and the cover screen), 11–13 sp; with the line, the face tightens to icon 20 + gap 2 | under the Feed label: "Next in 55m" / "Næste om 55m", "Next soon", "Due 24m ago" / "Ventet for 24m siden" | under Diaper, when poop is predictable: "Poop in 3h 10m" / "Bæ om 3t 10m", "Poop soon", "Poop due 24m ago" | under the status: "Next sleep in 50m" / "Sover igen om 50m" | "Wakes in 2h 15m" / "Vågner om 2t 15m" |
+| Watch Main and Tile (one shared model, DESIGN_SPEC §3.5.1) | third row line: "Next in 55m", "Next soon", "Due 24m ago" | third row line: "Poop in 3h 10m", "Poop soon", "Poop due 24m ago" | under "Start sleep": "in 50m" / "om 50m" | under "Woke up": "in 2h 15m" |
 
-The widget shows clock times only (it does not tick), rounded to 5 minutes, kept once passed; it refreshes when a
-forecast is dropped (step 3).
-Feed and Diaper keep the same face: when either has a line, both reserve it, so the icons stay aligned; the compact
-(two-line label) face has no room and shows none. The watch's Adjust start line is a clock time too, so the Danish fits
-on one line. TalkBack: "Log feed, next feed expected around 15:35", "expected to wake around 05:25", "Next sleep in 55
-minutes". The 3×1 widget, the tile, the complications and the watch's first screen (its 60 dp Feed and Diaper buttons
-are full) have no room and show none.
+Every surface words the estimates relative to now, by the same rules (core `EstimateText`): rounded up to 5 minutes,
+"soon" under 5 minutes, then how long ago it was due. The widget does not tick: it is redrawn when the words change
+(every 5 minutes, then each minute once overdue, until the forecast is dropped). The Tile builds the same rules into a
+dynamic expression the renderer keeps current; the watch app re-words them each minute. Feed and Diaper keep the same
+face on the widget: when either has a line, both reserve it, so the icons stay aligned; the compact (two-line label)
+face has no room and shows none. TalkBack reads the clock time, which does not tick: "Log feed, next feed expected
+around 15:35", "expected to wake around 05:25". The 3×1 widget and the complications have no room and show none.
 
 **The estimate** (`forecast` in `:core`, `domain/Forecast.kt`). There is no validated model for predicting one baby's
 sleep or feeds (wake-window charts are rules of thumb, and babies differ widely), so the app only looks at this baby's

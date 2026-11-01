@@ -35,6 +35,8 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.ffmathy.pooparazzi.core.domain.Expected
 import com.ffmathy.pooparazzi.core.format.ClockFormatter
+import com.ffmathy.pooparazzi.core.format.Estimate
+import com.ffmathy.pooparazzi.core.format.EstimateText
 import com.ffmathy.pooparazzi.core.format.LabelFormatter
 import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
 import com.ffmathy.pooparazzi.core.model.DiaperKind
@@ -108,18 +110,20 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     fun asleepSince(millis: Long): String = since(string(CoreR.string.status_asleep), millis)
     fun awakeSince(millis: Long): String = since(string(CoreR.string.status_awake), millis)
 
+    private val estimates = EstimateText(context)
+
     /**
-     * "Wakes ~05:30" while asleep, "Next sleep ~15:25" while awake (V1_ADDITIONS §9). The widget does not tick, so it
-     * keeps the estimate's clock time even once it has passed.
+     * "Wakes in 2h 15m" while asleep, "Next sleep in 50m" while awake (V1_ADDITIONS §9), relative to [now] as on the
+     * watch. The widget does not tick: [WidgetUpdater] redraws it when the words change ([Expected.nextTextChange]).
      */
-    fun sleepForecast(expected: Expected, asleep: Boolean): String =
-        string(if (asleep) CoreR.string.forecast_wakes_at else CoreR.string.forecast_next_sleep_at, time(expected.roundedAtMillis))
+    fun sleepForecast(expected: Expected, asleep: Boolean, now: Long): String =
+        estimates.format(if (asleep) Estimate.WAKE else Estimate.NEXT_SLEEP, expected, now)
 
-    /** Under Feed: "Next ~15:35". */
-    fun feedForecast(expected: Expected): String = string(CoreR.string.forecast_feed_at, time(expected.roundedAtMillis))
+    /** Under Feed: "Next in 55m", "Next soon", "Due 24m ago". */
+    fun feedForecast(expected: Expected, now: Long): String = estimates.format(Estimate.FEED, expected, now)
 
-    /** Under Diaper: "Poop ~18:00". */
-    fun poopForecast(expected: Expected): String = string(CoreR.string.forecast_poop_at, time(expected.roundedAtMillis))
+    /** Under Diaper: "Poop in 2h 10m", "Poop soon", "Poop due 24m ago". */
+    fun poopForecast(expected: Expected, now: Long): String = estimates.format(Estimate.POOP, expected, now)
 
     /** TalkBack: "next feed expected around 15:35" / "next poop expected around 18:00". */
     fun feedForecastSpoken(expected: Expected): String = string(CoreR.string.spoken_forecast_feed_at, time(expected.roundedAtMillis))

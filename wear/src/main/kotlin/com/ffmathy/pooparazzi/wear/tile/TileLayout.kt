@@ -1,5 +1,7 @@
 package com.ffmathy.pooparazzi.wear.tile
 
+import com.ffmathy.pooparazzi.core.domain.Expected
+import com.ffmathy.pooparazzi.core.format.Estimate
 import androidx.wear.protolayout.LayoutElementBuilders.HORIZONTAL_ALIGN_START
 import com.ffmathy.pooparazzi.wear.glance.GlanceTitle
 import com.ffmathy.pooparazzi.wear.glance.GlanceText
@@ -339,7 +341,7 @@ private class TileContent(
         } ?: secondary
         sheetButton(
             events.feed, XDrawables.feed, res.getString(CoreR.string.kind_feed), shownSecondary,
-            next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let(glanceText::nextFeed),
+            next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let { estimate(Estimate.FEED, it, TEXT_ALIGN_START) },
             description = description,
             onClick = openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
         )
@@ -360,10 +362,16 @@ private class TileContent(
             ?: res.getString(R.string.status_no_diaper_yet).layoutString
         sheetButton(
             events.diaper, XDrawables.diaper, res.getString(CoreR.string.kind_diaper), secondary,
-            next = next?.takeIf { lastDiaper != null && roomForEstimates }?.let(glanceText::nextPoop),
+            next = next?.takeIf { lastDiaper != null && roomForEstimates }?.let { estimate(Estimate.POOP, it, TEXT_ALIGN_START) },
             description = description,
             onClick = openApp(MainActivity.OPEN_DIAPER, CLICK_OPEN_DIAPER),
         )
+    }
+
+    /** An estimate's line, kept current by the renderer ("Next in 55m" → "Next soon" → "Due 4m ago"), as on Main. */
+    private fun estimate(kind: Estimate, expected: Expected, alignment: Int): LayoutString {
+        val (ahead, soon, past) = glanceText.template(kind)
+        return text.estimate(expected.atMillis, glanceText.next(kind, expected, now), ahead, soon, past).layout(alignment)
     }
 
     /** [this] read on with the estimate after it ("…, next feed expected around 15:30"). */
@@ -379,7 +387,7 @@ private class TileContent(
         @DrawableRes icon: Int,
         label: String,
         secondary: LayoutString,
-        next: String?,
+        next: LayoutString?,
         description: LayoutModifier,
         onClick: Clickable,
     ): LayoutElement = button(
@@ -392,7 +400,7 @@ private class TileContent(
             if (next == null) {
                 since
             } else {
-                column(since, plainText(next.layoutString, Typography.LABEL_SMALL, event.onContainer.layout, start = true), horizontalAlignment = HORIZONTAL_ALIGN_START)
+                column(since, plainText(next, Typography.LABEL_SMALL, event.onContainer.layout, start = true), horizontalAlignment = HORIZONTAL_ALIGN_START)
             }
         },
         width = expand(),
@@ -433,7 +441,7 @@ private class TileContent(
                 if (next == null) {
                     word
                 } else {
-                    column(word, plainText(glanceText.nextSleep(next).layoutString, Typography.LABEL_SMALL, sleep.onContainer.layout), horizontalAlignment = HORIZONTAL_ALIGN_CENTER)
+                    column(word, plainText(estimate(Estimate.SLEEP_SHORT, next, TEXT_ALIGN_CENTER), Typography.LABEL_SMALL, sleep.onContainer.layout), horizontalAlignment = HORIZONTAL_ALIGN_CENTER)
                 }
             },
         )

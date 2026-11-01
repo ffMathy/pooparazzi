@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.wear.main
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import com.ffmathy.pooparazzi.core.format.Estimate
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.foundation.layout.height
@@ -160,7 +161,7 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                     spoken = lastFeed?.let {
                         f.spokenAgo(stringResource(CoreR.string.spoken_last_feed), spokenFeedType(it), it.startMillis, state.now)
                     },
-                    next = nextFeed?.let(words::nextFeed),
+                    next = nextFeed?.let { words.next(Estimate.FEED, it, glance.now) },
                     nextSpoken = nextFeed?.let(words::nextFeedSpoken),
                     loaded = state.loaded,
                     onClick = actions.onFeed,
@@ -181,7 +182,7 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
                         val kind = it.diaperKind ?: DiaperKind.PLAIN
                         f.spokenAgo(stringResource(CoreR.string.spoken_last_diaper), stringResource(SpokenLabels.diaperKind(kind)), it.startMillis, state.now)
                     },
-                    next = nextPoop?.let(words::nextPoop),
+                    next = nextPoop?.let { words.next(Estimate.POOP, it, glance.now) },
                     nextSpoken = nextPoop?.let(words::nextPoopSpoken),
                     loaded = state.loaded,
                     onClick = actions.onDiaper,
@@ -440,7 +441,7 @@ private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: Edge
     val label = stringResource(if (asleep) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
     val next = state.glance.nextSleep
     val action = if (asleep) stringResource(R.string.cd_woke_up_end_sleep) else label
-    // Under the word, as on the Tile: the expected wake-up or next sleep ("~05:25").
+    // Under the word, as on the Tile: the expected wake-up or next sleep ("in 50m").
     val name = next?.let { stringResource(R.string.spoken_pair, action, words.nextSleepSpoken(it, asleep)) } ?: action
     val guardText = state.sleepGuard?.let { stringResource(it.edgeText()) }
     val sleepState = sleepStateDescription(state, f)
@@ -482,7 +483,7 @@ private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: Edge
                         modifier = Modifier.widthIn(max = if (guardText != null) EDGE_GUARD_WIDTH else labelWidth + 8.dp),
                     )
                     if (guardText == null && next != null) {
-                        Text(words.nextSleep(next), style = MaterialTheme.typography.labelSmall, color = content, maxLines = 1)
+                        Text(words.next(Estimate.SLEEP_SHORT, next, state.now), style = MaterialTheme.typography.labelSmall, color = content, maxLines = 1)
                     }
                 }
             }
