@@ -385,7 +385,7 @@ private fun SleepToggle(snapshot: WidgetSnapshot, strings: WidgetStrings, colors
         modifier = modifier,
         fill = if (sleepStart != null) sleep.containerLit else sleep.container,
         border = if (sleepStart != null) sleep.strong else null,
-        radius = 34.dp,
+        radius = 20.dp,
         action = actionRunCallback<ToggleSleepAction>(),
         description = listOfNotNull(status, forecastSpoken).fold(name) { said, part -> strings.string(R.string.spoken_pair, said, part) },
     ) {
