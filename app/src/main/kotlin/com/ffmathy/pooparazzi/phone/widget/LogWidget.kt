@@ -158,7 +158,7 @@ private fun StatusRow(
 }
 
 /**
- * Idle and asleep: "Fed at 12:22" and "Pee at 13:44" (the diaper only when both fit). With two or more babies the row
+ * Idle and asleep: "Fed 2h 10m ago" and "Pee 48m ago" (the diaper only when both fit). With two or more babies the row
  * starts with the [baby]'s label, and the facts that no longer fit beside it are dropped.
  */
 @Composable
@@ -180,13 +180,13 @@ private fun RowScope.StatusFacts(
         Spacer(GlanceModifier.width(FactGap))
     }
     when {
-        // Narrow: the toggle row has no room for "Asleep since 02:05", so it moves up here (DESIGN_SPEC §10.11).
+        // Narrow: the toggle row has no room for "Asleep 1h 07m", so it moves up here (DESIGN_SPEC §10.11).
         sleepStart != null && !layout.wide -> {
-            val text = strings.asleepSince(sleepStart)
+            val text = strings.asleepFor(sleepStart, snapshot.now)
             if (baby == null || factWidth(text) <= room) Fact(XDrawables.sleepRunning, colors.sleep.strong, text, colors)
         }
         else -> {
-            val feedText = lastFeed?.let { strings.fedAt(it) } ?: strings.noFeeds()
+            val feedText = lastFeed?.let { strings.fedAgo(it, snapshot.now) } ?: strings.noFeeds()
             // Without a name the feed fact always shows (as before several babies); beside one only when it fits.
             val feedShown = baby == null || factWidth(feedText) <= room
             if (feedShown) {
@@ -196,7 +196,7 @@ private fun RowScope.StatusFacts(
             val diaper = snapshot.lastDiaper
             val kind = diaper?.let { DiaperKind.of(it.pee, it.poop) }
             if (feedShown && diaper != null && kind != null) {
-                val diaperText = strings.diaperAt(kind, diaper.startMillis)
+                val diaperText = strings.diaperAgo(kind, diaper.startMillis, snapshot.now)
                 if (factWidth(diaperText) <= room) {
                     Spacer(GlanceModifier.width(FactGap))
                     val icon = if (kind == DiaperKind.BOTH) colors.bothIcon else XDrawables.forDiaperKind(kind)
@@ -315,12 +315,12 @@ private fun LogButtons(
         val cell = GlanceModifier.defaultWeight().fillMaxHeight()
         val feed = colors.feed
         SheetButton(HomeLaunch.Feed, feed, described(R.string.widget_cd_log_feed, feedNext?.let(strings::feedForecastSpoken)), cell) {
-            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style, sub = feedNext?.let(strings::feedForecast) ?: "\u00A0".takeIf { sub })
+            ButtonFace(XDrawables.feed, feed.strong, feedLabel, feed.onContainer, style, sub = feedNext?.let { strings.feedForecast(it, snapshot.now) } ?: "\u00A0".takeIf { sub })
         }
         Spacer(GlanceModifier.width(8.dp))
         val diaper = colors.diaper
         SheetButton(HomeLaunch.Diaper, diaper, described(R.string.widget_cd_log_diaper, poopNext?.let(strings::poopForecastSpoken)), cell) {
-            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style, sub = poopNext?.let(strings::poopForecast) ?: "\u00A0".takeIf { sub })
+            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style, sub = poopNext?.let { strings.poopForecast(it, snapshot.now) } ?: "\u00A0".takeIf { sub })
         }
     }
 }
@@ -360,8 +360,8 @@ private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: 
 }
 
 /**
- * The sleep toggle: "Start sleep" with "Awake since 13:27" at the end, or the checked "Woke up" (lit fill, 2 dp
- * strong border) with "Asleep since 02:05". Under it, what the last week expects: "Next sleep ~15:25" or "Wakes ~05:30"
+ * The sleep toggle: "Start sleep" with "Awake 1h 05m" at the end, or the checked "Woke up" (lit fill, 2 dp
+ * strong border) with "Asleep 1h 07m". Under it, what the last week expects: "Next sleep in 50m" or "Wakes in 2h 15m"
  * (V1_ADDITIONS §9). The end text wraps rather than clips when alone, and is dropped when narrow.
  */
 @Composable
@@ -371,11 +371,11 @@ private fun SleepToggle(snapshot: WidgetSnapshot, strings: WidgetStrings, colors
     val awakeSince = snapshot.awakeSinceMillis
     val label = strings.string(if (sleepStart != null) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
     val status = when {
-        sleepStart != null -> strings.asleepSince(sleepStart)
-        awakeSince != null -> strings.awakeSince(awakeSince)
+        sleepStart != null -> strings.asleepFor(sleepStart, snapshot.now)
+        awakeSince != null -> strings.awakeFor(awakeSince, snapshot.now)
         else -> null
     }
-    val forecast = snapshot.sleepForecast?.let { strings.sleepForecast(it, sleepStart != null) }
+    val forecast = snapshot.sleepForecast?.let { strings.sleepForecast(it, sleepStart != null, snapshot.now) }
     val forecastSpoken = snapshot.sleepForecast?.let { strings.sleepForecastSpoken(it, sleepStart != null) }
     val name = strings.forBaby(
         strings.string(if (sleepStart != null) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep),
@@ -412,10 +412,6 @@ private fun SleepToggleRow(icon: Int, label: String, status: String?, forecast: 
         if (layout.wide && status != null) {
             Spacer(GlanceModifier.width(12.dp))
             Spacer(GlanceModifier.defaultWeight())
-            if (asleep) {
-                WidgetIcon(XDrawables.sleepRunning, sleep.strong, 16.dp)
-                Spacer(GlanceModifier.width(6.dp))
-            }
             if (forecast == null) {
                 WidgetText(status, sleep.onContainer, 14.sp, maxLines = 2, align = TextAlign.End)
             } else {

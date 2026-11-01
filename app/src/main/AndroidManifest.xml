@@ -99,6 +99,9 @@
         <receiver
             android:name=".notify.TimerActionReceiver"
             android:exported="false" />
+        <receiver
+            android:name=".widget.WidgetTickReceiver"
+            android:exported="false" />
 
         <!--
             Firebase starts in PooparazziApp, and only in builds with a Firebase configuration (AppAccounts): without one

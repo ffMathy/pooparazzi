@@ -5,31 +5,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.wear.compose.foundation.LocalAmbientModeManager
-import androidx.wear.compose.material3.ConfirmationDialogDefaults
-import androidx.wear.compose.material3.FailureConfirmationDialog
-import androidx.wear.compose.material3.OpenOnPhoneDialog
-import androidx.wear.compose.material3.OpenOnPhoneDialogDefaults
-import androidx.wear.compose.material3.confirmationDialogCurvedText
-import androidx.wear.compose.material3.openOnPhoneDialogCurvedText
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
-import com.ffmathy.pooparazzi.wear.adjust.AdjustActions
-import com.ffmathy.pooparazzi.wear.adjust.AdjustScreen
-import com.ffmathy.pooparazzi.wear.adjust.SetTimeScreen
 import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
 import com.ffmathy.pooparazzi.wear.diaper.colourOptions
@@ -42,17 +29,11 @@ import com.ffmathy.pooparazzi.wear.logged.LoggedScreen
 import com.ffmathy.pooparazzi.wear.logged.UndoneScreen
 import com.ffmathy.pooparazzi.wear.main.MainActions
 import com.ffmathy.pooparazzi.wear.main.MainScreen
-import com.ffmathy.pooparazzi.wear.phone.PhoneLink
 import com.ffmathy.pooparazzi.wear.state.WearEvent
-import com.ffmathy.pooparazzi.wear.state.XHaptic
-import com.ffmathy.pooparazzi.wear.state.adjustableFields
-import com.ffmathy.pooparazzi.wear.today.TodayScreen
 import com.ffmathy.pooparazzi.wear.ui.Option
 import com.ffmathy.pooparazzi.wear.ui.OptionScreen
 import com.ffmathy.pooparazzi.wear.ui.perform
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Destinations of the watch app (DESIGN_SPEC §3.1). */
@@ -65,9 +46,6 @@ object WearRoutes {
     const val DIAPER_TEXTURE = "diaper/texture"
     const val LOGGED = "logged"
     const val UNDONE = "undone"
-    const val ADJUST = "adjust"
-    const val SET_TIME = "adjust/time"
-    const val TODAY = "today"
 
     /** The baby picker (two or more babies, BABIES_AND_BACKUP §2.5). */
     const val BABY = "baby"
@@ -86,13 +64,10 @@ sealed interface WearDeepLink {
 
     /** Logged for an entry the Tile just wrote, with Undo active at once. */
     data class Logged(val entryId: String) : WearDeepLink
-
-    /** Today. */
-    data object Today : WearDeepLink
 }
 
 /**
- * The app's navigation (DESIGN_SPEC §3.1): Main and its pickers, Logged / Undone, Adjust / Set time and Today, in a
+ * The app's navigation (DESIGN_SPEC §3.1): Main and its pickers and Logged / Undone, in a
  * [SwipeDismissableNavHost] (swipe right cancels a picker). One-shot [MainViewModel.events] drive haptics and the
  * navigation that depends on a write's outcome.
  *
@@ -103,15 +78,11 @@ sealed interface WearDeepLink {
 @Composable
 fun WearNavHost(
     viewModel: MainViewModel,
-    phoneLink: PhoneLink?,
     deepLinks: StateFlow<WearDeepLink?>? = null,
     onDeepLinkHandled: () -> Unit = {},
     navController: NavHostController = rememberSwipeDismissableNavController(),
 ) {
     val haptics = LocalHapticFeedback.current
-    val scope = rememberCoroutineScope()
-    var openOnPhone by remember { mutableStateOf(false) }
-    var phoneFailed by remember { mutableStateOf(false) }
 
     fun go(route: String) = navController.navigate(route) { launchSingleTop = true }
     fun backToMain() {
@@ -129,8 +100,6 @@ fun WearNavHost(
                 WearEvent.ShowUndone -> navController.navigate(WearRoutes.UNDONE) { popUpTo(WearRoutes.MAIN) }
                 WearEvent.ShowSide -> go(WearRoutes.SIDE)
                 WearEvent.BackToMain -> backToMain()
-                // Adjust and Set time above it; nothing when Adjust is already gone.
-                WearEvent.CloseAdjust -> navController.popBackStack(WearRoutes.ADJUST, inclusive = true)
             }
         }
     }
@@ -150,7 +119,6 @@ fun WearNavHost(
                 go(WearRoutes.DIAPER)
             }
             is WearDeepLink.Logged -> viewModel.openReceipt(deepLink.entryId, fromTile = true)
-            WearDeepLink.Today -> go(WearRoutes.TODAY)
         }
         onDeepLinkHandled()
     }
@@ -184,11 +152,6 @@ fun WearNavHost(
                         go(WearRoutes.DIAPER)
                     },
                     onSleepToggle = gate.tapWith { shown -> viewModel.toggleSleep(shown) },
-                    onAdjust = gate.tapWith2 { entry, field ->
-                        viewModel.beginAdjust(entry.id, listOf(field))
-                        go(WearRoutes.ADJUST)
-                    },
-                    onHistory = gate.tap { go(WearRoutes.TODAY) },
                     onBaby = gate.tap { go(WearRoutes.BABY) },
                 ),
             )
@@ -293,70 +256,7 @@ fun WearNavHost(
         composable(WearRoutes.UNDONE) {
             UndoneScreen(onDone = ::backToMain)
         }
-        composable(WearRoutes.ADJUST) { backStackEntry ->
-            val gate = rememberTopGate(navController, backStackEntry)
-            val state by viewModel.adjust.collectAsStateWithLifecycle()
-            // An applied choice clears the request: keep showing the screen while it leaves.
-            rememberLast(state)?.let {
-                AdjustScreen(
-                    it,
-                    AdjustActions(
-                        onOption = gate.tapWith2 { field, at -> viewModel.adjust(field, at) },
-                        onSetTime = gate.tapWith { field ->
-                            viewModel.beginSetTime(field)
-                            go(WearRoutes.SET_TIME)
-                        },
-                    ),
-                )
-            }
-        }
-        composable(WearRoutes.SET_TIME) { backStackEntry ->
-            val gate = rememberTopGate(navController, backStackEntry)
-            val state by viewModel.setTime.collectAsStateWithLifecycle()
-            rememberLast(state)?.let { SetTimeScreen(it, onPicked = gate.tapWith { time -> viewModel.setTime(time) }) }
-        }
-        composable(WearRoutes.TODAY) { backStackEntry ->
-            val gate = rememberTopGate(navController, backStackEntry)
-            val state by viewModel.today.collectAsStateWithLifecycle()
-            val availability = remember(phoneLink) { phoneLink?.available ?: flowOf(false) }
-            val available by availability.collectAsStateWithLifecycle(initialValue = false)
-            TodayScreen(
-                state = state,
-                phoneAvailable = available,
-                onRow = gate.tapWith { entry ->
-                    viewModel.beginAdjust(entry.id, entry.adjustableFields(), allowSetTime = true)
-                    go(WearRoutes.ADJUST)
-                },
-                onMoreOnPhone = gate.tap {
-                    scope.launch {
-                        // Never a dead button: say so when the phone could not open History.
-                        if (phoneLink?.openHistory() == true) {
-                            openOnPhone = true
-                        } else {
-                            haptics.perform(XHaptic.REJECT)
-                            phoneFailed = true
-                        }
-                    }
-                },
-            )
-        }
     }
-
-    val continueOnPhone = stringResource(R.string.open_on_phone)
-    val curvedStyle = OpenOnPhoneDialogDefaults.curvedTextStyle
-    OpenOnPhoneDialog(
-        visible = openOnPhone,
-        onDismissRequest = { openOnPhone = false },
-        curvedText = { openOnPhoneDialogCurvedText(text = continueOnPhone, style = curvedStyle) },
-    )
-    val couldNotOpen = stringResource(R.string.open_on_phone_failed)
-    val failedStyle = ConfirmationDialogDefaults.curvedTextStyle
-    FailureConfirmationDialog(
-        visible = phoneFailed,
-        onDismissRequest = { phoneFailed = false },
-        curvedText = { confirmationDialogCurvedText(couldNotOpen, failedStyle) },
-        modifier = Modifier.semantics { contentDescription = couldNotOpen },
-    )
 }
 
 /** The last non-null [value]: a screen keeps showing its state while it leaves after the state was used up. */

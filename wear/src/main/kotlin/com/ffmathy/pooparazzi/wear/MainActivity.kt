@@ -16,7 +16,6 @@ import androidx.wear.compose.foundation.rememberAmbientModeManager
 import androidx.wear.compose.material3.AppScaffold
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.wear.ongoing.NotificationPermissionRequest
-import com.ffmathy.pooparazzi.wear.phone.RemotePhoneLink
 import com.ffmathy.pooparazzi.wear.state.MainMode
 import com.ffmathy.pooparazzi.wear.theme.AmbientSupport
 import com.ffmathy.pooparazzi.wear.theme.WearableAmbientModeManager
@@ -44,7 +43,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Core.init(applicationContext)
         if (savedInstanceState == null) deepLinks.value = deepLinkOf(intent)
-        val phoneLink = RemotePhoneLink(applicationContext)
         // Wear OS 3–5: always-on through the wearable library's observer, registered while the activity is created.
         val wearableAmbient = if (ambientSupport == AmbientSupport.WEARABLE_LIBRARY) {
             WearableAmbientModeManager().also { lifecycle.addObserver(AmbientLifecycleObserver(this, it)) }
@@ -68,7 +66,6 @@ class MainActivity : ComponentActivity() {
                         AppScaffold(timeText = { XTimeText() }) {
                             WearNavHost(
                                 viewModel = viewModel,
-                                phoneLink = phoneLink,
                                 deepLinks = deepLinks,
                                 onDeepLinkHandled = { deepLinks.value = null },
                             )
@@ -86,7 +83,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        /** One of [OPEN_MAIN], [OPEN_FEED_TYPE], [OPEN_DIAPER], [OPEN_LOGGED], [OPEN_TODAY]. */
+        /** One of [OPEN_MAIN], [OPEN_FEED_TYPE], [OPEN_DIAPER], [OPEN_LOGGED]. */
         const val EXTRA_OPEN = "com.ffmathy.pooparazzi.wear.extra.OPEN"
 
         /** The entry for [OPEN_LOGGED]. */
@@ -100,7 +97,9 @@ class MainActivity : ComponentActivity() {
         /** "End feed" of an older tile (when breastfeeds were timed): opens Main now. */
         private const val LEGACY_OPEN_END_FEED = "end_feed"
         const val OPEN_LOGGED = "logged"
-        const val OPEN_TODAY = "today"
+
+        /** Today, which the watch no longer has (history is on the phone): opens Main. */
+        private const val LEGACY_OPEN_TODAY = "today"
 
         /** An intent that opens the app at [open] (and, for [OPEN_LOGGED], the Logged screen of [entryId]). */
         fun intent(context: Context, open: String, entryId: String? = null): Intent =
@@ -113,7 +112,7 @@ class MainActivity : ComponentActivity() {
             OPEN_FEED_TYPE -> WearDeepLink.FeedType
             OPEN_DIAPER -> WearDeepLink.Diaper
             LEGACY_OPEN_END_FEED -> WearDeepLink.Main
-            OPEN_TODAY -> WearDeepLink.Today
+            LEGACY_OPEN_TODAY -> WearDeepLink.Main
             OPEN_LOGGED -> intent.getStringExtra(EXTRA_ENTRY_ID)?.let { WearDeepLink.Logged(it) }
             else -> null
         }

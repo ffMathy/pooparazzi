@@ -17,6 +17,7 @@ import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.wear.MainActivity
 import com.ffmathy.pooparazzi.wear.sample.WearSamples
+import com.ffmathy.pooparazzi.wear.glance.GlanceTitle
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.surface.SurfaceText
 import com.ffmathy.pooparazzi.core.settings.Settings as CoreSettings
@@ -149,7 +150,7 @@ class TileLayoutTest {
     fun theConfirmationIsItsOwnTimelineEntry() {
         val state = WearSamples.tileJustLogged()
         assertEquals(listOf(SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS), state.changes)
-        assertTrue(state.at(SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS).title is TileTitle.Name)
+        assertTrue(state.at(SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS).title.let { it is TileTitle.Glance && it.title is GlanceTitle.Name })
         assertNull(state.at(SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS).undoEntryId)
     }
 
@@ -159,7 +160,7 @@ class TileLayoutTest {
         // The same moment, but the nap was undone in the app (or deleted on the phone).
         val summary = summarize(SampleData.scenario(), SampleData.NOW_1432, SampleData.ZONE)
         val state = TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null)
-        assertTrue(state.title is TileTitle.Name)
+        assertTrue(state.title.let { it is TileTitle.Glance && it.title is GlanceTitle.Name })
         assertNull(state.undoEntryId)
     }
 
@@ -170,7 +171,7 @@ class TileLayoutTest {
 
     @Test
     fun withoutDiapersRowBSaysSo() {
-        val proto = build(WearSamples.tileIdle().copy(lastDiaper = null))
+        val proto = build(WearSamples.tileIdle().let { it.copy(glance = it.glance.copy(lastDiaper = null)) })
         assertTrue(proto.has("No diapers yet"))
         assertTrue(proto.has("Diaper. No diapers yet"))
     }
@@ -178,7 +179,7 @@ class TileLayoutTest {
     @Test
     fun aSpokenLastDiaperNamesBothInWords() {
         val state = WearSamples.tileIdle(babyName = "").let { idle ->
-            idle.copy(lastDiaper = idle.lastDiaper?.copy(poop = true))
+            idle.copy(glance = idle.glance.copy(lastDiaper = idle.lastDiaper?.copy(poop = true)))
         }
         assertTrue(build(state).has("Last diaper, pee and poop, 48 minutes ago"))
     }
@@ -219,10 +220,10 @@ class TileLayoutTest {
         val second = twins.withSelectedBaby(SampleData.TWIN_ID)
         assertEquals("Baby 2", TileUiState.titleName(second, labels))
         val state = WearSamples.tileIdle(babyName = TileUiState.titleName(second, labels))
-        assertEquals(TileTitle.Name("Baby 2"), state.title)
+        assertEquals(TileTitle.Glance(GlanceTitle.Name("Baby 2")), state.title)
         assertTrue(build(state).has("Baby 2"))
         // The usual priorities still hold: a running sleep wins over the label.
-        assertTrue(WearSamples.tileAsleep().copy(babyName = "Baby 2").title is TileTitle.Asleep)
+        assertTrue(WearSamples.tileAsleep().let { it.copy(glance = it.glance.copy(babyName = "Baby 2")) }.title.let { it is TileTitle.Glance && it.title is GlanceTitle.Asleep })
     }
 
     @Test
@@ -230,7 +231,7 @@ class TileLayoutTest {
         val labels = LabelFormatter(context)
         // Unnamed: no "Baby" title, the last diaper as before.
         assertEquals("", TileUiState.titleName(CoreSettings(), labels))
-        assertTrue(WearSamples.tileIdle(babyName = TileUiState.titleName(CoreSettings(), labels)).title is TileTitle.LastDiaper)
+        assertTrue(WearSamples.tileIdle(babyName = TileUiState.titleName(CoreSettings(), labels)).title.let { it is TileTitle.Glance && it.title is GlanceTitle.LastDiaper })
         assertEquals(SampleData.BABY_NAME, TileUiState.titleName(SampleData.settings, labels))
         // Two babies, the named one current: its name.
         assertEquals(SampleData.BABY_NAME, TileUiState.titleName(SampleData.twinSettings, labels))
@@ -262,11 +263,11 @@ class TileLayoutTest {
     @Test
     fun titlePriority() {
         val asleep = WearSamples.tileAsleep()
-        assertTrue(asleep.title is TileTitle.Asleep)
+        assertTrue(asleep.title.let { it is TileTitle.Glance && it.title is GlanceTitle.Asleep })
         val loggedWhileAsleep = asleep.copy(feedback = WearSamples.tileJustLogged().feedback?.copy(untilMillis = asleep.now + 5_000))
         assertTrue(loggedWhileAsleep.title is TileTitle.Logged)
-        assertTrue(WearSamples.tileIdle().title is TileTitle.Name)
-        assertTrue(WearSamples.tileIdle(babyName = "  ").title is TileTitle.LastDiaper)
+        assertTrue(WearSamples.tileIdle().title.let { it is TileTitle.Glance && it.title is GlanceTitle.Name })
+        assertTrue(WearSamples.tileIdle(babyName = "  ").title.let { it is TileTitle.Glance && it.title is GlanceTitle.LastDiaper })
     }
 
     @Test

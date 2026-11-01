@@ -13,7 +13,6 @@ import com.ffmathy.pooparazzi.core.data.EntryRepository
 import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.LogResult
 import com.ffmathy.pooparazzi.core.domain.Summary
-import com.ffmathy.pooparazzi.core.domain.localDate
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
 import com.ffmathy.pooparazzi.core.model.Breast
@@ -28,8 +27,6 @@ import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.EntrySync
-import com.ffmathy.pooparazzi.wear.state.AdjustRequest
-import com.ffmathy.pooparazzi.wear.state.AdjustUiState
 import com.ffmathy.pooparazzi.wear.state.DiaperDraft
 import com.ffmathy.pooparazzi.wear.state.EarlierOffsets
 import com.ffmathy.pooparazzi.wear.state.FeedDraft
@@ -39,15 +36,10 @@ import com.ffmathy.pooparazzi.wear.state.GuardTarget
 import com.ffmathy.pooparazzi.wear.state.MainUiState
 import com.ffmathy.pooparazzi.wear.state.Receipt
 import com.ffmathy.pooparazzi.wear.state.ReceiptKind
-import com.ffmathy.pooparazzi.wear.state.SetTimeUiState
 import com.ffmathy.pooparazzi.wear.state.SideDraft
-import com.ffmathy.pooparazzi.wear.state.TimeField
-import com.ffmathy.pooparazzi.wear.state.TodayUiState
 import com.ffmathy.pooparazzi.wear.state.Undo
 import com.ffmathy.pooparazzi.wear.state.WearEvent
 import com.ffmathy.pooparazzi.wear.state.XHaptic
-import com.ffmathy.pooparazzi.wear.state.timeOf
-import com.ffmathy.pooparazzi.wear.state.withTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -74,14 +66,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.time.LocalTime
 import java.time.ZoneId
 
 /**
  * The watch app's state holder, shared by every destination (it lives as long as the activity).
  *
  * It derives Main and Today from the repository, the sync status and a minute ticker; keeps the drafts of the
- * pickers (Feed type, Side, Diaper, Adjust, Set time) and the current Logged receipt; and performs every write.
+ * pickers (Feed type, Side, Diaper) and the current Logged receipt; and performs every write.
  * Haptics and navigation that depend on a write's outcome are sent as one-shot [events]
  * (DESIGN_SPEC §3.5, §5.11, §5.12; V1_ADDITIONS §2.2, §3.2).
  *
@@ -127,17 +118,6 @@ class MainViewModel(
             MainUiState.from(summarize(log.entries, clock.now(), zone()), guard, status, log.babies.babies, log.babies.selectedBabyId)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, MainUiState.loading(clock.now(), zone()))
 
-    val today: StateFlow<TodayUiState> =
-        combine(entries, nowTicks) { list, _ ->
-            val zone = zone()
-            val summary = summarize(list, clock.now(), zone)
-            TodayUiState(summary.now, zone, summary.todayDate, summary.dayEntries(summary.todayDate))
-        }.stateIn(
-            viewModelScope,
-            SharingStarted.Eagerly,
-            zone().let { TodayUiState(clock.now(), it, localDate(clock.now(), it), emptyList(), loaded = false) },
-        )
-
     private val _feedDraft = MutableStateFlow<FeedDraft?>(null)
     val feedDraft: StateFlow<FeedDraft?> = _feedDraft.asStateFlow()
 
@@ -149,24 +129,6 @@ class MainViewModel(
 
     private val _receipt = MutableStateFlow<Receipt?>(null)
     val receipt: StateFlow<Receipt?> = _receipt.asStateFlow()
-
-    /** What Adjust is open for; cleared once a choice is applied, so a second tap on the leaving screen does nothing. */
-    private val adjustRequest = MutableStateFlow<AdjustRequest?>(null)
-    val adjust: StateFlow<AdjustUiState?> =
-        combine(entries, adjustRequest, nowTicks) { list, request, _ ->
-            request ?: return@combine null
-            val entry = list.firstOrNull { it.id == request.entryId } ?: return@combine null
-            AdjustUiState.build(entry, request.fields, request.allowSetTime, clock.now(), zone())
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
-
-    private val setTimeField = MutableStateFlow<TimeField?>(null)
-    val setTime: StateFlow<SetTimeUiState?> =
-        combine(entries, adjustRequest, setTimeField) { list, request, field ->
-            if (request == null || field == null) return@combine null
-            val entry = list.firstOrNull { it.id == request.entryId } ?: return@combine null
-            val base = entry.timeOf(field) ?: return@combine null
-            SetTimeUiState(entry, field, base, zone())
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _events = Channel<WearEvent>(Channel.BUFFERED)
 
@@ -383,77 +345,12 @@ class MainViewModel(
         send(WearEvent.ShowUndone)
     }
 
-    // ---- Adjust / Set time -------------------------------------------------------------------
-
-    /** Opens Adjust for [entryId]'s [fields]; [allowSetTime] adds "Set time" (from Today rows). */
-    fun beginAdjust(entryId: String, fields: List<TimeField>, allowSetTime: Boolean = false) {
-        setTimeField.value = null
-        adjustRequest.value = AdjustRequest(entryId, fields, allowSetTime)
-    }
-
-    /**
-     * An Adjust choice: moves [field] to [at], the time the tapped button showed ("−5m · 02:00"), plays SegmentTick
-     * and returns. The target is absolute, so offsets are never cumulative (DESIGN_SPEC §4.4), and the request is used
-     * up: a second tap queued behind the first does nothing.
-     */
-    fun adjust(field: TimeField, at: Long): Job = action {
-        val request = adjustRequest.value ?: return@action
-        val entry = repository.get(request.entryId)?.takeUnless { it.deleted }
-        val updated = entry?.withTime(field, at, clock.now())
-        if (updated == null) {
-            haptic(XHaptic.REJECT)
-            return@action
-        }
-        repository.update(updated)
-        closeAdjust()
-    }
-
-    /** "Set time" on Adjust: opens the time picker for [field]. */
-    fun beginSetTime(field: TimeField) {
-        setTimeField.value = field
-    }
-
-    /**
-     * The picked clock time for the open Set time field: the latest such time on or before now, on the base's
-     * day or the day before. Returns to Adjust's caller.
-     */
-    fun setTime(time: LocalTime): Job = action {
-        // Used up by an earlier confirm (a double tap): nothing to do.
-        val request = adjustRequest.value ?: return@action
-        val field = setTimeField.value ?: return@action
-        val entry = repository.get(request.entryId)?.takeUnless { it.deleted }
-        val base = entry?.timeOf(field)
-        if (entry == null || base == null) {
-            haptic(XHaptic.REJECT)
-            return@action
-        }
-        val now = clock.now()
-        val zone = zone()
-        var at = localDate(base, zone).atTime(time).atZone(zone).toInstant().toEpochMilli()
-        if (at > now) at = localDate(base, zone).minusDays(1).atTime(time).atZone(zone).toInstant().toEpochMilli()
-        val updated = entry.withTime(field, at, now)
-        if (updated == null) {
-            haptic(XHaptic.REJECT)
-            return@action
-        }
-        repository.update(updated)
-        closeAdjust()
-    }
-
-    /** After an applied choice: SegmentTick, then back to Adjust's caller; the request is used up. */
-    private fun closeAdjust() {
-        setTimeField.value = null
-        adjustRequest.value = null
-        haptic(XHaptic.SEGMENT_TICK)
-        send(WearEvent.CloseAdjust)
-    }
-
     // ---- Babies ------------------------------------------------------------------------------
 
     /**
      * The baby picker's choice: makes [id] the watch's current baby (on this watch only: never synced) and returns to
      * Main with a confirmation (BABIES_AND_BACKUP §2.5). What was open belongs to the previous baby, so a switch drops
-     * the drafts, the Logged receipt and its Undo, and the Adjust request, and resets the 2 s double-toggle guard: the
+     * the drafts and the Logged receipt and its Undo, and resets the 2 s double-toggle guard: the
      * other baby's sleep toggle must work at once.
      */
     fun selectBaby(id: String): Job = action {
@@ -464,8 +361,6 @@ class MainViewModel(
             _sideDraft.value = null
             _diaperDraft.value = null
             _receipt.value = null
-            setTimeField.value = null
-            adjustRequest.value = null
             lastSleepToggleAt = NEVER
             clearGuard()
         }

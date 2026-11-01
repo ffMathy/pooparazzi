@@ -60,7 +60,6 @@ dependencies {
     implementation(libs.wear.compose.foundation)
     implementation(libs.wear.compose.navigation)
     implementation(libs.wear.compose.ui.tooling)
-    implementation(libs.wear.remote.interactions)
     // Always-on (ambient) on Wear OS 3–5 watches, which have no Wear SDK ambient service.
     implementation(libs.wear.ambient)
     implementation(libs.wear.tiles)

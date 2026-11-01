@@ -24,11 +24,9 @@ import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.testing.FakeSettingsRepository
-import com.ffmathy.pooparazzi.wear.state.GuardTarget
 import com.ffmathy.pooparazzi.wear.state.MainMode
 import com.ffmathy.pooparazzi.wear.state.MainUiState
 import com.ffmathy.pooparazzi.wear.state.ReceiptKind
-import com.ffmathy.pooparazzi.wear.state.TimeField
 import com.ffmathy.pooparazzi.wear.state.Undo
 import com.ffmathy.pooparazzi.wear.state.WearEvent
 import com.ffmathy.pooparazzi.wear.state.XHaptic
@@ -58,7 +56,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Collections
 
@@ -173,18 +170,6 @@ class MainViewModelTest {
         assertEquals(at(13, 27), state.lastSleep?.endMillis)
         assertNull(state.runningSleep)
         assertNull(state.guard)
-    }
-
-    @Test
-    fun todayListsTodaysEntriesNewestFirst() = test {
-        seed(SampleData.scenario())
-        // Room may emit the merge in steps: wait for the whole day.
-        val today = await(vm.today) { it.loaded && it.entries.size == SampleData.scenario().size }
-        assertEquals(SampleData.TODAY, today.day)
-        assertEquals("sample-pee-1344", today.entries.first().id)
-        // The sleep that started on Sunday 22:40 overlaps today and is listed last.
-        assertEquals("sample-sleep-2240", today.entries.last().id)
-        assertEquals(SampleData.scenario().size, today.entries.size)
     }
 
     // ---- Feed type ----------------------------------------------------------------------------
@@ -612,108 +597,6 @@ class MainViewModelTest {
         awaitEvent(WearEvent.ShowUndone)
     }
 
-    // ---- Adjust / Set time ---------------------------------------------------------------------
-
-    @Test
-    fun adjustStartOfTheRunningSleep() = test {
-        clock.set(SampleData.NOW_0312)
-        seed(SampleData.scenarioAt0312())
-        vm.beginAdjust("sample-sleep-0205", listOf(TimeField.START))
-        val state = await(vm.adjust) { it != null }!!
-        assertEquals(listOf(at(1, 50), at(2, 0), at(2, 10)), state.groups.single().options.map { it.at })
-        assertTrue(state.groups.single().options.all { it.enabled })
-
-        vm.adjust(TimeField.START, at(1, 50)).join()
-        assertEquals(at(1, 50), repo.get("sample-sleep-0205")?.startMillis)
-        assertTrue(repo.get("sample-sleep-0205")!!.isRunning)
-        assertEquals(WearEvent.CloseAdjust, awaitEvent(WearEvent.CloseAdjust).last())
-        assertEquals(XHaptic.SEGMENT_TICK, haptics().last())
-    }
-
-    @Test
-    fun adjustDisablesAndRejectsATimeInTheFuture() = test {
-        val pee = repo.logDiaper(clock.now() - 3 * minute, pee = true, poop = false)
-        vm.beginAdjust(pee.id, listOf(TimeField.START))
-        val state = await(vm.adjust) { it != null }!!
-        assertEquals(listOf(true, true, false), state.groups.single().options.map { it.enabled })
-
-        vm.adjust(TimeField.START, pee.startMillis + 5 * minute).join()
-        assertEquals(pee.startMillis, repo.get(pee.id)?.startMillis)
-        assertEquals(XHaptic.REJECT, haptics().last())
-    }
-
-    @Test
-    fun theAwakeCardAdjustsTheEndOfTheLastSleep() = test {
-        seed(SampleData.scenario())
-        vm.beginAdjust("sample-sleep-1240", listOf(TimeField.END))
-        await(vm.adjust) { it != null }
-        vm.adjust(TimeField.END, at(13, 22)).join()
-        assertEquals(at(13, 22), repo.get("sample-sleep-1240")?.endMillis)
-    }
-
-    @Test
-    fun aDoubleTapOnAnAdjustChoiceAppliesItOnceAndReturnsOnce() = test {
-        clock.set(SampleData.NOW_0312)
-        seed(SampleData.scenarioAt0312())
-        vm.beginAdjust("sample-sleep-0205", listOf(TimeField.START))
-        val option = await(vm.adjust) { it != null }!!.groups.single().options.single { it.minutes == -5 }
-        assertEquals(at(2, 0), option.at)
-
-        val first = vm.adjust(TimeField.START, option.at)
-        val second = vm.adjust(TimeField.START, option.at)
-        first.join()
-        second.join()
-
-        // Never cumulative (DESIGN_SPEC §4.4): 02:05 − 5m, not − 10m.
-        assertEquals(at(2, 0), repo.get("sample-sleep-0205")?.startMillis)
-        assertEquals(1, events.count { it == WearEvent.CloseAdjust })
-        assertEquals(listOf(XHaptic.SEGMENT_TICK), haptics())
-    }
-
-    @Test
-    fun aDoubleConfirmOnSetTimeAppliesItOnceAndReturnsOnce() = test {
-        seed(SampleData.scenario())
-        vm.beginAdjust("sample-sleep-1240", listOf(TimeField.START, TimeField.END), allowSetTime = true)
-        vm.beginSetTime(TimeField.END)
-        await(vm.setTime) { it != null }
-        val first = vm.setTime(LocalTime.of(13, 15))
-        val second = vm.setTime(LocalTime.of(13, 15))
-        first.join()
-        second.join()
-        assertEquals(at(13, 15), repo.get("sample-sleep-1240")?.endMillis)
-        assertEquals(1, events.count { it == WearEvent.CloseAdjust })
-        assertEquals(listOf(XHaptic.SEGMENT_TICK), haptics())
-    }
-
-    @Test
-    fun setTimePutsThePickedTimeOnTheEntrysDayOrTheDayBefore() = test {
-        seed(SampleData.scenario())
-        vm.beginAdjust("sample-sleep-1240", listOf(TimeField.START, TimeField.END), allowSetTime = true)
-        vm.beginSetTime(TimeField.END)
-        assertEquals(at(13, 27), await(vm.setTime) { it != null }!!.base)
-        vm.setTime(LocalTime.of(13, 15)).join()
-        assertEquals(at(13, 15), repo.get("sample-sleep-1240")?.endMillis)
-        assertEquals(WearEvent.CloseAdjust, awaitEvent(WearEvent.CloseAdjust).last())
-
-        // 23:00 today would be in the future: it lands on the day before.
-        vm.beginAdjust("sample-pee-1344", listOf(TimeField.START), allowSetTime = true)
-        vm.beginSetTime(TimeField.START)
-        await(vm.setTime) { it?.entry?.id == "sample-pee-1344" }
-        vm.setTime(LocalTime.of(23, 0)).join()
-        assertEquals(epochMillis(SampleData.YESTERDAY, 23, 0, zone), repo.get("sample-pee-1344")?.startMillis)
-    }
-
-    @Test
-    fun setTimeRejectsAnEndBeforeTheStart() = test {
-        seed(SampleData.scenario())
-        vm.beginAdjust("sample-sleep-1240", listOf(TimeField.START, TimeField.END), allowSetTime = true)
-        vm.beginSetTime(TimeField.END)
-        await(vm.setTime) { it != null }
-        vm.setTime(LocalTime.of(12, 0)).join()
-        assertEquals(at(13, 27), repo.get("sample-sleep-1240")?.endMillis)
-        assertEquals(XHaptic.REJECT, haptics().last())
-    }
-
     // ---- Babies (BABIES_AND_BACKUP §2.5) --------------------------------------------------------
 
     @Test
@@ -756,9 +639,6 @@ class MainViewModelTest {
         seed(SampleData.scenario())
         vm.beginFeed()
         vm.beginDiaper()
-        vm.beginAdjust("sample-pee-1344", listOf(TimeField.START), allowSetTime = true)
-        vm.beginSetTime(TimeField.START)
-        await(vm.setTime) { it != null }
         vm.beginFeed()
         vm.chooseFeedType(FeedType.FORMULA).join()
         assertNotNull(vm.receipt.value)
@@ -771,8 +651,6 @@ class MainViewModelTest {
         assertNull(vm.sideDraft.value)
         assertNull(vm.diaperDraft.value)
         assertNull("Undo belonged to Noa's formula", vm.receipt.value)
-        assertNull(await(vm.adjust) { it == null })
-        assertNull(await(vm.setTime) { it == null })
         // Undo now has nothing to revert.
         vm.undo().join()
         assertEquals(SampleData.scenario().size + 1, repo.observeAllEntries().first().size)
@@ -823,7 +701,6 @@ class MainViewModelTest {
             // The time-zone broadcast (or the next minute tick) re-reads the zone.
             travelling.refresh()
             assertEquals(ZoneId.of("Europe/London"), await(travelling.main) { it.zone == system }.zone)
-            assertEquals(ZoneId.of("Europe/London"), await(travelling.today) { it.zone == system }.zone)
             travelling.beginDiaper()
             assertEquals(ZoneId.of("Europe/London"), travelling.diaperDraft.value?.zone)
         } finally {

@@ -17,7 +17,6 @@
     <!-- TalkBack name of the running-sleep EdgeButton (DESIGN_SPEC §9.4) -->
     <string name="cd_woke_up_end_sleep">Woke up, end sleep</string>
     <!-- Click label of status cards and Today rows: they open Adjust -->
-    <string name="action_adjust">Adjust</string>
 
     <!-- Logged -->
     <string name="logged_already_logged">Already logged</string>
@@ -25,17 +24,10 @@
     <string name="logged_dismiss">Dismiss</string>
 
     <!-- Adjust: group headers for the start and end of a completed interval. %1$s is a clock time. -->
-    <string name="adjust_start_at">Start · %1$s</string>
-    <string name="adjust_end_at">End · %1$s</string>
-    <string name="action_set_time">Set time</string>
 
     <!-- Today -->
-    <string name="today_empty">Nothing logged today yet</string>
-    <string name="action_more_on_phone">More on phone</string>
     <!-- OpenOnPhoneDialog curved text -->
-    <string name="open_on_phone">Continue on phone</string>
     <!-- Failure confirmation when the phone could not open History (not reachable, or an old phone app) -->
-    <string name="open_on_phone_failed">Couldn\'t open on phone</string>
 
     <!-- ===== Spoken forms (TalkBack, DESIGN_SPEC §9.4–9.5): never arrows, "+" or dashes ===== -->
     <!-- Breast sides with an order, read without the arrow ("Left → Right") -->
@@ -46,7 +38,6 @@
     <!-- A time range, read without the dash: "14:32 to 14:50". %1$s and %2$s are clock times. -->
     <string name="spoken_range">%1$s to %2$s</string>
     <!-- A range on another day: "Sun 22:40 to 01:35". %1$s weekday, %2$s spoken_range. -->
-    <string name="spoken_range_on_day">%1$s %2$s</string>
     <!-- Two spoken facts in a row: "Left then right, 18 minutes" -->
     <string name="spoken_pair">%1$s, %2$s</string>
     <!-- A status with its duration and start: "Awake 1 hour 5 minutes, since 13:27" -->
@@ -105,8 +96,10 @@
     <!-- ===== Ongoing Activity (DESIGN_SPEC §3.8, §10.6) ===== -->
     <string name="ongoing_channel_name">Running timers</string>
     <string name="ongoing_channel_description">Shows a running sleep on the watch face.</string>
-    <!-- "Asleep since 02:05" (no ticking duration). Keep the #start# token: the system fills it in. -->
+    <!-- TalkBack for the Ongoing Activity: "Asleep since 02:05". Keep the #start# token. -->
     <string name="ongoing_asleep_since">Asleep since #start#</string>
+    <!-- "Asleep 1:07:23": the system fills in #elapsed#, how long the sleep has run, and keeps it current. Keep the token. -->
+    <string name="ongoing_asleep_for">Asleep #elapsed#</string>
     <!-- TalkBack, the place of a ticked side checkbox: "Left, first, checkbox, checked" -->
     <string name="spoken_side_first">first</string>
     <string name="spoken_side_second">second</string>

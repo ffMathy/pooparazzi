@@ -71,6 +71,25 @@ class SurfaceText(
     fun template(template: Template, value: TimeText): TimeText =
         TimeText(template.fill(value.static), template.wrap(value.dynamic), template.fill(value.longest))
 
+    /**
+     * An estimate relative to the platform clock, by the rules of `GlanceText.next`: [inTemplate] with the time until
+     * [atMillis] rounded up to five minutes ("Next in 55m"), [soon] under five minutes, then [agoTemplate] with how long
+     * ago it was once a minute past ("Due 24m ago"). [static] is the line at the time the surface was built.
+     */
+    fun estimate(atMillis: Long, static: String, inTemplate: String, soon: String, agoTemplate: String): TimeText {
+        val until = DynamicInstant.platformTimeWithSecondsPrecision().durationUntil(DynamicInstant.withSecondsPrecision(Instant.ofEpochMilli(atMillis)))
+        val seconds = until.toIntSeconds()
+        val roundedUpMinutes = seconds.plus(STEP_SECONDS - 1).div(STEP_SECONDS).times(STEP_SECONDS / 60)
+        val ahead = Template(inTemplate)
+        val past = Template(agoTemplate)
+        val dynamic = DynamicString.onCondition(seconds.gte(STEP_SECONDS)).use(ahead.wrap(minutesBody(roundedUpMinutes)))
+            .elseUse(
+                DynamicString.onCondition(seconds.gt(-60)).use(DynamicString.constant(soon))
+                    .elseUse(past.wrap(agoBody(atMillis))),
+            )
+        return TimeText(static, dynamic, longestOf(static, ahead.fill(widestDuration), soon, past.fill(widestDuration)))
+    }
+
     /** Clock time "14:32" (absolute, never changes). */
     fun clock(millis: Long): String = formatters.clock.format(millis, zone)
 
@@ -112,6 +131,16 @@ class SurfaceText(
             .concat(DynamicString.constant(words.hour))
         return DynamicString.onCondition(totalMinutes.lt(MINUTES_PER_HOUR)).use(minutes)
             .elseUse(DynamicString.onCondition(totalMinutes.lt(MINUTES_PER_DAY)).use(hoursAndMinutes).elseUse(daysAndHours))
+    }
+
+    /** "55m" or "2h 10m" for a whole number of minutes (an estimate's rounded time until it). */
+    private fun minutesBody(totalMinutes: DynamicInt32): DynamicString {
+        val minutes = totalMinutes.format().concat(DynamicString.constant(words.minute))
+        val hoursAndMinutes = totalMinutes.div(MINUTES_PER_HOUR).format()
+            .concat(DynamicString.constant(words.hour + " "))
+            .concat(totalMinutes.rem(MINUTES_PER_HOUR).format(TWO_DIGITS))
+            .concat(DynamicString.constant(words.minute))
+        return DynamicString.onCondition(totalMinutes.lt(MINUTES_PER_HOUR)).use(minutes).elseUse(hoursAndMinutes)
     }
 
     /** The "just now" override: while under a minute since [fromMillis], time-since reads "just now". */
@@ -210,6 +239,9 @@ class SurfaceText(
     companion object {
         private const val MINUTE = 60_000L
         private const val MINUTES_PER_HOUR = 60
+
+        /** An estimate's rounding step ([com.ffmathy.pooparazzi.core.domain.Expected.STEP_MILLIS]), in seconds. */
+        private const val STEP_SECONDS = (com.ffmathy.pooparazzi.core.domain.Expected.STEP_MILLIS / 1000).toInt()
         private const val MINUTES_PER_DAY = 24 * 60
         private const val OTHER_QUANTITY = 5
         private const val LESS_THAN_ONE = "<1"

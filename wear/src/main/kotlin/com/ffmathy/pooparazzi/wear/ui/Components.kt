@@ -2,12 +2,7 @@ package com.ffmathy.pooparazzi.wear.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -286,73 +281,6 @@ fun XListButton(
             )
         },
     )
-}
-
-/**
- * A status card (DESIGN_SPEC §3.5.9): line 1 icon 18 + lead word (no digits), line 2 "{duration} · {clock}"
- * autosized down to 11 sp. TalkBack reads [spoken] (durations spoken in words, §9.5).
- */
-@Composable
-fun StatusCard(
-    icon: ImageVector,
-    iconTint: Color,
-    title: String,
-    detail: String,
-    spoken: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    transformation: SurfaceTransformation? = null,
-    forecast: String? = null,
-) {
-    val ambient = isAmbient()
-    val colors = MaterialTheme.colorScheme
-    Button(
-        onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            // A minimum, not a fixed height: the list's edge transformation must be able to squish it.
-            .heightIn(min = 52.dp)
-            .semantics { contentDescription = spoken },
-        shape = WatchShapes.Button,
-        colors = tonalButtonColors(),
-        border = ambientBorder(colors.outline),
-        transformation = transformation,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-    ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .clearAndSetSemantics { },
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                XIcon(icon, contentDescription = null, tint = if (ambient) WatchAmbient.content else iconTint, size = 18.dp)
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    title,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (ambient) WatchAmbient.content else colors.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            AutoSizeLine(
-                text = detail,
-                style = WatchType.labelSmall,
-                color = if (ambient) WatchAmbient.content else colors.onSurfaceVariant,
-                minSize = 11,
-            )            // What the last week expects next ("Next sleep in 55m"; V1_ADDITIONS §9), under the facts.
-            if (forecast != null) {
-                AutoSizeLine(
-                    text = forecast,
-                    style = WatchType.labelSmall,
-                    color = if (ambient) WatchAmbient.content else colors.onSurfaceVariant,
-                    minSize = 11,
-                )
-            }
-        }
-    }
 }
 
 /** One centred line that steps its size down (to [minSize] sp) instead of clipping. */

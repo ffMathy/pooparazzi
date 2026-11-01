@@ -17,7 +17,7 @@ object WidgetSamples {
     /** The sleep started on the widget at 14:32 in [justLogged]. */
     val sleep1432: Entry = Entry.sleep(SampleData.NOW_1432, id = "sample-widget-sleep-1432")
 
-    /** 14:32: "Fed at 12:22", "Pee at 13:44", "Awake since 13:27", "Next sleep ~15:25". */
+    /** 14:32: "Fed 2h 10m ago", "Pee 48m ago", "Awake 1h 05m", "Next sleep in 50m". */
     fun idle(night: Boolean): WidgetSnapshot = build(SampleData.history(zone = zone), SampleData.NOW_1432, night)
 
     /** 14:32, sleep just started on the widget: "Sleep started at 14:32" with Undo. */
@@ -38,7 +38,7 @@ object WidgetSamples {
     /** 03:12, asleep since 02:05, "Wakes ~05:25": always Night under Auto. */
     fun asleep(): WidgetSnapshot = build(SampleData.historyAt0312(zone), SampleData.NOW_0312, night = null)
 
-    /** 14:50, after the 14:32 breast feed: "Fed at 14:32" with the breast icon. */
+    /** 14:50, after the 14:32 breast feed: "Fed 18m ago" with the breast icon. */
     fun afterBreastfeed(night: Boolean): WidgetSnapshot = build(SampleData.history(zone = zone) + SampleData.recentBreastfeed(zone), SampleData.NOW_1450, night)
 
     /** Twins (Noa current) at 14:32: the status row starts with "Noa", and TalkBack names her. */

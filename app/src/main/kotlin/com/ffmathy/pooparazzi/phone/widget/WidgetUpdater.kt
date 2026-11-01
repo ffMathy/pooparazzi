@@ -1,11 +1,15 @@
 package com.ffmathy.pooparazzi.phone.widget
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.util.Log
-import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -21,13 +25,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 /**
  * Keeps the placed widgets current (DESIGN_SPEC §10.11): re-renders them on every log and sleep change (the app scope
- * observes the entries, see `SystemSurfaces`), after every widget command, when a receipt or notice expires, and at the
+ * observes the entries, see `SystemSurfaces`), after every widget command, every minute (the times are relative: "Fed
+ * 2h 10m ago", "Next in 55m"), when a receipt or notice expires, and at the
  * night-window boundaries while the Appearance is Auto (Night ↔ Day). The timed refreshes are one-time WorkManager work,
  * so they also happen when the process has died.
  */
@@ -72,6 +78,7 @@ object WidgetUpdater {
         val work = WorkManager.getInstance(context)
         PrefsWidgetMemoStore.get(context).memo.value.nextExpiry(now)?.let { at -> work.refreshAt(context, "expiry", at, now) }
         WidgetSource.from(context).current().forecastExpiry(now)?.let { at -> work.refreshAt(context, "forecast", at, now) }
+        scheduleMinuteTick(context, now)
         if (graph.settings.current().appearance == Appearance.AUTO) {
             work.refreshAt(context, "night", nextNightBoundary(now, zone), now)
         }
@@ -89,11 +96,23 @@ object WidgetUpdater {
         enqueueUniqueWork("widget-refresh-$purpose-$at", ExistingWorkPolicy.KEEP, request)
     }
 
+    /**
+     * Redraws at the next minute, so the relative times follow the clock ("Fed 2h 10m ago", "Next in 55m"). The alarm
+     * does not wake the phone: one that sleeps redraws as soon as it wakes up, before anyone looks at the widget.
+     */
+    private fun scheduleMinuteTick(context: Context, now: Long) {
+        val alarms = context.getSystemService(AlarmManager::class.java) ?: return
+        alarms.set(AlarmManager.RTC, now - now.mod(MINUTE_MILLIS) + MINUTE_MILLIS, WidgetTickReceiver.intent(context))
+    }
+
     /** Stops the timed refreshes once no widget of any kind is placed (a provider's last instance was removed). */
     fun cancelIfNoneLeft(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
         val left = providers().sumOf { (receiver, _) -> manager.getAppWidgetIds(ComponentName(context, receiver)).size }
-        if (left == 0) runCatching { WorkManager.getInstance(context).cancelAllWorkByTag(TAG_REFRESH) }
+        if (left == 0) {
+            runCatching { WorkManager.getInstance(context).cancelAllWorkByTag(TAG_REFRESH) }
+            context.getSystemService(AlarmManager::class.java)?.cancel(WidgetTickReceiver.intent(context))
+        }
     }
 
     /** The next start or end of the night window after [now] (DESIGN_SPEC §8.1, 19:00 and 07:00 by default). */
@@ -112,9 +131,33 @@ object WidgetUpdater {
 
     private const val TAG = "WidgetUpdater"
     private const val TAG_REFRESH = "widget-refresh"
+    private const val MINUTE_MILLIS = 60_000L
 
     /** WorkManager may run early by a few milliseconds; a little slack makes sure the deadline has passed. */
     private const val SLACK_MILLIS = 250L
+}
+
+/** The minute tick of [WidgetUpdater]: one refresh, which schedules the next. */
+class WidgetTickReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val pending = goAsync()
+        Core.ensureInitialized(context).scope.launch {
+            try {
+                WidgetUpdater.refresh(context)
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    companion object {
+        fun intent(context: Context): PendingIntent = PendingIntent.getBroadcast(
+            context,
+            0,
+            Intent(context, WidgetTickReceiver::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+    }
 }
 
 /** Runs one [WidgetUpdater.refresh] (a receipt expired, or the night window began or ended). */

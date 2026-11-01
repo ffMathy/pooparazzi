@@ -31,10 +31,8 @@ import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
 import com.ffmathy.pooparazzi.wear.logged.LOGGED_INERT_MILLIS
 import com.ffmathy.pooparazzi.wear.logged.UNDONE_MILLIS
-import com.ffmathy.pooparazzi.wear.phone.PhoneLink
 import com.ffmathy.pooparazzi.wear.testing.FakeSettingsRepository
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -61,20 +59,7 @@ class WearNavHostTest {
     private lateinit var repo: RoomEntryRepository
     private lateinit var vm: MainViewModel
     private val store = ViewModelStore()
-    private val phone = FakePhoneLink()
     private val settings = FakeSettingsRepository()
-
-    /** A phone that is not reachable unless a test says so, and that cannot open History unless told it can. */
-    private class FakePhoneLink : PhoneLink {
-        override val available = MutableStateFlow(false)
-        var opens = false
-        var requests = 0
-
-        override suspend fun openHistory(): Boolean {
-            requests++
-            return opens
-        }
-    }
 
     @Before
     fun setUp() {
@@ -88,7 +73,7 @@ class WearNavHostTest {
         }
         vm = ViewModelProvider.create(store, factory)[MainViewModel::class]
         compose.mainClock.autoAdvance = false
-        compose.setContent { XWearTheme { AppScaffold { WearNavHost(vm, phoneLink = phone) } } }
+        compose.setContent { XWearTheme { AppScaffold { WearNavHost(vm) } } }
         settle()
     }
 
@@ -126,7 +111,7 @@ class WearNavHostTest {
 
     @Test
     fun formulaThenUndo() {
-        waitFor("Feed").performClick()
+        waitForDescription("Feed.").performClick()
         waitFor("Feed · 14:32")
         settle(600) // Past the picker cooldown.
         compose.onNodeWithText("Formula").performClick()
@@ -144,7 +129,7 @@ class WearNavHostTest {
 
     @Test
     fun diaperWithPeeIsSaved() {
-        waitFor("Diaper").performClick()
+        waitForDescription("Diaper.").performClick()
         waitFor("Diaper · 14:32")
         settle(600)
         compose.onNodeWithText("Pee").performClick()
@@ -173,7 +158,7 @@ class WearNavHostTest {
 
     @Test
     fun breastThenSideThenSaveLogsAnInstantWithTheTickOrder() {
-        waitFor("Feed").performClick()
+        waitForDescription("Feed.").performClick()
         settle(600)
         compose.onNodeWithText("Breast").performClick()
         waitFor("Which side?")
@@ -199,45 +184,8 @@ class WearNavHostTest {
     }
 
     @Test
-    fun historyOpensTodayAndARowOpensAdjust() {
-        runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
-        waitForDescription("Last feed, formula")
-        // Hero, Awake, last diaper, History: the list continues below the fold.
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
-        waitFor("History").performClick()
-        waitFor("Today")
-        settle(600) // Past the screen transition: a tap only counts on a settled screen.
-        waitForDescription("Pee, 13:44").performClick()
-        waitFor("Pee · 13:44")
-        waitForDescription("5 minutes earlier, 13:39")
-    }
-
-    @Test
-    fun aDoubleTapOnAnAdjustChoiceMovesTheTimeOnceAndReturnsToMain() {
-        runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
-        waitForDescription("Last feed, formula")
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
-        // The Awake card adjusts the end of the last sleep (13:27).
-        waitForDescription("Awake 1 hour 5 minutes").performClick()
-        waitFor("Woke up · 13:27")
-        settle(600)
-        val minusFive = compose.onNodeWithContentDescription("5 minutes earlier, 13:22")
-        minusFive.performClick()
-        minusFive.performClick()
-        settle(600)
-
-        // The write lands off the main thread: wait for it rather than for a fixed time (slow CI runners).
-        fun sleepEnd() = runBlocking { repo.get("sample-sleep-1240") }?.endMillis
-        compose.waitUntil(5_000) { sleepEnd() != at(13, 27) }
-        // Back on Main (a second pop used to remove Main itself and leave a blank screen).
-        waitForDescription("Start sleep")
-        waitForDescription("Last feed, formula")
-        assertEquals("once, not −10m", at(13, 22), sleepEnd())
-    }
-
-    @Test
     fun aDoubleTapOnAColourReturnsToTheDiaperScreenOnce() {
-        waitFor("Diaper").performClick()
+        waitForDescription("Diaper.").performClick()
         waitFor("Diaper · 14:32")
         settle(600)
         compose.onNodeWithText("Poop").performClick()
@@ -259,34 +207,14 @@ class WearNavHostTest {
         assertTrue(vm.diaperDraft.value?.poop == true)
     }
 
-    @Test
-    fun moreOnPhoneSaysSoWhenThePhoneCannotOpenHistory() {
-        phone.available.value = true
-        runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
-        waitForDescription("Last feed, formula")
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
-        waitFor("History").performClick()
-        waitFor("Today")
-        settle(600)
-        // Main stays composed behind Today (for swipe-to-dismiss): scroll Today's own list.
-        compose.onNode(hasScrollToIndexAction() and hasAnyDescendant(hasText("Today"))).performScrollToIndex(SampleData.scenario().size)
-        settle(600)
-        waitFor("More on phone").performClick()
-
-        waitForDescription("Couldn't open on phone")
-        assertEquals(1, phone.requests)
-    }
-
     // ---- Babies (BABIES_AND_BACKUP §2.5) --------------------------------------------------------
 
     @Test
     fun withOneBabyMainHasNoBabyButton() {
         runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
         waitForDescription("Last feed, formula")
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
         settle()
         assertTrue(compose.onAllNodes(hasContentDescription("Switch baby", substring = true)).fetchSemanticsNodes().isEmpty())
-        assertTrue(compose.onAllNodes(hasText("Noa")).fetchSemanticsNodes().isEmpty())
     }
 
     @Test
@@ -294,8 +222,6 @@ class WearNavHostTest {
         settings.state.value = SampleData.twinSettings
         runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
         waitForDescription("Last feed, formula")
-        // The baby button comes right after the hero.
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
         waitForDescription("Noa. Switch baby").performClick()
 
         waitFor("Switch baby")
@@ -309,11 +235,9 @@ class WearNavHostTest {
         waitForDescription("No feeds yet")
         assertEquals(SampleData.TWIN_ID, settings.state.value.selectedBabyId)
         settle(1_000) // The picker has slid away once the transition is over.
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
         waitForDescription("Ida. Switch baby")
         // The diaper is Ida's.
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(0)
-        waitFor("Diaper").performClick()
+        waitForDescription("Diaper.").performClick()
         waitFor("Diaper · 14:32")
         settle(600)
         compose.onNodeWithText("Save").performClick()
