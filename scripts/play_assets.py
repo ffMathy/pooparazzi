@@ -47,12 +47,12 @@ DIAPER = (
 # Recorded phone screen (app/screenshots/<lang>/), the part of it to show (None: all of it, else a box), and the
 # caption per language. Order is the listing's order; Play shows at most 8.
 PHONE = [
-    ("01-home-night.png", None, {"en": "Feeds, diapers and sleep at a glance", "da": "Måltider, bleer og søvn med et blik"}),
-    ("03-home-asleep-night.png", None, {"en": "Start a nap with one tap", "da": "Start en lur med ét tryk"}),
+    ("03-home-asleep-night.png", None, {"en": "Made for 3 am: dim, and one tap to start a nap", "da": "Lavet til kl. 3: dæmpet, og ét tryk starter en lur"}),
+    ("02-home-day.png", None, {"en": "See when the next feed and nap are due", "da": "Se, hvornår næste måltid og lur venter"}),
     ("07-breast-sheet-ticked.png", None, {"en": "Know which side is next", "da": "Husk, hvilken side der er den næste"}),
     ("08-diaper-sheet.png", None, {"en": "Pee, poop, colour and texture", "da": "Tis, afføring, farve og konsistens"}),
     ("10-history-day.png", None, {"en": "The whole day on one ribbon", "da": "Hele dagen på ét bånd"}),
-    ("21-statistics.png", None, {"en": "Averages for any period", "da": "Gennemsnit for enhver periode"}),
+    ("45-statistics-typical-day.png", None, {"en": "Averages and your baby's typical day", "da": "Gennemsnit og barnets typiske dag"}),
     # The recording stacks four widget states; the first two (Night, then Day with its Undo) are enough.
     ("17-widget-4x2.png", (0, 0, 1170, 1440), {"en": "Log from your home screen", "da": "Log fra startskærmen"}),
     ("37-settings-family.png", None, {"en": "Share with your family, if you like", "da": "Del med familien, hvis du vil"}),

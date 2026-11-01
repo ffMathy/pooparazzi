@@ -42,6 +42,7 @@ import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
+import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.ui.components.SyncGlyphs
 import com.ffmathy.pooparazzi.phone.ui.components.SyncIcon
 import com.ffmathy.pooparazzi.phone.ui.components.SyncIcons
@@ -53,7 +54,7 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
  * Home's top bar (DESIGN_SPEC §3.3.1): the baby's name, the status icons under it (the watch, and the cloud while
- * signed in; an icon in its error state is a retry button), the History pill and Settings. In lights-down the text and
+ * signed in; an icon in its error state is a retry button), the History pill, the `chart` button to Statistics and Settings. In lights-down the text and
  * icons use onSurfaceVariant and the pill loses its fill.
  *
  * With two or more [babies] (BABIES_AND_BACKUP §2.4) the name is the current baby's label on a 48 dp button with a
@@ -119,6 +120,17 @@ internal fun HomeTopBar(
                 }
             }
             HistoryPill(pill, lightsDown, actions::onOpenHistory, Modifier.padding(top = 8.dp))
+            // Statistics one tap from Home, so it is found without going through History first.
+            Box(
+                Modifier
+                    .padding(start = TopBarGap, top = 8.dp)
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .clickable(role = Role.Button, onClick = actions::onOpenStatistics),
+                contentAlignment = Alignment.Center,
+            ) {
+                XIcon(XIcons.chart, contentDescription = stringResource(R.string.statistics_title), tint = colors.onSurfaceVariant, size = 24.dp)
+            }
             Box(
                 Modifier
                     .padding(start = TopBarGap, end = 12.dp, top = 8.dp)
@@ -197,8 +209,8 @@ private fun historyPillStyle(icons: List<SyncIcon>, maxWidth: Dp): PillStyle {
     return remember(sync, label, maxWidth, density) {
         with(density) {
             val text = measurer.measure(label, PhoneType.labelLarge, maxLines = 1).size.width.toDp()
-            // Start 20, the gaps either side of the pill, Settings 48 and its 12 end margin.
-            val left = maxWidth - 20.dp - TopBarGap * 2 - 48.dp - 12.dp
+            // Start 20, the gaps either side of the pill, Statistics 48 and its gap, Settings 48 and its 12 end margin.
+            val left = maxWidth - 20.dp - TopBarGap * 3 - 48.dp * 2 - 12.dp
             when {
                 left - (12.dp + 18.dp + 6.dp + text + 14.dp) >= sync -> PillStyle.FULL
                 left - (14.dp + text + 14.dp) >= sync -> PillStyle.TEXT

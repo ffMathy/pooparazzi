@@ -14,6 +14,9 @@ import com.ffmathy.pooparazzi.core.model.PoopTexture
 interface HomeActions {
     // Top bar and navigation
     fun onOpenHistory() {}
+
+    /** The `chart` button between History and Settings: Statistics (P8). */
+    fun onOpenStatistics() {}
     fun onOpenSettings() {}
     fun onRetrySync() {}
 

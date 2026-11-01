@@ -73,6 +73,17 @@ class AppNavigationTest {
         compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
     }
 
+    /** Home's `chart` button opens Statistics directly; Back returns to Home. */
+    @Test
+    fun homeOpensStatisticsAndBackReturnsHome() {
+        compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
+        compose.onNodeWithContentDescription("Statistics").performClick()
+        compose.waitUntilAtLeastOneExists(hasText(STATISTICS_EMPTY), timeoutMillis = 5_000)
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText(STATISTICS_EMPTY)).fetchSemanticsNodes().isEmpty() }
+    }
+
     /** A second Back tap while Statistics is still animating out must not pop History as well (back on Home). */
     @Test
     fun aDoubleTapOnBackFromStatisticsReturnsToHistoryOnce() {
