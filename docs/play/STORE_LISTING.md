@@ -46,6 +46,8 @@ HISTORY AND STATISTICS
 • A day view with a 24-hour ribbon and day totals.
 • Edit, delete or add past entries; every quick log can be undone.
 • Average feeds, diapers and sleep per day over the period you choose.
+• Your baby's typical day: when they usually sleep, feed and need a new diaper, and the usual time between feeds, between diapers, how long naps and nights last and how long they are awake, by day and by night.
+• Statistics is one tap from the home screen.
 
 ON YOUR WRIST
 • A full Wear OS app that logs even when the phone is away.
@@ -125,6 +127,8 @@ HISTORIK OG STATISTIK
 • En dagsoversigt med et døgnbånd og dagens tal.
 • Ret, slet eller tilføj tidligere registreringer; alt, der logges hurtigt, kan fortrydes.
 • Gennemsnitligt antal måltider, bleskift og søvn per dag i den periode, du vælger.
+• Barnets typiske dag: hvornår barnet plejer at sove, spise og skulle skiftes, og den typiske tid mellem måltider og bleskift, hvor længe lure og nætter varer, og hvor længe barnet er vågent, om dagen og om natten.
+• Statistikken er ét tryk fra forsiden.
 
 PÅ HÅNDLEDDET
 • En fuld Wear OS-app, der logger, også når telefonen er langt væk.

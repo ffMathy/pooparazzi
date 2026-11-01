@@ -33,7 +33,7 @@ data object Home
 @Serializable
 data object History
 
-/** Statistics (P8), opened from History. */
+/** Statistics (P8), opened from Home's `chart` button or History's Statistics button. */
 @Serializable
 data object Statistics
 
@@ -111,7 +111,7 @@ fun PooparazziPhoneApp(
 }
 
 /**
- * Home, History (with Statistics over it), Settings, the font licences, the Account screen and the join confirmation. The edit sheet (P4) is
+ * Home, History, Statistics (over Home or History), Settings, the font licences, the Account screen and the join confirmation. The edit sheet (P4) is
  * not a destination: it opens over the screen that asked for it (Home's since-rows and Adjust card, History's rows and
  * FAB), with its scrim over that screen. A deep link returns to Home first, which then opens the sheet or card it asks
  * for; [HomeLaunch.History] (the watch's "More on phone") opens History over Home instead.
@@ -162,6 +162,7 @@ fun PooparazziNavHost(
             HomeRoute(
                 onOpenHistory = { open(History) },
                 onOpenSettings = { open(Settings) },
+                onOpenStatistics = { open(Statistics) },
                 launch = launch?.takeUnless { it == HomeLaunch.History },
                 onLaunchHandled = onLaunchHandled,
                 onLaunchedSheetClosed = onLaunchedSheetClosed,

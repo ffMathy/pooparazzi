@@ -62,6 +62,7 @@ internal object HomeDefaults {
 fun HomeRoute(
     onOpenHistory: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenStatistics: () -> Unit = {},
     launch: HomeLaunch? = null,
     onLaunchHandled: (HomeLaunch) -> Unit = {},
     onLaunchedSheetClosed: () -> Unit = {},
@@ -93,10 +94,12 @@ fun HomeRoute(
     }
     val history by rememberUpdatedState(onOpenHistory)
     val settings by rememberUpdatedState(onOpenSettings)
+    val statistics by rememberUpdatedState(onOpenStatistics)
     val actions = remember(viewModel, editViewModel) {
         object : HomeActions by viewModel {
             override fun onOpenHistory() = history()
             override fun onOpenSettings() = settings()
+            override fun onOpenStatistics() = statistics()
             override fun onEditEntry(entryId: String) = editViewModel.openEntry(entryId)
             override fun onSheetEdit(entryId: String) = viewModel.onSheetEdit(entryId) { editViewModel.openEntry(entryId) }
         }

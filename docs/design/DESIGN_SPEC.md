@@ -169,6 +169,7 @@ Home ──Diaper / Feed───────▶ Diaper / Feed sheet ──Save 
  │ ├─History pill / Today grid ──▶ History ──row──▶ Edit sheet
  │ │                                        ├─Statistics button▶ Statistics (P8) ──range chip──▶ menu / date range dialog
  │ │                                        └─"Add entry" FAB──▶ Edit sheet ("Add past entry" mode)
+ │ ├─`chart` button ────────▶ Statistics (P8)
  │ └─Settings ──────────────▶ Settings (not designed; Appendix B)
 Widget buttons ──▶ log in place (no app launch) · Widget background ──▶ Home with the receipt for the last widget log
 Live Update ──"Woke up" action──▶ ends the sleep
@@ -220,7 +221,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Earlier.
 | Band | Height | Reference y | Content |
 |---|---|---|---|
 | Status-bar inset | 24 | 0–24 | background only |
-| Top bar | 64 | 24–88 | "Noa", status icons, History pill, Settings |
+| Top bar | 64 | 24–88 | "Noa", status icons, History pill, Statistics, Settings |
 | gap | 8 | | |
 | Lamp | 248 | 96–344 | §2.4 (it gives up the room the two-line since-rows take) |
 | gap | 4 | | |
@@ -239,6 +240,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Earlier.
 - "Noa" (the baby's name): titleLarge, onSurface, vertically centred on the same line as the History pill and Settings (32 dp from the top of the bar), whether or not status icons follow; the icons hang below it and the bar grows to fit them.
 - Status icons under the name (§4.5), directly below its 40 dp line: 20 dp glyphs 12 apart in onSurfaceVariant, no visible text — the watch (hidden without one), then the cloud while an account is signed in. TalkBack reads each icon's sentence (§4.5). An icon in its **error** state is in error colour and a 48 dp button (retry) that starts at its glyph and reaches up over the name; it may overlap only non-interactive content. When the first icon is a button the next glyph starts after it (28 dp gap), so two buttons never overlap. With two or more babies the icons are their own row, 48 dp tall in an error state. History and Statistics show no status icons: Home already does.
 - History pill: 48 target / 40 visual, r 20, fill surfaceContainerHigh, padding start 12 / end 14, `history` 18 onSurfaceVariant + 6 + "History" labelLarge onSurface. Opens History.
+- Statistics: 48 × 48 icon button 4 after the pill, `chart` 24 onSurfaceVariant, content description "Statistics". Opens Statistics (P8), so it is found without going through History.
 - Settings: 48 × 48 icon button, `settings` 24 onSurfaceVariant, content description "Settings".
 
 **Since-rows**: each is a full-width button 350 × 56 (min), r 12, padding 4 16, gap 12. Content: icon 40 (spanning both lines), then two lines — the title (titleMedium onSurface) over the detail (dataMedium onSurfaceVariant: elapsed time, then " · "-separated facts) — and `chevronRight` 16 in outline at the end. Each line is one line, ellipsized; from 130 % font scale each may take two. Text slot = **238 dp**.
@@ -334,6 +336,7 @@ Receipt rules:
 | Undo | revert; "Undone" | `Reject` |
 | Since-row | edit sheet of that latest entry | — |
 | History pill, Today grid | History | — |
+| `chart` button | Statistics | — |
 | Lamp text | edit sheet of the last feed (idle) or of the running sleep | — |
 
 Input cooldowns apply (§5.9): after a sheet tile commits, Feed, Diaper and the Sleep toggle ignore taps for 600 ms after the sheet has finished closing.

@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -60,6 +61,7 @@ class HomeSemanticsTest {
         override fun onDiaperPee(checked: Boolean) { calls += "pee:$checked" }
         override fun onSleepToggle(shownRunning: Boolean) { calls += "toggle:$shownRunning" }
         override fun onOpenHistory() { calls += "history" }
+        override fun onOpenStatistics() { calls += "statistics" }
         override fun onPoopColor(color: PoopColor?) { calls += "colour:$color" }
         override fun onSideTick(breast: Breast) { calls += "tick:$breast" }
         override fun onLogBreastfeed() { calls += "log-breast" }
@@ -163,6 +165,14 @@ class HomeSemanticsTest {
         show(HomeSamples.asleep())
         compose.onNodeWithText("Next in 2h 15m", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("wakes up in about 2 hours 15 minutes, around 05:27", useUnmergedTree = true).assertExists()
+    }
+
+    /** Statistics is one tap from Home: the `chart` button between the History pill and Settings. */
+    @Test
+    fun theStatisticsButtonOpensStatistics() {
+        show(HomeSamples.idle())
+        compose.onNodeWithContentDescription("Statistics").assertHasClickAction().performClick()
+        assertEquals(listOf("statistics"), calls)
     }
 
     @Test
