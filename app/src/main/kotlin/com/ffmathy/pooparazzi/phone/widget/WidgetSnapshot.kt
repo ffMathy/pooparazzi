@@ -121,15 +121,6 @@ fun WidgetSnapshot.forecastExpiry(now: Long): Long? = listOfNotNull(sleepForecas
     .filter { it > now }
     .minOrNull()
 
-/**
- * When the estimates' words next change without any new data ("Next in 55m" → "Next in 50m" → "Next soon" → "Due 1m
- * ago"), while they still show (until [forecastExpiry]).
- */
-fun WidgetSnapshot.forecastTextChange(now: Long): Long? = listOfNotNull(sleepForecast, feedForecast, poopForecast)
-    .filter { it.goneAtMillis > now }
-    .map { it.nextTextChange(now) }
-    .minOrNull()
-
 /** When the widgets next change without any new data: the receipt or notice expiry, if any. */
 fun WidgetMemo.nextExpiry(now: Long): Long? =
     listOfNotNull(receipt?.expiresAtMillis, notice?.expiresAtMillis).filter { it > now }.minOrNull()

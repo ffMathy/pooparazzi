@@ -28,8 +28,7 @@ enum class Estimate(@StringRes val inId: Int, @StringRes val soonId: Int, @Strin
  * An estimate relative to now, on every surface that shows one (the phone's widgets, the watch's Tile and app), as the
  * phone's Home words it (V1_ADDITIONS §9): the time until it rounded up to five minutes ("in 55m": a week's typical
  * gap, not a minute-exact promise), "soon" under five minutes, and how long ago once it is a minute past
- * ([Expected.remainingMillis], [Expected.agoMillis]). A surface that is not redrawn every minute redraws at
- * [Expected.nextTextChange].
+ * ([Expected.remainingMillis], [Expected.agoMillis]).
  */
 class EstimateText(private val res: Resources, private val duration: DurationFormatter) {
     constructor(context: Context) : this(context.resources, DurationFormatter.from(context))

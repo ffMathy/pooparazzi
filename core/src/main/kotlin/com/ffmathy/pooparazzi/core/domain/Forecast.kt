@@ -26,20 +26,6 @@ data class Expected(val atMillis: Long, val goneAtMillis: Long, val samples: Int
     /** How long ago it should have happened ("24m ago"); null until a full minute after it (until then it is "soon"). */
     fun agoMillis(now: Long): Long? = (now - atMillis).takeIf { it >= MINUTE_MILLIS }
 
-    /**
-     * The next moment after [now] at which its relative wording changes ("in 55m" → "in 50m" → "soon" → "1m ago" →
-     * "2m ago"), for surfaces that are redrawn only when asked to.
-     */
-    fun nextTextChange(now: Long): Long {
-        if (agoMillis(now) != null) return atMillis + ((now - atMillis) / MINUTE_MILLIS + 1) * MINUTE_MILLIS
-        val left = atMillis - now
-        // "Soon" (under a step away) until a full minute past it.
-        if (left < STEP_MILLIS) return atMillis + MINUTE_MILLIS
-        // Shown rounded up: "in 55m" from 55m down to 50m and a millisecond; at 50m sharp it reads "in 50m".
-        val steps = (left + STEP_MILLIS - 1) / STEP_MILLIS
-        return if (steps >= 2) atMillis - (steps - 1) * STEP_MILLIS else atMillis - STEP_MILLIS + 1
-    }
-
     /** [atMillis] to the nearest [STEP_MILLIS], for surfaces that show a clock time ("~15:25"). */
     val roundedAtMillis: Long get() = (atMillis + STEP_MILLIS / 2) / STEP_MILLIS * STEP_MILLIS
 

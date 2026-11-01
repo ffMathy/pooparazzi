@@ -423,15 +423,15 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
 
-Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (§8.5) and the device font (no tnum). They show **absolute times only, always with "at"** ("Fed at 12:22"). The sleep toggle logs in place without launching the app; Feed and Diaper open the app on the same Feed and Diaper sheets as Home's buttons, so the optional details (feed type and breast order, pee/poop, colour, texture) are asked for exactly as in the app.
+Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (§8.5) and the device font (no tnum). They show **relative times**, as the watch does ("Fed 2h 10m ago", "Asleep 1h 07m", "Next in 55m"), and are redrawn every minute by a non-waking alarm (a phone that sleeps redraws as it wakes); receipts keep their clock time ("Sleep started at 14:32"). The sleep toggle logs in place without launching the app; Feed and Diaper open the app on the same Feed and Diaper sheets as Home's buttons, so the optional details (feed type and breast order, pee/poop, colour, texture) are asked for exactly as in the app.
 
 **4×2** (reference 358 × 208, system corner radius (reference r 24), surfaceContainer, padding 12)
 
 | Row | Idle | Asleep | Just logged |
 |---|---|---|---|
-| 1 (24, not a separate target) | `feed` 16 + 6 + "Fed at 12:22" labelLarge 15 sp onSurface; 16 gap; `pee` 16 + "Pee at 13:44" | "Fed at 01:40", "Pee at 01:52" | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
+| 1 (24, not a separate target) | `feed` 16 + 6 + "Fed 2h 10m ago" labelLarge 15 sp onSurface; 16 gap; `pee` 16 + "Pee 48m ago" | "Fed 1h 32m ago", "Pee 1h 20m ago" | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
 | 2 (68) | 2 equal buttons, gap 8, r 20; icon 24 at +10, label 15 sp at +40: Feed (FEED colours, opens the Feed sheet), Diaper (DIAPER colours, `diaper`, opens the Diaper sheet) | unchanged | unchanged |
-| 3 (68) | Sleep toggle, full width, r 20 (as every widget button), SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake since 13:27" dataSmall | checked: r 20, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned `sleepRunning` 16 + 6 + "Asleep since 02:05" | unchanged |
+| 3 (68) | Sleep toggle, full width, r 20 (as every widget button), SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake 1h 05m" dataSmall | checked: r 20, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned "Asleep 1h 07m" (no icon) | unchanged |
 
 - Just logged: nothing else changes. No button moves, relabels or changes colour, and Undo never sits where a log button is. The receipt reverts on the next log or after 10 s.
 - The widget background (outside the buttons) opens the app with the receipt for the last widget log.
@@ -1088,7 +1088,7 @@ One grammar everywhere the app renders text, including the tile and complication
 | Day prefix | only when an entry starts on another day | `Sun 22:40 – 01:35` | |
 | Diaper kind | status surfaces lead with `Pee` / `Poop` / `Both`; receipts and History write Both as `Pee + poop` | `Pee 48m ago · 13:44` | `Diaper 48m ago · 13:44 · Pee` |
 | Offsets | minus sign U+2212, unit letter | `−5m`, `+5m` | `-5m` (hyphen) |
-| Widget | absolute times only, always with "at" | `Fed at 12:22` | `Fed 12:22` |
+| Widget | relative, as the watch (receipts keep "at") | `Fed 2h 10m ago` | `Fed at 12:22` |
 | Tile title | "Fed 14:32" (no "at"; width) | | |
 
 **Hero split**: a duration renders as number/unit pairs. 130 min → `2` `h` `10` `m`; 48 min → `48` `m`.
@@ -1361,7 +1361,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 | Condition | Change |
 |---|---|
-| 4×2 narrower than 320 dp, or font scale ≥ 1.3 | hide the end-aligned "Awake since 13:27" / "Asleep since 02:05" in row 3. While asleep, show "Asleep since 02:05" in row 1 instead. (The guideline 4×2 is 276 dp wide, 252 inside the padding, against the 294 dp row 3 needs) |
+| 4×2 narrower than 320 dp, or font scale ≥ 1.3 | hide the end-aligned "Awake 1h 05m" / "Asleep 1h 07m" in row 3. While asleep, show "Asleep 1h 07m" in row 1 instead. (The guideline 4×2 is 276 dp wide, 252 inside the padding, against the 294 dp row 3 needs) |
 | 3×1 where a word of "Start sleep" does not fit its button | label "Sleep" (unchecked) / "Woke up" (checked) |
 | 3×1 where any label still does not fit | icon-only buttons with content descriptions "Log feed" / "Log diaper" / "Start sleep" |
 | 3×1 narrower than 180 dp (an old 2×1) | padding 8, gaps 4, so the three 24 dp icons still fit |

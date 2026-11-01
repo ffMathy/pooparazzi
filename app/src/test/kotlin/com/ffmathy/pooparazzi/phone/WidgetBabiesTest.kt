@@ -66,7 +66,7 @@ class WidgetBabiesTest {
         val twins = render(DpSize(358.dp, 208.dp)) { LogWidgetContent(WidgetSamples.twins(night = true)) }
         val texts = twins.texts()
         assertEquals("the row starts with the name", "Noa", texts.first())
-        assertTrue("the feed still fits beside it: $texts", texts.any { it.startsWith("Fed at 12:22") })
+        assertTrue("the feed still fits beside it: $texts", texts.any { it.startsWith("Fed 2h 10m ago") })
 
         val one = render(DpSize(358.dp, 208.dp)) { LogWidgetContent(WidgetSamples.idle(night = true)) }
         assertFalse("one baby: no name in the row", "Noa" in one.texts())
@@ -77,7 +77,7 @@ class WidgetBabiesTest {
         val narrow = render(DpSize(250.dp, 190.dp)) { LogWidgetContent(WidgetSamples.twins(night = false)) }
         val texts = narrow.texts()
         assertEquals("Noa", texts.first())
-        assertFalse("no room for the diaper beside the name and the feed: $texts", texts.any { it.startsWith("Pee at") })
+        assertFalse("no room for the diaper beside the name and the feed: $texts", texts.any { it.startsWith("Pee ") })
     }
 
     @Test
