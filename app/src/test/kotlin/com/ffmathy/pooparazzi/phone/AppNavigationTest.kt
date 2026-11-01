@@ -118,7 +118,7 @@ class AppNavigationTest {
         compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
         compose.onNodeWithText("History").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
-        compose.onNodeWithContentDescription("Statistics").performClick()
+        compose.onNodeWithText("Statistics").performClick()
         compose.waitUntilAtLeastOneExists(hasText(STATISTICS_EMPTY), timeoutMillis = 5_000)
         compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Add entry")).fetchSemanticsNodes().isEmpty() }
     }

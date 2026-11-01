@@ -22,11 +22,21 @@
     <string name="history_next_day">Næste dag</string>
     <string name="history_add_entry">Tilføj</string>
     <string name="history_empty">Intet registreret denne dag.</string>
+    <string name="typical_day_title">Typisk dag</string>
+    <string name="typical_day_empty">En typisk dag vises, når der er registreret 3 dage i perioden.</string>
+    <string name="typical_day_by_day">Om dagen</string>
+    <string name="typical_day_by_night">Om natten</string>
+    <string name="typical_day_between_feeds">Mellem måltider</string>
+    <string name="typical_day_between_diapers">Mellem bleskift</string>
+    <string name="typical_day_sleep">Søvn</string>
+    <string name="typical_day_awake">Vågen</string>
+    <string name="typical_day_spoken_plot">Hvornår søvn, måltider og bleskift typisk sker i løbet af dagen</string>
+    <string name="typical_day_spoken_interval">cirka %1$s, typisk %2$s til %3$s</string>
+    <string name="typical_day_spoken_row">%1$s. Om dagen: %2$s. Om natten: %3$s.</string>
     <string name="action_edit_time">Ret tid</string>
 
     <!-- Statistik -->
     <string name="statistics_title">Statistik</string>
-    <string name="statistics_subtitle">Gennemsnit pr. dag</string>
     <string name="statistics_last_7_days">Seneste 7 dage</string>
     <string name="statistics_last_30_days">Seneste 30 dage</string>
     <string name="statistics_last_90_days">Seneste 90 dage</string>

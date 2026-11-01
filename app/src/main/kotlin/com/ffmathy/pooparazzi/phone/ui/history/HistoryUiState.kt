@@ -2,12 +2,10 @@ package com.ffmathy.pooparazzi.phone.ui.history
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.domain.Ribbon
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
-import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -17,7 +15,6 @@ import java.time.ZoneId
  *
  * @property now the minute the screen describes (epoch ms).
  * @property day the day shown; [today] is the day containing [now].
- * @property cloud the backup's status; [CloudStatus.Off] (nobody signed in) shows no cloud icon.
  * @property canGoBack there is something logged before [day] ("Previous day" is enabled).
  * @property canGoForward [day] is before today ("Next day" is disabled on today).
  * @property ribbon the day ribbon geometry (glance-only).
@@ -33,8 +30,6 @@ data class HistoryUiState(
     val zone: ZoneId,
     val day: LocalDate,
     val today: LocalDate,
-    val sync: SyncStatus,
-    val cloud: CloudStatus = CloudStatus.Off,
     val canGoBack: Boolean,
     val canGoForward: Boolean,
     val ribbon: Ribbon,
@@ -61,8 +56,6 @@ data class DeletedReceipt(val key: Long, val entry: Entry)
 @Stable
 interface HistoryActions {
     fun onBack() {}
-    fun onRetrySync() {}
-    fun onRetryBackup() {}
     fun onPreviousDay() {}
     fun onNextDay() {}
 

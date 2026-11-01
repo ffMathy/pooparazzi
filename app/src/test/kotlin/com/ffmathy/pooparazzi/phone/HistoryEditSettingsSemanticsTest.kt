@@ -152,7 +152,7 @@ class HistoryEditSettingsSemanticsTest {
     @Test
     fun historyOpensStatistics() {
         compose.setContent { NightLightTheme(night = true) { HistoryScreen(HistorySamples.today(), history) } }
-        compose.onNodeWithContentDescription("Statistics").assertHasClickAction().performClick()
+        compose.onNodeWithText("Statistics").assertHasClickAction().performClick()
         compose.onAllNodes(hasScrollAction()).assertCountEquals(1)
         compose.onAllNodesWithContentDescription("Back").assertCountEquals(1)
         assertEquals(listOf("statistics"), calls)

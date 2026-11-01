@@ -57,7 +57,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -109,7 +108,7 @@ fun StatisticsRoute(onBack: () -> Unit) {
 
 /**
  * Statistics (P8, V1_ADDITIONS §8): averages per day of feeds, pee, poop and sleep over one range (the last 30 days
- * unless the chip picks the last 7 or 90 days, all days or dates from a dialog). The rows open one at a time; the open row shows its bar chart of the range. Only whole days up to yesterday count, and a
+ * unless the chip picks the last 7 or 90 days, all days or dates from a dialog). The rows open one at a time; the open row shows its bar chart of the range. Under them, the typical day of the range. Only whole days up to yesterday count, and a
  * day counts for a kind only if one was logged that day. Settings' skeleton: one scrolling column under the top bar,
  * laid out edge to edge from [windowInsets].
  */
@@ -125,25 +124,6 @@ fun StatisticsScreen(
     val bottomInset = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
     val report = state.report
     var choosing by rememberSaveable { mutableStateOf(false) }
-    // With two or more babies, whose statistics these are (as on History, BABIES_AND_BACKUP §2.4), then the subtitle.
-    val subtitle: (@Composable ColumnScope.() -> Unit)? = if (report == null && !state.hasSeveralBabies) {
-        null
-    } else {
-        {
-            if (state.hasSeveralBabies) {
-                Text(
-                    formatters.labels.baby(state.baby, state.babies),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colors.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (report != null) {
-                Text(stringResource(R.string.statistics_subtitle), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
-            }
-        }
-    }
     Column(
         modifier
             .fillMaxSize()
@@ -155,7 +135,6 @@ fun StatisticsScreen(
             navigationIcon = XIcons.back,
             navigationLabel = stringResource(R.string.cd_back),
             onNavigate = actions::onBack,
-            below = subtitle,
         )
         // The screen's only scrollable node (the menu and the date dialog are popups, outside it).
         Column(
@@ -241,6 +220,8 @@ private fun StatisticsContent(
             color = colors.onSurfaceVariant,
             modifier = Modifier.padding(top = 12.dp, start = 4.dp, end = 4.dp),
         )
+        // Under the averages, the typical day over the same days.
+        TypicalDay(state.pattern, rangeLabel(report.range), formatters, Modifier.padding(top = 24.dp))
     }
 }
 
