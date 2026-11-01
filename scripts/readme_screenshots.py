@@ -43,6 +43,7 @@ PHONE = {
     "08b-diaper-sheet-nudged.png": "diaper-sheet-nudged",
     "10-history-day.png": "history",
     "11-history-night.png": "history-night",
+    "45-history-pattern.png": "history-pattern",
     "13-edit-breastfeed.png": "edit-feed",
     "13b-edit-formula.png": "edit-formula",
     "14-edit-diaper.png": "edit-diaper",

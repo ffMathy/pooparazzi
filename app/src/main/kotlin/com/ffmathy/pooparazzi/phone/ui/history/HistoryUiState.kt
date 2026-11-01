@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.phone.ui.history
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
+import com.ffmathy.pooparazzi.core.domain.DailyPattern
 import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.domain.Ribbon
 import com.ffmathy.pooparazzi.core.model.Baby
@@ -22,6 +23,7 @@ import java.time.ZoneId
  * @property canGoForward [day] is before today ("Next day" is disabled on today).
  * @property ribbon the day ribbon geometry (glance-only).
  * @property counts feeds · pee · poop · sleep for [day].
+ * @property pattern the typical day over the week before [day] ("Typical day"), or null under three logged days.
  * @property entries the day's entries, newest first, including running ones.
  * @property receipt the last delete, offered for Undo in a snackbar.
  * @property babies all babies, in order; with two or more the current baby's label shows under the title.
@@ -39,6 +41,7 @@ data class HistoryUiState(
     val canGoForward: Boolean,
     val ribbon: Ribbon,
     val counts: DayCounts,
+    val pattern: DailyPattern? = null,
     val entries: List<Entry>,
     val receipt: DeletedReceipt? = null,
     val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),

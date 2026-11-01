@@ -365,6 +365,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 | Stats 264–312 | 4 columns: numbers titleLarge onSurface ("5", "4", "2", "7h 57m"), captions labelSmall onSurfaceVariant ("feeds", "pee", "poop", "sleep") |
 | Heading 332–350 | "Today" labelMedium onSurfaceVariant (a heading) |
 | List from 360 | one row per entry, newest first |
+| Typical day | under the last row (24 above): a card r 20, surfaceContainer, padding 16 top and bottom. See **Typical day** below |
 | FAB | extended FAB "Add entry", bottom end: 138 × 56, r 16, primaryContainer, `plus` 24 + 8 + labelLarge onPrimaryContainer. Flat (§5.9), so while rows scroll under it, it collapses to the 56 × 56 icon FAB (still named "Add entry"); at the end of the list, where the list's bottom padding keeps it clear of the rows, it shows its label |
 
 **Ribbon** (coordinates inside the card). Plot x = 12 + 326 × hours / 24 (00 to 24).
@@ -374,6 +375,11 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 - Now-line: 2 dp wide, y 8–74, onSurface. Nothing is drawn after now.
 - Axis labels y 78–94, labelSmall onSurfaceVariant: "00" (start-aligned), "06", "12", "18" (centred), "24" (end-aligned).
 - Text alternative: "Today: 5 feeds, 4 pee, 2 poop, 7 hours 57 minutes sleep".
+
+**Typical day** (the pattern of the 7 days before the day shown; only days with something logged count, and none before 3 of them):
+- Heading (one TalkBack heading): "Typical day" titleMedium onSurface, then "Last 7 days" (on today) or "7 days before Sat 24 Oct" labelSmall onSurfaceVariant, 16 inset. Under 3 logged days, only "A typical day shows once 3 days are logged." bodyMedium onSurfaceVariant follows.
+- Plot, 100 tall, the ribbon's geometry with a 16 plot inset: night bands 00–07 and 19–24; three lanes 14 tall, sleep at y 13, feeds at y 34, diapers at y 53, each split into 48 half-hour cells in SLEEP, FEED and DIAPER strong at an alpha equal to the cell's share (at least 18 % when above 0): for sleep the share of the half hour asleep on an average day, for feeds and diapers the share of days with one in it. Axis labels as on the ribbon. One TalkBack line: "When sleep, feeds and diapers usually happen through the day".
+- Intervals: "By day" "By night" labelSmall onSurfaceVariant over two equal columns indented 18 (past the dot); then four rows, gap 10: a 10 dot (FEED, DIAPER, SLEEP strong, and SLEEP strong at 45 % for awake) + 8 + "Between feeds", "Between diapers", "Sleep", "Awake" dataSmall onSurface, and under it, in each column, the median dataMedium onSurface ("2h 50m") over the interquartile range labelSmall onSurfaceVariant ("2h 20m–3h 15m"), both to the nearest 5 minutes, or "–" under 3 stretches. A stretch is by night when it starts 19:00–07:00. Feeds or diapers under 10 minutes apart are one; gaps over 12 hours are left out. Each row reads as one sentence: "Between feeds. By day: about 2 hours 50 minutes, usually 2 hours 20 minutes to 3 hours 15 minutes. By night: …".
 
 **List rows**: buttons 350 × 56, gap 2, fill surfaceContainer. The group's outer corners are r 20 and the inner corners r 6. Shape-coded avatar 40 (§6.3) at 16 from the start, then text at 72 from the start.
 - Instant rows: one-line title titleMedium ("Pee", "Fed", "Poop", "Pee + poop"), vertically centred; trailing time dataMedium onSurfaceVariant, end-aligned with 16 inset.

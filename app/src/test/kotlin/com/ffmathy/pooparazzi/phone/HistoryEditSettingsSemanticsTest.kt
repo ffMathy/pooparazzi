@@ -143,9 +143,21 @@ class HistoryEditSettingsSemanticsTest {
     @Test
     fun theAddEntryFabShowsItsLabelAtTheEndOfTheList() {
         compose.setContent { NightLightTheme(night = false) { HistoryScreen(HistorySamples.today(), history) } }
-        compose.onNode(hasScrollAction()).performScrollToIndex(HistorySamples.today().entries.size + 3)
+        compose.onNode(hasScrollAction()).performScrollToIndex(HistorySamples.today().entries.size + 4)
         compose.waitForIdle()
         compose.onNodeWithText("Add entry").assertExists()
+    }
+
+    /** Under the log, the typical day: a heading, the plot read as one line, and each interval row read as one sentence. */
+    @Test
+    fun theTypicalDaySpeaks() {
+        compose.setContent { NightLightTheme(night = false) { HistoryScreen(HistorySamples.today(), history) } }
+        compose.onNode(hasScrollAction()).performScrollToIndex(HistorySamples.today().entries.size + 4)
+        compose.waitForIdle()
+        compose.onNodeWithText("Typical day").assertExists()
+        compose.onNodeWithContentDescription("When sleep, feeds and diapers usually happen through the day").assertExists()
+        compose.onNode(hasContentDescription("Between feeds. By day: about ", substring = true)).assertExists()
+        compose.onNode(hasContentDescription("Sleep. By day: about ", substring = true)).assertExists()
     }
 
     /** The `chart` button at the end of the top bar opens Statistics; the list and Back stay single nodes. */

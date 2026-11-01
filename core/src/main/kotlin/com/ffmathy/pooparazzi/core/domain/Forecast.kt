@@ -187,7 +187,7 @@ private fun poopAfterFeed(feeds: List<Entry>, poops: List<Entry>, now: Long, zon
 }
 
 /** The [q] quantile of [sorted], interpolating between neighbours. */
-private fun quantile(sorted: List<Long>, q: Double): Double {
+internal fun quantile(sorted: List<Long>, q: Double): Double {
     val position = (sorted.size - 1) * q
     val low = sorted[position.toInt()]
     val high = sorted[minOf(position.toInt() + 1, sorted.size - 1)]

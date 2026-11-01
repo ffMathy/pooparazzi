@@ -125,7 +125,7 @@ fun HistoryRoute(onBack: () -> Unit, onOpenStatistics: () -> Unit) {
 
 /**
  * History (P3, DESIGN_SPEC §3.3.3, V1_ADDITIONS §4): the top bar with the status icons, the day switcher, the day
- * ribbon, the stats, and the day's entries newest first. Rows open the edit sheet and swipe to reveal Delete (with an Undo
+ * ribbon, the stats, the day's entries newest first, and under them the typical day of the week before. Rows open the edit sheet and swipe to reveal Delete (with an Undo
  * snackbar); the "Add entry" FAB adds a past entry. Laid out edge to edge from [windowInsets].
  */
 @Composable
@@ -203,6 +203,10 @@ fun HistoryScreen(
                             .animateItem()
                             .padding(bottom = if (index == state.entries.lastIndex) 0.dp else HistoryRowDefaults.Gap),
                     )
+                }
+                // Under the day's log: the typical day of the week before, to compare the day with.
+                item(key = "pattern") {
+                    HistoryPattern(state.pattern, state.day, state.today, formatters, Modifier.padding(top = 24.dp))
                 }
             }
         }

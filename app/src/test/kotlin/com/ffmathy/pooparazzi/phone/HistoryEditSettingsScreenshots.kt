@@ -14,6 +14,8 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
@@ -115,6 +117,14 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
         SettingsScreen(SettingsSamples.state().copy(watchNeedsUpdate = true), SettingsActions.None, windowInsets = ReferenceInsets)
     }
 
+    /** Under the day's log, the typical day of the week before: lanes by half hour, and the usual intervals. */
+    @Test fun historyPattern() = scrolledToEnd("45-history-pattern", night = false, HistorySamples.today())
+
+    @Test fun historyPatternNight() = scrolledToEnd("history-pattern-night", night = true, HistorySamples.today(), tour = false)
+
+    /** Under three logged days: the card says when the typical day will show (written under build/). */
+    @Test fun historyPatternEmpty() = scrolledToEnd("history-pattern-empty", night = true, HistorySamples.firstDays(), tour = false)
+
     /** Not part of the tour (written under build/): the blocking validation line, and a past day. */
     @Test fun editValidation() = sheet("edit-validation", night = true, EditSamples.sleepEndBeforeStart(), tour = false)
 
@@ -169,6 +179,14 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
 
     @Composable
     private fun History(state: HistoryUiState) = HistoryScreen(state, HistoryActions.None, windowInsets = ReferenceInsets)
+
+    /** History scrolled to its last item, the Typical day card. */
+    private fun scrolledToEnd(name: String, night: Boolean, state: HistoryUiState, tour: Boolean = true) {
+        compose.setContent { NightLightTheme(night = night) { History(state) } }
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(state.entries.size.coerceAtLeast(1) + 4)
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage(path(name, tour))
+    }
 
     private fun screen(name: String, night: Boolean, tour: Boolean = true, content: @Composable () -> Unit) {
         compose.setContent { NightLightTheme(night = night, content = content) }

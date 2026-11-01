@@ -12,15 +12,18 @@ import java.time.LocalDate
 object HistorySamples {
     private val zone = SampleData.ZONE
 
-    /** Today at 14:32: ribbon, 5 feeds · 4 pee · 2 poop · 7h 57m, 15 rows. */
-    fun today(): HistoryUiState = build(SampleData.scenario(zone), SampleData.NOW_1432)
+    /** Today at 14:32: ribbon, 5 feeds · 4 pee · 2 poop · 7h 57m, 15 rows, and the typical day of the weeks before. */
+    fun today(): HistoryUiState = build(SampleData.history(zone = zone), SampleData.NOW_1432)
+
+    /** Only the reference scenario (yesterday evening and today): too few days for a typical day yet. */
+    fun firstDays(): HistoryUiState = build(SampleData.scenario(zone), SampleData.NOW_1432)
 
     /** The night snapshot at 03:12: the 02:05 sleep still running. */
     fun night(): HistoryUiState =
-        build(SampleData.scenarioAt0312(zone), SampleData.NOW_0312, SyncStatus.Synced(SampleData.SYNCED_0311))
+        build(SampleData.historyAt0312(zone), SampleData.NOW_0312, SyncStatus.Synced(SampleData.SYNCED_0311))
 
     /** Sun 25 Oct, seen at 14:32 on Monday: the evening's 22:40 sleep runs past midnight. */
-    fun yesterday(): HistoryUiState = build(SampleData.scenario(zone), SampleData.NOW_1432, day = SampleData.YESTERDAY)
+    fun yesterday(): HistoryUiState = build(SampleData.history(zone = zone), SampleData.NOW_1432, day = SampleData.YESTERDAY)
 
     /** [today] with twins (Noa current): "Noa" under the title; signed in and backed up at 14:31 (the cloud icon). */
     fun twins(): HistoryUiState = today().copy(

@@ -1,11 +1,13 @@
 package com.ffmathy.pooparazzi.phone.ui.history
 
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
+import com.ffmathy.pooparazzi.core.domain.dailyPattern
 import com.ffmathy.pooparazzi.core.domain.localDate
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
+import com.ffmathy.pooparazzi.phone.ui.theme.NightRule
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -38,6 +40,7 @@ internal object HistoryStateBuilder {
             canGoForward = shown < today,
             ribbon = summary.ribbon(shown),
             counts = summary.dayCounts(shown),
+            pattern = dailyPattern(summary.entries, shown, now, zone, NightRule.DEFAULT_NIGHT_START, NightRule.DEFAULT_NIGHT_END),
             entries = summary.dayEntries(shown),
             receipt = receipt,
             babies = babies,
