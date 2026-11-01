@@ -236,8 +236,8 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Earlier.
 | Navigation inset | 24 | 820–844 | nothing interactive |
 
 **Top bar**
-- "Noa" (the baby's name): titleLarge, onSurface.
-- Status icons under the name (§4.5), 4 dp below it: 20 dp glyphs 12 apart in onSurfaceVariant, no visible text — the watch (hidden without one), then the cloud while an account is signed in. TalkBack reads each icon's sentence (§4.5). An icon in its **error** state is in error colour and a 48 dp button (retry) that starts at its glyph and reaches up over the name; it may overlap only non-interactive content. When the first icon is a button the next glyph starts after it (28 dp gap), so two buttons never overlap. With two or more babies (and in History, under the title) the icons are their own row, 48 dp tall in an error state.
+- "Noa" (the baby's name): titleLarge, onSurface, vertically centred on the same line as the History pill and Settings (32 dp from the top of the bar), whether or not status icons follow; the icons hang below it and the bar grows to fit them.
+- Status icons under the name (§4.5), directly below its 40 dp line: 20 dp glyphs 12 apart in onSurfaceVariant, no visible text — the watch (hidden without one), then the cloud while an account is signed in. TalkBack reads each icon's sentence (§4.5). An icon in its **error** state is in error colour and a 48 dp button (retry) that starts at its glyph and reaches up over the name; it may overlap only non-interactive content. When the first icon is a button the next glyph starts after it (28 dp gap), so two buttons never overlap. With two or more babies (and in History, under the title) the icons are their own row, 48 dp tall in an error state.
 - History pill: 48 target / 40 visual, r 20, fill surfaceContainerHigh, padding start 12 / end 14, `history` 18 onSurfaceVariant + 6 + "History" labelLarge onSurface. Opens History.
 - Settings: 48 × 48 icon button, `settings` 24 onSurfaceVariant, content description "Settings".
 
@@ -431,7 +431,7 @@ Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (
 |---|---|---|---|
 | 1 (24, not a separate target) | `feed` 16 + 6 + "Fed at 12:22" labelLarge 15 sp onSurface; 16 gap; `pee` 16 + "Pee at 13:44" | "Fed at 01:40", "Pee at 01:52" | `check` 16 onSurfaceVariant + 6 + "Sleep started at 14:32"; at the end a text button "Undo" (`undo` 16 + 6 + labelLarge 15 sp, primary, 48 dp target, description "Undo sleep start") |
 | 2 (68) | 2 equal buttons, gap 8, r 20; icon 24 at +10, label 15 sp at +40: Feed (FEED colours, opens the Feed sheet), Diaper (DIAPER colours, `diaper`, opens the Diaper sheet) | unchanged | unchanged |
-| 3 (68) | Sleep toggle, full width, r 34, SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake since 13:27" dataSmall | checked: r 34, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned `sleepRunning` 16 + 6 + "Asleep since 02:05" | unchanged |
+| 3 (68) | Sleep toggle, full width, r 20 (as every widget button), SLEEP container, padding 0 20: `sleep` 24 + 10 + "Start sleep" 16 sp SLEEP onContainer; end-aligned "Awake since 13:27" dataSmall | checked: r 20, SLEEP containerLit, 2 dp SLEEP strong border, `wake` + "Woke up" (name "Woke up, end sleep"); end-aligned `sleepRunning` 16 + 6 + "Asleep since 02:05" | unchanged |
 
 - Just logged: nothing else changes. No button moves, relabels or changes colour, and Undo never sits where a log button is. The receipt reverts on the next log or after 10 s.
 - The widget background (outside the buttons) opens the app with the receipt for the last widget log.
@@ -913,7 +913,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 | History rows | 56 tall, gap 2, group corners 20, inner corners 6 | 60 tall, r 26, gap 4 |
 | Avatars | 40, shape-coded, outlined | 32, shape-coded, outlined |
 | Ribbon | card r 20; sleep bars 14 tall, rx 3, min width 6; feed ticks 4 × 14, rx 2; diaper marks Ø10–12 | — |
-| Widget | system radius (reference r 24); buttons r 20; 4×2 sleep toggle r 34, checked or not | — |
+| Widget | system radius (reference r 24); every button r 20 (the 4×2 sleep toggle too), checked or not | — |
 | Save button / FAB | 160 × 56 r 28 / extended FAB r 16 | — |
 
 **A shape never changes with its state.** Pressed, checked, selected and active elements (the big buttons, the sleep toggle, connected button groups, checkbox tiles, chips, widget buttons, watch buttons) keep their corners; fill, border, icon, check and ripple tell the state.
