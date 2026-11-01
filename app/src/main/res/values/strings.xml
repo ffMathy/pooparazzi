@@ -73,7 +73,6 @@
 
     <!-- Statistics (P8). Also the name of History's chart button. -->
     <string name="statistics_title">Statistics</string>
-    <string name="statistics_subtitle">Average per day</string>
     <string name="statistics_last_7_days">Last 7 days</string>
     <string name="statistics_last_30_days">Last 30 days</string>
     <string name="statistics_last_90_days">Last 90 days</string>

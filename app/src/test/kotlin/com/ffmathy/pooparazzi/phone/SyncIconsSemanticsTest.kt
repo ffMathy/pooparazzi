@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
@@ -37,7 +38,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The top bars' status icons (DESIGN_SPEC §4.5): no visible text, TalkBack reads the full sentence, the cloud only
+ * Home's top bar status icons (DESIGN_SPEC §4.5; History has none): no visible text, TalkBack reads the full sentence, the cloud only
  * while signed in, and only an error state is a 48 dp retry button.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -48,10 +49,6 @@ class SyncIconsSemanticsTest {
 
     private val calls = mutableListOf<String>()
     private val home = object : HomeActions {
-        override fun onRetrySync() { calls += "retry-sync" }
-        override fun onRetryBackup() { calls += "retry-backup" }
-    }
-    private val history = object : HistoryActions {
         override fun onRetrySync() { calls += "retry-sync" }
         override fun onRetryBackup() { calls += "retry-backup" }
     }
@@ -119,20 +116,12 @@ class SyncIconsSemanticsTest {
         compose.onNodeWithContentDescription("Backup deleted · Back up now to start again").assert(notClickable)
     }
 
+    /** The status icons are on Home only: History's top bar is Back, "History" and the Statistics button. */
     @Test
-    fun historyShowsTheSameIcons() {
-        compose.setContent { NightLightTheme(night = true) { HistoryScreen(HistorySamples.twins(), history) } }
-        compose.onNodeWithContentDescription("Synced with watch · 14:31").assert(notClickable)
-        compose.onNodeWithContentDescription("Backed up · 14:31").assert(notClickable)
-        compose.onAllNodesWithText("Synced with watch", substring = true).assertCountEquals(0)
-    }
-
-    @Test
-    fun historyErrorIconsRetry() {
-        compose.setContent { NightLightTheme(night = true) { HistoryScreen(HistorySamples.syncStates(SyncStatus.Error, CloudStatus.Error), history) } }
-        compose.onNodeWithContentDescription("Couldn't save · Tap to retry").assert(isButton).assertHeightIsAtLeast(48.dp).performClick()
-        compose.onNodeWithContentDescription("Couldn't back up · Tap to retry").assert(isButton).assertHeightIsAtLeast(48.dp).performClick()
-        assertEquals(listOf("retry-sync", "retry-backup"), calls)
+    fun historyShowsNoStatusIcons() {
+        compose.setContent { NightLightTheme(night = true) { HistoryScreen(HistorySamples.twins(), HistoryActions.None) } }
+        compose.onAllNodesWithContentDescription("Synced with watch", substring = true).assertCountEquals(0)
+        compose.onAllNodesWithContentDescription("Backed up", substring = true).assertCountEquals(0)
     }
 
     @Test

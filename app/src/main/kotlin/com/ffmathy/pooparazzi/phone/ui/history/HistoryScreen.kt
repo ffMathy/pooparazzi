@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -74,9 +75,7 @@ import com.ffmathy.pooparazzi.core.ui.time.rememberReducedMotion
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.ui.components.IconTarget
 import com.ffmathy.pooparazzi.phone.ui.components.LabelTarget
-import com.ffmathy.pooparazzi.phone.ui.components.SyncIcons
 import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
-import com.ffmathy.pooparazzi.phone.ui.components.syncIcons
 import com.ffmathy.pooparazzi.phone.ui.edit.EditSheet
 import com.ffmathy.pooparazzi.phone.ui.edit.EditViewModel
 import com.ffmathy.pooparazzi.phone.ui.edit.rememberEditEffects
@@ -125,7 +124,7 @@ fun HistoryRoute(onBack: () -> Unit, onOpenStatistics: () -> Unit) {
 }
 
 /**
- * History (P3, DESIGN_SPEC §3.3.3, V1_ADDITIONS §4): the top bar with the status icons, the day switcher, the day
+ * History (P3, DESIGN_SPEC §3.3.3, V1_ADDITIONS §4): the top bar, the day switcher, the day
  * ribbon, the stats, and the day's entries newest first. Rows open the edit sheet and swipe to reveal Delete (with an Undo
  * snackbar); the "Add entry" FAB adds a past entry. Laid out edge to edge from [windowInsets].
  */
@@ -238,20 +237,16 @@ fun HistoryScreen(
 }
 
 /**
- * Back, "History", the current baby's label with two or more babies (BABIES_AND_BACKUP §2.4), the status icons (an
- * icon in its error state is a 48 dp retry target) and the "Statistics" button (`chart` + its name) to Statistics.
+ * Back, "History" and the "Statistics" button (`chart` + its name) to Statistics, all on one line; with two or more
+ * babies the current baby's label goes under the title (BABIES_AND_BACKUP §2.4). The watch and backup status icons are
+ * on Home only.
  */
 @Composable
 private fun HistoryTopBar(state: HistoryUiState, formatters: Formatters, actions: HistoryActions) {
-    val icons = syncIcons(state.sync, state.cloud, state.zone, formatters, actions::onRetrySync, actions::onRetryBackup)
-    XTopBar(
-        title = stringResource(CoreR.string.nav_history),
-        navigationIcon = XIcons.back,
-        navigationLabel = stringResource(R.string.cd_back),
-        onNavigate = actions::onBack,
-        actions = { LabelTarget(XIcons.chart, stringResource(R.string.statistics_title), actions::onOpenStatistics) },
-    ) {
-        if (state.hasSeveralBabies) {
+    val baby: (@Composable ColumnScope.() -> Unit)? = if (!state.hasSeveralBabies) {
+        null
+    } else {
+        {
             Text(
                 formatters.labels.baby(state.baby, state.babies),
                 style = MaterialTheme.typography.titleMedium,
@@ -260,8 +255,15 @@ private fun HistoryTopBar(state: HistoryUiState, formatters: Formatters, actions
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        SyncIcons(icons, Modifier.padding(top = 4.dp))
     }
+    XTopBar(
+        title = stringResource(CoreR.string.nav_history),
+        navigationIcon = XIcons.back,
+        navigationLabel = stringResource(R.string.cd_back),
+        onNavigate = actions::onBack,
+        actions = { LabelTarget(XIcons.chart, stringResource(R.string.statistics_title), actions::onOpenStatistics) },
+        below = baby,
+    )
 }
 
 /** ‹ "Today · Mon 26 Oct" › — "Next day" is disabled on today (outlineVariant). */

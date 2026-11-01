@@ -37,7 +37,6 @@
 
     <!-- Statistik -->
     <string name="statistics_title">Statistik</string>
-    <string name="statistics_subtitle">Gennemsnit pr. dag</string>
     <string name="statistics_last_7_days">Seneste 7 dage</string>
     <string name="statistics_last_30_days">Seneste 30 dage</string>
     <string name="statistics_last_90_days">Seneste 90 dage</string>

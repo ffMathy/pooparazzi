@@ -237,7 +237,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Earlier.
 
 **Top bar**
 - "Noa" (the baby's name): titleLarge, onSurface, vertically centred on the same line as the History pill and Settings (32 dp from the top of the bar), whether or not status icons follow; the icons hang below it and the bar grows to fit them.
-- Status icons under the name (§4.5), directly below its 40 dp line: 20 dp glyphs 12 apart in onSurfaceVariant, no visible text — the watch (hidden without one), then the cloud while an account is signed in. TalkBack reads each icon's sentence (§4.5). An icon in its **error** state is in error colour and a 48 dp button (retry) that starts at its glyph and reaches up over the name; it may overlap only non-interactive content. When the first icon is a button the next glyph starts after it (28 dp gap), so two buttons never overlap. With two or more babies (and in History, under the title) the icons are their own row, 48 dp tall in an error state.
+- Status icons under the name (§4.5), directly below its 40 dp line: 20 dp glyphs 12 apart in onSurfaceVariant, no visible text — the watch (hidden without one), then the cloud while an account is signed in. TalkBack reads each icon's sentence (§4.5). An icon in its **error** state is in error colour and a 48 dp button (retry) that starts at its glyph and reaches up over the name; it may overlap only non-interactive content. When the first icon is a button the next glyph starts after it (28 dp gap), so two buttons never overlap. With two or more babies the icons are their own row, 48 dp tall in an error state. History and Statistics show no status icons: Home already does.
 - History pill: 48 target / 40 visual, r 20, fill surfaceContainerHigh, padding start 12 / end 14, `history` 18 onSurfaceVariant + 6 + "History" labelLarge onSurface. Opens History.
 - Settings: 48 × 48 icon button, `settings` 24 onSurfaceVariant, content description "Settings".
 
@@ -359,7 +359,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 
 | Band (reference y) | Content |
 |---|---|
-| Top bar 24–88 | Back icon button (`back` 24, "Back"); "History" titleLarge; at the end the "Statistics" button: a 48 tall pill, `chart` 20 + 6 + "Statistics" labelLarge, both onSurfaceVariant, 12 inside each end (TalkBack reads the label). It opens Statistics (P8, V1_ADDITIONS §8) |
+| Top bar 24–88 | Back icon button (`back` 24, "Back"); "History" titleLarge, on one line with Back and the Statistics button (with two or more babies the baby's label goes under it); no status icons (they are on Home); at the end the "Statistics" button: a 48 tall pill, `chart` 20 + 6 + "Statistics" labelLarge, both onSurfaceVariant, 12 inside each end (TalkBack reads the label). It opens Statistics (P8, V1_ADDITIONS §8) |
 | Day switcher 96–144 | `chevronLeft` icon button ("Previous day"); "Today · Mon 26 Oct" titleMedium centred; `chevronRight` icon button ("Next day"), disabled on today (icon outlineVariant) |
 | Ribbon card 152–252 | 350 × 100, r 20, surfaceContainer. Decorative, not tappable |
 | Stats 264–312 | 4 columns: numbers titleLarge onSurface ("5", "4", "2", "7h 57m"), captions labelSmall onSurfaceVariant ("feeds", "pee", "poop", "sleep") |
@@ -696,9 +696,9 @@ Counts: Both adds 1 to pee **and** 1 to poop.
 
 ### 4.5 Sync state (device-level, shown in UI)
 
-The state shows as a small icon, never as visible text: the **other device** with a mark on its face or screen (the phone's top bars show a watch, the watch shows a phone), and on the phone also a **cloud** for the backup while an account is signed in (BABIES_AND_BACKUP §3.2). The sentence is the icon's TalkBack description; Settings › Watch sync still shows it as text, with "Sync now".
+The state shows as a small icon, never as visible text: the **other device** with a mark on its face or screen (Home's top bar shows a watch, the watch shows a phone), and on the phone also a **cloud** for the backup while an account is signed in (BABIES_AND_BACKUP §3.2). The sentence is the icon's TalkBack description; Settings › Watch sync still shows it as text, with "Sync now".
 
-| State | Phone (top bars) · spoken | Watch (Logged, list footer) · spoken | Mark |
+| State | Phone (Home's top bar) · spoken | Watch (Logged, list footer) · spoken | Mark |
 |---|---|---|---|
 | Synced | `watchSynced` · "Synced with watch · 14:31" | `phoneSynced` · "Synced with phone · 14:31" | tick |
 | Syncing | `watchPending` · "Syncing with watch…" | `phonePending` in the footer (Logged hides it) · "Syncing with phone…" | "…" |

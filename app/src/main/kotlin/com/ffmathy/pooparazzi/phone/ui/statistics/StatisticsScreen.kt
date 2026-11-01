@@ -125,23 +125,18 @@ fun StatisticsScreen(
     val bottomInset = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
     val report = state.report
     var choosing by rememberSaveable { mutableStateOf(false) }
-    // With two or more babies, whose statistics these are (as on History, BABIES_AND_BACKUP §2.4), then the subtitle.
-    val subtitle: (@Composable ColumnScope.() -> Unit)? = if (report == null && !state.hasSeveralBabies) {
+    // With two or more babies, whose statistics these are (as on History, BABIES_AND_BACKUP §2.4).
+    val subtitle: (@Composable ColumnScope.() -> Unit)? = if (!state.hasSeveralBabies) {
         null
     } else {
         {
-            if (state.hasSeveralBabies) {
-                Text(
-                    formatters.labels.baby(state.baby, state.babies),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colors.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (report != null) {
-                Text(stringResource(R.string.statistics_subtitle), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
-            }
+            Text(
+                formatters.labels.baby(state.baby, state.babies),
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
     Column(
