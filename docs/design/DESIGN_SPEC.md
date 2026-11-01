@@ -241,8 +241,8 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Earlier and Adj
 | Navigation inset | 24 | 820–844 | nothing interactive |
 
 **Top bar**
-- "Noa" (the baby's name): titleLarge, onSurface.
-- Status icons under the name (§4.5), 4 dp below it: 20 dp glyphs 12 apart in onSurfaceVariant, no visible text — the watch (hidden without one), then the cloud while an account is signed in. TalkBack reads each icon's sentence (§4.5). An icon in its **error** state is in error colour and a 48 dp button (retry) that starts at its glyph and reaches up over the name; it may overlap only non-interactive content. When the first icon is a button the next glyph starts after it (28 dp gap), so two buttons never overlap. With two or more babies (and in History, under the title) the icons are their own row, 48 dp tall in an error state.
+- "Noa" (the baby's name): titleLarge, onSurface, vertically centred on the same line as the History pill and Settings (32 dp from the top of the bar), whether or not status icons follow; the icons hang below it and the bar grows to fit them.
+- Status icons under the name (§4.5), directly below its 40 dp line: 20 dp glyphs 12 apart in onSurfaceVariant, no visible text — the watch (hidden without one), then the cloud while an account is signed in. TalkBack reads each icon's sentence (§4.5). An icon in its **error** state is in error colour and a 48 dp button (retry) that starts at its glyph and reaches up over the name; it may overlap only non-interactive content. When the first icon is a button the next glyph starts after it (28 dp gap), so two buttons never overlap. With two or more babies (and in History, under the title) the icons are their own row, 48 dp tall in an error state.
 - History pill: 48 target / 40 visual, r 20, fill surfaceContainerHigh, padding start 12 / end 14, `history` 18 onSurfaceVariant + 6 + "History" labelLarge onSurface. Opens History.
 - Settings: 48 × 48 icon button, `settings` 24 onSurfaceVariant, content description "Settings".
 

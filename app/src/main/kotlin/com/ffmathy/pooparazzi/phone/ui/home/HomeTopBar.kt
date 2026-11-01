@@ -78,13 +78,13 @@ internal fun HomeTopBar(
     val icons = syncIcons(sync, cloud, zone, formatters, actions::onRetrySync, actions::onRetryBackup)
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val pill = historyPillStyle(icons, maxWidth)
-        Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Centred, so the name lines up with History and Settings when there are no icons (no watch, no account).
+        // Top-aligned: the name sits on History and Settings' centre line (32 dp down) and the status icons hang below it.
+        Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.Top) {
             Box(
                 Modifier
                     .weight(1f)
                     .heightIn(min = 64.dp),
-                contentAlignment = Alignment.CenterStart,
+                contentAlignment = Alignment.TopStart,
             ) {
                 if (several) {
                     val baby = babies.firstOrNull { it.id == babyId } ?: babies.first()
@@ -96,17 +96,20 @@ internal fun HomeTopBar(
                         actions = actions,
                     )
                 } else {
-                    Column(Modifier.padding(start = 20.dp, end = TopBarGap, top = 6.dp, bottom = 4.dp)) {
+                    Column(Modifier.padding(start = 20.dp, end = TopBarGap, top = 12.dp, bottom = 4.dp)) {
                         val name = babyName.ifBlank { stringResource(CoreR.string.baby_name_hint) }
-                        Text(
-                            name,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = if (babyName.isBlank()) colors.onSurfaceVariant else chrome,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.semantics { heading() },
-                        )
-                        if (icons.isNotEmpty()) SyncGlyphs(icons, Modifier.padding(top = 4.dp))
+                        // 40 dp, centred: the same box as the History pill's visual, so the name shares its centre line.
+                        Box(Modifier.heightIn(min = 40.dp), contentAlignment = Alignment.CenterStart) {
+                            Text(
+                                name,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = if (babyName.isBlank()) colors.onSurfaceVariant else chrome,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.semantics { heading() },
+                            )
+                        }
+                        if (icons.isNotEmpty()) SyncGlyphs(icons)
                     }
                 }
                 if (!several && icons.any { it.onRetry != null }) {
@@ -115,10 +118,10 @@ internal fun HomeTopBar(
                     SyncTargets(icons, Modifier.align(Alignment.BottomStart).padding(start = 20.dp))
                 }
             }
-            HistoryPill(pill, lightsDown, actions::onOpenHistory)
+            HistoryPill(pill, lightsDown, actions::onOpenHistory, Modifier.padding(top = 8.dp))
             Box(
                 Modifier
-                    .padding(start = TopBarGap, end = 12.dp)
+                    .padding(start = TopBarGap, end = 12.dp, top = 8.dp)
                     .size(48.dp)
                     .clip(RoundedCornerShape(24.dp))
                     .clickable(role = Role.Button, onClick = actions::onOpenSettings),
@@ -147,7 +150,7 @@ private fun SwitcherColumn(
 ) {
     val color = if (named) chrome else MaterialTheme.colorScheme.onSurfaceVariant
     val spoken = stringResource(CoreR.string.cd_baby_switch, label)
-    Column(Modifier.padding(start = 12.dp, end = TopBarGap, bottom = 4.dp)) {
+    Column(Modifier.padding(start = 12.dp, end = TopBarGap, top = 8.dp, bottom = 4.dp)) {
         Row(
             Modifier
                 .height(48.dp)
@@ -207,12 +210,12 @@ private fun historyPillStyle(icons: List<SyncIcon>, maxWidth: Dp): PillStyle {
 
 /** The History pill: 48 target / 40 visual, r 20, `history` 18 + 6 + "History" (narrower when [style] says so). */
 @Composable
-private fun HistoryPill(style: PillStyle, lightsDown: Boolean, onClick: () -> Unit) {
+private fun HistoryPill(style: PillStyle, lightsDown: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(20.dp)
     val label = stringResource(CoreR.string.nav_history)
     Box(
-        Modifier
+        modifier
             .height(48.dp)
             .widthIn(min = 48.dp)
             .clip(shape)
