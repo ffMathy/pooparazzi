@@ -55,6 +55,11 @@
             After a reboot or an app update nothing restarts the process, and notifications are gone: this puts the
             Ongoing Activity of a running sleep back (DESIGN_SPEC §3.8). Only the system sends these.
         -->
+        <!-- The Ongoing Activity's minute redraw (its status is relative: "Asleep · feed in 2h 05m"). -->
+        <receiver
+            android:name=".ongoing.OngoingTickReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".SurfacesRestoreReceiver"
             android:exported="false">

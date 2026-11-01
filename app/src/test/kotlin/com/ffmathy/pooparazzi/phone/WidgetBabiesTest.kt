@@ -57,7 +57,8 @@ class WidgetBabiesTest {
 
     private fun View.all(): List<View> = listOf(this) + ((this as? ViewGroup)?.let { g -> (0 until g.childCount).flatMap { g.getChildAt(it).all() } } ?: emptyList())
 
-    private fun View.texts(): List<String> = all().filterIsInstance<TextView>().map { it.text.toString() }.filter { it.isNotEmpty() }
+    // Non-breaking spaces (kept inside "2h 10m") read as plain ones here.
+    private fun View.texts(): List<String> = all().filterIsInstance<TextView>().map { it.text.toString().replace("\u00A0", " ") }.filter { it.isNotEmpty() }
 
     private fun View.descriptions(): List<String> = all().mapNotNull { it.contentDescription?.toString() }
 
@@ -78,8 +79,9 @@ class WidgetBabiesTest {
         val narrow = render(DpSize(250.dp, 190.dp)) { LogWidgetContent(WidgetSamples.twins(night = false)) }
         val texts = narrow.texts()
         assertEquals("Noa", texts.first())
-        // The sleep status goes under "Start sleep" in the toggle, not up into the row.
-        assertEquals(texts.toString(), listOf("Start sleep", "Awake 1h 05m"), texts.takeLast(2))
+        // The sleep status stays in the sleep toggle, under its label, not up in the row.
+        assertTrue(texts.toString(), texts.indexOf("Awake 1h 05m") > texts.indexOf("Start sleep"))
+        assertEquals(texts.toString(), 1, texts.count { it == "Awake 1h 05m" })
     }
 
     @Test

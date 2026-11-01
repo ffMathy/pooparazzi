@@ -199,27 +199,17 @@
     <!-- java.time pattern for dates such as "Mon 26 Oct" -->
     <string name="pattern_weekday_day_month">EEE d MMM</string>
 
-    <!-- What the last 7 days expect next (V1_ADDITIONS §9), relative to now on every surface (core EstimateText). -->
-    <string name="forecast_next_sleep_in">Next sleep in %1$s</string>
-    <string name="forecast_wakes_in">Wakes in %1$s</string>
-    <string name="forecast_next_sleep_soon">Next sleep soon</string>
-    <string name="forecast_wakes_soon">Wakes soon</string>
-    <!-- Once the estimate has passed: "Next sleep 24m ago". -->
-    <string name="forecast_next_sleep_ago">Next sleep %1$s ago</string>
-    <string name="forecast_wakes_ago">Wake-up %1$s ago</string>
     <string name="spoken_forecast_sleep_at">expected to sleep again around %1$s</string>
     <string name="spoken_forecast_wake_at">expected to wake around %1$s</string>
-    <string name="forecast_soon_word">soon</string>
     <string name="spoken_forecast_feed_at">next feed expected around %1$s</string>
     <string name="spoken_forecast_poop_at">next poop expected around %1$s</string>
-    <!-- The estimates relative to now, rounded up to 5 minutes (widgets, the watch Tile and app): under Feed "Next in 55m" /
-         "Next soon" / "Due 24m ago" (it was expected 24m ago); under Diaper the same for the next poop; under
-         "Start sleep" / "Woke up" the expected next sleep or wake-up ("in 50m"). -->
-    <string name="estimate_feed_in">Next in %1$s</string>
-    <string name="estimate_feed_soon">Next soon</string>
-    <string name="estimate_feed_ago">Due %1$s ago</string>
-    <string name="estimate_poop_in">Poop in %1$s</string>
-    <string name="estimate_poop_soon">Poop soon</string>
+    <!-- The estimates relative to now, rounded up to 5 minutes (widgets, the watch Tile and app): under Feed and under
+         "Start sleep" / "Woke up" "Next in 55m" / "Next soon" / "Due 24m ago" (it was expected 24m ago); under Diaper
+         "Next poop in 3h 10m" / "Next poop soon" / "Poop due 24m ago". -->
+    <string name="estimate_next_in">Next in %1$s</string>
+    <string name="estimate_next_soon">Next soon</string>
+    <string name="estimate_next_ago">Due %1$s ago</string>
+    <string name="estimate_poop_in">Next poop in %1$s</string>
+    <string name="estimate_poop_soon">Next poop soon</string>
     <string name="estimate_poop_ago">Poop due %1$s ago</string>
-    <string name="estimate_in">in %1$s</string>
 </resources>

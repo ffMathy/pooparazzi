@@ -1,9 +1,12 @@
 package com.ffmathy.pooparazzi.phone
 
 import android.app.Application
+import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.app.AppViewModel
+import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,5 +53,22 @@ class AppViewModelWelcomeTest : CoreTestBase() {
         val accounts = FakeAccounts(signedIn = FakeAccounts().nextUser)
         assertFalse(AppViewModel(core.repository, core.settings, accounts, signedIn).welcome.value)
         assertTrue("a phone with an account has nothing to ask", signedIn.seen)
+    }
+
+    /** A widget set to Ida opens the app for her: she becomes the current baby before the sheet is asked for. */
+    @Test
+    fun aLaunchForAnotherBabyMakesThatBabyCurrentFirst() = coreTest { core ->
+        core.settings.ensureBabies(listOf(SampleData.TWIN_ID))
+        val vm = AppViewModel(core.repository, core.settings, FakeAccounts(), MemoryWelcomeStore())
+        vm.request(HomeLaunch.Diaper, SampleData.TWIN_ID)
+        runCurrent()
+        assertEquals(SampleData.TWIN_ID, core.settings.current().selectedBaby.id)
+        assertEquals(HomeLaunch.Diaper, vm.launch.value)
+
+        // A baby that is gone (removed on another phone) leaves the current one alone.
+        vm.request(HomeLaunch.Feed, "gone")
+        runCurrent()
+        assertEquals(SampleData.TWIN_ID, core.settings.current().selectedBaby.id)
+        assertEquals(HomeLaunch.Feed, vm.launch.value)
     }
 }

@@ -7,13 +7,13 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -30,11 +30,11 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
-import com.ffmathy.pooparazzi.phone.ui.home.ReceiptSpec
 import com.ffmathy.pooparazzi.phone.ui.home.HomeActions
 import com.ffmathy.pooparazzi.phone.ui.home.HomeScreen
 import com.ffmathy.pooparazzi.phone.ui.home.HomeStateBuilder
 import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
+import com.ffmathy.pooparazzi.phone.ui.home.ReceiptSpec
 import com.ffmathy.pooparazzi.phone.ui.home.SheetModel
 import com.ffmathy.pooparazzi.phone.ui.preview.HomeSamples
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
@@ -141,19 +141,19 @@ class HomeSemanticsTest {
     fun theButtonsSayWhatTheWeekExpectsNext() {
         // V1_ADDITIONS §9: Feed and Start sleep carry the forecast; poop varies too much in the sample week to predict.
         show(HomeSamples.idle())
-        compose.onNodeWithText("in 1h 00m", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("in 50m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Next in 1h 00m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Next in 50m", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("next feed in about 1 hour, around 15:30", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("sleeps again in about 50 minutes, around 15:19", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("poop in", substring = true, useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText("Next poop in", substring = true, useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
     fun aPassedEstimateSaysHowLongAgoItWasDue() {
-        // V1_ADDITIONS §9: the estimate stays put; at 15:55 the feed expected ~15:30 is "24m ago", not a new guess.
+        // V1_ADDITIONS §9: the estimate stays put; at 15:55 the feed expected ~15:30 is "Due 24m ago", not a new guess.
         show(HomeSamples.forecastPassed())
-        compose.onNodeWithText("24m ago", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("36m ago", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Due 24m ago", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Due 36m ago", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("next feed expected 24 minutes ago, around 15:30", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("expected to sleep again 36 minutes ago, around 15:19", useUnmergedTree = true).assertExists()
     }
@@ -161,7 +161,7 @@ class HomeSemanticsTest {
     @Test
     fun wokeUpSaysWhenTheBabyIsExpectedToWake() {
         show(HomeSamples.asleep())
-        compose.onNodeWithText("in 2h 15m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Next in 2h 15m", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("wakes up in about 2 hours 15 minutes, around 05:27", useUnmergedTree = true).assertExists()
     }
 

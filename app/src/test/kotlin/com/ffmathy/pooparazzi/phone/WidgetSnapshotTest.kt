@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone
 
 import android.app.Application
+import android.net.Uri
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.Appearance
@@ -14,8 +15,8 @@ import com.ffmathy.pooparazzi.phone.widget.WidgetSamples
 import com.ffmathy.pooparazzi.phone.widget.WidgetSnapshot
 import com.ffmathy.pooparazzi.phone.widget.WidgetUpdater
 import com.ffmathy.pooparazzi.phone.widget.forecastExpiry
+import com.ffmathy.pooparazzi.phone.widget.keepTogether
 import com.ffmathy.pooparazzi.phone.widget.nextExpiry
-import android.net.Uri
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -124,5 +125,23 @@ class WidgetSnapshotTest {
         assertTrue(HomeLaunch.Feed.opensSheet)
         assertEquals("the old End feed link opens Home", HomeLaunch.Home, DeepLinks.parse(Uri.parse("pooparazzi://home/side")))
         assertTrue("a receipt is a sheet too", HomeLaunch.Receipt(ReceiptKind.LOGGED, "x").opensSheet)
+    }
+
+    /** A widget set to another baby opens the app for that baby: the link carries it, and the sheet is unchanged. */
+    @Test
+    fun aWidgetsBabyRidesOnItsLink() {
+        val uri = DeepLinks.uri(HomeLaunch.Diaper, "ida")
+        assertEquals("pooparazzi://home/diaper?baby=ida", uri.toString())
+        assertEquals(HomeLaunch.Diaper, DeepLinks.parse(uri))
+        assertEquals("ida", DeepLinks.babyOf(uri))
+        assertNull("one baby: no baby in the link", DeepLinks.babyOf(DeepLinks.uri(HomeLaunch.Feed)))
+    }
+
+    /** A narrow widget button wraps a line between its parts, never inside a duration or a breast order. */
+    @Test
+    fun widgetLinesKeepDurationsAndSidesTogether() {
+        assertEquals("Næste om 1t\u00A000m", keepTogether("Næste om 1t 00m"))
+        assertEquals("1h\u00A032m ago · L\u00A0→\u00A0R", keepTogether("1h 32m ago · L → R"))
+        assertEquals("48m ago", keepTogether("48m ago"))
     }
 }

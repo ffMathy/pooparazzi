@@ -7,6 +7,7 @@
 <full-backup-content>
     <exclude domain="sharedpref" path="system_surfaces.xml" />
     <exclude domain="sharedpref" path="widget_memo.xml" />
+    <exclude domain="sharedpref" path="widget_babies.xml" />
     <exclude domain="sharedpref" path="account_welcome.xml" />
     <exclude domain="sharedpref" path="account_email_link.xml" />
     <exclude domain="sharedpref" path="account_family.xml" />

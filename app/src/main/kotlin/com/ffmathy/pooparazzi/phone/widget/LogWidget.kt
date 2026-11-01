@@ -1,10 +1,9 @@
 package com.ffmathy.pooparazzi.phone.widget
 
-import androidx.annotation.StringRes
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -20,6 +19,7 @@ import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -34,7 +34,6 @@ import androidx.glance.layout.width
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.TextAlign
-import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
@@ -53,7 +52,7 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 class LogWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(LogLayout.Sizes)
 
-    override suspend fun provideGlance(context: Context, id: GlanceId) = provideSnapshots(context) { LogWidgetContent(it) }
+    override suspend fun provideGlance(context: Context, id: GlanceId) = provideSnapshots(context, id) { LogWidgetContent(it) }
 
     /** The generated picker preview (Glance 1.2, Android 15+): the reference scenario at 14:32. */
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
@@ -69,7 +68,7 @@ class LogWidget : GlanceAppWidget() {
 class CoverWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Single
 
-    override suspend fun provideGlance(context: Context, id: GlanceId) = provideSnapshots(context) { LogWidgetContent(it) }
+    override suspend fun provideGlance(context: Context, id: GlanceId) = provideSnapshots(context, id) { LogWidgetContent(it) }
 
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
         provideContent { LogWidgetContent(WidgetSamples.idle(night = true)) }
@@ -80,14 +79,17 @@ class CoverWidget : GlanceAppWidget() {
  * Which parts of the 4×2 widget fit at a size (DESIGN_SPEC §10.11 breakpoints). [width] is the size the widget is
  * composed for (Glance's responsive bucket, never wider than the real widget), so text measured against it fits.
  */
-internal data class LogLayout(val statusRow: Boolean, val labels: Boolean, val wide: Boolean, val width: Dp) {
+internal data class LogLayout(val statusRow: Boolean, val labels: Boolean, val width: Dp, val tall: Boolean = false) {
     /** Row 1's width inside the 12 dp padding. */
     val rowWidth: Dp get() = width - 24.dp
 
-    /** One of the two log buttons (gap 8). */
-    val buttonWidth: Dp get() = (width - 24.dp - 8.dp) / 2
+    /** One of the three buttons (gap 8). */
+    val buttonWidth: Dp get() = (width - 24.dp - 16.dp) / 3
 
     companion object {
+        /** From this height the three buttons are stacked, each a full-width row. */
+        val TALL_HEIGHT = 280.dp
+
         val Sizes: Set<DpSize> = setOf(
             DpSize(120.dp, 100.dp),
             DpSize(240.dp, 130.dp),
@@ -98,15 +100,16 @@ internal data class LogLayout(val statusRow: Boolean, val labels: Boolean, val w
 
         /**
          * Row 1 needs 180 dp of height (below it the widget keeps only the buttons, like a 2×2); labels need 240 dp
-         * of width; under 320 dp, or from 1.3× font scale, row 3 drops its end-aligned status and row 1 shows one fact.
+         * of width. Where a label does not fit its third on one line, the buttons take the compact face. A tall widget
+         * (from [TALL_HEIGHT], as on a Samsung flip's cover screen, 352 × 339 dp) stacks the three buttons instead.
          */
-        fun of(size: DpSize, fontScale: Float): LogLayout {
+        fun of(size: DpSize): LogLayout {
             val statusRow = size.height >= 180.dp
             return LogLayout(
                 statusRow = statusRow,
                 labels = size.width >= 240.dp && size.height >= 130.dp,
-                wide = size.width >= 320.dp && fontScale < 1.3f,
                 width = size.width,
+                tall = size.height >= TALL_HEIGHT && size.width >= 240.dp,
             )
         }
     }
@@ -117,10 +120,10 @@ internal data class LogLayout(val statusRow: Boolean, val labels: Boolean, val w
 internal fun LogWidgetContent(snapshot: WidgetSnapshot) {
     val context = LocalContext.current
     val strings = remember(context, snapshot.language, snapshot.zone) { WidgetStrings(context.inAppLanguage(snapshot.language), snapshot.zone) }
-    val layout = LogLayout.of(LocalSize.current, context.resources.configuration.fontScale)
+    val layout = LogLayout.of(LocalSize.current)
     val measure = remember(context) { WidgetMeasure(context) }
     val colors = WidgetColors(snapshot.night)
-    WidgetSurface(colors, snapshot.backgroundLaunch) {
+    WidgetSurface(colors, snapshot.backgroundLaunch, snapshot.launchBabyId) {
         Column(
             GlanceModifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, bottom = 12.dp, top = if (layout.statusRow) 0.dp else 12.dp),
         ) {
@@ -130,8 +133,6 @@ internal fun LogWidgetContent(snapshot: WidgetSnapshot) {
                 Spacer(GlanceModifier.height(4.dp))
             }
             LogButtons(snapshot, strings, colors, layout, measure, GlanceModifier.fillMaxWidth().defaultWeight())
-            Spacer(GlanceModifier.height(8.dp))
-            SleepToggle(snapshot, strings, colors, layout, GlanceModifier.fillMaxWidth().defaultWeight())
         }
     }
 }
@@ -152,20 +153,44 @@ private fun StatusRow(
         when {
             notice != null -> NoticeLine(notice, strings, colors)
             receipt != null -> ReceiptLine(receipt, baby, strings, colors, layout, measure)
-            else -> StatusTitle(snapshot, baby, colors)
+            else -> StatusTitle(snapshot, baby, strings, colors)
         }
     }
 }
 
 /**
- * Idle and asleep: the baby's name, as the watch's title (the label with two or more babies; nothing when unnamed). The
- * times sit in the buttons they belong to, as on the watch: "2h 10m ago" in Feed and Diaper, "Awake 1h 05m" in the
- * sleep toggle.
+ * Idle and asleep: the baby's name, as the watch's title (nothing when one baby is unnamed). With two or more babies it
+ * is the widget's baby switcher, as the name with a chevron is on Home: a tap moves this widget on to the next baby
+ * (Noa → Ida → Noa), so twins can each have a widget. The times sit in the buttons they belong to, as on the watch:
+ * "2h 10m ago" in Feed and Diaper, "Awake 1h 05m" in the sleep toggle.
  */
 @Composable
-private fun StatusTitle(snapshot: WidgetSnapshot, baby: String?, colors: WidgetColors) {
-    val name = baby ?: snapshot.baby.name.trim().takeIf { it.isNotEmpty() } ?: return
+private fun StatusTitle(snapshot: WidgetSnapshot, baby: String?, strings: WidgetStrings, colors: WidgetColors) {
+    if (baby != null) {
+        BabySwitcher(baby, strings, colors)
+        return
+    }
+    val name = snapshot.baby.name.trim().takeIf { it.isNotEmpty() } ?: return
     BabyLabel(name, colors)
+}
+
+/** The widget's baby with a chevron, in a pill: a tap moves the widget on to the next baby ([NextBabyAction]). */
+@Composable
+private fun BabySwitcher(label: String, strings: WidgetStrings, colors: WidgetColors) {
+    Row(
+        GlanceModifier
+            .height(36.dp)
+            .cornerRadius(18.dp)
+            .background(colors.surfaceHigh.provider())
+            .padding(start = 12.dp, end = 8.dp)
+            .clickable(actionRunCallback<NextBabyAction>())
+            .semantics { contentDescription = strings.string(CoreR.string.cd_baby_switch, label) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        WidgetText(label, colors.onSurface, FactSize)
+        Spacer(GlanceModifier.width(4.dp))
+        WidgetIcon(XDrawables.chevronDown, colors.onSurfaceVariant, 16.dp)
+    }
 }
 
 /** The current baby's label at the start of the status row (two or more babies), in the facts' type (as measured). */
@@ -236,8 +261,13 @@ private fun NoticeLine(notice: WidgetNotice, strings: WidgetStrings, colors: Wid
 }
 
 /**
- * Feed and Diaper: two equal buttons, gap 8, r 20. Each opens the app on its logging sheet (the same sheet as Home's
- * buttons), where the optional details are chosen: feed type and breast order, pee/poop, colour and texture.
+ * Feed, Diaper and the sleep toggle: three equal buttons side by side, gap 8, r 20, as on the 3×1 widget but taller.
+ * Feed and Diaper open the app on their logging sheet (the same sheet as Home's buttons), where the optional details are
+ * chosen: feed type and breast order, pee/poop, colour and texture. The sleep toggle starts or ends the sleep in place.
+ *
+ * Under each label, as the watch shows them: the time since the last one ("2h 10m ago"; the sleep toggle "Awake 1h 05m"
+ * or "Asleep 1h 07m") and what the last week expects next ("Next in 55m", "Poop in 3h 10m", "in 50m" under the sleep
+ * toggle, V1_ADDITIONS §9). The three keep the same number of lines, so their icons and labels stay aligned.
  */
 @Composable
 private fun LogButtons(
@@ -248,50 +278,111 @@ private fun LogButtons(
     measure: WidgetMeasure,
     modifier: GlanceModifier,
 ) {
-    // With two or more babies TalkBack names the baby the sheets open for (BABIES_AND_BACKUP §2.4).
+    // With two or more babies TalkBack names the baby the buttons are for (BABIES_AND_BACKUP §2.4).
     val baby = strings.babyLabel(snapshot)
-    // Both buttons share one face, so their icons stay aligned: a label that needs two lines compacts both.
+    val sleepStart = snapshot.runningSleepStart
+    val asleep = sleepStart != null
     val feedLabel = strings.string(CoreR.string.kind_feed)
     val diaperLabel = strings.string(CoreR.string.kind_diaper)
+    val sleepLabel = strings.string(if (asleep) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
+    // All three share one face, so their icons stay aligned: a label that needs two lines compacts all three.
     val style = when {
         !layout.labels -> FaceStyle.IconOnly
-        listOf(feedLabel, diaperLabel).all { measure.fits(it, LabelSize, layout.buttonWidth - 8.dp) } -> FaceStyle.Regular
+        listOf(feedLabel, diaperLabel, sleepLabel).all { measure.fits(it, LabelSize, layout.buttonWidth - 8.dp) } -> FaceStyle.Regular
         else -> FaceStyle.Compact
     }
-    // Under the label of the regular face, as the watch's rows: the time since the last one ("2h 10m ago") and what the
-    // last week expects next ("Next in 55m", V1_ADDITIONS §9). Both buttons keep the same number of lines, so their icons
-    // stay aligned.
-    val regular = style == FaceStyle.Regular
+    // The times show on both faces with labels; the icon-only face (a small widget) has no room.
+    val regular = style != FaceStyle.IconOnly
+    val now = snapshot.now
     val lastFeed = snapshot.lastFeed?.takeIf { regular }
     val lastDiaper = snapshot.lastDiaper?.takeIf { regular }
     val feedNext = snapshot.feedForecast?.takeIf { regular }
     val poopNext = snapshot.poopForecast?.takeIf { regular }
-    val feedLines = listOfNotNull(lastFeed?.let { strings.fedAgo(it, snapshot.now) }, feedNext?.let { strings.feedForecast(it, snapshot.now) })
-    val diaperLines = listOfNotNull(lastDiaper?.let { strings.ago(it.startMillis, snapshot.now) }, poopNext?.let { strings.poopForecast(it, snapshot.now) })
-    val lines = maxOf(feedLines.size, diaperLines.size)
+    val sleepNext = snapshot.sleepForecast?.takeIf { regular }
+    val sleepStatus = when {
+        !regular -> null
+        sleepStart != null -> strings.asleepFor(sleepStart, now)
+        snapshot.awakeSinceMillis != null -> strings.awakeFor(snapshot.awakeSinceMillis, now)
+        else -> null
+    }
+    val feedLines = listOfNotNull(lastFeed?.let { strings.fedAgo(it, now) }, feedNext?.let { strings.feedForecast(it, now) })
+    val diaperLines = listOfNotNull(lastDiaper?.let { strings.ago(it.startMillis, now) }, poopNext?.let { strings.poopForecast(it, now) })
+    val stacked = layout.tall && style != FaceStyle.IconOnly
+    val sleepLines = listOfNotNull(sleepStatus, sleepNext?.let { strings.sleepForecast(it, now) })
+    val lines = maxOf(feedLines.size, diaperLines.size, sleepLines.size)
     fun padded(sub: List<String>) = sub + List(lines - sub.size) { "\u00A0" }
-    fun described(@StringRes name: Int, vararg spoken: String?) =
-        spoken.filterNotNull().fold(strings.forBaby(strings.string(name), baby)) { said, part -> strings.string(R.string.spoken_pair, said, part) }
-    Row(modifier) {
-        val cell = GlanceModifier.defaultWeight().fillMaxHeight()
+    fun described(name: String, vararg spoken: String?) =
+        spoken.filterNotNull().fold(name) { said, part -> strings.string(R.string.spoken_pair, said, part) }
+    // A tall widget stacks them: each a full-width row with the icon at the start and its lines beside it.
+    @Composable
+    fun face(icon: Int, iconColor: Color?, label: String, labelColor: Color, lines: List<String>) =
+        if (stacked) RowFace(icon, iconColor, label, labelColor, lines) else ButtonFace(icon, iconColor, label, labelColor, style, sub = padded(lines))
+    StackOrRow(stacked, modifier) { cell, gap ->
         val feed = colors.feed
         val feedSaid = described(
-            R.string.widget_cd_log_feed,
-            lastFeed?.let { strings.agoSpoken(CoreR.string.spoken_last_feed, it.startMillis, snapshot.now) },
-            feedNext?.let(strings::feedForecastSpoken),
+            strings.forBaby(strings.string(R.string.widget_cd_log_feed), baby),
+            lastFeed?.let { strings.agoSpoken(CoreR.string.spoken_last_feed, it.startMillis, now) },
+            snapshot.feedForecast?.let(strings::feedForecastSpoken),
         )
-        SheetButton(HomeLaunch.Feed, feed, feedSaid, cell) {
-            ButtonFace(XDrawables.forFeedType(snapshot.lastFeed?.feedType), feed.strong, feedLabel, feed.onContainer, style, sub = padded(feedLines))
+        SheetButton(HomeLaunch.Feed, snapshot.launchBabyId, feed, feedSaid, cell) {
+            face(XDrawables.forFeedType(snapshot.lastFeed?.feedType), feed.strong, feedLabel, feed.onContainer, feedLines)
         }
-        Spacer(GlanceModifier.width(8.dp))
+        Spacer(gap)
         val diaper = colors.diaper
         val diaperSaid = described(
-            R.string.widget_cd_log_diaper,
-            lastDiaper?.let { strings.agoSpoken(CoreR.string.spoken_last_diaper, it.startMillis, snapshot.now) },
-            poopNext?.let(strings::poopForecastSpoken),
+            strings.forBaby(strings.string(R.string.widget_cd_log_diaper), baby),
+            lastDiaper?.let { strings.agoSpoken(CoreR.string.spoken_last_diaper, it.startMillis, now) },
+            snapshot.poopForecast?.let(strings::poopForecastSpoken),
         )
-        SheetButton(HomeLaunch.Diaper, diaper, diaperSaid, cell) {
-            ButtonFace(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, style, sub = padded(diaperLines))
+        SheetButton(HomeLaunch.Diaper, snapshot.launchBabyId, diaper, diaperSaid, cell) {
+            face(XDrawables.diaper, diaper.strong, diaperLabel, diaper.onContainer, diaperLines)
+        }
+        Spacer(gap)
+        val sleep = colors.sleep
+        val sleepSaid = described(
+            strings.forBaby(strings.string(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep), baby),
+            sleepStatus,
+            snapshot.sleepForecast?.let { strings.sleepForecastSpoken(it, asleep) },
+        )
+        WidgetButton(
+            modifier = cell,
+            fill = if (asleep) sleep.containerLit else sleep.container,
+            border = if (asleep) sleep.strong else null,
+            radius = 20.dp,
+            action = actionRunCallback<ToggleSleepAction>(),
+            description = sleepSaid,
+        ) {
+            face(if (asleep) XDrawables.wake else XDrawables.sleep, sleep.strong, sleepLabel, sleep.onContainer, sleepLines)
+        }
+    }
+}
+
+/**
+ * A line that wraps only where it reads well: never inside a duration ("1t 00m") or a breast order ("L → R"), so a
+ * narrow button breaks "Næste om / 1t 00m" and "1h 32m ago · / L → R".
+ */
+internal fun keepTogether(text: String): String =
+    text.replace(Regex("""(\d+\p{L}+) (\d)"""), "$1\u00A0$2").replace(" → ", "\u00A0→\u00A0")
+
+/** The three buttons side by side, or stacked ([stacked]); [content] gets each button's modifier and the gap after it. */
+@Composable
+private fun StackOrRow(stacked: Boolean, modifier: GlanceModifier, content: @Composable (cell: GlanceModifier, gap: GlanceModifier) -> Unit) {
+    if (stacked) {
+        Column(modifier) { content(GlanceModifier.fillMaxWidth().defaultWeight(), GlanceModifier.height(8.dp)) }
+    } else {
+        Row(modifier) { content(GlanceModifier.defaultWeight().fillMaxHeight(), GlanceModifier.width(8.dp)) }
+    }
+}
+
+/** A stacked button's face: icon 24 at the start, then the label 16 sp over its lines in 13 sp, as the watch's rows. */
+@Composable
+private fun RowFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, lines: List<String>) {
+    Row(GlanceModifier.fillMaxSize().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+        WidgetIcon(icon, iconColor, 24.dp)
+        Spacer(GlanceModifier.width(14.dp))
+        Column {
+            WidgetText(label, labelColor, 16.sp, maxLines = 1)
+            lines.forEach { WidgetText(keepTogether(it), labelColor, 13.sp, maxLines = 1) }
         }
     }
 }
@@ -305,108 +396,30 @@ private val LabelSize = 15.sp
 private val CompactTopSpace = 10.dp
 
 /**
- * Icon over label, centred: 24 dp + 6 + 15 sp, or the compact 20 dp + two lines of 13 sp ("Afslut" / "amning").
- * The compact face starts with [CompactTopSpace], so that, centred in the same button, its icon's centre lines up with
- * the regular face's.
+ * Icon over label, centred: 24 dp + 6 + 15 sp, then the [sub] lines in 12 sp (up to two lines each); or the compact
+ * 20 dp + two lines of 13 sp ("Start" / "sleep") with the [sub] lines in 11 sp. The compact face starts with [CompactTopSpace], so that, centred in
+ * the same button, its icon's centre lines up with the regular face's.
  */
 @Composable
 private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle, sub: List<String> = emptyList()) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
+    Column(
+        GlanceModifier.padding(horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         if (style == FaceStyle.Compact) Spacer(GlanceModifier.height(CompactTopSpace))
-        // With lines under the label the face tightens (icon 20 then 18, gap 2 then 0, label 14 sp with two), so every
-        // line keeps its padding in the button.
-        val iconSize = when {
-            sub.size >= 2 -> 18.dp
-            style == FaceStyle.Compact || sub.isNotEmpty() -> 20.dp
-            else -> 24.dp
-        }
-        WidgetIcon(icon, iconColor, iconSize)
+        WidgetIcon(icon, iconColor, if (style == FaceStyle.Compact) 20.dp else 24.dp)
         if (style != FaceStyle.IconOnly) {
-            Spacer(GlanceModifier.height(if (style == FaceStyle.Compact || sub.size >= 2) 0.dp else if (sub.isNotEmpty()) 2.dp else 6.dp))
+            Spacer(GlanceModifier.height(if (style == FaceStyle.Compact) 0.dp else 6.dp))
             WidgetText(
                 text = label,
                 color = labelColor,
-                size = if (style == FaceStyle.Compact) 13.sp else if (sub.size >= 2) 14.sp else LabelSize,
+                size = if (style == FaceStyle.Compact) 13.sp else LabelSize,
                 maxLines = 2,
                 align = TextAlign.Center,
-                modifier = GlanceModifier.padding(horizontal = 4.dp),
             )
-            sub.forEach { WidgetText(it, labelColor, 11.sp, maxLines = 1, align = TextAlign.Center, modifier = GlanceModifier.padding(horizontal = 4.dp)) }
-        }
-    }
-}
-
-/**
- * The sleep toggle: "Start sleep" with "Awake 1h 05m" at the end, or the checked "Woke up" (lit fill, 2 dp
- * strong border) with "Asleep 1h 07m". Under it, what the last week expects: "Next sleep in 50m" or "Wakes in 2h 15m"
- * (V1_ADDITIONS §9). The end text wraps rather than clips when alone, and is dropped when narrow.
- */
-@Composable
-private fun SleepToggle(snapshot: WidgetSnapshot, strings: WidgetStrings, colors: WidgetColors, layout: LogLayout, modifier: GlanceModifier) {
-    val sleep = colors.sleep
-    val sleepStart = snapshot.runningSleepStart
-    val awakeSince = snapshot.awakeSinceMillis
-    val label = strings.string(if (sleepStart != null) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
-    val status = when {
-        sleepStart != null -> strings.asleepFor(sleepStart, snapshot.now)
-        awakeSince != null -> strings.awakeFor(awakeSince, snapshot.now)
-        else -> null
-    }
-    val forecast = snapshot.sleepForecast?.let { strings.sleepForecast(it, sleepStart != null, snapshot.now) }
-    val forecastSpoken = snapshot.sleepForecast?.let { strings.sleepForecastSpoken(it, sleepStart != null) }
-    val name = strings.forBaby(
-        strings.string(if (sleepStart != null) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep),
-        strings.babyLabel(snapshot),
-    )
-    WidgetButton(
-        modifier = modifier,
-        fill = if (sleepStart != null) sleep.containerLit else sleep.container,
-        border = if (sleepStart != null) sleep.strong else null,
-        radius = 20.dp,
-        action = actionRunCallback<ToggleSleepAction>(),
-        description = listOfNotNull(status, forecastSpoken).fold(name) { said, part -> strings.string(R.string.spoken_pair, said, part) },
-    ) {
-        val icon = if (sleepStart != null) XDrawables.wake else XDrawables.sleep
-        if (!layout.labels) {
-            WidgetIcon(icon, sleep.strong, 24.dp)
-        } else {
-            SleepToggleRow(icon, label, status, forecast, sleepStart != null, layout, colors)
-        }
-    }
-}
-
-@Composable
-private fun SleepToggleRow(icon: Int, label: String, status: String?, forecast: String?, asleep: Boolean, layout: LogLayout, colors: WidgetColors) {
-    val sleep = colors.sleep
-    Row(
-        // Inside the 2 dp border the content keeps its 20 dp inset.
-        GlanceModifier.fillMaxSize().padding(horizontal = if (asleep) 18.dp else 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        WidgetIcon(icon, sleep.strong, 24.dp)
-        Spacer(GlanceModifier.width(10.dp))
-        if (!layout.wide && status != null) {
-            // Narrow: no room at the end, so the status goes under the label (still in the toggle, as Feed's and
-            // Diaper's times are in theirs).
-            Column {
-                WidgetText(label, sleep.onContainer, 16.sp)
-                WidgetText(status, sleep.onContainer, 13.sp, maxLines = 1)
-            }
-        } else {
-            WidgetText(label, sleep.onContainer, 16.sp)
-        }
-        if (layout.wide && status != null) {
-            Spacer(GlanceModifier.width(12.dp))
-            Spacer(GlanceModifier.defaultWeight())
-            if (forecast == null) {
-                WidgetText(status, sleep.onContainer, 14.sp, maxLines = 2, align = TextAlign.End)
-            } else {
-                // The forecast goes under the status, one line each (V1_ADDITIONS §9).
-                Column(horizontalAlignment = Alignment.End) {
-                    WidgetText(status, sleep.onContainer, 14.sp, maxLines = 1, align = TextAlign.End)
-                    WidgetText(forecast, sleep.onContainer, 13.sp, maxLines = 1, align = TextAlign.End)
-                }
-            }
+            if (sub.isNotEmpty()) Spacer(GlanceModifier.height(2.dp))
+            sub.forEach { WidgetText(keepTogether(it), labelColor, if (style == FaceStyle.Compact) 11.sp else 12.sp, maxLines = 2, align = TextAlign.Center) }
         }
     }
 }
