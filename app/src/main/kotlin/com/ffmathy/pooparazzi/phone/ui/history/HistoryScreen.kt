@@ -73,6 +73,7 @@ import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.time.rememberReducedMotion
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.ui.components.IconTarget
+import com.ffmathy.pooparazzi.phone.ui.components.LabelTarget
 import com.ffmathy.pooparazzi.phone.ui.components.SyncIcons
 import com.ffmathy.pooparazzi.phone.ui.components.XTopBar
 import com.ffmathy.pooparazzi.phone.ui.components.syncIcons
@@ -125,7 +126,7 @@ fun HistoryRoute(onBack: () -> Unit, onOpenStatistics: () -> Unit) {
 
 /**
  * History (P3, DESIGN_SPEC §3.3.3, V1_ADDITIONS §4): the top bar with the status icons, the day switcher, the day
- * ribbon, the stats, the day's entries newest first, and under them the typical day of the week before. Rows open the edit sheet and swipe to reveal Delete (with an Undo
+ * ribbon, the stats, and the day's entries newest first. Rows open the edit sheet and swipe to reveal Delete (with an Undo
  * snackbar); the "Add entry" FAB adds a past entry. Laid out edge to edge from [windowInsets].
  */
 @Composable
@@ -204,10 +205,6 @@ fun HistoryScreen(
                             .padding(bottom = if (index == state.entries.lastIndex) 0.dp else HistoryRowDefaults.Gap),
                     )
                 }
-                // Under the day's log: the typical day of the week before, to compare the day with.
-                item(key = "pattern") {
-                    HistoryPattern(state.pattern, state.day, state.today, formatters, Modifier.padding(top = 24.dp))
-                }
             }
         }
         SnackbarHost(
@@ -242,7 +239,7 @@ fun HistoryScreen(
 
 /**
  * Back, "History", the current baby's label with two or more babies (BABIES_AND_BACKUP §2.4), the status icons (an
- * icon in its error state is a 48 dp retry target) and the `chart` button to Statistics.
+ * icon in its error state is a 48 dp retry target) and the "Statistics" button (`chart` + its name) to Statistics.
  */
 @Composable
 private fun HistoryTopBar(state: HistoryUiState, formatters: Formatters, actions: HistoryActions) {
@@ -252,7 +249,7 @@ private fun HistoryTopBar(state: HistoryUiState, formatters: Formatters, actions
         navigationIcon = XIcons.back,
         navigationLabel = stringResource(R.string.cd_back),
         onNavigate = actions::onBack,
-        actions = { IconTarget(XIcons.chart, stringResource(R.string.statistics_title), actions::onOpenStatistics) },
+        actions = { LabelTarget(XIcons.chart, stringResource(R.string.statistics_title), actions::onOpenStatistics) },
     ) {
         if (state.hasSeveralBabies) {
             Text(

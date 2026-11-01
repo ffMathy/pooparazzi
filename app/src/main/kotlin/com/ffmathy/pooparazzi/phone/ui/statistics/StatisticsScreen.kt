@@ -109,7 +109,7 @@ fun StatisticsRoute(onBack: () -> Unit) {
 
 /**
  * Statistics (P8, V1_ADDITIONS §8): averages per day of feeds, pee, poop and sleep over one range (the last 30 days
- * unless the chip picks the last 7 or 90 days, all days or dates from a dialog). The rows open one at a time; the open row shows its bar chart of the range. Only whole days up to yesterday count, and a
+ * unless the chip picks the last 7 or 90 days, all days or dates from a dialog). The rows open one at a time; the open row shows its bar chart of the range. Under them, the typical day of the range. Only whole days up to yesterday count, and a
  * day counts for a kind only if one was logged that day. Settings' skeleton: one scrolling column under the top bar,
  * laid out edge to edge from [windowInsets].
  */
@@ -241,6 +241,8 @@ private fun StatisticsContent(
             color = colors.onSurfaceVariant,
             modifier = Modifier.padding(top = 12.dp, start = 4.dp, end = 4.dp),
         )
+        // Under the averages, the typical day over the same days.
+        TypicalDay(state.pattern, rangeLabel(report.range), formatters, Modifier.padding(top = 24.dp))
     }
 }
 

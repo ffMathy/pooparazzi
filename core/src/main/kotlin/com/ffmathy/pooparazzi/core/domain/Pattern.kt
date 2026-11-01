@@ -27,7 +27,7 @@ data class PatternIntervals(
 }
 
 /**
- * The typical day over the logged days [from]..[to] (History's "Pattern" card): when in the day the baby usually
+ * The typical day over the logged days [from]..[to] (Statistics' "Typical day" card): when in the day the baby usually
  * sleeps, feeds and gets a diaper, and the usual time between them.
  *
  * Each of [sleep], [feeds] and [diapers] has one share 0..1 per [PatternRules.SLOT_MINUTES] slot of the local day
@@ -53,9 +53,6 @@ data class DailyPattern(
 
 /** Tuning of [dailyPattern]. */
 object PatternRules {
-    /** How many days before the shown day the pattern looks at: a week follows a growing baby. */
-    const val DAYS = 7L
-
     /** Fewer logged days than this and there is no pattern yet. */
     const val MIN_DAYS = 3
 
@@ -67,22 +64,21 @@ object PatternRules {
 }
 
 /**
- * The [DailyPattern] of the [PatternRules.DAYS] days before [day] (so today's pattern does not count today, which has
- * not finished), or null when fewer than [PatternRules.MIN_DAYS] of them have anything logged. A stretch is by night
+ * The [DailyPattern] of the days [from]..[to] (Statistics' range; today counts only up to [now]), or null when fewer
+ * than [PatternRules.MIN_DAYS] of them have anything logged. A stretch is by night
  * when it starts in [nightStart]..[nightEnd] (the night window, 19:00–07:00 by default), otherwise by day. Feeds or
  * diapers under [ForecastRules.MIN_GAP_MILLIS] apart are one (a feed per side), and gaps over
  * [ForecastRules.MAX_GAP_MILLIS] are a forgotten log, not a stretch. Entries after [now] are ignored.
  */
 fun dailyPattern(
     entries: List<Entry>,
-    day: LocalDate,
+    from: LocalDate,
+    to: LocalDate,
     now: Long,
     zone: ZoneId,
     nightStart: LocalTime = LocalTime.of(19, 0),
     nightEnd: LocalTime = LocalTime.of(7, 0),
 ): DailyPattern? {
-    val from = day.minusDays(PatternRules.DAYS)
-    val to = day.minusDays(1)
     val windowStart = DayBounds.of(from, zone).startMillis
     val windowEnd = minOf(DayBounds.of(to, zone).endMillis, now)
     val visible = entries
@@ -101,9 +97,12 @@ fun dailyPattern(
     val sleepDays = dates.filter { date -> inWindow.any { it.kind == EntryKind.SLEEP && localDate(it.startMillis, zone) == date } }
     val sleepShares = FloatArray(PatternRules.SLOTS)
     for (date in sleepDays) {
+        // Only the sleeps that touch the day: a range may be months long.
+        val bounds = DayBounds.of(date, zone)
+        val onDay = sleeps.filter { it.startMillis < bounds.endMillis && it.effectiveEndIn(now) > bounds.startMillis }
         for (slot in 0 until PatternRules.SLOTS) {
             val (start, end) = slotBounds(date, slot, zone)
-            val asleep = sleeps.sumOf { sleep -> (minOf(sleep.effectiveEndIn(now), end) - maxOf(sleep.startMillis, start)).coerceAtLeast(0L) }
+            val asleep = onDay.sumOf { sleep -> (minOf(sleep.effectiveEndIn(now), end) - maxOf(sleep.startMillis, start)).coerceAtLeast(0L) }
             sleepShares[slot] += (asleep.toFloat() / (end - start)).coerceAtMost(1f)
         }
     }

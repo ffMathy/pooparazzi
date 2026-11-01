@@ -52,25 +52,22 @@
     <string name="history_next_day">Next day</string>
     <string name="history_add_entry">Add entry</string>
     <string name="history_empty">Nothing logged on this day.</string>
-    <!-- History's "Typical day" card: the week before the day shown -->
-    <string name="history_pattern_title">Typical day</string>
-    <string name="history_pattern_last_week">Last 7 days</string>
-    <!-- "7 days before Sat 24 Oct" -->
-    <string name="history_pattern_week_before">7 days before %1$s</string>
-    <string name="history_pattern_empty">A typical day shows once 3 days are logged.</string>
-    <string name="history_pattern_by_day">By day</string>
-    <string name="history_pattern_by_night">By night</string>
-    <string name="history_pattern_between_feeds">Between feeds</string>
-    <string name="history_pattern_between_diapers">Between diapers</string>
-    <string name="history_pattern_sleep">Sleep</string>
-    <string name="history_pattern_awake">Awake</string>
+    <!-- Statistics' "Typical day" card, over the chosen range -->
+    <string name="typical_day_title">Typical day</string>
+    <string name="typical_day_empty">A typical day shows once 3 days in this range are logged.</string>
+    <string name="typical_day_by_day">By day</string>
+    <string name="typical_day_by_night">By night</string>
+    <string name="typical_day_between_feeds">Between feeds</string>
+    <string name="typical_day_between_diapers">Between diapers</string>
+    <string name="typical_day_sleep">Sleep</string>
+    <string name="typical_day_awake">Awake</string>
     <!-- The range half of the stretches fall in: "2h 20m–3h 15m" -->
-    <string name="history_pattern_range" translatable="false">%1$s–%2$s</string>
-    <string name="history_pattern_spoken_plot">When sleep, feeds and diapers usually happen through the day</string>
+    <string name="typical_day_range" translatable="false">%1$s–%2$s</string>
+    <string name="typical_day_spoken_plot">When sleep, feeds and diapers usually happen through the day</string>
     <!-- TalkBack: "about 2 hours 50 minutes, usually 2 hours 20 minutes to 3 hours 15 minutes" -->
-    <string name="history_pattern_spoken_interval">about %1$s, usually %2$s to %3$s</string>
+    <string name="typical_day_spoken_interval">about %1$s, usually %2$s to %3$s</string>
     <!-- TalkBack: "Between feeds. By day: about …. By night: about …." -->
-    <string name="history_pattern_spoken_row">%1$s. By day: %2$s. By night: %3$s.</string>
+    <string name="typical_day_spoken_row">%1$s. By day: %2$s. By night: %3$s.</string>
     <!-- Custom accessibility action on a History row (DESIGN_SPEC §9.4) -->
     <string name="action_edit_time">Edit time</string>
 

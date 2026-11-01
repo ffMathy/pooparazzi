@@ -1,4 +1,4 @@
-package com.ffmathy.pooparazzi.phone.ui.history
+package com.ffmathy.pooparazzi.phone.ui.statistics
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -41,9 +41,9 @@ import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.ui.tokens.LocalXPalette
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
-import java.time.LocalDate
+import com.ffmathy.pooparazzi.phone.ui.history.RibbonDefaults
 
-/** The typical-day plot inside the Pattern card: the day ribbon's lanes and axis, as shares of the week. */
+/** The plot inside the Typical day card: History's day-ribbon lanes and axis, as shares of the range's days. */
 private object PatternDefaults {
     val PlotHeight = 100.dp
     const val SLEEP_TOP = 13f
@@ -59,17 +59,16 @@ private object PatternDefaults {
 }
 
 /**
- * "Typical day" (History, under the day's stats): when the baby usually sleeps, feeds and gets a diaper over the
- * [DailyPattern] week before the day shown, drawn like the day ribbon above it (same lanes and axis, each half hour as
- * strong as it is typical), then the usual time between feeds and diapers, how long a sleep lasts and how long the
- * baby is awake between sleeps, by day and by night: the middle value and, under it, the range half of them fall in.
- * Without a pattern yet (under three logged days) it says so.
+ * "Typical day" (Statistics, under the averages): when the baby usually sleeps, feeds and gets a diaper over the
+ * logged days of the range ([subtitle], e.g. "Last 30 days"), drawn like History's day ribbon (same lanes and axis,
+ * each half hour as strong as it is typical), then the usual time between feeds and diapers, how long a sleep lasts
+ * and how long the baby is awake between sleeps, by day and by night: the middle value and, under it, the range half
+ * of them fall in. Without a pattern yet (under three logged days in the range) it says so.
  */
 @Composable
-internal fun HistoryPattern(
+internal fun TypicalDay(
     pattern: DailyPattern?,
-    day: LocalDate,
-    today: LocalDate,
+    subtitle: String,
     formatters: Formatters,
     modifier: Modifier = Modifier,
 ) {
@@ -83,20 +82,12 @@ internal fun HistoryPattern(
             .padding(vertical = 16.dp),
     ) {
         Column(Modifier.padding(horizontal = 16.dp).semantics(mergeDescendants = true) { heading() }) {
-            Text(stringResource(R.string.history_pattern_title), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
-            Text(
-                if (day == today) {
-                    stringResource(R.string.history_pattern_last_week)
-                } else {
-                    stringResource(R.string.history_pattern_week_before, formatters.clock.dayMonth(day))
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.onSurfaceVariant,
-            )
+            Text(stringResource(R.string.typical_day_title), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
         }
         if (pattern == null) {
             Text(
-                stringResource(R.string.history_pattern_empty),
+                stringResource(R.string.typical_day_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
@@ -106,10 +97,10 @@ internal fun HistoryPattern(
         PatternPlot(pattern, Modifier.padding(top = 4.dp))
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             HeaderRow()
-            IntervalRow(stringResource(R.string.history_pattern_between_feeds), events.feed.strong, pattern, formatters) { it.betweenFeeds }
-            IntervalRow(stringResource(R.string.history_pattern_between_diapers), events.diaper.strong, pattern, formatters) { it.betweenDiapers }
-            IntervalRow(stringResource(R.string.history_pattern_sleep), events.sleep.strong, pattern, formatters) { it.sleep }
-            IntervalRow(stringResource(R.string.history_pattern_awake), events.sleep.strong.copy(alpha = 0.45f), pattern, formatters) { it.awake }
+            IntervalRow(stringResource(R.string.typical_day_between_feeds), events.feed.strong, pattern, formatters) { it.betweenFeeds }
+            IntervalRow(stringResource(R.string.typical_day_between_diapers), events.diaper.strong, pattern, formatters) { it.betweenDiapers }
+            IntervalRow(stringResource(R.string.typical_day_sleep), events.sleep.strong, pattern, formatters) { it.sleep }
+            IntervalRow(stringResource(R.string.typical_day_awake), events.sleep.strong.copy(alpha = 0.45f), pattern, formatters) { it.awake }
         }
     }
 }
@@ -125,7 +116,7 @@ private fun PatternPlot(pattern: DailyPattern, modifier: Modifier = Modifier) {
     val nightBand = palette.colors.ribbonNightBand
     val axisLine = with(LocalDensity.current) { axisStyle.lineHeight.toDp() }
     val height = maxOf(PatternDefaults.PlotHeight, RibbonDefaults.AXIS_TOP.dp + axisLine + 6.dp)
-    val description = stringResource(R.string.history_pattern_spoken_plot)
+    val description = stringResource(R.string.typical_day_spoken_plot)
     Box(modifier.fillMaxWidth().height(height).clearAndSetSemantics { contentDescription = description }) {
         Canvas(Modifier.matchParentSize()) {
             val d = density
@@ -149,8 +140,8 @@ private fun HeaderRow() {
     val style = MaterialTheme.typography.labelSmall
     val color = MaterialTheme.colorScheme.onSurfaceVariant
     Row(Modifier.fillMaxWidth().padding(start = PatternDefaults.ValueIndent).clearAndSetSemantics { }) {
-        Text(stringResource(R.string.history_pattern_by_day), style = style, color = color, modifier = Modifier.weight(1f))
-        Text(stringResource(R.string.history_pattern_by_night), style = style, color = color, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.typical_day_by_day), style = style, color = color, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.typical_day_by_night), style = style, color = color, modifier = Modifier.weight(1f))
     }
 }
 
@@ -167,7 +158,7 @@ private fun IntervalRow(
     val byDay = pick(pattern.day)
     val byNight = pick(pattern.night)
     val spoken = stringResource(
-        R.string.history_pattern_spoken_row,
+        R.string.typical_day_spoken_row,
         label,
         spokenInterval(byDay, formatters),
         spokenInterval(byNight, formatters),
@@ -195,7 +186,7 @@ private fun IntervalValue(interval: PatternInterval?, formatters: Formatters, mo
         Text(formatters.duration.format(rounded(interval.medianMillis)), style = PhoneType.dataMedium, color = colors.onSurface)
         Text(
             stringResource(
-                R.string.history_pattern_range,
+                R.string.typical_day_range,
                 formatters.duration.format(rounded(interval.lowMillis)),
                 formatters.duration.format(rounded(interval.highMillis)),
             ),
@@ -211,7 +202,7 @@ private fun spokenInterval(interval: PatternInterval?, formatters: Formatters): 
     interval ?: return stringResource(R.string.statistics_spoken_not_logged)
     val duration = formatters.duration
     return stringResource(
-        R.string.history_pattern_spoken_interval,
+        R.string.typical_day_spoken_interval,
         duration.spoken(rounded(interval.medianMillis)),
         duration.spoken(rounded(interval.lowMillis)),
         duration.spoken(rounded(interval.highMillis)),
@@ -247,7 +238,7 @@ private fun DrawScope.lane(shares: List<Float>, top: Float, color: Color, x: (Fl
     }
 }
 
-/** "00" start-aligned, "06" "12" "18" centred on their hour, "24" end-aligned, like the day ribbon. */
+/** "00" start-aligned, "06" "12" "18" centred on their hour, "24" end-aligned, like History's day ribbon. */
 private fun DrawScope.hourAxis(measurer: TextMeasurer, style: TextStyle, x: (Float) -> Float, inset: Float, d: Float) {
     val top = RibbonDefaults.AXIS_TOP * d
     listOf(0, 6, 12, 18, 24).forEach { hour ->

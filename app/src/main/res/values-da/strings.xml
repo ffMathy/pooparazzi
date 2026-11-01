@@ -22,19 +22,17 @@
     <string name="history_next_day">Næste dag</string>
     <string name="history_add_entry">Tilføj</string>
     <string name="history_empty">Intet registreret denne dag.</string>
-    <string name="history_pattern_title">Typisk dag</string>
-    <string name="history_pattern_last_week">Seneste 7 dage</string>
-    <string name="history_pattern_week_before">7 dage før %1$s</string>
-    <string name="history_pattern_empty">En typisk dag vises, når der er registreret 3 dage.</string>
-    <string name="history_pattern_by_day">Om dagen</string>
-    <string name="history_pattern_by_night">Om natten</string>
-    <string name="history_pattern_between_feeds">Mellem måltider</string>
-    <string name="history_pattern_between_diapers">Mellem bleskift</string>
-    <string name="history_pattern_sleep">Søvn</string>
-    <string name="history_pattern_awake">Vågen</string>
-    <string name="history_pattern_spoken_plot">Hvornår søvn, måltider og bleskift typisk sker i løbet af dagen</string>
-    <string name="history_pattern_spoken_interval">cirka %1$s, typisk %2$s til %3$s</string>
-    <string name="history_pattern_spoken_row">%1$s. Om dagen: %2$s. Om natten: %3$s.</string>
+    <string name="typical_day_title">Typisk dag</string>
+    <string name="typical_day_empty">En typisk dag vises, når der er registreret 3 dage i perioden.</string>
+    <string name="typical_day_by_day">Om dagen</string>
+    <string name="typical_day_by_night">Om natten</string>
+    <string name="typical_day_between_feeds">Mellem måltider</string>
+    <string name="typical_day_between_diapers">Mellem bleskift</string>
+    <string name="typical_day_sleep">Søvn</string>
+    <string name="typical_day_awake">Vågen</string>
+    <string name="typical_day_spoken_plot">Hvornår søvn, måltider og bleskift typisk sker i løbet af dagen</string>
+    <string name="typical_day_spoken_interval">cirka %1$s, typisk %2$s til %3$s</string>
+    <string name="typical_day_spoken_row">%1$s. Om dagen: %2$s. Om natten: %3$s.</string>
     <string name="action_edit_time">Ret tid</string>
 
     <!-- Statistik -->

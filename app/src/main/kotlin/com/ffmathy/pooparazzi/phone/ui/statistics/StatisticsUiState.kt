@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.phone.ui.statistics
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import com.ffmathy.pooparazzi.core.domain.DailyPattern
 import com.ffmathy.pooparazzi.core.domain.StatsChart
 import com.ffmathy.pooparazzi.core.domain.StatsMetric
 import com.ffmathy.pooparazzi.core.domain.StatsRange
@@ -20,6 +21,7 @@ import java.time.ZoneId
  * @property report the last 7 days, the last 30 days and the comparison range; null until a whole day has been
  * logged (the empty state).
  * @property chart [report]'s chart of [metric].
+ * @property pattern the typical day over [report]'s range ("Typical day"), or null under three logged days in it.
  * @property babies all babies, in order; with two or more the current baby's label shows under the title, as on
  * History (BABIES_AND_BACKUP §2.4).
  * @property babyId the current baby, whose log this is.
@@ -31,6 +33,7 @@ data class StatisticsUiState(
     val metric: StatsMetric,
     val report: StatsReport?,
     val chart: StatsChart?,
+    val pattern: DailyPattern? = null,
     val babies: List<Baby> = listOf(Baby(Baby.FIRST_ID)),
     val babyId: String = babies.first().id,
 ) {

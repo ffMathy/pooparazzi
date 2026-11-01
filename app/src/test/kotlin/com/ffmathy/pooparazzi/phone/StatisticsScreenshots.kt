@@ -5,6 +5,9 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
@@ -30,7 +33,7 @@ import java.time.LocalDate
 /**
  * Statistics (P8) on the reference phone (390 × 844 dp, xxhdpi) with the sample history and a fixed clock (V1_ADDITIONS
  * §6, §8), in English and Danish: `app/screenshots/<lang>/21-…22-*.png`, continuing the tour after the notifications, and
- * `34-statistics-twins.png` with two babies. The other states are written under `build/outputs/roborazzi/` for review.
+ * `34-statistics-twins.png` with two babies, and `45-statistics-typical-day.png` scrolled to the Typical day card. The other states are written under `build/outputs/roborazzi/` for review.
  * The status and navigation bars are left empty (24 dp insets, as on the reference device).
  */
 abstract class StatisticsScreenshots(private val language: String) {
@@ -89,6 +92,23 @@ abstract class StatisticsScreenshots(private val language: String) {
         }
         compose.waitForIdle()
         captureScreenRoboImage(path("statistics-date-picker", tour = false))
+    }
+
+    /** Under the averages, the typical day of the last 30 days: lanes by half hour, and the usual intervals. */
+    @Test fun statisticsTypicalDay() = scrolledToTypicalDay("45-statistics-typical-day", night = false, StatisticsSamples.lastThirtyDays())
+
+    @Test fun statisticsTypicalDayNight() = scrolledToTypicalDay("statistics-typical-day-night", night = true, StatisticsSamples.night(), tour = false)
+
+    /** Under three logged days in the range: the card says when it will show (written under build/). */
+    @Test fun statisticsTypicalDaySoFar() = scrolledToTypicalDay("statistics-typical-day-so-far", night = false, StatisticsSamples.soFar(), tour = false)
+
+    /** Statistics scrolled to the end, where the Typical day card is. */
+    private fun scrolledToTypicalDay(name: String, night: Boolean, state: StatisticsUiState, tour: Boolean = true) {
+        compose.setContent { NightLightTheme(night = night) { Statistics(state) } }
+        // To the end of the one scrolling column, so the whole card shows.
+        compose.onNode(hasScrollAction()).performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 100_000f) }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage(path(name, tour))
     }
 
     @Composable

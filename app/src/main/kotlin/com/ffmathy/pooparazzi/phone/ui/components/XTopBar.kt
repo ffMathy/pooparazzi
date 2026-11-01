@@ -93,3 +93,24 @@ internal fun IconTarget(
         XIcon(icon, contentDescription = label, tint = tint, size = iconSize)
     }
 }
+
+/**
+ * A 48 dp tall pill button with an [XIcon] and its [label] (History's "Statistics"): `icon` 20 + 6 + labelLarge,
+ * both onSurfaceVariant, 12 inside each end. The label is the button's name, so the icon is not read.
+ */
+@Composable
+internal fun LabelTarget(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        modifier
+            .heightIn(min = 48.dp)
+            .clip(CircleShape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        XIcon(icon, contentDescription = null, tint = color, size = 20.dp)
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = color, maxLines = 1)
+    }
+}
