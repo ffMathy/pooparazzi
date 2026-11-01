@@ -272,7 +272,6 @@ The since-row never shows colour or texture.
 | feeds / pee / poop / sleep (Today grid) | — | måltider / tis / bæ / søvn |
 | Statistics (the screen, History's chart button) | Statistics | Statistik |
 | Last 7 days / Last 30 days / Last 90 days | Last 7 days / Last 30 days / Last 90 days | Seneste 7 dage / Seneste 30 dage / Seneste 90 dage |
-| Average per day (Statistics subtitle) | Average per day | Gennemsnit pr. dag |
 
 ---
 
@@ -394,7 +393,7 @@ These names are what the apps code against.
 
 ## 8. Statistics (P8)
 
-**Placement.** Statistics is a destination over History. The `chart` icon button at the end of History's top bar opens it (TalkBack: "Statistics"); Back, in the top bar or from the system, returns to History with its day kept, and a second tap during the transition is dropped. There is no deep link, widget or Home entry point; a widget or notification link still returns to Home. History's list, its single scrollable node and its single "Back" are unchanged: History stays "one day", Statistics is "many days".
+**Placement.** Statistics is a destination over History. The "Statistics" button (`chart` 20 + "Statistics") at the end of History's top bar opens it; Back, in the top bar or from the system, returns to History with its day kept, and a second tap during the transition is dropped. There is no deep link, widget or Home entry point; a widget or notification link still returns to Home. History's list, its single scrollable node and its single "Back" are unchanged: History stays "one day", Statistics is "many days".
 
 **What it shows.** Averages per day of feeds · pee · poop · sleep (§4's order) over **one range**, chosen with the range chip: the **last 30 days** by default. Only that range is shown; there is no second column to compare with. The rows are a single-select accordion: the open row shows a bar chart of the range. Poop is open on every new visit.
 
@@ -433,11 +432,12 @@ Only whole days count: every window ends **yesterday**, and the **first logged d
 
 | Band | Content |
 |---|---|
-| Top bar | Back; "Statistics" titleLarge (a heading); under it "Average per day" labelMedium onSurfaceVariant (not in the empty state). No action at the end |
+| Top bar | Back; "Statistics" titleLarge (a heading). No subtitle, no baby label and no action at the end |
 | Period header | the range chip, inset 16 like the rows' content, with its dates under it ("26 Sep – 25 Oct", dataSmall onSurfaceVariant) and a coverage line when it applies |
 | Rows | 4 grouped cards (gap 2, r 20 / r 6, surfaceContainer, padding 16 / 12 / 8): the kind's glyph 20 in its strong colour + name labelLarge + `chevronDown` 20 when closed; then the range's average (displaySmall), shrinking to 12 sp rather than clip |
 | Open row | adds its chart; the card grows with `animateContentSize` (left out with reduced motion) |
 | Footnote | "Averages count whole days up to yesterday. …" bodySmall onSurfaceVariant |
+| Typical day | 24 under the footnote: a card r 20, surfaceContainer, padding 16 top and bottom (§8.6) |
 
 Everything scrolls in one column (the menu and the dialog are popups). At large font sizes labels and dates wrap; the numbers and the range chip's label stay on one line and shrink.
 
@@ -457,7 +457,15 @@ Everything scrolls in one column (the menu and the dialog are popups). At large 
 - **Chart:** one node: "Poop per day, 26 September to 25 October. Highest 5 on Wednesday 7 October. Lowest 0 on Friday 23 October.", for bars of several days "…, each bar 7 days. Highest 3.3 from 11 May to 17 May. …" (the oldest bar can be a single day, and is then said like a day: "Lowest 1.0 on Sunday 23 August."), then "2 days with no diapers logged are left out." and "Days before 23 October are left out." when they apply.
 - Spoken dates use full month names; the year is added when a range spans two years or is not in the current year.
 
-### 8.6 Known limit
+### 8.6 Typical day
+
+The pattern of the range's days (the same days as the averages; today so far while `soFar`): when the baby usually sleeps, feeds and gets a diaper, and the usual time between them. Only days with something logged count, and none of it shows before 3 of them ("A typical day shows once 3 days in this range are logged." bodyMedium onSurfaceVariant under the heading).
+
+- **Heading** (one TalkBack heading): "Typical day" titleMedium onSurface, then the range's name ("Last 30 days") labelSmall onSurfaceVariant, 16 inset.
+- **Plot**, 100 tall, History's ribbon geometry (DESIGN_SPEC §3.3.3) with a 16 plot inset: night bands 00–07 and 19–24; three lanes 14 tall, sleep at y 13, feeds at y 34, diapers at y 53, each split into 48 half-hour cells in SLEEP, FEED and DIAPER strong at an alpha equal to the cell's share (at least 18 % when above 0). For sleep the share is the part of the half hour spent asleep on an average day with a sleep logged; for feeds and diapers, the share of days (with one of that kind logged) with one starting in it. Axis labels as on the ribbon. TalkBack reads one line: "When sleep, feeds and diapers usually happen through the day".
+- **Intervals:** "By day" and "By night" labelSmall onSurfaceVariant over two equal columns indented 18; then four rows, gap 10: a 10 dot (FEED, DIAPER, SLEEP strong, and SLEEP strong at 45 % for awake) + 8 + "Between feeds", "Between diapers", "Sleep", "Awake" dataSmall onSurface, and under it, in each column, the median dataMedium onSurface ("3h 00m") over the interquartile range labelSmall onSurfaceVariant ("2h 15m–3h 25m"), both to the nearest 5 minutes, or "–" under 3 stretches. A stretch is by night when it starts 19:00–07:00. Feeds or diapers under 10 minutes apart are one; gaps over 12 hours are left out (as for the forecast, §9). Each row reads as one sentence: "Between feeds. By day: about 3 hours, usually 2 hours 15 minutes to 3 hours 25 minutes. By night: …".
+
+### 8.7 Known limit
 
 A partly logged day (the afternoon forgotten) cannot be told apart from a quiet day: it counts, and shows as a low bar and as the lowest value in the TalkBack summary.
 

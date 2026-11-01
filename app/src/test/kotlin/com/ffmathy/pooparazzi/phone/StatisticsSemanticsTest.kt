@@ -18,6 +18,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.domain.StatsMetric
 import com.ffmathy.pooparazzi.core.domain.StatsRange
@@ -94,6 +95,16 @@ class StatisticsSemanticsTest {
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
             .performClick()
         assertEquals(listOf("metric:FEEDS"), calls)
+    }
+
+    /** Under the averages, the typical day: a heading, the plot read as one line, each interval row as one sentence. */
+    @Test
+    fun theTypicalDaySpeaks() {
+        show(StatisticsSamples.lastThirtyDays())
+        compose.onNodeWithText("Typical day").performScrollTo().assertExists()
+        compose.onNodeWithContentDescription("When sleep, feeds and diapers usually happen through the day").assertExists()
+        compose.onNode(hasContentDescription("Between feeds. By day: about ", substring = true)).assertExists()
+        compose.onNode(hasContentDescription("Awake. By day: about ", substring = true)).assertExists()
     }
 
     @Test
