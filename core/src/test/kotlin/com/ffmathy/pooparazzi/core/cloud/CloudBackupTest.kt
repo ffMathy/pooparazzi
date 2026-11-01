@@ -338,6 +338,34 @@ class CloudBackupTest {
         assertEquals(CloudStatus.Synced(now), phone.status)
     }
 
+    @Test
+    fun aBrokenBackupSyncsEveryTimeTheAppComesBack() = runTest {
+        val phone = Phone(this, alice)
+        store.failure = CloudError.OFFLINE
+        phone.backup.start()
+        advanceUntilIdle()
+        assertEquals(CloudStatus.Offline, phone.status)
+
+        // Within the minute, but offline: tries again.
+        store.failure = CloudError.OTHER
+        phone.backup.requestSync()
+        advanceUntilIdle()
+        assertEquals(CloudStatus.Error, phone.status)
+
+        // Still within the minute, but the last sync failed: tries again, and gets through.
+        store.failure = null
+        val pulls = store.pulls
+        phone.backup.requestSync()
+        advanceUntilIdle()
+        assertEquals(pulls + 1, store.pulls)
+        assertEquals(CloudStatus.Synced(now), phone.status)
+
+        // Backed up again: the throttle is back.
+        phone.backup.requestSync()
+        advanceUntilIdle()
+        assertEquals(pulls + 1, store.pulls)
+    }
+
     // ---- Pushing ----------------------------------------------------------------------------------
 
     @Test

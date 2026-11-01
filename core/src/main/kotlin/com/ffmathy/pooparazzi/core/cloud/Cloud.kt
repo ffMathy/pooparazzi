@@ -158,7 +158,10 @@ interface CloudSync {
      */
     suspend fun syncNow()
 
-    /** Pulls and pushes in the background, at most once a minute (the app coming to the foreground). */
+    /**
+     * Pulls and pushes in the background (the app coming to the foreground): at most once a minute, but every time
+     * while the backup is broken ([CloudStatus.Offline] or [CloudStatus.Error]).
+     */
     fun requestSync()
 
     /**

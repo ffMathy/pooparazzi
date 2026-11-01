@@ -203,7 +203,7 @@ One at a time, never throwing, and always a pull before a push:
 
 ### 4.4 When it runs (and what it costs)
 
-- At app start, when an account signs in, when the phone app comes to the foreground (at most once a minute), and from "Back up now".
+- At app start, when an account signs in, when the phone app comes to the foreground (at most once a minute, but every time while the status is Offline or Error), and from "Back up now".
 - A sync about 2 s after any local write or watch merge leaves rows pending. It pulls first like every sync: one extra read per push when nothing else changed.
 - No snapshot listener: Firestore bills a re-attached listener as a full re-read after 30 minutes away. A pull with nothing new costs one read per collection (babies, entries); each changed entry or baby costs one read; each uploaded entry or baby one write; and every request costs one more read for the rules' membership check.
 

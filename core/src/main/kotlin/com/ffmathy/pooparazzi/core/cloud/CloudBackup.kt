@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    A deleted row goes up as a tombstone without its time and details ([forCloud]).
  *
  * Syncs run when an account signs in or its family changes, on [requestSync] (the app in the foreground, at most once a
- * minute) and [syncNow], and [pushDelayMillis] after a write leaves rows or babies pending. Nothing keeps a listener
+ * minute, but every time while the status is [CloudStatus.Offline] or [CloudStatus.Error]) and [syncNow], and [pushDelayMillis] after a write leaves rows or babies pending. Nothing keeps a listener
  * open on the backend: a pull with nothing new costs two reads (babies and entries).
  *
  * Rows and babies are flagged for the backend only while an account is signed in (the repositories ask [account]);
@@ -94,7 +94,8 @@ class CloudBackup(
     }
 
     override fun requestSync() {
-        if (!claimPull()) return
+        // A broken backup (offline, or the last sync failed) tries again every time the app comes back, unthrottled.
+        if (!claimPull(force = state.value.isBroken)) return
         scope.launch { sync() }
     }
 
@@ -192,10 +193,10 @@ class CloudBackup(
         null
     }
 
-    /** True (and counted as the latest pull) when no pull started in the last [pullIntervalMillis]. */
-    private fun claimPull(): Boolean = synchronized(pullLock) {
+    /** True (and counted as the latest pull) when [force]d or no pull started in the last [pullIntervalMillis]. */
+    private fun claimPull(force: Boolean = false): Boolean = synchronized(pullLock) {
         val now = monotonicMillis()
-        val due = lastPullAt.let { it == null || now - it >= pullIntervalMillis }
+        val due = force || lastPullAt.let { it == null || now - it >= pullIntervalMillis }
         if (due) lastPullAt = now
         due
     }
@@ -349,6 +350,9 @@ class CloudBackup(
         /** Bounds of one sync, far beyond any real log (5 million changes, 400 000 uploads). */
         private const val MAX_PAGES = 10_000
         private const val MAX_PUSH_BATCHES = 1_000
+
+        /** The last sync did not get through ([CloudStatus.Offline], [CloudStatus.Error]): [requestSync] retries unthrottled. */
+        private val CloudStatus.isBroken: Boolean get() = this == CloudStatus.Offline || this == CloudStatus.Error
 
         private fun CloudError.toStatus(): CloudStatus = when (this) {
             CloudError.OFFLINE -> CloudStatus.Offline

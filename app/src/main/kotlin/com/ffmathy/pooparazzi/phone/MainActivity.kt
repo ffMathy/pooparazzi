@@ -108,7 +108,8 @@ class MainActivity : AppCompatActivity() {
         SystemSurfaces.onAppResumed(this)
         // The family may have changed on another phone (a member removed by the family's creator, BABIES_AND_BACKUP §3.4).
         AppAccounts.onAppResumed()
-        // The backup pulls what changed elsewhere (another phone on the account) at most once a minute (§4.4).
+        // The backup pulls what changed elsewhere (another phone on the account) at most once a minute (§4.4),
+        // and every time while the last sync failed (offline or an error).
         Core.graph.cloud.requestSync()
         // The language the app runs in is the platform's per-app choice (the parent may change it in system settings
         // on API 33+). Mirror it into the settings, which sync it to the watch (V1_ADDITIONS §5).
