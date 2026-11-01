@@ -9,6 +9,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -167,7 +168,16 @@ class HomeSemanticsTest {
         compose.onNodeWithContentDescription("wakes up in about 2 hours 15 minutes, around 05:27", useUnmergedTree = true).assertExists()
     }
 
-    /** Statistics is one tap from Home: the `chart` button between the History pill and Settings. */
+    /** History is an icon button like Statistics and Settings: no visible label, named "History" for TalkBack. */
+    @Test
+    fun theHistoryButtonIsAnIconNamedHistory() {
+        show(HomeSamples.idle())
+        compose.onAllNodesWithText("History").assertCountEquals(0)
+        compose.onNodeWithContentDescription("History").assertHasClickAction().performClick()
+        assertEquals(listOf("history"), calls)
+    }
+
+    /** Statistics is one tap from Home: the `chart` button between History and Settings. */
     @Test
     fun theStatisticsButtonOpensStatistics() {
         show(HomeSamples.idle())

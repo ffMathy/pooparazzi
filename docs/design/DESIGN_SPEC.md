@@ -166,7 +166,7 @@ Home ──Diaper / Feed───────▶ Diaper / Feed sheet ──Save 
  │ ├─since-row 1 / 2──────▶ Edit sheet (latest entry of that row)
  │ ├─Lamp text──────────▶ Edit sheet (last feed, or the running sleep)
  │ ├─Receipt sheet ──Edit──▶ Edit sheet (that entry) · ──Undo──▶ Home + "Undone" notice
- │ ├─History pill / Today grid ──▶ History ──row──▶ Edit sheet
+ │ ├─History button / Today grid ──▶ History ──row──▶ Edit sheet
  │ │                                        ├─Statistics button▶ Statistics (P8) ──range chip──▶ menu / date range dialog
  │ │                                        └─"Add entry" FAB──▶ Edit sheet ("Add past entry" mode)
  │ ├─`chart` button ────────▶ Statistics (P8)
@@ -221,7 +221,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Earlier.
 | Band | Height | Reference y | Content |
 |---|---|---|---|
 | Status-bar inset | 24 | 0–24 | background only |
-| Top bar | 64 | 24–88 | "Noa", status icons, History pill, Statistics, Settings |
+| Top bar | 64 | 24–88 | "Noa", status icons, History, Statistics and Settings icon buttons |
 | gap | 8 | | |
 | Lamp | 248 | 96–344 | §2.4 (it gives up the room the two-line since-rows take) |
 | gap | 4 | | |
@@ -237,10 +237,10 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Earlier.
 | Navigation inset | 24 | 820–844 | nothing interactive |
 
 **Top bar**
-- "Noa" (the baby's name): titleLarge, onSurface, vertically centred on the same line as the History pill and Settings (32 dp from the top of the bar), whether or not status icons follow; the icons hang below it and the bar grows to fit them.
+- "Noa" (the baby's name): titleLarge, onSurface, vertically centred on the same line as the History, Statistics and Settings buttons (32 dp from the top of the bar), whether or not status icons follow; the icons hang below it and the bar grows to fit them.
 - Status icons under the name (§4.5), directly below its 40 dp line: 20 dp glyphs 12 apart in onSurfaceVariant, no visible text — the watch (hidden without one), then the cloud while an account is signed in. TalkBack reads each icon's sentence (§4.5). An icon in its **error** state is in error colour and a 48 dp button (retry) that starts at its glyph and reaches up over the name; it may overlap only non-interactive content. When the first icon is a button the next glyph starts after it (28 dp gap), so two buttons never overlap. With two or more babies the icons are their own row, 48 dp tall in an error state. History and Statistics show no status icons: Home already does.
-- History pill: 48 target / 40 visual, r 20, fill surfaceContainerHigh, padding start 12 / end 14, `history` 18 onSurfaceVariant + 6 + "History" labelLarge onSurface. Opens History.
-- Statistics: 48 × 48 icon button 4 after the pill, `chart` 24 onSurfaceVariant, content description "Statistics". Opens Statistics (P8), so it is found without going through History.
+- History: 48 × 48 icon button, `history` 24 onSurfaceVariant, content description "History". Opens History.
+- Statistics: 48 × 48 icon button 4 after History, `chart` 24 onSurfaceVariant, content description "Statistics". Opens Statistics (P8), so it is found without going through History.
 - Settings: 48 × 48 icon button, `settings` 24 onSurfaceVariant, content description "Settings".
 
 **Since-rows**: each is a full-width button 350 × 56 (min), r 12, padding 4 16, gap 12. Content: icon 40 (spanning both lines), then two lines — the title (titleMedium onSurface) over the detail (dataMedium onSurfaceVariant: elapsed time, then " · "-separated facts) — and `chevronRight` 16 in outline at the end. Each line is one line, ellipsized; from 130 % font scale each may take two. Text slot = **238 dp**.
@@ -311,7 +311,7 @@ Receipt rules:
 | Idle | no running sleep | FEED Lamp (Night glow / Day disc); rows Awake + last diaper; Today grid |
 | Just logged | Feed or Diaper sheet saved | the sheet closes; the Lamp / since-rows show the log, `Confirm` |
 | Toggled | Start sleep, Woke up | the receipt sheet (no timeout) |
-| Running, Night = **lights-down** | Night active and a sleep running | "Noa", status icons and Settings in onSurfaceVariant; History pill unfilled with onSurfaceVariant label; glow 0.45 SLEEP + orbit; Today numbers onSurfaceVariant; toggle checked. Nothing else changes |
+| Running, Night = **lights-down** | Night active and a sleep running | "Noa" in onSurfaceVariant (the status icons and the History, Statistics and Settings buttons already are); glow 0.45 SLEEP + orbit; Today numbers onSurfaceVariant; toggle checked. Nothing else changes |
 | Running, Day | Day active and a sleep running | no dimming; SLEEP disc + track + cut-out ember |
 | Diaper sheet open | Diaper | scrim + sheet (P2) |
 | Guard | repeat toggle within 2 s | card row 2 guard line, `Reject` |
@@ -335,7 +335,7 @@ Receipt rules:
 | Card offset / Adjust chip | shift the time (see card rules) | `SegmentTick` |
 | Undo | revert; "Undone" | `Reject` |
 | Since-row | edit sheet of that latest entry | — |
-| History pill, Today grid | History | — |
+| History button, Today grid | History | — |
 | `chart` button | Statistics | — |
 | Lamp text | edit sheet of the last feed (idle) or of the running sleep | — |
 
@@ -742,7 +742,7 @@ Event colours are **not** M3 roles. They form a separate fixed palette (containe
 | surfaceContainerLowest | `#080706` | ribbon night bands |
 | surfaceContainerLow | `#14110E` | bottom sheets |
 | surfaceContainer | `#1C1713` | ribbon card, list rows, widget body |
-| surfaceContainerHigh | `#26201A` | History pill, time fields |
+| surfaceContainerHigh | `#26201A` | time fields |
 | surfaceContainerHighest | `#312922` | notice card |
 | onSurface | `#E8D8C3` | |
 | onSurfaceVariant | `#B8A48E` | |
@@ -766,7 +766,7 @@ Event colours are **not** M3 roles. They form a separate fixed palette (containe
 | surfaceContainerLowest | `#FFFCF8` | |
 | surfaceContainerLow | `#F6EEE5` | bottom sheets |
 | surfaceContainer | `#F0E6DA` | ribbon card, list rows, widget body |
-| surfaceContainerHigh | `#EADDCF` | History pill, time fields, ribbon night bands |
+| surfaceContainerHigh | `#EADDCF` | time fields, ribbon night bands |
 | surfaceContainerHighest | `#E3D5C5` | notice card |
 | onSurface | `#221A12` | |
 | onSurfaceVariant | `#54473A` | |
@@ -928,7 +928,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 
 - Spacing scale: 4 · 8 · 12 · 16 · 20 · 24 · 32 · 48.
 - Phone gutter 20 (sheets 24). Button row gap 12. Watch ButtonGroup gap 6.
-- **40 visual / 48 target pattern** (chips, History pill, CompactButton): the clickable element is 48 tall and transparent; the visible pill inside it is 40 (watch CompactButton 32) and carries the fill, border and radius.
+- **40 visual / 48 target pattern** (chips, CompactButton): the clickable element is 48 tall and transparent; the visible pill inside it is 40 (watch CompactButton 32) and carries the fill, border and radius.
 - Minimum targets: 48 dp on phone, widget and watch; Wear tonal buttons ≥ 52 dp tall.
 - **Elevation: 0 everywhere. No shadows.** Modal layers use the scrim.
 
@@ -1127,7 +1127,7 @@ Consequence: with Auto and naps on, a running sleep always gets the Night theme 
 | Changes | Stays |
 |---|---|
 | top-bar text and icons → onSurfaceVariant | every control's position |
-| History pill loses its fill | Feed / Diaper / Sleep fills |
+| | Feed / Diaper / Sleep fills |
 | glow → SLEEP at 0.45 (+ orbit) | layout bands |
 | Today grid numbers → onSurfaceVariant (captions unchanged) | since-rows, notice card |
 

@@ -51,7 +51,7 @@ class DeepLinkNavigationTest {
         compose.onNodeWithText("Cancel").performClick()
         compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Save")).fetchSemanticsNodes().isEmpty() }
 
-        compose.onNodeWithText("History").performClick()
+        compose.onNodeWithContentDescription("History").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
 
         // The widget's Feed button while the app shows History.
@@ -65,7 +65,7 @@ class DeepLinkNavigationTest {
     fun aWidgetLinkWhileStatisticsIsOpenReturnsToHome() {
         val activity = Robolectric.buildActivity(MainActivity::class.java).setup()
         compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 10_000)
-        compose.onNodeWithText("History").performClick()
+        compose.onNodeWithContentDescription("History").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
         compose.onNodeWithText("Statistics").performClick()
         compose.waitUntilAtLeastOneExists(hasText(STATISTICS_EMPTY), timeoutMillis = 5_000)

@@ -37,7 +37,7 @@ class AppNavigationTest {
         compose.onNodeWithText("Diaper").assertExists()
         compose.onNodeWithText("Start sleep").assertExists()
 
-        compose.onNodeWithText("History").performClick()
+        compose.onNodeWithContentDescription("History").performClick()
         compose.waitUntilAtLeastOneExists(hasContentDescription("Back"), timeoutMillis = 5_000)
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 5_000)
@@ -51,7 +51,7 @@ class AppNavigationTest {
     @Test
     fun aDoubleTapOnBackReturnsToHomeOnce() {
         compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
-        compose.onNodeWithText("History").performClick()
+        compose.onNodeWithContentDescription("History").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
 
         compose.mainClock.autoAdvance = false
@@ -107,7 +107,7 @@ class AppNavigationTest {
     @Test
     fun historyAddsAPastEntryAndSettingsShowTheFontLicences() {
         compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
-        compose.onNodeWithText("History").performClick()
+        compose.onNodeWithContentDescription("History").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
         compose.onNodeWithText("Add entry").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Add past entry"), timeoutMillis = 5_000)
@@ -127,7 +127,7 @@ class AppNavigationTest {
     /** Home › History › Statistics, waiting until History has gone. */
     private fun openStatistics() {
         compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
-        compose.onNodeWithText("History").performClick()
+        compose.onNodeWithContentDescription("History").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Add entry"), timeoutMillis = 5_000)
         compose.onNodeWithText("Statistics").performClick()
         compose.waitUntilAtLeastOneExists(hasText(STATISTICS_EMPTY), timeoutMillis = 5_000)
