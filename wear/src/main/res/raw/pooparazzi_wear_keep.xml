@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Resource shrinking (release builds) keeps this although no code refers to it: Play Services reads the capabilities
+    (core's res/values/wear.xml) by name. Without them the phone cannot see that the watch has the app, and says
+    "No watch connected" although data items still sync.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@array/android_wear_capabilities" />

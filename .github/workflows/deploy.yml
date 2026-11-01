@@ -12,7 +12,7 @@ on:
       - "firebase/firestore.indexes.json"
       - "firebase/hosting/**"
       - "firebase/package.json"
-      - "firebase/package-lock.json"
+      - "firebase/bun.lock"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
@@ -43,7 +43,7 @@ jobs:
         if: env.SERVICE_ACCOUNT != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The Firestore emulator of the tests needs Java 21; Node.js comes with the runner image.
+      # The Firestore emulator of the tests needs Java 21; Node.js (for the Firebase CLI) comes with the runner image.
       - name: Set up JDK 21
         if: env.SERVICE_ACCOUNT != ''
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -51,14 +51,18 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      - name: Set up Bun
+        if: env.SERVICE_ACCOUNT != ''
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
       - name: Install
         if: env.SERVICE_ACCOUNT != ''
-        run: npm ci --no-audit --no-fund
+        run: bun install --frozen-lockfile
 
       # Never deploy rules that fail their tests.
       - name: Rules tests
         if: env.SERVICE_ACCOUNT != ''
-        run: npm test
+        run: bun run test
 
       - name: Deploy
         if: env.SERVICE_ACCOUNT != ''
@@ -67,5 +71,5 @@ jobs:
           printf '%s' "$SERVICE_ACCOUNT" > "$key"
           trap 'rm -f "$key"' EXIT
           export GOOGLE_APPLICATION_CREDENTIALS="$key"
-          project="$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).project_id)" "$key")"
-          npm run deploy -- --project "$project" --non-interactive
+          project="$(bun -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).project_id)" "$key")"
+          bun run deploy -- --project "$project" --non-interactive

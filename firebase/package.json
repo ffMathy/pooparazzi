@@ -4,9 +4,9 @@
   "description": "Firestore security rules of the Pooparazzi backup and families, the retention job, their tests, and the Firebase Hosting site (docs/BACKEND.md).",
   "type": "module",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore,auth --project demo-pooparazzi \"node --test --test-concurrency=1 test/*.test.js\"",
+    "test": "firebase emulators:exec --only firestore,auth --project demo-pooparazzi \"bun test ./test\"",
     "deploy": "firebase deploy --only firestore,hosting",
-    "retention": "node retention/run.js"
+    "retention": "bun retention/run.js"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "6.0.0",

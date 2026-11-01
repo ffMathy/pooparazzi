@@ -1,7 +1,7 @@
-// Tests of firestore.rules on the Firestore emulator: `npm test` in firebase/ (docs/BACKEND.md).
+// Tests of firestore.rules on the Firestore emulator: `bun run test` in firebase/ (docs/BACKEND.md).
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { after, beforeEach, describe, test } from 'node:test'
+import { afterAll, beforeEach, describe, test } from 'bun:test'
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing'
 import {
   Timestamp, collection, deleteDoc, doc, documentId, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc,
@@ -90,7 +90,7 @@ beforeEach(async () => {
   await env.clearFirestore()
 })
 
-after(async () => {
+afterAll(async () => {
   await env.cleanup()
 })
 

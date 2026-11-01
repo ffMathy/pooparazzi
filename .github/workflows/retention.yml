@@ -45,9 +45,13 @@ jobs:
         working-directory: .
         run: echo "::notice::FIREBASE_SERVICE_ACCOUNT is not set, so there is no backup to clean up (docs/BACKEND.md)."
 
+      - name: Set up Bun
+        if: env.SERVICE_ACCOUNT != ''
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
       - name: Install
         if: env.SERVICE_ACCOUNT != ''
-        run: npm ci --no-audit --no-fund
+        run: bun install --frozen-lockfile
 
       - name: Retention
         if: env.SERVICE_ACCOUNT != ''
@@ -58,9 +62,9 @@ jobs:
           key="$RUNNER_TEMP/service-account.json"
           printf '%s' "$SERVICE_ACCOUNT" > "$key"
           export GOOGLE_APPLICATION_CREDENTIALS="$key"
-          export FIREBASE_PROJECT_ID="$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).project_id)" "$key")"
+          export FIREBASE_PROJECT_ID="$(bun -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).project_id)" "$key")"
           args=()
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           if [ "$REDACT" = "true" ]; then args+=(--redact-tombstones); fi
-          node retention/run.js "${args[@]}"
+          bun retention/run.js "${args[@]}"
           rm -f "$key"

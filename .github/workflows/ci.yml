@@ -1,4 +1,5 @@
-# Pull requests: unit tests (JVM + Robolectric, no emulator) and debug builds of the phone and watch apps.
+# Pull requests: unit tests (JVM + Robolectric, no emulator), the repository's Bun tests (tests/) and debug builds of the
+# phone and watch apps.
 name: CI
 
 on:
@@ -20,6 +21,13 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+      # Checks on the Android sources that no Gradle build catches, such as resources kept from release shrinking.
+      - name: Bun tests
+        run: bun test ./tests
 
       - name: Set up JDK 21
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0

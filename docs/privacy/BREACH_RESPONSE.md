@@ -4,7 +4,7 @@ What to do if the backup's data may have been read, changed, lost or deleted by 
 
 ## 1. Contain (at once)
 
-- Fix or roll back the rules (`firebase/firestore.rules`, `npx firebase deploy --only firestore`), or temporarily deploy a deny-all rule set: the app keeps the log on the phone and backs up again later.
+- Fix or roll back the rules (`firebase/firestore.rules`, `bunx firebase deploy --only firestore`), or temporarily deploy a deny-all rule set: the app keeps the log on the phone and backs up again later.
 - An invite flaw: delete every document in `invites` (Firestore console), so no open link works until the fix is deployed.
 - Rotate what leaked: delete the service account key in Google Cloud › IAM › Service accounts and update the `FIREBASE_SERVICE_ACCOUNT` secret; change the Google account's password and review its sessions; disable affected Authentication users if needed.
 - Keep evidence: note the times and save the relevant Cloud Logging and Firebase usage graphs.
