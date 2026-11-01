@@ -1,11 +1,13 @@
 package com.ffmathy.pooparazzi.phone.widget
 
 import android.content.Context
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -21,6 +23,7 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.RowScope
@@ -34,6 +37,7 @@ import androidx.glance.layout.width
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.TextAlign
+import com.ffmathy.pooparazzi.core.domain.Expected
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
@@ -265,9 +269,10 @@ private fun NoticeLine(notice: WidgetNotice, strings: WidgetStrings, colors: Wid
  * Feed and Diaper open the app on their logging sheet (the same sheet as Home's buttons), where the optional details are
  * chosen: feed type and breast order, pee/poop, colour and texture. The sleep toggle starts or ends the sleep in place.
  *
- * Under each label, as the watch shows them: the time since the last one ("2h 10m ago"; the sleep toggle "Awake 1h 05m"
- * or "Asleep 1h 07m") and what the last week expects next ("Next in 55m", "Poop in 3h 10m", "in 50m" under the sleep
- * toggle, V1_ADDITIONS §9). The three keep the same number of lines, so their icons and labels stay aligned.
+ * Under each label, a small icon says what each time is, so the lines stay short: `history` + the time since the last
+ * one ("2h 10m"; the sleep toggle `awake` or `sleep` + "1h 05m"), then `upcoming` + what the last week expects
+ * next ("55m", "soon", "24m ago"; under Diaper the next poop, V1_ADDITIONS §9). The three keep the same number of
+ * lines, so their icons and labels stay aligned.
  */
 @Composable
 private fun LogButtons(
@@ -301,21 +306,27 @@ private fun LogButtons(
     val sleepNext = snapshot.sleepForecast?.takeIf { regular }
     val sleepStatus = when {
         !regular -> null
+        sleepStart != null -> SubLine(XDrawables.sleep, strings.lasting(sleepStart, now))
+        snapshot.awakeSinceMillis != null -> SubLine(XDrawables.awake, strings.lasting(snapshot.awakeSinceMillis, now))
+        else -> null
+    }
+    val sleepStatusSpoken = when {
         sleepStart != null -> strings.asleepFor(sleepStart, now)
         snapshot.awakeSinceMillis != null -> strings.awakeFor(snapshot.awakeSinceMillis, now)
         else -> null
     }
-    val feedLines = listOfNotNull(lastFeed?.let { strings.fedAgo(it, now) }, feedNext?.let { strings.feedForecast(it, now) })
-    val diaperLines = listOfNotNull(lastDiaper?.let { strings.ago(it.startMillis, now) }, poopNext?.let { strings.poopForecast(it, now) })
+    fun next(expected: Expected?) = expected?.let { SubLine(XDrawables.upcoming, strings.forecast(it, now)) }
+    val feedLines = listOfNotNull(lastFeed?.let { SubLine(XDrawables.history, strings.fedSince(it, now)) }, next(feedNext))
+    val diaperLines = listOfNotNull(lastDiaper?.let { SubLine(XDrawables.history, strings.since(it.startMillis, now)) }, next(poopNext))
     val stacked = layout.tall && style != FaceStyle.IconOnly
-    val sleepLines = listOfNotNull(sleepStatus, sleepNext?.let { strings.sleepForecast(it, now) })
+    val sleepLines = listOfNotNull(sleepStatus, next(sleepNext))
     val lines = maxOf(feedLines.size, diaperLines.size, sleepLines.size)
-    fun padded(sub: List<String>) = sub + List(lines - sub.size) { "\u00A0" }
+    fun padded(sub: List<SubLine>) = sub + List(lines - sub.size) { SubLine(null, "\u00A0") }
     fun described(name: String, vararg spoken: String?) =
         spoken.filterNotNull().fold(name) { said, part -> strings.string(R.string.spoken_pair, said, part) }
     // A tall widget stacks them: each a full-width row with the icon at the start and its lines beside it.
     @Composable
-    fun face(icon: Int, iconColor: Color?, label: String, labelColor: Color, lines: List<String>) =
+    fun face(icon: Int, iconColor: Color?, label: String, labelColor: Color, lines: List<SubLine>) =
         if (stacked) RowFace(icon, iconColor, label, labelColor, lines) else ButtonFace(icon, iconColor, label, labelColor, style, sub = padded(lines))
     StackOrRow(stacked, modifier) { cell, gap ->
         val feed = colors.feed
@@ -341,7 +352,7 @@ private fun LogButtons(
         val sleep = colors.sleep
         val sleepSaid = described(
             strings.forBaby(strings.string(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep), baby),
-            sleepStatus,
+            sleepStatusSpoken,
             snapshot.sleepForecast?.let { strings.sleepForecastSpoken(it, asleep) },
         )
         WidgetButton(
@@ -359,7 +370,7 @@ private fun LogButtons(
 
 /**
  * A line that wraps only where it reads well: never inside a duration ("1t 00m") or a breast order ("L → R"), so a
- * narrow button breaks "Næste om / 1t 00m" and "1h 32m ago · / L → R".
+ * narrow button breaks "1h 32m · / L → R".
  */
 internal fun keepTogether(text: String): String =
     text.replace(Regex("""(\d+\p{L}+) (\d)"""), "$1\u00A0$2").replace(" → ", "\u00A0→\u00A0")
@@ -376,13 +387,13 @@ private fun StackOrRow(stacked: Boolean, modifier: GlanceModifier, content: @Com
 
 /** A stacked button's face: icon 24 at the start, then the label 16 sp over its lines in 13 sp, as the watch's rows. */
 @Composable
-private fun RowFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, lines: List<String>) {
+private fun RowFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, lines: List<SubLine>) {
     Row(GlanceModifier.fillMaxSize().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         WidgetIcon(icon, iconColor, 24.dp)
         Spacer(GlanceModifier.width(14.dp))
         Column {
             WidgetText(label, labelColor, 16.sp, maxLines = 1)
-            lines.forEach { WidgetText(keepTogether(it), labelColor, 13.sp, maxLines = 1) }
+            lines.forEach { SubLineText(it, labelColor, 13.sp, 13.dp, maxLines = 1) }
         }
     }
 }
@@ -396,12 +407,12 @@ private val LabelSize = 15.sp
 private val CompactTopSpace = 10.dp
 
 /**
- * Icon over label, centred: 24 dp + 6 + 15 sp, then the [sub] lines in 12 sp (up to two lines each); or the compact
+ * Icon over label, centred: 24 dp + 6 + 15 sp, then the [sub] lines (icon 12 dp + 3 + 12 sp, up to two lines each); or the compact
  * 20 dp + two lines of 13 sp ("Start" / "sleep") with the [sub] lines in 11 sp. The compact face starts with [CompactTopSpace], so that, centred in
  * the same button, its icon's centre lines up with the regular face's.
  */
 @Composable
-private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle, sub: List<String> = emptyList()) {
+private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: Color, style: FaceStyle, sub: List<SubLine> = emptyList()) {
     Column(
         GlanceModifier.padding(horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -419,7 +430,27 @@ private fun ButtonFace(icon: Int, iconColor: Color?, label: String, labelColor: 
                 align = TextAlign.Center,
             )
             if (sub.isNotEmpty()) Spacer(GlanceModifier.height(2.dp))
-            sub.forEach { WidgetText(keepTogether(it), labelColor, if (style == FaceStyle.Compact) 11.sp else 12.sp, maxLines = 2, align = TextAlign.Center) }
+            val compact = style == FaceStyle.Compact
+            sub.forEach { SubLineText(it, labelColor, if (compact) 11.sp else 12.sp, if (compact) 11.dp else 12.dp, maxLines = 2) }
         }
+    }
+}
+
+/** One line under a button's label: [icon] (`history`, `upcoming`, `awake`, `sleep`) says what [text]'s time is. */
+internal data class SubLine(@DrawableRes val icon: Int?, val text: String)
+
+/**
+ * [line]'s icon at the text's size, 3 dp, then the text; an icon-less line (a reserved blank) is the text alone. The
+ * icon sits by the first line, so a line that wraps ("1h 32m · / L → R") keeps it beside the time.
+ */
+@Composable
+private fun SubLineText(line: SubLine, color: Color, size: TextUnit, iconSize: Dp, maxLines: Int) {
+    Row(verticalAlignment = Alignment.Top) {
+        if (line.icon != null) {
+            // Centres the icon on the first line (its line height is about 4/3 of the text size).
+            Box(GlanceModifier.padding(top = (size.value / 3f / 2f + 1f).dp)) { WidgetIcon(line.icon, color, iconSize) }
+            Spacer(GlanceModifier.width(3.dp))
+        }
+        WidgetText(keepTogether(line.text), color, size, maxLines = maxLines)
     }
 }

@@ -471,29 +471,29 @@ A partly logged day (the afternoon forgotten) cannot be told apart from a quiet 
 
 ## 9. Forecast: what comes next
 
-Home's buttons say what the last week expects next, as a small second line under each label (labelLarge, the
-button's onContainer at 78 %, one line that shrinks to fit rather than wrap):
+Home's buttons say what the last week expects next, as a small second line under each label (`upcoming` 16 + 4 +
+labelLarge, the button's onContainer at 78 %, one line that shrinks to fit rather than wrap). The icon says "next", so
+the line is the time alone:
 
 | Button | Second line | TalkBack |
 |---|---|---|
-| Feed | "Next in 1h 05m" / "Næste om 1t 05m" | "next feed in about 1 hour 5 minutes, around 15:35" |
-| Diaper | "Next poop in 3h 10m" / "Næste bæ om 3t 10m" (poop only; pee is not predicted) | "next poop in about …, around …" |
-| Start sleep | "Next in 55m" / "Næste om 55m" | "sleeps again in about 55 minutes, around 15:23" |
-| Woke up (a sleep runs) | "Next in 2h 15m" / "Næste om 2t 15m": the expected wake-up | "wakes up in about 2 hours 15 minutes, around 05:27" |
+| Feed | "1h 05m" / "1t 05m" | "next feed in about 1 hour 5 minutes, around 15:35" |
+| Diaper | "3h 10m" / "3t 10m": the next poop (pee is not predicted) | "next poop in about …, around …" |
+| Start sleep | "55m" | "sleeps again in about 55 minutes, around 15:23" |
+| Woke up (a sleep runs) | "2h 15m" / "2t 15m": the expected wake-up | "wakes up in about 2 hours 15 minutes, around 05:27" |
 
-Times are rounded up to 5 minutes (an estimate, not a promise); under 5 minutes the line reads "Next soon" / "Næste snart"
-("Next poop soon" / "Næste bæ snart"). Once the estimate has passed it stays put and says how long ago it was due: "Due
-24m ago" / "Ventet for 24m siden" ("Poop due 24m ago" / "Bæ ventet for 24m siden"); TalkBack "next feed expected 24 minutes ago, around 15:30". A button the week
+Times are rounded up to 5 minutes (an estimate, not a promise); under 5 minutes the line reads "soon" / "snart".
+Once the estimate has passed it stays put and says how long ago it was due: "24m ago" / "24m siden"; TalkBack "next feed expected 24 minutes ago, around 15:30". A button the week
 cannot predict has no second line.
 
 **The other surfaces** (one more line each where there is room):
 
 | Surface | Feed | Diaper | Sleep, awake | Sleep, asleep |
 |---|---|---|---|---|
-| 4×2 widget (and the cover screen), in each button under its label | "Next in 55m", "Next soon", "Due 24m ago" | "Next poop in 3h 10m", "Next poop soon", "Poop due 24m ago" | "Next in 50m" | "Next in 2h 15m" |
+| 4×2 widget (and the cover screen), in each button under its label, after `upcoming` as on Home | "55m", "soon", "24m ago" | "3h 10m", "soon", "24m ago" | "50m" | "2h 15m" |
 | Watch Main and Tile (one shared model, DESIGN_SPEC §3.5.1) | third row line: "Next in 55m" | third row line: "Next poop in 3h 10m" | under "Start sleep": "Next in 50m" | under "Woke up": "Next in 2h 15m" |
 
-Every surface (Home, the widgets, the watch) words the estimates the same, relative to now (core `EstimateText`): rounded up to 5 minutes,
+Every surface (Home, the widgets, the watch) states the estimates by the same rules, relative to now (core `EstimateText`; Home and the 4×2 widget show the time alone after `upcoming`, the watch words it in full): rounded up to 5 minutes,
 "soon" under 5 minutes, then how long ago it was due. The widget does not tick: it is redrawn when the words change
 (every 5 minutes, then each minute once overdue, until the forecast is dropped). The Tile builds the same rules into a
 dynamic expression the renderer keeps current; the watch app re-words them each minute. Feed and Diaper keep the same

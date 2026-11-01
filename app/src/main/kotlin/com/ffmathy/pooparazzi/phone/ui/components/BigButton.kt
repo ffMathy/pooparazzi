@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,7 +55,8 @@ object BigButtonDefaults {
  * @param icon drawn in [iconTint]; pass `Color.Unspecified` for a two-tone vector.
  * @param onClickLabel what a tap does, for accessibility services ("End sleep").
  * @param semantics extra semantics on the clickable node (a name or state description that differs from the label).
- * @param sublabel a small second line under the label (the forecast, "in 1h 05m"), said as [sublabelSpoken].
+ * @param sublabel a small second line under the label (the forecast, "1h 05m"), said as [sublabelSpoken].
+ * @param sublabelIcon drawn before [sublabel] at its size, saying what its time is (`upcoming`: expected next).
  */
 @Composable
 fun BigButton(
@@ -71,6 +74,7 @@ fun BigButton(
     minHeight: Dp = BigButtonDefaults.Height,
     sublabel: String? = null,
     sublabelSpoken: String? = null,
+    sublabelIcon: ImageVector? = null,
 ) {
     val shape = RoundedCornerShape(radius)
     Surface(
@@ -113,16 +117,23 @@ fun BigButton(
                     },
                 )
                 if (sublabel != null) {
-                    // One line: a narrow button at a large font shrinks it ("om 2t 45m") rather than cut it.
+                    // One line: a narrow button at a large font shrinks it ("2t 45m") rather than cut it.
                     val sublabelStyle = MaterialTheme.typography.labelLarge
-                    BasicText(
-                        sublabel,
-                        style = sublabelStyle.copy(color = labelColor.copy(alpha = 0.78f)),
-                        maxLines = 1,
-                        softWrap = false,
-                        autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = sublabelStyle.fontSize, stepSize = 0.5.sp),
-                        modifier = if (sublabelSpoken != null) Modifier.semantics { contentDescription = sublabelSpoken } else Modifier,
-                    )
+                    val sublabelColor = labelColor.copy(alpha = 0.78f)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (sublabelIcon != null) {
+                            XIcon(sublabelIcon, contentDescription = null, tint = sublabelColor, size = 16.dp)
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        BasicText(
+                            sublabel,
+                            style = sublabelStyle.copy(color = sublabelColor),
+                            maxLines = 1,
+                            softWrap = false,
+                            autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = sublabelStyle.fontSize, stepSize = 0.5.sp),
+                            modifier = if (sublabelSpoken != null) Modifier.semantics { contentDescription = sublabelSpoken } else Modifier,
+                        )
+                    }
                 }
             }
         }

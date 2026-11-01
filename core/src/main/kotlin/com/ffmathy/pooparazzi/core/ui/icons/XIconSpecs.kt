@@ -53,6 +53,9 @@ object XIconSpecs {
     /** Two paths: [BOTH_PEE] (PEE strong) and [BOTH_POOP] (POOP strong) in the two-tone form. */
     val both = icon("both", BOTH_PEE, BOTH_POOP)
     val history = icon("history", "M3.5 12a8.5 8.5 0 1 0 2.5-6", "M3.5 3.5V8H8", "M12 7.5V12l3 2")
+
+    /** [history] mirrored, a clock with a forward arrow: "what is expected next" on the 4×2 widget's lines. */
+    val upcoming = icon("upcoming", "M20.5 12a8.5 8.5 0 1 1-2.5-6", "M20.5 3.5V8H16", "M12 7.5V12l3 2")
     val edit = icon("edit", "M5 19l.9-3.9L16.1 4.9a2.05 2.05 0 0 1 2.9 2.9L8.8 18.1z", "M14.5 6.5l3 3")
     val undo = icon("undo", "M9 14 4 9l5-5", "M4 9h10.5a5.5 5.5 0 0 1 0 11H11")
     val delete = icon(
@@ -189,7 +192,7 @@ object XIconSpecs {
 
     /** Every icon, in the order of DESIGN_SPEC §6.2 followed by the v1 additions. */
     val all: List<XIconSpec> = listOf(
-        sleep, wake, feed, diaper, pee, poop, both, history, edit, undo, delete, profile, settings, phone, synced, pending,
+        sleep, wake, feed, diaper, pee, poop, both, history, upcoming, edit, undo, delete, profile, settings, phone, synced, pending,
         offline, check, plus, back, chevronLeft, chevronRight, chevronDown, close, clock, awake, sleepRunning,
         breast, food, sideLeft, sideRight, sideLeftRight, sideRightLeft, checkbox, checkboxChecked, info, chart,
         watchSynced, watchPending, watchOffline, watchError, phoneSynced, phonePending, phoneOffline, cloudError,
