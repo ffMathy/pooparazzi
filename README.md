@@ -161,10 +161,16 @@ Open the phone app once and set the baby's name in Settings › Babies (and add 
 
 Everything runs on the JVM with Robolectric (no emulator needed): view models, the repository and sync merge, formatting in both languages, TalkBack descriptions, navigation, widgets, the Tile layout and complications, and smoke tests of the apps' entry points. Statistics has plain JUnit tests of its rules in `core` (which days count, rounding, ranges, DST days and chart bins), plus view-model, TalkBack (English and Danish), navigation and screenshot tests in `app`.
 
-The backend's Firestore security rules and the retention job have their own tests on the Firestore and Authentication emulators (Node.js 22 and JDK 21):
+The backend's Firestore security rules and the retention job have their own tests on the Firestore and Authentication emulators (Bun, Node.js 22 for the Firebase CLI, and JDK 21):
 
 ```sh
-cd firebase && npm install && npm test
+cd firebase && bun install && bun run test
+```
+
+Checks on the Android sources that no Gradle build catches (for example that both apps keep the Wear capabilities through release resource shrinking) are Bun tests in `tests/`:
+
+```sh
+bun test ./tests
 ```
 
 ## Screenshots

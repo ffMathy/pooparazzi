@@ -1,6 +1,6 @@
-// Tests of retention/retention.js on the Authentication and Firestore emulators: `npm test` in firebase/.
+// Tests of retention/retention.js on the Authentication and Firestore emulators: `bun run test` in firebase/.
 import assert from 'node:assert/strict'
-import { after, beforeEach, test } from 'node:test'
+import { afterAll, beforeEach, test } from 'bun:test'
 import { deleteApp, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore'
@@ -39,7 +39,7 @@ async function clear() {
 }
 
 beforeEach(clear)
-after(() => deleteApp(app))
+afterAll(() => deleteApp(app))
 
 test('accounts unused for two years leave their family as the app does, and their data goes', async () => {
   await auth.importUsers([

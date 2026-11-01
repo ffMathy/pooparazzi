@@ -155,18 +155,6 @@ jobs:
           "-Ppooparazzi.versionCode=$VERSION_BASE"
           "-Ppooparazzi.versionName=$VERSION_NAME"
 
-      # Play Services reads the Wear capabilities by name; resource shrinking once dropped them, so the phone said
-      # "No watch connected" next to a watch with the app. Fail the release if either APK lacks them.
-      - name: Check the Wear capabilities survived shrinking
-        run: |
-          aapt2="$ANDROID_HOME/build-tools/36.1.0/aapt2"
-          for apk in app/build/outputs/apk/release/app-release.apk wear/build/outputs/apk/release/wear-release.apk; do
-            dump="$("$aapt2" dump resources "$apk")"
-            for name in android_wear_capabilities pooparazzi_tracker pooparazzi_babies; do
-              grep -q "$name" <<<"$dump" || { echo "::error::$apk lacks $name (resource shrinking removed it)"; exit 1; }
-            done
-          done
-
       - name: Remove the upload keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/upload.jks"

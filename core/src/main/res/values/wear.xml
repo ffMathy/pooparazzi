@@ -4,7 +4,7 @@
   status). pooparazzi_babies: the app knows several babies (BABIES_AND_BACKUP §2.3); a watch with the first but not the
   second runs an older version, and the phone lets no second baby be added until it is updated.
   The tools:keep below is not enough for release builds' resource shrinking: the apps keep the array from res/raw
-  (app's pooparazzi_keep.xml, wear's pooparazzi_wear_keep.xml), and the release workflow checks both APKs for it.
+  (app's pooparazzi_keep.xml, wear's pooparazzi_wear_keep.xml); tests/wear-capabilities.test.ts checks that both do.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@array/android_wear_capabilities">
     <string-array name="android_wear_capabilities" translatable="false">
