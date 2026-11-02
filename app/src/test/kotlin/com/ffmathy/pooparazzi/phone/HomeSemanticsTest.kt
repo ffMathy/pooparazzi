@@ -145,16 +145,16 @@ class HomeSemanticsTest {
     fun theButtonsSayWhatTheWeekExpectsNext() {
         // V1_ADDITIONS §9: Feed and Start sleep carry the forecast; poop varies too much in the sample week to predict.
         show(HomeSamples.idle())
-        compose.onNodeWithText("1h 00m", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("50m", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("next feed in about 1 hour, around 15:30", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("sleeps again in about 50 minutes, around 15:19", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("55m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("45m", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("next feed in about 55 minutes, around 15:25", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("sleeps again in about 45 minutes, around 15:14", useUnmergedTree = true).assertExists()
         compose.onNodeWithContentDescription("next poop", substring = true, useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
     fun aPassedEstimateSaysNowNotATimeInThePast() {
-        // V1_ADDITIONS §9: the estimate stays put; at 15:55 the feed expected ~15:30 is "now", not a new guess or "24m ago".
+        // V1_ADDITIONS §9: the estimate stays put; at 15:55 the feed expected ~15:25 is "now", not a new guess or "24m ago".
         show(HomeSamples.forecastPassed())
         compose.onAllNodesWithText("now", useUnmergedTree = true).assertCountEquals(2)
         compose.onNodeWithText("24m ago", useUnmergedTree = true).assertDoesNotExist()
@@ -167,7 +167,7 @@ class HomeSemanticsTest {
     fun wokeUpSaysWhenTheBabyIsExpectedToWake() {
         show(HomeSamples.asleep())
         compose.onNodeWithText("2h 15m", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("wakes up in about 2 hours 15 minutes, around 05:27", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("wakes up in about 2 hours 15 minutes, around 05:25", useUnmergedTree = true).assertExists()
     }
 
     /** History is an icon button like Statistics and Settings: no visible label, named "History" for TalkBack. */

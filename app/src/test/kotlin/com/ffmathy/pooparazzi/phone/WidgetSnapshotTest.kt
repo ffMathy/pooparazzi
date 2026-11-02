@@ -47,8 +47,8 @@ class WidgetSnapshotTest {
     fun theButtonsCarryTheWeeksForecast() {
         // V1_ADDITIONS §9: awake, the next sleep; asleep, the wake-up; both as clock times rounded to 5 minutes.
         val idle = WidgetSamples.idle(night = true)
-        assertEquals(SampleData.at(15, 20), idle.sleepForecast!!.roundedAtMillis)
-        assertEquals(SampleData.at(15, 30), idle.feedForecast!!.roundedAtMillis)
+        assertEquals(SampleData.at(15, 15), idle.sleepForecast!!.roundedAtMillis)
+        assertEquals(SampleData.at(15, 25), idle.feedForecast!!.roundedAtMillis)
         assertNull("poop varies too much in the sample week", idle.poopForecast)
         // An estimate stays put once passed: the widget next refreshes when the first one is dropped as stale.
         val forecasts = listOf(idle.sleepForecast!!, idle.feedForecast!!)

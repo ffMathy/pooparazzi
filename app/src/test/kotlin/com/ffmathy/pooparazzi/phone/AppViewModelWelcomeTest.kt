@@ -77,7 +77,7 @@ class AppViewModelWelcomeTest : CoreTestBase() {
 
     /** The first run's "Your baby" screen: after the Welcome, once, on a fresh start only. */
     @Test
-    fun theBabyIsAskedForAfterTheWelcomeOnce() = coreTest { core ->
+    fun theBabyIsAskedForAfterTheWelcomeOnce() = coreTest(seed = emptyList()) { core ->
         // A fresh install: one baby, not named yet.
         core.settings.renameBaby(Baby.FIRST_ID, "")
         val store = MemoryWelcomeStore()
@@ -98,7 +98,7 @@ class AppViewModelWelcomeTest : CoreTestBase() {
 
     /** A phone that already has a log (an update), or a named baby, is not asked. */
     @Test
-    fun aPhoneWithALogOrANamedBabyIsNotAsked() = coreTest { core ->
+    fun aPhoneWithALogOrANamedBabyIsNotAsked() = coreTest(seed = emptyList()) { core ->
         core.settings.renameBaby(Baby.FIRST_ID, "")
         core.repository.add(Entry.diaper(SampleData.NOW_1432, pee = true, poop = false))
         val logged = AppViewModel(core.repository, core.settings, FakeAccounts(), MemoryWelcomeStore(seen = true))
@@ -107,7 +107,7 @@ class AppViewModelWelcomeTest : CoreTestBase() {
     }
 
     @Test
-    fun aNamedBabyIsNotAsked() = coreTest { core ->
+    fun aNamedBabyIsNotAsked() = coreTest(seed = emptyList()) { core ->
         core.settings.setBabyName("Noa")
         val named = AppViewModel(core.repository, core.settings, FakeAccounts(), MemoryWelcomeStore(seen = true))
         runCurrent()
@@ -115,7 +115,7 @@ class AppViewModelWelcomeTest : CoreTestBase() {
     }
 
     @Test
-    fun unknownUntilTheLogHasLoaded() = coreTest { core ->
+    fun unknownUntilTheLogHasLoaded() = coreTest(seed = emptyList()) { core ->
         core.settings.renameBaby(Baby.FIRST_ID, "")
         val vm = AppViewModel(core.repository, core.settings, FakeAccounts(), MemoryWelcomeStore(seen = true))
         assertNull("the splash waits for it", vm.babyIntro.value)

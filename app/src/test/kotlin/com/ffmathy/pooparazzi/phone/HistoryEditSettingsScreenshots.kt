@@ -132,6 +132,8 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
             }
         }
         compose.waitForIdle()
+        // The dialog's name field keeps a blinking cursor animation running; hold the clock so the capture sees an idle app.
+        compose.mainClock.autoAdvance = false
         captureScreenRoboImage(path("51-settings-add-baby", tour = true))
     }
 

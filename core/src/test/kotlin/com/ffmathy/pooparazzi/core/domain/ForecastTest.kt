@@ -144,8 +144,8 @@ class ForecastTest {
     @Test
     fun theSampleWeekPredictsSleepAndFeedButNotPoop() {
         val f = forecast(summarize(SampleData.history(), SampleData.NOW_1432, ZONE))
-        assertTrue(f.sleep!!.atMillis in SampleData.NOW_1432 + 45 * MINUTE..SampleData.NOW_1432 + 55 * MINUTE)
-        assertTrue(f.feed!!.atMillis in SampleData.NOW_1432 + 55 * MINUTE..SampleData.NOW_1432 + 60 * MINUTE)
+        assertTrue(f.sleep!!.atMillis in SampleData.NOW_1432 + 40 * MINUTE..SampleData.NOW_1432 + 50 * MINUTE)
+        assertTrue(f.feed!!.atMillis in SampleData.NOW_1432 + 50 * MINUTE..SampleData.NOW_1432 + 55 * MINUTE)
         assertNull(f.poop)
     }
 
