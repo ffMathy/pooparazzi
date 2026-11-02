@@ -107,7 +107,7 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
 
     /**
      * The 4×2 widget's lines, each after an icon that says what the time is, so the words need not: `history` + "2h 10m"
-     * (since the last one), `awake` / `sleep` + "1h 05m" (awake or asleep for), `upcoming` + "55m" (the next one
+     * (since the last one, or awake or asleep for), `upcoming` + "55m" (the next one
      * expected in; "soon" under 5 minutes, and "24m ago" once it was due). The widget does not tick: [WidgetUpdater]
      * redraws it every minute.
      */
@@ -119,7 +119,7 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     fun agoSpoken(@StringRes label: Int, millis: Long, now: Long): String =
         string(R.string.join_space, string(label), relative.agoSpoken(clockDurationMillis(millis, now)))
 
-    /** Asleep or awake for: "1h 05m", after the `sleep` or `awake` icon. */
+    /** Asleep or awake for: "1h 05m", after the `history` icon. */
     fun lasting(millis: Long, now: Long): String = duration.format(clockDurationMillis(millis, now))
 
     /** TalkBack: "Asleep 1h 07m" / "Awake 1h 05m". */
