@@ -98,7 +98,7 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Main, idle | Main, asleep | Main, after a breast feed | Feed type |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/watch-main-idle.png" width="170" alt="Watch main, idle, as the Tile: Feed 2h 10m since, 1h 00m to the next; Diaper 48m since; Start sleep, next in 50m"> | <img src="docs/screenshots/en/watch-main-asleep.png" width="170" alt="Watch main, asleep: Asleep 1h 07m, Feed with Next in 2h 45m, Diaper, Woke up in 2h 15m"> | <img src="docs/screenshots/en/watch-main-after-breast.png" width="170" alt="Watch main after a breast feed"> | <img src="docs/screenshots/en/watch-feed-type.png" width="170" alt="Watch feed type"> |
+| <img src="docs/screenshots/en/watch-main-idle.png" width="170" alt="Watch main, idle, as the Tile: the feed icon with 2h 10m since and 1h 00m to the next; the diaper icon with 48m since; a large Start sleep button, next in 50m"> | <img src="docs/screenshots/en/watch-main-asleep.png" width="170" alt="Watch main, asleep: Asleep 1h 07m, Feed with Next in 2h 45m, Diaper, Woke up in 2h 15m"> | <img src="docs/screenshots/en/watch-main-after-breast.png" width="170" alt="Watch main after a breast feed"> | <img src="docs/screenshots/en/watch-feed-type.png" width="170" alt="Watch feed type"> |
 
 | Side | Diaper | Poop colour | Logged + Undo |
 |:---:|:---:|:---:|:---:|

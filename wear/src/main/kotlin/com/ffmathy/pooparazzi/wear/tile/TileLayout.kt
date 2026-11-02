@@ -19,7 +19,6 @@ import androidx.wear.protolayout.LayoutElementBuilders.VERTICAL_ALIGN_CENTER
 import androidx.wear.protolayout.ModifiersBuilders.Clickable
 import androidx.wear.protolayout.layout.androidImageResource
 import androidx.wear.protolayout.layout.basicImage
-import androidx.wear.protolayout.layout.box
 import androidx.wear.protolayout.layout.column
 import androidx.wear.protolayout.layout.imageResource
 import androidx.wear.protolayout.layout.row
@@ -35,7 +34,6 @@ import androidx.wear.protolayout.material3.primaryLayout
 import androidx.wear.protolayout.material3.text
 import androidx.wear.protolayout.material3.textEdgeButton
 import androidx.wear.protolayout.modifiers.LayoutModifier
-import androidx.wear.protolayout.modifiers.background
 import androidx.wear.protolayout.modifiers.border
 import androidx.wear.protolayout.modifiers.clearSemantics
 import androidx.wear.protolayout.modifiers.clickable
@@ -339,11 +337,12 @@ private class TileContent(
             ).layoutString
         } ?: secondary
         sheetButton(
-            events.feed, XDrawables.feed, res.getString(CoreR.string.kind_feed), shownSecondary,
+            events.feed, XDrawables.feed, shownSecondary,
             secondaryIcon = XDrawables.history.takeIf { confirmed == null && lastFeed != null },
             next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let { estimate(it, TEXT_ALIGN_START) },
             description = description,
             onClick = openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
+            confirmation = confirmed != null,
         )
     }
 
@@ -361,7 +360,7 @@ private class TileContent(
         val secondary = lastDiaper?.let { text.since(it.startMillis, now).layout(TEXT_ALIGN_START) }
             ?: res.getString(R.string.status_no_diaper_yet).layoutString
         sheetButton(
-            events.diaper, XDrawables.diaper, res.getString(CoreR.string.kind_diaper), secondary,
+            events.diaper, XDrawables.diaper, secondary,
             secondaryIcon = XDrawables.history.takeIf { lastDiaper != null },
             next = next?.takeIf { lastDiaper != null && roomForEstimates }?.let { estimate(it, TEXT_ALIGN_START) },
             description = description,
@@ -383,30 +382,31 @@ private class TileContent(
         if (nextSpoken == null) this else text.template(SurfaceText.Template(res.getString(R.string.spoken_pair, SurfaceText.Template.PLACEHOLDER, nextSpoken)), this)
 
     /**
-     * A full-width row that opens one of the app's logging screens: icon, label and the time since the last one after
-     * [secondaryIcon] (`history`, "⟲ 2h 10m"), then the estimate of the next one after `upcoming` ([next], "⟳ 55m"), as
-     * Main's rows show it.
+     * A full-width row that opens one of the app's logging screens, as Main's rows: the event's icon (no label: the
+     * icon says it, and [description] names it), then the time since the last one after [secondaryIcon] (`history`,
+     * "⟲ 2h 10m") over the estimate of the next one after `upcoming` ([next], "⟳ 55m"), at the size a label had.
      */
     private fun MaterialScope.sheetButton(
         event: EventColors,
         @DrawableRes icon: Int,
-        label: String,
         secondary: LayoutString,
         @DrawableRes secondaryIcon: Int?,
         next: LayoutString?,
         description: LayoutModifier,
         onClick: Clickable,
+        /** A just-logged confirmation in [secondary]: the smaller type it is measured for. */
+        confirmation: Boolean = false,
     ): LayoutElement = button(
         onClick = onClick,
         modifier = description,
         iconContent = { glyph(icon, event.strong, ROW_ICON) },
-        labelContent = { plainText(label.layoutString, Typography.LABEL_MEDIUM, event.onContainer.layout, start = true) },
-        secondaryLabelContent = {
-            val since = iconLine(secondaryIcon, secondary, Typography.LABEL_SMALL, event.onContainer, LINE_ICON, start = true)
+        labelContent = {
+            val type = if (confirmation) Typography.LABEL_SMALL else Typography.LABEL_MEDIUM
+            val since = iconLine(secondaryIcon, secondary, type, event.onContainer, LINE_ICON, TEXT_ALIGN_START)
             if (next == null) {
                 since
             } else {
-                column(since, iconLine(XDrawables.upcoming, next, Typography.LABEL_SMALL, event.onContainer, LINE_ICON, start = true), horizontalAlignment = HORIZONTAL_ALIGN_START)
+                column(since, iconLine(XDrawables.upcoming, next, Typography.LABEL_MEDIUM, event.onContainer, LINE_ICON, TEXT_ALIGN_START), horizontalAlignment = HORIZONTAL_ALIGN_START)
             }
         },
         width = expand(),
@@ -418,7 +418,7 @@ private class TileContent(
             secondaryLabelColor = event.onContainer.layout,
         ),
         style = ButtonStyle.smallButtonStyle(),
-        contentPadding = padding(start = ROW_START_PADDING, top = 4f, end = 12f, bottom = 4f),
+        contentPadding = padding(start = ROW_START_PADDING, top = 4f, end = ROW_END_PADDING, bottom = 4f),
     )
 
     // ---- Edge ------------------------------------------------------------------------------------
@@ -482,9 +482,9 @@ private class TileContent(
         typography: Int,
         color: Color,
         iconSize: Float,
-        start: Boolean = false,
+        alignment: Int = TEXT_ALIGN_CENTER,
     ): LayoutElement {
-        val line = plainText(value, typography, color.layout, start = start)
+        val line = plainText(value, typography, color.layout, alignment)
         return if (icon == null) line else row(glyph(icon, color, iconSize), spacer(width = dp(3f)), line, verticalAlignment = VERTICAL_ALIGN_CENTER)
     }
 
@@ -492,13 +492,13 @@ private class TileContent(
         value: LayoutString,
         typography: Int,
         color: LayoutColor,
-        start: Boolean = false,
+        alignment: Int = TEXT_ALIGN_CENTER,
         bold: Boolean = false,
     ): LayoutElement = text(
         value,
         typography = typography,
         color = color,
-        alignment = if (start) TEXT_ALIGN_START else TEXT_ALIGN_CENTER,
+        alignment = alignment,
         settings = if (bold) listOf(FontSetting.weight(BOLD)) else emptyList(),
         modifier = LayoutModifier.clearSemantics(),
     )
@@ -518,14 +518,15 @@ private class TileContent(
         const val TITLE_ICON = TileTextMeasure.TITLE_ICON_DP
         const val ROW_ICON = 24f
 
-        /** The `history` / `upcoming` icon before a row's labelSmall line, and before the EdgeButton's smallest line. */
-        const val LINE_ICON = 12f
+        /** The `history` / `upcoming` icon before a row's labelMedium line, and before the EdgeButton's smallest line. */
+        const val LINE_ICON = 14f
         const val EDGE_LINE_ICON = 10f
 
         /** The largest font scale at which a row's estimate still fits as its third line. */
         const val MAX_ESTIMATE_FONT_SCALE = 1.15f
         const val ROW_GAP = 6f
         const val ROW_START_PADDING = 16f
+        const val ROW_END_PADDING = 14f
         const val LIT_BORDER = 1.5f
         const val BOLD = 700
     }
