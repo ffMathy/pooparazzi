@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
@@ -46,7 +47,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -60,7 +60,6 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
-import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
 import com.ffmathy.pooparazzi.core.format.DurationFormatter
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.Labels
@@ -125,7 +124,9 @@ fun MainScreen(state: MainUiState, actions: MainActions, modifier: Modifier = Mo
     val small = isSmallWatch()
     val babyLabel = babyLabelOrNull(state.babies, state.babyId)
     val babyTime = rememberBabyTimeText(babyLabel)
-    val edgeSize = if (small) EdgeButtonSize.ExtraSmall else EdgeButtonSize.Small
+    // The rows need two lines, not three: the sleep toggle gets the height they leave, unless the baby picker's
+    // button already takes it (two or more babies) or the watch is small.
+    val edgeSize = if (small || babyLabel != null) EdgeButtonSize.Small else EdgeButtonSize.Medium
     val events = events()
     val glance = state.glance
     val resources = LocalResources.current
@@ -221,19 +222,32 @@ private const val MIN_ROW_FONT_SCALE = 0.8f
 /** The smallest font scale any text on Main steps down to; below it, it is cut with an ellipsis instead. */
 private const val MIN_FIT_FONT_SCALE = 0.7f
 
+/** The gap between a row's icon and its label. */
+private val ICON_GAP = 10.dp
+
+/** The least gap between a row's label and its times. */
+private val TIME_GAP = 8.dp
+
 /** A row's width that its text cannot use: the side padding, the icon and the gap after it. */
-private val ROW_TEXT_INSET = 14.dp * 2 + 24.dp + 10.dp
+private val ROW_TEXT_INSET = 14.dp * 2 + 24.dp + ICON_GAP
+
+/** How wide [text] in [style] is on one line at font scale 1. */
+@Composable
+private fun textWidth(text: AnnotatedString, style: TextStyle): Dp {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(text, style, density.density) {
+        val unscaled = Density(density.density, 1f)
+        val width = measurer.measure(text, style, maxLines = 1, softWrap = false, density = unscaled).size.width
+        with(unscaled) { width.toDp() }
+    }
+}
 
 /** The font scale at which [text] in [style] is exactly [maxWidth] wide on one line. */
 @Composable
 private fun widthScale(text: AnnotatedString, style: TextStyle, maxWidth: Dp): Float {
-    val measurer = rememberTextMeasurer()
-    val density = LocalDensity.current
-    return remember(text, style, maxWidth, density.density) {
-        val unscaled = Density(density.density, 1f)
-        val width = measurer.measure(text, style, maxLines = 1, softWrap = false, density = unscaled).size.width
-        if (width <= 0) Float.MAX_VALUE else with(unscaled) { maxWidth.toPx() } / width
-    }
+    val width = textWidth(text, style)
+    return if (width <= 0.dp) Float.MAX_VALUE else maxWidth / width
 }
 
 /** A line led by a small icon that says what its time is: `history` the time since, `upcoming` the expected next. */
@@ -380,10 +394,10 @@ private val TITLE_MAX_WIDTH = 140.dp
 // ---- Rows ------------------------------------------------------------------------------------
 
 /**
- * A full-width event row, as the Tile's: icon, label, then the time since the last one after `history` ("⟲ 2h 10m")
- * and the expected next one after `upcoming` ("⟳ 55m"), so the lines need no "ago" / "next in". The rows share
- * the screen's height, so their text steps down (rather than clipping) where a large font or a small watch leaves
- * less room. The whole row is read as one sentence.
+ * A full-width event row, as the Tile's: icon and label, and against the row's right edge the time since the last one
+ * after `history` ("⟲ 2h 10m") over the expected next one after `upcoming` ("⟳ 55m"), so the lines need no "ago" /
+ * "next in". The rows share the screen's height, so their text steps down (rather than clipping) where a large font
+ * or a small watch leaves less room. The whole row is read as one sentence.
  */
 @Composable
 private fun EventRow(
@@ -422,50 +436,54 @@ private fun EventRow(
         border = ambientBorder(colors.strong),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = ROW_PADDING),
     ) {
-        Row(Modifier.fillMaxWidth().clearAndSetSemantics { }, verticalAlignment = Alignment.CenterVertically) {
-            XIcon(icon, null, tint = if (ambient) WatchAmbient.content else colors.strong, size = 24.dp)
-            Spacer(Modifier.width(10.dp))
-            val labelStyle = MaterialTheme.typography.labelMedium
-            val smallStyle = MaterialTheme.typography.labelSmall
-            // The rows share the screen's height: their text takes the largest font scale that fits. In order of
-            // preference: label, time since and estimate on three lines; without the estimate on two; or, where two
-            // would be too small (two babies on a small watch), "Feed · ⟲ 2h 10m" on one.
-            val known = rowSize.height > 0.dp
-            val height = (rowSize.height - ROW_PADDING * 2).value
-            val width = rowSize.width - ROW_TEXT_INSET
-            val lines = listOfNotNull(IconLine(null, label) to labelStyle, secondary?.let { it to smallStyle }, nextLine?.let { it to smallStyle })
-            val layouts = buildList {
-                add(lines)
-                if (nextLine != null) add(lines.dropLast(1))
-            }.map { candidate ->
-                val fit = if (!known) 1f else minOf(
-                    height / candidate.sumOf { (_, style) -> style.lineHeight.value.toDouble() }.toFloat(),
-                    candidate.minOf { (line, style) -> widthScale(line.measured(), style, width) },
+        val labelStyle = MaterialTheme.typography.labelMedium
+        val smallStyle = MaterialTheme.typography.labelSmall
+        // The label on the left, its times stacked against the right edge ("Feed   ⟲ 2h 10m / ⟳ 1h 00m"), so a row
+        // needs two lines, not three. The text takes the largest font scale that fits; where both times would be too
+        // small (two babies on a small watch) the estimate goes. With nothing logged yet, "No feeds yet" sits under
+        // the label instead.
+        val known = rowSize.height > 0.dp
+        val height = (rowSize.height - ROW_PADDING * 2).value
+        val width = rowSize.width - ROW_TEXT_INSET
+        val stackedLine = secondary?.takeIf { it.icon == null }
+        val labelWidth = textWidth(AnnotatedString(label), labelStyle)
+        val times = listOfNotNull(secondary, nextLine)
+        val layouts = buildList {
+            add(times)
+            if (nextLine != null) add(times.dropLast(1))
+        }.map { shown ->
+            val fit = if (!known) {
+                1f
+            } else if (stackedLine != null) {
+                minOf(
+                    height / (labelStyle.lineHeight.value + smallStyle.lineHeight.value),
+                    width / maxOf(labelWidth, textWidth(stackedLine.measured(), smallStyle)),
                 )
-                candidate to fit
+            } else {
+                val timesWidth = shown.maxOfOrNull { textWidth(it.measured(), smallStyle) } ?: 0.dp
+                minOf(
+                    height / maxOf(labelStyle.lineHeight.value, shown.size * smallStyle.lineHeight.value),
+                    (width - TIME_GAP) / (labelWidth + timesWidth),
+                )
             }
-            val oneLine = buildAnnotatedString {
-                append(label)
-                if (secondary != null) withStyle(smallStyle.toSpanStyle()) { append(DOT_SEPARATOR); append(secondary.annotated()) }
-            }
-            val oneLineMeasured = buildAnnotatedString {
-                append(label)
-                if (secondary != null) withStyle(smallStyle.toSpanStyle()) { append(DOT_SEPARATOR); append(secondary.measured()) }
-            }
-            val single = if (!known) 1f else minOf(height / labelStyle.lineHeight.value, widthScale(oneLineMeasured, labelStyle, width))
-            val chosen = layouts.firstOrNull { it.second >= MIN_ROW_FONT_SCALE }
-            val useLines = chosen != null || secondary == null || single <= layouts.last().second
-            val (shown, fit) = chosen ?: layouts.last()
-            val ownFit = if (useLines) fit else single
-            SideEffect { onFit(ownFit) }
-            Column(Modifier.weight(1f)) {
-                if (useLines) {
-                    CappedFontScale(minOf(fit, sharedScale ?: fit).coerceAtLeast(MIN_FIT_FONT_SCALE)) {
-                        shown.forEach { (line, style) -> IconLineText(line.annotated(), style, text) }
+            shown to fit
+        }
+        val (shown, fit) = layouts.firstOrNull { it.second >= MIN_ROW_FONT_SCALE } ?: layouts.last()
+        SideEffect { onFit(fit) }
+        CappedFontScale(minOf(fit, sharedScale ?: fit).coerceAtLeast(MIN_FIT_FONT_SCALE)) {
+            Row(Modifier.fillMaxWidth().clearAndSetSemantics { }, verticalAlignment = Alignment.CenterVertically) {
+                XIcon(icon, null, tint = if (ambient) WatchAmbient.content else colors.strong, size = 24.dp)
+                Spacer(Modifier.width(ICON_GAP))
+                if (stackedLine != null) {
+                    Column(Modifier.weight(1f)) {
+                        IconLineText(AnnotatedString(label), labelStyle, text)
+                        IconLineText(stackedLine.annotated(), smallStyle, text)
                     }
                 } else {
-                    CappedFontScale(minOf(single, sharedScale ?: single).coerceAtLeast(MIN_FIT_FONT_SCALE)) {
-                        IconLineText(oneLine, labelStyle, text)
+                    Text(label, Modifier.weight(1f), style = labelStyle, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.width(TIME_GAP))
+                    Column(horizontalAlignment = Alignment.End) {
+                        shown.forEach { line -> IconLineText(line.annotated(), smallStyle, text) }
                     }
                 }
             }
@@ -477,7 +495,9 @@ private fun EventRow(
 
 /**
  * The sleep toggle (§3.5.1–2): "Start sleep" (SLEEP container) or "Woke up" (SLEEP containerLit + border), the stock
- * collapsing EdgeButton. A rejected toggle shows two centred lines ("Already / asleep") instead of the label for 2 s.
+ * collapsing EdgeButton, with the expected next sleep or wake-up under the word ("⟳ 50m"). It is Medium wherever
+ * the rows leave room for it. A rejected toggle shows two centred lines ("Already / asleep") instead of the label for
+ * 2 s.
  */
 @Composable
 private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: EdgeButtonSize, f: Formatters, words: GlanceText, modifier: Modifier) {
@@ -487,7 +507,7 @@ private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: Edge
     val label = stringResource(if (asleep) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
     val next = state.glance.nextSleep
     val action = if (asleep) stringResource(R.string.cd_woke_up_end_sleep) else label
-    // Under the word, as on the Tile: the expected wake-up or next sleep ("in 50m").
+    // Read after the action: the expected wake-up or next sleep.
     val name = next?.let { stringResource(R.string.spoken_pair, action, words.nextSleepSpoken(it, asleep)) } ?: action
     val guardText = state.sleepGuard?.let { stringResource(it.edgeText()) }
     val sleepState = sleepStateDescription(state, f)
@@ -513,15 +533,15 @@ private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: Edge
         border = border,
     ) {
         Box(Modifier.clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
-            // One line of "Start sleep" must clear the button's curve: the label steps down to fit its width.
-            val labelWidth = if (size == EdgeButtonSize.ExtraSmall) EDGE_LABEL_WIDTH_EXTRA_SMALL else EDGE_LABEL_WIDTH
+            // EdgeButton pads its content well inside its top edge (99 dp of a Medium button, 75 dp of a Small one on a
+            // small watch): the word's line may use the button's width there, the estimate's a little less, where the
+            // button's curve begins. Each line steps down on its own until it fits.
+            val wide = if (size == EdgeButtonSize.Medium) EDGE_WIDTH_MEDIUM else EDGE_WIDTH_SMALL
             val style = MaterialTheme.typography.labelMedium
             val nextText = next?.takeIf { guardText == null }?.let { IconLine(XIcons.upcoming, words.nextShort(it, state.now)) }
             val nextStyle = MaterialTheme.typography.labelSmall
-            // Each line steps down on its own until it fits the button's width ("Start sleep", "⟳ 50m"); the
-            // second sits lower, where the button's curve leaves less room.
-            val labelFit = if (guardText != null) EDGE_MAX_FONT_SCALE else minOf(EDGE_MAX_FONT_SCALE, widthScale(AnnotatedString(label), style, labelWidth))
-            val nextFit = nextText?.let { minOf(EDGE_MAX_FONT_SCALE, widthScale(it.measured(), nextStyle, labelWidth - EDGE_LOWER_LINE_INSET)) }
+            val labelFit = if (guardText != null) EDGE_MAX_FONT_SCALE else minOf(EDGE_MAX_FONT_SCALE, widthScale(AnnotatedString(label), style, wide))
+            val nextFit = nextText?.let { minOf(EDGE_MAX_FONT_SCALE, widthScale(it.measured(), nextStyle, wide - EDGE_LOWER_LINE_INSET)) }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CappedFontScale(labelFit.coerceAtLeast(MIN_FIT_FONT_SCALE)) {
                     Text(
@@ -531,7 +551,7 @@ private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: Edge
                         textAlign = TextAlign.Center,
                         maxLines = if (guardText != null) 2 else 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = if (guardText != null) EDGE_GUARD_WIDTH else labelWidth + 8.dp),
+                        modifier = if (guardText != null) Modifier.widthIn(max = EDGE_GUARD_WIDTH) else Modifier.requiredWidthIn(max = wide),
                     )
                 }
                 if (nextText != null && nextFit != null) {
@@ -557,8 +577,11 @@ private fun sleepStateDescription(state: MainUiState, f: Formatters): String? {
     return f.statusSince(stringResource(CoreR.string.status_awake), end)
 }
 
-/** The EdgeButton's content width at its top, where the label sits. */
-private val EDGE_LABEL_WIDTH = 84.dp
+/** The width the sleep toggle's word may use at the top of a Medium EdgeButton. */
+private val EDGE_WIDTH_MEDIUM = 120.dp
+
+/** The width the sleep toggle's word may use at the top of a Small EdgeButton. */
+private val EDGE_WIDTH_SMALL = 96.dp
 
 /** How much narrower the EdgeButton is at its second line than at its first (its curve). */
 private val EDGE_LOWER_LINE_INSET = 16.dp
@@ -566,10 +589,7 @@ private val EDGE_LOWER_LINE_INSET = 16.dp
 /** The two-line guard ("Already / asleep") may use the button's full content width. */
 private val EDGE_GUARD_WIDTH = 96.dp
 
-/** The ExtraSmall EdgeButton's (small watches) content width at its top. */
-private val EDGE_LABEL_WIDTH_EXTRA_SMALL = 60.dp
-
-/** The EdgeButton label's largest font scale: "Start sleep" still fits one line of [EDGE_LABEL_WIDTH]. */
+/** The sleep toggle's largest font scale. */
 private const val EDGE_MAX_FONT_SCALE = 1.15f
 
 

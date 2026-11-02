@@ -11,9 +11,11 @@ import androidx.wear.protolayout.DimensionBuilders.expand
 import androidx.wear.protolayout.DimensionBuilders.weight
 import androidx.wear.protolayout.LayoutElementBuilders.FontSetting
 import androidx.wear.protolayout.LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER
+import androidx.wear.protolayout.LayoutElementBuilders.HORIZONTAL_ALIGN_END
 import androidx.wear.protolayout.LayoutElementBuilders.HORIZONTAL_ALIGN_START
 import androidx.wear.protolayout.LayoutElementBuilders.LayoutElement
 import androidx.wear.protolayout.LayoutElementBuilders.TEXT_ALIGN_CENTER
+import androidx.wear.protolayout.LayoutElementBuilders.TEXT_ALIGN_END
 import androidx.wear.protolayout.LayoutElementBuilders.TEXT_ALIGN_START
 import androidx.wear.protolayout.LayoutElementBuilders.VERTICAL_ALIGN_CENTER
 import androidx.wear.protolayout.ModifiersBuilders.Clickable
@@ -38,10 +40,13 @@ import androidx.wear.protolayout.modifiers.LayoutModifier
 import androidx.wear.protolayout.modifiers.background
 import androidx.wear.protolayout.modifiers.border
 import androidx.wear.protolayout.modifiers.clearSemantics
+import androidx.wear.protolayout.modifiers.clip
 import androidx.wear.protolayout.modifiers.clickable
 import androidx.wear.protolayout.modifiers.contentDescription
 import androidx.wear.protolayout.modifiers.loadAction
 import androidx.wear.protolayout.modifiers.padding
+import androidx.wear.protolayout.modifiers.semanticsRole
+import androidx.wear.protolayout.ModifiersBuilders.SEMANTICS_ROLE_BUTTON
 import androidx.wear.protolayout.types.LayoutColor
 import androidx.wear.protolayout.types.LayoutString
 import androidx.wear.protolayout.types.argb
@@ -132,7 +137,8 @@ internal val Color.layout: LayoutColor get() = toArgb().argb
  */
 fun MaterialScope.pooparazziTile(state: TileUiState, text: SurfaceText, token: Long, dynamic: Boolean = true): LayoutElement {
     val small = deviceConfiguration.screenWidthDp < SMALL_WATCH_DP
-    val builder = TileContent(this, state, text, token, dynamic, confirmInRowA = small)
+    val large = deviceConfiguration.fontScale > TileContent.MAX_ESTIMATE_FONT_SCALE
+    val builder = TileContent(this, state, text, token, dynamic, confirmInRowA = small, timesBeside = !small && !large)
     val undoEntry = state.undoEntryId
     val title = if (small) null else builder.title()
     return primaryLayout(
@@ -156,7 +162,15 @@ private class TileContent(
     private val useDynamic: Boolean,
     /** No title on this screen: Row A's secondary label shows the just-logged confirmation. */
     private val confirmInRowA: Boolean,
+    /**
+     * The rows' times stand against their right edge, beside the label, as on Main. Below 225 dp, or at a large font
+     * scale, tile text (which cannot step down to fit) would cut the label: the times go under it there.
+     */
+    private val timesBeside: Boolean,
 ) {
+    /** How the rows' times line up: against the right edge beside the label, or under it. */
+    private val timesAlignment = if (timesBeside) TEXT_ALIGN_END else TEXT_ALIGN_START
+
     private val context = scope.context
     private val res = context.resources
     private val events = TileTheme.events
@@ -319,7 +333,7 @@ private class TileContent(
             text.template(SurfaceText.Template.of(res, R.string.tile_cd_feed), text.spokenAgo(it.startMillis, now))
         }?.withNext(next?.let(glanceText::nextFeedSpoken))
         val spokenStatic = spoken?.static ?: res.getString(R.string.tile_cd_feed_none)
-        val secondary = lastFeed?.let { text.since(it.startMillis, now).layout(TEXT_ALIGN_START) }
+        val secondary = lastFeed?.let { text.since(it.startMillis, now).layout(timesAlignment) }
             ?: res.getString(R.string.status_no_feed_yet).layoutString
         val confirmed = (state.title as? TileTitle.Logged)?.feedback?.takeIf { confirmInRowA }?.let(::confirmation)
         val description = if (confirmed != null) {
@@ -341,7 +355,7 @@ private class TileContent(
         sheetButton(
             events.feed, XDrawables.feed, res.getString(CoreR.string.kind_feed), shownSecondary,
             secondaryIcon = XDrawables.history.takeIf { confirmed == null && lastFeed != null },
-            next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let { estimate(it, TEXT_ALIGN_START) },
+            next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let { estimate(it, timesAlignment) },
             description = description,
             onClick = openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
         )
@@ -358,12 +372,12 @@ private class TileContent(
             spoken?.static ?: res.getString(R.string.tile_cd_diaper_none),
             spoken?.dynamic?.takeIf { useDynamic },
         )
-        val secondary = lastDiaper?.let { text.since(it.startMillis, now).layout(TEXT_ALIGN_START) }
+        val secondary = lastDiaper?.let { text.since(it.startMillis, now).layout(timesAlignment) }
             ?: res.getString(R.string.status_no_diaper_yet).layoutString
         sheetButton(
             events.diaper, XDrawables.diaper, res.getString(CoreR.string.kind_diaper), secondary,
             secondaryIcon = XDrawables.history.takeIf { lastDiaper != null },
-            next = next?.takeIf { lastDiaper != null && roomForEstimates }?.let { estimate(it, TEXT_ALIGN_START) },
+            next = next?.takeIf { lastDiaper != null && roomForEstimates }?.let { estimate(it, timesAlignment) },
             description = description,
             onClick = openApp(MainActivity.OPEN_DIAPER, CLICK_OPEN_DIAPER),
         )
@@ -383,9 +397,10 @@ private class TileContent(
         if (nextSpoken == null) this else text.template(SurfaceText.Template(res.getString(R.string.spoken_pair, SurfaceText.Template.PLACEHOLDER, nextSpoken)), this)
 
     /**
-     * A full-width row that opens one of the app's logging screens: icon, label and the time since the last one after
-     * [secondaryIcon] (`history`, "⟲ 2h 10m"), then the estimate of the next one after `upcoming` ([next], "⟳ 55m"), as
-     * Main's rows show it.
+     * A full-width row that opens one of the app's logging screens, as Main's rows: icon and label, and against the
+     * row's right edge the time since the last one after [secondaryIcon] (`history`, "⟲ 2h 10m") over the estimate of
+     * the next one after `upcoming` ([next], "⟳ 55m"). A [secondary] without an icon ("No feeds yet", a just-logged
+     * confirmation), and every time where they cannot stand beside the label ([timesBeside]), goes under it instead.
      */
     private fun MaterialScope.sheetButton(
         event: EventColors,
@@ -396,30 +411,62 @@ private class TileContent(
         next: LayoutString?,
         description: LayoutModifier,
         onClick: Clickable,
-    ): LayoutElement = button(
-        onClick = onClick,
-        modifier = description,
-        iconContent = { glyph(icon, event.strong, ROW_ICON) },
-        labelContent = { plainText(label.layoutString, Typography.LABEL_MEDIUM, event.onContainer.layout, start = true) },
-        secondaryLabelContent = {
-            val since = iconLine(secondaryIcon, secondary, Typography.LABEL_SMALL, event.onContainer, LINE_ICON, start = true)
-            if (next == null) {
-                since
-            } else {
-                column(since, iconLine(XDrawables.upcoming, next, Typography.LABEL_SMALL, event.onContainer, LINE_ICON, start = true), horizontalAlignment = HORIZONTAL_ALIGN_START)
-            }
-        },
-        width = expand(),
-        height = weight(1f),
-        colors = ButtonColors(
-            containerColor = event.container.layout,
-            iconColor = event.strong.layout,
-            labelColor = event.onContainer.layout,
-            secondaryLabelColor = event.onContainer.layout,
-        ),
-        style = ButtonStyle.smallButtonStyle(),
-        contentPadding = padding(start = ROW_START_PADDING, top = 4f, end = 12f, bottom = 4f),
-    )
+    ): LayoutElement {
+        val labelText = plainText(label.layoutString, Typography.LABEL_MEDIUM, event.onContainer.layout, TEXT_ALIGN_START)
+        if (secondaryIcon == null || !timesBeside) {
+            return button(
+                onClick = onClick,
+                modifier = description,
+                iconContent = { glyph(icon, event.strong, ROW_ICON) },
+                labelContent = { labelText },
+                secondaryLabelContent = {
+                    val since = iconLine(secondaryIcon, secondary, Typography.LABEL_SMALL, event.onContainer, LINE_ICON, TEXT_ALIGN_START)
+                    if (next == null) {
+                        since
+                    } else {
+                        column(since, iconLine(XDrawables.upcoming, next, Typography.LABEL_SMALL, event.onContainer, LINE_ICON, TEXT_ALIGN_START), horizontalAlignment = HORIZONTAL_ALIGN_START)
+                    }
+                },
+                width = expand(),
+                height = weight(1f),
+                colors = ButtonColors(
+                    containerColor = event.container.layout,
+                    iconColor = event.strong.layout,
+                    labelColor = event.onContainer.layout,
+                    secondaryLabelColor = event.onContainer.layout,
+                ),
+                style = ButtonStyle.smallButtonStyle(),
+                contentPadding = padding(start = ROW_START_PADDING, top = 4f, end = ROW_END_PADDING, bottom = 4f),
+            )
+        }
+        // The Material button's label slot only wraps its content, so this one is laid out by hand, as the button is.
+        val since = iconLine(secondaryIcon, secondary, Typography.LABEL_SMALL, event.onContainer, LINE_ICON, TEXT_ALIGN_END)
+        val times = if (next == null) {
+            since
+        } else {
+            column(since, iconLine(XDrawables.upcoming, next, Typography.LABEL_SMALL, event.onContainer, LINE_ICON, TEXT_ALIGN_END), horizontalAlignment = HORIZONTAL_ALIGN_END)
+        }
+        return box(
+            row(
+                glyph(icon, event.strong, ROW_ICON),
+                spacer(width = dp(ICON_GAP)),
+                box(labelText, width = weight(1f), horizontalAlignment = HORIZONTAL_ALIGN_START),
+                spacer(width = dp(TIME_GAP)),
+                times,
+                width = expand(),
+                verticalAlignment = VERTICAL_ALIGN_CENTER,
+            ),
+            modifier = description
+                .clickable(onClick)
+                .semanticsRole(SEMANTICS_ROLE_BUTTON)
+                .background(event.container.layout)
+                .clip(shapes.full)
+                .padding(start = ROW_START_PADDING, top = 4f, end = ROW_END_PADDING, bottom = 4f),
+            width = expand(),
+            height = weight(1f),
+            horizontalAlignment = HORIZONTAL_ALIGN_START,
+        )
+    }
 
     // ---- Edge ------------------------------------------------------------------------------------
 
@@ -482,9 +529,9 @@ private class TileContent(
         typography: Int,
         color: Color,
         iconSize: Float,
-        start: Boolean = false,
+        alignment: Int = TEXT_ALIGN_CENTER,
     ): LayoutElement {
-        val line = plainText(value, typography, color.layout, start = start)
+        val line = plainText(value, typography, color.layout, alignment)
         return if (icon == null) line else row(glyph(icon, color, iconSize), spacer(width = dp(3f)), line, verticalAlignment = VERTICAL_ALIGN_CENTER)
     }
 
@@ -492,13 +539,13 @@ private class TileContent(
         value: LayoutString,
         typography: Int,
         color: LayoutColor,
-        start: Boolean = false,
+        alignment: Int = TEXT_ALIGN_CENTER,
         bold: Boolean = false,
     ): LayoutElement = text(
         value,
         typography = typography,
         color = color,
-        alignment = if (start) TEXT_ALIGN_START else TEXT_ALIGN_CENTER,
+        alignment = alignment,
         settings = if (bold) listOf(FontSetting.weight(BOLD)) else emptyList(),
         modifier = LayoutModifier.clearSemantics(),
     )
@@ -526,6 +573,13 @@ private class TileContent(
         const val MAX_ESTIMATE_FONT_SCALE = 1.15f
         const val ROW_GAP = 6f
         const val ROW_START_PADDING = 16f
+        const val ROW_END_PADDING = 14f
+
+        /** The gap between a row's icon and its label, as the Material button's. */
+        const val ICON_GAP = 6f
+
+        /** The least gap between a row's label and its times. */
+        const val TIME_GAP = 8f
         const val LIT_BORDER = 1.5f
         const val BOLD = 700
     }
