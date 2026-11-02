@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ import com.ffmathy.pooparazzi.wear.state.TimeTitle
 import com.ffmathy.pooparazzi.wear.theme.WatchAmbient
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
 import com.ffmathy.pooparazzi.wear.theme.isAmbient
+import com.ffmathy.pooparazzi.wear.ui.AutoSizeLine
 import com.ffmathy.pooparazzi.wear.ui.WatchShapes
 import com.ffmathy.pooparazzi.wear.ui.ambientBorder
 import com.ffmathy.pooparazzi.wear.ui.events
@@ -206,7 +208,14 @@ private fun DoneEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Boole
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             XIcon(XIcons.check, null, tint = content, size = 20.dp)
             Spacer(Modifier.width(6.dp))
-            Text(stringResource(CoreR.string.action_done), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+            // Steps down rather than cutting "Færdig" at large font sizes (as Undo on Logged).
+            AutoSizeLine(
+                stringResource(CoreR.string.action_done),
+                MaterialTheme.typography.labelMedium,
+                content,
+                minSize = 11,
+                modifier = Modifier.widthIn(max = 64.dp),
+            )
         }
     }
 }
