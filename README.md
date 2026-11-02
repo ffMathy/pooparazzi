@@ -52,7 +52,7 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Bottle: milk or formula, amount | Edit bottle feed | Diaper, backdated |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/en/phone-bottle-sheet.png" width="200" alt="Feed sheet after Bottle, with the optional Milk | Formula choice and amount slider at 120 ml (or 4 fl oz where ounces are used)"> | <img src="docs/screenshots/en/phone-edit-bottle.png" width="200" alt="Edit a bottle feed with its optional contents and amount"> | <img src="docs/screenshots/en/phone-diaper-sheet-nudged.png" width="200" alt="Diaper sheet after tapping −5m twice: Diaper · 14:22, was 14:32"> |
+| <img src="docs/screenshots/en/phone-bottle-sheet.png" width="200" alt="Feed sheet after Bottle, with the optional Milk | Formula choice and amount slider at 120 ml (or 4 fl oz where ounces are used)"> | <img src="docs/screenshots/en/phone-edit-bottle.png" width="200" alt="Edit a bottle feed with its optional contents and amount"> | <img src="docs/screenshots/en/phone-diaper-sheet-nudged.png" width="200" alt="Diaper sheet after tapping −5m twice: Diaper, 14:22 · was 14:32"> |
 
 | History | History, Night | Edit feed | Edit diaper |
 |:---:|:---:|:---:|:---:|

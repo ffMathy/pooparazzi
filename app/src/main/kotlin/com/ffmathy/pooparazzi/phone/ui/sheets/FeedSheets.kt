@@ -99,9 +99,13 @@ internal fun FeedSheetContent(
         sheet.bottle -> CoreR.string.feed_type_bottle
         else -> CoreR.string.kind_feed
     }
-    val title = titleWithTime(titleRes, time)
-    SheetColumn(title) {
-        SheetHeader(title, callbacks.onCancel, was = sheet.was?.let { formatters.clock.format(it, zone) })
+    SheetColumn(titleWithTime(titleRes, time)) {
+        SheetHeader(
+            stringResource(titleRes),
+            callbacks.onCancel,
+            time = time,
+            was = sheet.was?.let { formatters.clock.format(it, zone) },
+        )
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
         Spacer(Modifier.height(12.dp))

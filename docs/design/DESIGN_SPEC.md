@@ -351,8 +351,8 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 | Part | Spec |
 |---|---|
 | Sheet | full width, 368 tall at reference (top at y 476), surfaceContainerLow, top corners r 28. Handle 32 × 4, r 2, onSurfaceVariant at 0.4, 12 from the top |
-| Header (48) | "Diaper · 14:32" titleLarge onSurface at the 24 gutter. **The time is stamped at the moment Diaper was tapped.** After a nudge, "was 14:32" dataMedium onSurfaceVariant before Cancel. "Cancel" text button (labelLarge onSurfaceVariant) at the end |
-| When chips | four nudge chips, gap 8, equal widths: "−15m", "−10m", "−5m", "+5m". Taps add up, like the edit sheet's nudges: −5m twice changes the title to "Diaper · 14:22" with "was 14:32". "+5m" is disabled while it would reach the future |
+| Header (48) | "Diaper" titleLarge onSurface at the 24 gutter (up to 2 lines, ellipsized), over the **effective time** "14:32" in dataMedium onSurfaceVariant on a line of its own, so a long title ("Modermælks­erstatning") never hides it. **The time is stamped at the moment Diaper was tapped.** After a nudge, " · was 14:32" follows the time ("14:22 · was 14:32"); the time line is a polite live region. "Cancel" text button (labelLarge onSurfaceVariant) at the end. The pane title is "Diaper · 14:32" |
+| When chips | four nudge chips, gap 8, equal widths: "−15m", "−10m", "−5m", "+5m". Taps add up, like the edit sheet's nudges: −5m twice changes the time line to "14:22 · was 14:32". "+5m" is disabled while it would reach the future |
 | Tiles | three buttons 106 × 128, r 28, gap 12. Content column: icon 40 at +24, label headlineSmall at +76. Pee: PEE container, `pee` PEE strong, "Pee" PEE onContainer. Poop: POOP container, `poop`, "Poop". Both: hard 50/50 split (start PEE container, end POOP container), two-tone `both`, "Both" in POOP onContainer |
 | Bottom | empty sheet area over the gesture inset |
 

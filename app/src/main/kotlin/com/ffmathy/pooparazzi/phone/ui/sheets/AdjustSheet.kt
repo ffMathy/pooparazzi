@@ -43,9 +43,14 @@ internal class AdjustSheetCallbacks(
 @Composable
 internal fun AdjustSheetContent(sheet: HomeSheetUi.Adjust, zone: ZoneId, formatters: Formatters, callbacks: AdjustSheetCallbacks) {
     val readiness = rememberPickerReadiness()
-    val title = titleWithTime(CoreR.string.action_adjust_start, formatters.clock.format(sheet.time, zone))
-    SheetColumn(title) {
-        SheetHeader(title, callbacks.onCancel, was = sheet.was?.let { formatters.clock.format(it, zone) })
+    val time = formatters.clock.format(sheet.time, zone)
+    SheetColumn(titleWithTime(CoreR.string.action_adjust_start, time)) {
+        SheetHeader(
+            stringResource(CoreR.string.action_adjust_start),
+            callbacks.onCancel,
+            time = time,
+            was = sheet.was?.let { formatters.clock.format(it, zone) },
+        )
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
         Spacer(Modifier.height(16.dp))
