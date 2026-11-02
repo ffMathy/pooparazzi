@@ -202,7 +202,9 @@ class AccessibilityTest {
         time.assertIsNotEnabled()
         compose.mainClock.advanceTimeBy(LOGGED_INERT_MILLIS + 50L)
         time.assertIsEnabled().assert(
-            SemanticsMatcher("click label Change time") { it.config.getOrNull(SemanticsActions.OnClick)?.label == "Change time" },
+            SemanticsMatcher("click label Change time") {
+                SemanticsActions.OnClick in it.config && it.config[SemanticsActions.OnClick].label == "Change time"
+            },
         )
         time.performClick()
         assertEquals(1, opened)
