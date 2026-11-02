@@ -222,11 +222,8 @@ private const val MIN_ROW_FONT_SCALE = 0.8f
 /** The smallest font scale any text on Main steps down to; below it, it is cut with an ellipsis instead. */
 private const val MIN_FIT_FONT_SCALE = 0.7f
 
-/** The gap between a row's icon and its label. */
-private val ICON_GAP = 10.dp
-
-/** The least gap between a row's label and its times. */
-private val TIME_GAP = 8.dp
+/** The gap between a row's icon and its times. */
+private val ICON_GAP = 12.dp
 
 /** A row's width that its text cannot use: the side padding, the icon and the gap after it. */
 private val ROW_TEXT_INSET = 14.dp * 2 + 24.dp + ICON_GAP
@@ -394,10 +391,10 @@ private val TITLE_MAX_WIDTH = 140.dp
 // ---- Rows ------------------------------------------------------------------------------------
 
 /**
- * A full-width event row, as the Tile's: icon and label, and against the row's right edge the time since the last one
- * after `history` ("⟲ 2h 10m") over the expected next one after `upcoming` ("⟳ 55m"), so the lines need no "ago" /
- * "next in". The rows share the screen's height, so their text steps down (rather than clipping) where a large font
- * or a small watch leaves less room. The whole row is read as one sentence.
+ * A full-width event row, as the Tile's: the event's icon (no label: the icon says it, and the row is read with its
+ * name), then the time since the last one after `history` ("⟲ 2h 10m") over the expected next one after `upcoming`
+ * ("⟳ 55m"), so the lines need no "ago" / "next in". The rows share the screen's height, so their text steps down
+ * (rather than clipping) where a large font or a small watch leaves less room. The whole row is read as one sentence.
  */
 @Composable
 private fun EventRow(
@@ -436,34 +433,24 @@ private fun EventRow(
         border = ambientBorder(colors.strong),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = ROW_PADDING),
     ) {
-        val labelStyle = MaterialTheme.typography.labelMedium
-        val smallStyle = MaterialTheme.typography.labelSmall
-        // The label on the left, its times stacked against the right edge ("Feed   ⟲ 2h 10m / ⟳ 1h 00m"), so a row
-        // needs two lines, not three. The text takes the largest font scale that fits; where both times would be too
-        // small (two babies on a small watch) the estimate goes. With nothing logged yet, "No feeds yet" sits under
-        // the label instead.
+        val style = MaterialTheme.typography.labelMedium
+        // No label: the icon says what the row is (TalkBack reads it). After it, the time since over the estimate, at
+        // the size a label had. The text takes the largest font scale that fits; where both lines would be too small
+        // (two babies on a small watch) the estimate goes.
         val known = rowSize.height > 0.dp
         val height = (rowSize.height - ROW_PADDING * 2).value
         val width = rowSize.width - ROW_TEXT_INSET
-        val stackedLine = secondary?.takeIf { it.icon == null }
-        val labelWidth = textWidth(AnnotatedString(label), labelStyle)
-        val times = listOfNotNull(secondary, nextLine)
+        val lines = listOfNotNull(secondary, nextLine)
         val layouts = buildList {
-            add(times)
-            if (nextLine != null) add(times.dropLast(1))
+            add(lines)
+            if (nextLine != null) add(lines.dropLast(1))
         }.map { shown ->
-            val fit = if (!known) {
+            val fit = if (!known || shown.isEmpty()) {
                 1f
-            } else if (stackedLine != null) {
-                minOf(
-                    height / (labelStyle.lineHeight.value + smallStyle.lineHeight.value),
-                    width / maxOf(labelWidth, textWidth(stackedLine.measured(), smallStyle)),
-                )
             } else {
-                val timesWidth = shown.maxOfOrNull { textWidth(it.measured(), smallStyle) } ?: 0.dp
                 minOf(
-                    height / maxOf(labelStyle.lineHeight.value, shown.size * smallStyle.lineHeight.value),
-                    (width - TIME_GAP) / (labelWidth + timesWidth),
+                    height / (shown.size * style.lineHeight.value),
+                    width / shown.maxOf { textWidth(it.measured(), style) },
                 )
             }
             shown to fit
@@ -474,17 +461,8 @@ private fun EventRow(
             Row(Modifier.fillMaxWidth().clearAndSetSemantics { }, verticalAlignment = Alignment.CenterVertically) {
                 XIcon(icon, null, tint = if (ambient) WatchAmbient.content else colors.strong, size = 24.dp)
                 Spacer(Modifier.width(ICON_GAP))
-                if (stackedLine != null) {
-                    Column(Modifier.weight(1f)) {
-                        IconLineText(AnnotatedString(label), labelStyle, text)
-                        IconLineText(stackedLine.annotated(), smallStyle, text)
-                    }
-                } else {
-                    Text(label, Modifier.weight(1f), style = labelStyle, color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Spacer(Modifier.width(TIME_GAP))
-                    Column(horizontalAlignment = Alignment.End) {
-                        shown.forEach { line -> IconLineText(line.annotated(), smallStyle, text) }
-                    }
+                Column(Modifier.weight(1f)) {
+                    shown.forEach { line -> IconLineText(line.annotated(), style, text) }
                 }
             }
         }

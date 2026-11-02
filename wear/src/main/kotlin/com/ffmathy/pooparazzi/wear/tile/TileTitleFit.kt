@@ -122,8 +122,8 @@ class TileTextMeasure(
         private const val MAIN_SIDE_MARGIN_WITHOUT_TITLE = 0.12f
         private const val MAIN_SIDE_INSET_DP = 2f
 
-        /** Row A's text column: the button less its 16 dp start padding, 24 dp icon, 6 dp gap and 12 dp end padding. */
-        private const val ROW_A_TEXT_INSET_DP = 16f + 24f + 6f + 12f
+        /** Row A's text column: the button less its 16 dp start padding, 24 dp icon, 6 dp gap and 14 dp end padding. */
+        private const val ROW_A_TEXT_INSET_DP = 16f + 24f + 6f + 14f
 
         /** The title slot's width on [device]. */
         fun titleSlotWidthDp(device: DeviceParameters): Float = device.screenWidthDp * (1f - 2f * TITLE_SIDE_MARGIN)

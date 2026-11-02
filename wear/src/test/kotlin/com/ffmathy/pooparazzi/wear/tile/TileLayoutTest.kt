@@ -68,7 +68,9 @@ class TileLayoutTest {
     fun idleShowsTheNameFeedAndDiaperWithTimeSinceAndTheToggle() {
         val proto = build(WearSamples.tileIdle())
         assertTrue(proto.has("Noa"))
-        assertTrue(proto.has("Feed"))
+        // The rows show their icon, not the word: TalkBack names them.
+        assertFalse(proto.has("Feed"))
+        assertFalse(proto.has("Diaper"))
         assertTrue(proto.has("2h 10m"))
         assertTrue(proto.has("Feed. Last feed 2 hours 10 minutes ago"))
         // "Start sleep" says what it showed, so a stale tap cannot end a sleep started elsewhere.
@@ -78,7 +80,6 @@ class TileLayoutTest {
         // Feed and Diaper open the app on Feed type and Diaper; they never log from the tile.
         assertTrue(proto.contains(MainActivity.OPEN_FEED_TYPE))
         assertTrue(proto.contains("open_diaper"))
-        assertTrue(proto.has("Diaper"))
         assertTrue(proto.has("48m"))
         assertTrue(proto.has("Diaper. Last diaper 48 minutes ago"))
         assertFalse(proto.contains("log_"))
@@ -96,7 +97,7 @@ class TileLayoutTest {
     @Test
     fun afterABreastFeedRowAIsStillFeed() {
         val proto = build(WearSamples.tileAfterBreastfeed())
-        assertTrue(proto.has("Feed"))
+        assertTrue(proto.contains("value=Feed. Last feed"))
         assertTrue(proto.has("18m"))
         assertFalse(proto.has("End feed"))
         assertTrue(proto.contains(MainActivity.OPEN_FEED_TYPE))
