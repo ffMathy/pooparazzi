@@ -39,6 +39,7 @@ import com.ffmathy.pooparazzi.wear.ui.eventButtonColors
 import com.ffmathy.pooparazzi.wear.ui.events
 import com.ffmathy.pooparazzi.wear.ui.rememberCooldown
 import com.ffmathy.pooparazzi.wear.ui.spokenOffset
+import com.ffmathy.pooparazzi.wear.time.offsetLabel
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 @Immutable
@@ -51,7 +52,7 @@ data class FeedTypeActions(
 /**
  * Feed type (V1_ADDITIONS §2.2): "Feed · 14:32" (stamped on the Feed tap), three full-width FEED buttons
  * (Breast / Bottle / Food), an outlined "Just the time" button (the type is optional: logs a feed with no type) and
- * an Earlier CompactButton that cycles the time through −5m / −10m / −15m. Breast opens Side for the optional side
+ * an Earlier CompactButton that opens the Time screen (crown or ±5m, then Done). Breast opens Side for the optional side
  * order (logged there, at this screen's time); the others log at once.
  * Taps are ignored for 500 ms after the screen appears (DESIGN_SPEC §5.9).
  */
@@ -113,14 +114,14 @@ fun FeedTypeScreen(draft: FeedDraft, actions: FeedTypeActions, modifier: Modifie
 private val FEED_TYPES = listOf(FeedType.BREAST, FeedType.BOTTLE, FeedType.FOOD)
 
 /**
- * The Earlier CompactButton shared by Feed type and Diaper: "Earlier" at no offset, then the offset ("−5m");
- * read as "5 minutes earlier, 14:27".
+ * The Earlier CompactButton shared by Feed type and Diaper: "Earlier" at no offset, then the offset ("−5m",
+ * "−1h 15m"); read as "5 minutes earlier, 14:27". It opens the Time screen.
  */
 @Composable
 fun EarlierButton(offsetMinutes: Int, at: Long, f: Formatters, onClick: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
     val earlier = stringResource(CoreR.string.action_earlier)
     XCompactButton(
-        label = if (offsetMinutes == 0) earlier else f.duration.offset(offsetMinutes),
+        label = if (offsetMinutes == 0) earlier else offsetLabel(f, offsetMinutes),
         icon = XIcons.clock,
         onClick = onClick,
         enabled = enabled,

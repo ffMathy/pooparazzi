@@ -16,6 +16,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.wear.compose.material3.AppScaffold
 import com.ffmathy.pooparazzi.core.model.Breast
@@ -31,6 +32,8 @@ import com.ffmathy.pooparazzi.wear.main.MainScreen
 import com.ffmathy.pooparazzi.wear.sample.WearSamples
 import com.ffmathy.pooparazzi.wear.state.DiaperDraft
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
+import com.ffmathy.pooparazzi.wear.time.TimeScreen
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -179,6 +182,52 @@ class AccessibilityTest {
         val idle = WearSamples.mainIdle()
         show { MainScreen(idle.copy(lastDiaper = idle.lastDiaper?.copy(poop = true)), MainActions()) }
         compose.onNode(hasContentDescription("Diaper. Last diaper, pee and poop, 48 minutes ago, at 13:44")).assertExists()
+    }
+
+    @Test
+    fun theTimeOnLoggedChangesTheTimeAfterTheInertSecond() {
+        compose.mainClock.autoAdvance = false
+        var opened = 0
+        show {
+            LoggedScreen(
+                WearSamples.receiptFormula(),
+                WearSamples.syncAt1431,
+                onUndo = {},
+                onDismiss = {},
+                onTimeout = {},
+                onChangeTime = { opened++ },
+            )
+        }
+        val time = compose.onNode(hasContentDescription("Bottle at 14:32"))
+        time.assertIsNotEnabled()
+        compose.mainClock.advanceTimeBy(LOGGED_INERT_MILLIS + 50L)
+        time.assertIsEnabled().assert(
+            SemanticsMatcher("click label Change time") { it.config.getOrNull(SemanticsActions.OnClick)?.label == "Change time" },
+        )
+        time.performClick()
+        assertEquals(1, opened)
+    }
+
+    @Test
+    fun timeReadsTheTimeWithItsOffsetAndTheButtonsInWords() {
+        show { TimeScreen(WearSamples.timeDraft(), onShift = {}, onDone = {}) }
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNode(hasContentDescription("Feed, 14:25, 7 minutes earlier")).assert(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion),
+        )
+        // Never "−5m" (TalkBack reads "m" as metres, DESIGN_SPEC §9.5).
+        compose.onNodeWithContentDescription("5 minutes earlier").assertIsEnabled()
+        compose.onNodeWithContentDescription("5 minutes later").assertIsEnabled()
+        compose.onNodeWithText("Done").assertIsEnabled()
+    }
+
+    @Test
+    fun timeDisablesAButtonAtItsLimit() {
+        show { TimeScreen(WearSamples.timeDraft().copy(offsetMinutes = 0), onShift = {}, onDone = {}) }
+        compose.mainClock.advanceTimeBy(600)
+        // Never later than the Feed tap.
+        compose.onNodeWithContentDescription("5 minutes later").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Feed, 14:32").assertExists()
     }
 
     @Test

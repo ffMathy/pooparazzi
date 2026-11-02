@@ -28,15 +28,18 @@ import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.EntrySync
 import com.ffmathy.pooparazzi.wear.state.DiaperDraft
-import com.ffmathy.pooparazzi.wear.state.EarlierOffsets
 import com.ffmathy.pooparazzi.wear.state.FeedDraft
 import com.ffmathy.pooparazzi.wear.state.Guard
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.state.GuardTarget
+import com.ffmathy.pooparazzi.wear.state.MAX_SHIFT_MINUTES
 import com.ffmathy.pooparazzi.wear.state.MainUiState
 import com.ffmathy.pooparazzi.wear.state.Receipt
 import com.ffmathy.pooparazzi.wear.state.ReceiptKind
 import com.ffmathy.pooparazzi.wear.state.SideDraft
+import com.ffmathy.pooparazzi.wear.state.TimeDraft
+import com.ffmathy.pooparazzi.wear.state.TimeTarget
+import com.ffmathy.pooparazzi.wear.state.TimeTitle
 import com.ffmathy.pooparazzi.wear.state.Undo
 import com.ffmathy.pooparazzi.wear.state.WearEvent
 import com.ffmathy.pooparazzi.wear.state.XHaptic
@@ -72,7 +75,7 @@ import java.time.ZoneId
  * The watch app's state holder, shared by every destination (it lives as long as the activity).
  *
  * It derives Main and Today from the repository, the sync status and a minute ticker; keeps the drafts of the
- * pickers (Feed type, Side, Diaper) and the current Logged receipt; and performs every write.
+ * pickers (Feed type, Side, Diaper, Time) and the current Logged receipt; and performs every write.
  * Haptics and navigation that depend on a write's outcome are sent as one-shot [events]
  * (DESIGN_SPEC §3.5, §5.11, §5.12; V1_ADDITIONS §2.2, §3.2).
  *
@@ -127,6 +130,9 @@ class MainViewModel(
     private val _diaperDraft = MutableStateFlow<DiaperDraft?>(null)
     val diaperDraft: StateFlow<DiaperDraft?> = _diaperDraft.asStateFlow()
 
+    private val _timeDraft = MutableStateFlow<TimeDraft?>(null)
+    val timeDraft: StateFlow<TimeDraft?> = _timeDraft.asStateFlow()
+
     private val _receipt = MutableStateFlow<Receipt?>(null)
     val receipt: StateFlow<Receipt?> = _receipt.asStateFlow()
 
@@ -147,10 +153,10 @@ class MainViewModel(
         _feedDraft.value = FeedDraft(stamp = clock.now(), zone = zone())
     }
 
-    /** Earlier on the Feed type screen: 0 → −5 → −10 → −15 → 0 minutes. */
-    fun cycleFeedOffset() {
-        _feedDraft.update { it?.copy(offsetMinutes = EarlierOffsets.next(it.offsetMinutes)) }
-        haptic(XHaptic.SEGMENT_TICK)
+    /** Earlier on the Feed type screen: opens the Time screen at the draft's time (up to the Feed tap's stamp). */
+    fun beginFeedTime() {
+        val draft = _feedDraft.value ?: return
+        _timeDraft.value = TimeDraft(TimeTarget.FEED, TimeTitle.FEED, draft.stamp, draft.zone, offsetMinutes = draft.offsetMinutes)
     }
 
     /**
@@ -257,9 +263,10 @@ class MainViewModel(
         _diaperDraft.value = DiaperDraft(stamp = clock.now(), zone = zone())
     }
 
-    fun cycleDiaperOffset() {
-        _diaperDraft.update { it?.copy(offsetMinutes = EarlierOffsets.next(it.offsetMinutes)) }
-        haptic(XHaptic.SEGMENT_TICK)
+    /** Earlier on the Diaper screen: opens the Time screen at the draft's time (up to the Diaper tap's stamp). */
+    fun beginDiaperTime() {
+        val draft = _diaperDraft.value ?: return
+        _timeDraft.value = TimeDraft(TimeTarget.DIAPER, TimeTitle.DIAPER, draft.stamp, draft.zone, offsetMinutes = draft.offsetMinutes)
     }
 
     fun setPee(on: Boolean) = _diaperDraft.update { it?.copy(pee = on) }
@@ -287,6 +294,68 @@ class MainViewModel(
             val result = repository.logDiaperChecked(draft.at, draft.pee, draft.poop, draft.color, draft.texture)
             showReceipt(ReceiptKind.DIAPER_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
         }
+    }
+
+    // ---- Time --------------------------------------------------------------------------------
+
+    /**
+     * The time on Logged was tapped, or the crown turned: opens the Time screen at the logged time (a feed's or
+     * diaper's time, a sleep's wake time). It can move up to now, and a wake time no earlier than a minute after the
+     * sleep began. Returns false when the receipt has no time to change ("Sleep cancelled").
+     */
+    fun beginReceiptTime(): Boolean {
+        val receipt = _receipt.value ?: return false
+        val entry = receipt.entry
+        val (title, base) = when (receipt.kind) {
+            ReceiptKind.FEED_LOGGED -> TimeTitle.FEED to entry.startMillis
+            ReceiptKind.DIAPER_LOGGED -> TimeTitle.DIAPER to entry.startMillis
+            ReceiptKind.WOKE_UP -> TimeTitle.WOKE_UP to (entry.endMillis ?: return false)
+            ReceiptKind.SLEEP_CANCELLED -> return false
+        }
+        val now = clock.now()
+        val earliest = if (receipt.kind == ReceiptKind.WOKE_UP) entry.startMillis + MINUTE else base - MAX_SHIFT_MILLIS
+        _timeDraft.value = TimeDraft(
+            target = TimeTarget.RECEIPT,
+            title = title,
+            base = base,
+            zone = receipt.zone,
+            minOffset = ceilMinutes(earliest - base).coerceIn(-MAX_SHIFT_MINUTES, 0),
+            maxOffset = Math.floorDiv(now - base, MINUTE).toInt().coerceIn(0, MAX_SHIFT_MINUTES),
+        )
+        return true
+    }
+
+    /** The crown ([minutes] ±1 a step) or a ±5m button on the Time screen; a tick per change, nothing past a limit. */
+    fun shiftTime(minutes: Int) {
+        val before = _timeDraft.value ?: return
+        val after = before.shiftedBy(minutes)
+        if (after == before) return
+        _timeDraft.value = after
+        haptic(XHaptic.SEGMENT_TICK)
+    }
+
+    /**
+     * Done on the Time screen: a picker's draft takes the new time; on Logged the entry is moved to it (Undo still
+     * removes the feed or diaper, or resumes the sleep) and Logged shows it with a fresh window. Then back.
+     */
+    fun saveTime(): Job = action {
+        // Consumed: a second tap on the leaving screen does nothing.
+        val draft = _timeDraft.consume() ?: return@action
+        when (draft.target) {
+            TimeTarget.FEED -> _feedDraft.update { it?.copy(offsetMinutes = draft.offsetMinutes) }
+            TimeTarget.DIAPER -> _diaperDraft.update { it?.copy(offsetMinutes = draft.offsetMinutes) }
+            TimeTarget.RECEIPT -> restoreOnFailure(_timeDraft, draft) {
+                val receipt = _receipt.value ?: return@restoreOnFailure
+                if (draft.offsetMinutes != 0) {
+                    val entry = receipt.entry
+                    val moved = if (draft.title == TimeTitle.WOKE_UP) entry.copy(endMillis = draft.at) else entry.copy(startMillis = draft.at)
+                    val updated = repository.update(moved)
+                    _receipt.value = receipt.copy(entry = updated, duplicate = false, serial = ++receiptSerial)
+                }
+            }
+        }
+        haptic(XHaptic.CONFIRM)
+        send(WearEvent.CloseTime)
     }
 
     // ---- Logged / Undo -----------------------------------------------------------------------
@@ -360,6 +429,7 @@ class MainViewModel(
             _feedDraft.value = null
             _sideDraft.value = null
             _diaperDraft.value = null
+            _timeDraft.value = null
             _receipt.value = null
             lastSleepToggleAt = NEVER
             clearGuard()
@@ -466,6 +536,10 @@ fun minuteTicks(clock: Clock): Flow<Unit> = flow {
 }
 
 private const val MINUTE = 60_000L
+private const val MAX_SHIFT_MILLIS = MAX_SHIFT_MINUTES * MINUTE
+
+/** [millis] in whole minutes, rounded up (towards later). */
+private fun ceilMinutes(millis: Long): Int = (-Math.floorDiv(-millis, MINUTE)).toInt()
 
 /** The babies with the current one ([Settings.selectedBabyId]) and that baby's entries. */
 private class BabyLog(val babies: Settings, val entries: List<Entry>)

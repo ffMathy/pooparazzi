@@ -30,7 +30,11 @@ import com.ffmathy.pooparazzi.wear.sample.WearSamples
 import com.ffmathy.pooparazzi.wear.state.Guard
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.state.GuardTarget
+import com.ffmathy.pooparazzi.wear.state.TimeDraft
+import com.ffmathy.pooparazzi.wear.state.TimeTarget
+import com.ffmathy.pooparazzi.wear.state.TimeTitle
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
+import com.ffmathy.pooparazzi.wear.time.TimeScreen
 import com.ffmathy.pooparazzi.wear.ui.LocalBabyTimeText
 import com.ffmathy.pooparazzi.wear.ui.LocalFixedTimeText
 import com.ffmathy.pooparazzi.wear.ui.rememberBabyTimeText
@@ -140,6 +144,22 @@ abstract class WatchScreenshots(private val lang: String) {
         LoggedScreen(WearSamples.receiptBreast(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
     }
 
+    /** Earlier on Feed type, the crown turned back 7 minutes: "Feed · −7m", 14:25, −5m / +5m and Done. */
+    @Test
+    fun s09b_time() = capture("09b-time", SampleData.NOW_1432) {
+        TimeScreen(WearSamples.timeDraft(), onShift = {}, onDone = {})
+    }
+
+    /** The time on Logged tapped after a wake-up: "Woke up · −1h 05m" in the sleep colour. */
+    @Test
+    fun s09c_timeWokeUp() = capture("09c-time-woke-up", SampleData.NOW_1432) {
+        TimeScreen(
+            TimeDraft(TimeTarget.RECEIPT, TimeTitle.WOKE_UP, base = SampleData.NOW_1432, zone = WearSamples.zone, offsetMinutes = -65, maxOffset = 0),
+            onShift = {},
+            onDone = {},
+        )
+    }
+
     // ---- Beyond the tour: states worth checking by eye -----------------------------------------
 
     /** A tap within 2 s of a toggle: "Already / asleep" on the EdgeButton, no state change (DESIGN_SPEC §3.5.2). */
@@ -209,6 +229,12 @@ abstract class WatchScreenshots(private val lang: String) {
     @Config(fontScale = 1.3f)
     fun s17_feedTypeLargeFont() =
         capture("17-feed-type-large-font", SampleData.NOW_1432) { FeedTypeScreen(WearSamples.feedDraft(), FeedTypeActions()) }
+
+    @Test
+    @Config(fontScale = 1.3f)
+    fun s18b_timeLargeFont() = capture("18b-time-large-font", SampleData.NOW_1432) {
+        TimeScreen(WearSamples.timeDraft(), onShift = {}, onDone = {})
+    }
 
     @Test
     @Config(fontScale = 1.3f)

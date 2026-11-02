@@ -113,7 +113,7 @@ data class Entry(
 - **Main:** Feed opens the **Feed type** screen.
   - Three stacked buttons (full width, 52 dp tall, `feed-container`): Breast, Bottle, Food.
   - A fourth, outlined button: **"Just the time"** (icon `clock`), which logs a feed with no type.
-  - A CompactButton "Earlier" cycles the stamp through −5m / −10m / −15m, as on the diaper picker.
+  - A CompactButton "Earlier" opens the **Time** screen (DESIGN_SPEC §3.5.4), as on the diaper picker: the crown moves the time a minute per step, −5m / +5m by five, Done applies it. The button then shows the offset ("−7m").
   - Bottle, Food and Just the time lead to **Logged** ("Bottle at 14:32" / "Feed at 14:32" + Undo).
   - Breast leads to the **Side screen**; nothing is logged yet, and swiping back returns to Feed type with its time.
 - **Side screen** (after Breast):

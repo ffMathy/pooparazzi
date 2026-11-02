@@ -30,6 +30,7 @@ import com.ffmathy.pooparazzi.wear.logged.UndoneScreen
 import com.ffmathy.pooparazzi.wear.main.MainActions
 import com.ffmathy.pooparazzi.wear.main.MainScreen
 import com.ffmathy.pooparazzi.wear.state.WearEvent
+import com.ffmathy.pooparazzi.wear.time.TimeScreen
 import com.ffmathy.pooparazzi.wear.ui.Option
 import com.ffmathy.pooparazzi.wear.ui.OptionScreen
 import com.ffmathy.pooparazzi.wear.ui.perform
@@ -45,6 +46,9 @@ object WearRoutes {
     const val DIAPER_COLOUR = "diaper/colour"
     const val DIAPER_TEXTURE = "diaper/texture"
     const val LOGGED = "logged"
+
+    /** Time (W4): opened by Earlier on Feed type and Diaper, and by the time (or the crown) on Logged. */
+    const val TIME = "time"
     const val UNDONE = "undone"
 
     /** The baby picker (two or more babies, BABIES_AND_BACKUP §2.5). */
@@ -100,6 +104,8 @@ fun WearNavHost(
                 WearEvent.ShowUndone -> navController.navigate(WearRoutes.UNDONE) { popUpTo(WearRoutes.MAIN) }
                 WearEvent.ShowSide -> go(WearRoutes.SIDE)
                 WearEvent.BackToMain -> backToMain()
+                // By route: a second Done never pops the screen under Time as well.
+                WearEvent.CloseTime -> navController.popBackStack(WearRoutes.TIME, inclusive = true)
             }
         }
     }
@@ -176,7 +182,10 @@ fun WearNavHost(
                     it,
                     FeedTypeActions(
                         onType = gate.tapWith { type -> viewModel.chooseFeedType(type) },
-                        onEarlier = gate.tap { viewModel.cycleFeedOffset() },
+                        onEarlier = gate.tap {
+                            viewModel.beginFeedTime()
+                            go(WearRoutes.TIME)
+                        },
                     ),
                 )
             }
@@ -205,7 +214,10 @@ fun WearNavHost(
                         onPoop = gate.tapWith { on -> viewModel.setPoop(on) },
                         onColour = gate.tap { go(WearRoutes.DIAPER_COLOUR) },
                         onTexture = gate.tap { go(WearRoutes.DIAPER_TEXTURE) },
-                        onEarlier = gate.tap { viewModel.cycleDiaperOffset() },
+                        onEarlier = gate.tap {
+                            viewModel.beginDiaperTime()
+                            go(WearRoutes.TIME)
+                        },
                         onSave = gate.tap { viewModel.saveDiaper() },
                     ),
                 )
@@ -249,7 +261,21 @@ fun WearNavHost(
                     sync = main.sync,
                     onUndo = gate.tap { viewModel.undo() },
                     onDismiss = gate.tap { backToMain() },
-                    onTimeout = ::backToMain,
+                    // Only while Logged is on top: not from under Time, as it leaves.
+                    onTimeout = gate.tap { backToMain() },
+                    onChangeTime = gate.tap { if (viewModel.beginReceiptTime()) go(WearRoutes.TIME) },
+                )
+            }
+        }
+        composable(WearRoutes.TIME) { backStackEntry ->
+            val gate = rememberTopGate(navController, backStackEntry)
+            val draft by viewModel.timeDraft.collectAsStateWithLifecycle()
+            // Done uses the draft up: keep showing it while Time leaves.
+            rememberLast(draft)?.let {
+                TimeScreen(
+                    it,
+                    onShift = gate.tapWith { minutes -> viewModel.shiftTime(minutes) },
+                    onDone = gate.tap { viewModel.saveTime() },
                 )
             }
         }

@@ -94,16 +94,42 @@ data class MainUiState(
     }
 }
 
-/** Earlier offsets cycle 0 → −5 → −10 → −15 → 0 (V1_ADDITIONS §2.2). Offsets are never cumulative. */
-object EarlierOffsets {
-    val CYCLE: List<Int> = listOf(0, -5, -10, -15)
+/** What the Time screen (W4) sets: a picker's draft before it is logged, or the entry on Logged after it is. */
+enum class TimeTarget { FEED, DIAPER, RECEIPT }
 
-    fun next(current: Int): Int = CYCLE[(CYCLE.indexOf(current).coerceAtLeast(0) + 1) % CYCLE.size]
+/** The Time screen's title, which also gives the time its event colour. */
+enum class TimeTitle { FEED, DIAPER, WOKE_UP }
+
+/**
+ * The Time screen (W4): the time being set, as whole minutes from [base] (the Feed or Diaper tap's stamp, or the
+ * time Logged shows), between [minOffset] and [maxOffset] (never in the future, never past the sleep's start).
+ * The crown moves it by a minute per step, the buttons by 5; nothing is applied until Done.
+ */
+@Immutable
+data class TimeDraft(
+    val target: TimeTarget,
+    val title: TimeTitle,
+    val base: Long,
+    val zone: ZoneId,
+    val offsetMinutes: Int = 0,
+    val minOffset: Int = -MAX_SHIFT_MINUTES,
+    val maxOffset: Int = 0,
+) {
+    val at: Long get() = base + offsetMinutes * MINUTE_MILLIS
+
+    /** [offsetMinutes] moved by [minutes], kept within the limits. */
+    fun shiftedBy(minutes: Int): TimeDraft = copy(offsetMinutes = (offsetMinutes + minutes).coerceIn(minOffset, maxOffset))
 }
+
+/** How far the Time screen moves a time: 12 hours either way. */
+const val MAX_SHIFT_MINUTES = 12 * 60
+
+/** The Time screen buttons' step; the crown moves a minute per step. */
+const val TIME_BUTTON_STEP_MINUTES = 5
 
 private const val MINUTE_MILLIS = 60_000L
 
-/** The Feed type screen: the time stamped on the Feed tap, plus an Earlier offset. */
+/** The Feed type screen: the time stamped on the Feed tap, plus the offset set on the Time screen (Earlier). */
 @Immutable
 data class FeedDraft(val stamp: Long, val offsetMinutes: Int = 0, val zone: ZoneId) {
     /** The time the feed is logged at. */
@@ -183,4 +209,7 @@ sealed interface WearEvent {
 
     /** Return to Main (closing pickers). */
     data object BackToMain : WearEvent
+
+    /** Done on the Time screen: back to the screen that opened it. */
+    data object CloseTime : WearEvent
 }
