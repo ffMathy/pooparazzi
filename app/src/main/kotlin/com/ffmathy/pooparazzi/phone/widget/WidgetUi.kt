@@ -127,8 +127,10 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     fun awakeFor(millis: Long, now: Long): String = string(R.string.join_space, string(CoreR.string.status_awake), lasting(millis, now))
 
     /** In the Feed button: "2h 10m", plus the breast order " · L → R" when one was recorded. */
-    fun fedSince(feed: Entry, now: Long): String = since(feed.startMillis, now) +
-        (feed.breastSide?.takeIf { feed.isBreastfeed }?.let { DOT_SEPARATOR + labels.sideShort(it) } ?: "")
+    fun fedSince(feed: Entry, now: Long): String = since(feed.startMillis, now) + (fedSide(feed)?.let { DOT_SEPARATOR + it } ?: "")
+
+    /** The breast order of [feed] ("L → R", "Left"), or null when none was recorded. */
+    fun fedSide(feed: Entry): String? = feed.breastSide?.takeIf { feed.isBreastfeed }?.let { labels.sideShort(it) }
 
     private val estimates = EstimateText(context)
 

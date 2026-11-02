@@ -38,6 +38,7 @@ import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.TextAlign
 import com.ffmathy.pooparazzi.core.domain.Expected
+import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
@@ -316,9 +317,9 @@ private fun LogButtons(
         else -> null
     }
     fun next(expected: Expected?) = expected?.let { SubLine(XDrawables.upcoming, strings.forecast(it, now)) }
-    val feedLines = listOfNotNull(lastFeed?.let { SubLine(XDrawables.history, strings.fedSince(it, now)) }, next(feedNext))
-    val diaperLines = listOfNotNull(lastDiaper?.let { SubLine(XDrawables.history, strings.since(it.startMillis, now)) }, next(poopNext))
     val stacked = layout.tall && style != FaceStyle.IconOnly
+    val feedLines = lastFeed?.let { fedLines(it, strings, layout, measure, style, stacked, now) }.orEmpty() + listOfNotNull(next(feedNext))
+    val diaperLines = listOfNotNull(lastDiaper?.let { SubLine(XDrawables.history, strings.since(it.startMillis, now)) }, next(poopNext))
     val sleepLines = listOfNotNull(sleepStatus, next(sleepNext))
     val lines = maxOf(feedLines.size, diaperLines.size, sleepLines.size)
     fun padded(sub: List<SubLine>) = sub + List(lines - sub.size) { SubLine(null, "\u00A0") }
@@ -366,6 +367,32 @@ private fun LogButtons(
             face(if (asleep) XDrawables.wake else XDrawables.sleep, sleep.strong, sleepLabel, sleep.onContainer, sleepLines)
         }
     }
+}
+
+/**
+ * The Feed button's `history` line: "1h 32m · L → R" where it fits on one line, else the time and, on a line of its own,
+ * the breast order ("1h 32m" / "Left"). The breast order then counts as a line, so the other buttons reserve one too
+ * and the three icons and labels stay aligned; a line wrapping inside the text would push only Feed's face up.
+ */
+private fun fedLines(
+    feed: Entry,
+    strings: WidgetStrings,
+    layout: LogLayout,
+    measure: WidgetMeasure,
+    style: FaceStyle,
+    stacked: Boolean,
+    now: Long,
+): List<SubLine> {
+    val joined = SubLine(XDrawables.history, strings.fedSince(feed, now))
+    val side = strings.fedSide(feed) ?: return listOf(joined)
+    if (stacked) return listOf(joined)
+    val compact = style == FaceStyle.Compact
+    val size = if (compact) 11.sp else 12.sp
+    val icon = if (compact) 11.dp else 12.dp
+    // The face's 6 dp padding each side, the icon and its 3 dp gap, and 2 dp to spare for rounding.
+    val room = layout.buttonWidth - 12.dp - icon - 3.dp - 2.dp
+    if (measure.fits(keepTogether(joined.text), size, room)) return listOf(joined)
+    return listOf(SubLine(XDrawables.history, strings.since(feed.startMillis, now)), SubLine(null, side))
 }
 
 /**
