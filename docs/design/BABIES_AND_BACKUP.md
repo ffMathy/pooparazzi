@@ -147,7 +147,7 @@ An invite link opens the app (App Link). Signed out, the app first asks to sign 
 Signing in only creates the account. Before anything is uploaded to the backend (a family created or joined, the log, the babies' names, the email address in the member list), a signed-in account that has not agreed on this phone sees a full screen of its own, before everything else (after the Welcome, before Home, the Account screen or a join confirmation; links wait behind it):
 
 - **"Back up to Google Firebase?"** "You're signed in as <email>. Nothing has been uploaded yet. Before anything is, please agree to this:"
-- **What is uploaded:** "Your log (feeds, diapers and sleep), your babies' names and your email address. A log like this can say something about your baby's health."
+- **What is uploaded:** "Your log (feeds, diapers and sleep), your babies' names and any birth dates you give, and your email address. A log like this can say something about your baby's health."
 - **Who sees it:** "You and the members of your family: everyone in it sees the family's log, the babies' names and the members' email addresses."
 - **Where:** "Google Firebase. The database is in the EU; Google processes it for us and uses it for nothing else."
 - **Changing your mind:** "Sign out to upload nothing more, leave the family, or delete your account (Settings › Account) to delete what is stored."

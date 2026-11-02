@@ -16,8 +16,8 @@ import kotlinx.coroutines.withContext
 import java.time.ZoneId
 
 /**
- * The Ongoing Activity's minute tick: its status is relative ("Feed 2h 05m"), so while a sleep runs it is
- * redrawn every minute ([RunningActivities] schedules the next tick, or cancels it once the sleep ends). Only the
+ * The Ongoing Activity's minute tick: its status is relative ("Feed 2h 05m"), so while it shows it is redrawn every
+ * minute ([RunningActivities] schedules the next tick, or cancels it once the activity goes). Only the
  * Ongoing Activity is redrawn; the tile and complications keep their own schedules.
  */
 class OngoingTickReceiver : BroadcastReceiver() {
@@ -29,7 +29,9 @@ class OngoingTickReceiver : BroadcastReceiver() {
                 val settings = graph.settings.current()
                 val summary = summarize(graph.repository.observeEntries().first(), graph.clock.now(), ZoneId.systemDefault())
                 val baby = if (settings.hasSeveralBabies) LabelFormatter(context).currentBaby(settings) else null
-                withContext(Dispatchers.Main) { RunningActivities(context).sync(summary, baby) }
+                withContext(Dispatchers.Main) {
+                    RunningActivities(context).sync(summary, baby, settings.watchForecasts, settings.selectedBaby.born)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

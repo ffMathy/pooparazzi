@@ -111,6 +111,38 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
         captureScreenRoboImage(path("44-settings-remove-baby", tour = true))
     }
 
+    /** Settings › Babies with a birth date given, and the date picker open on it; dialogs live in their own window. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test fun settingsBirthDate() {
+        compose.setContent {
+            NightLightTheme(night = false) {
+                SettingsScreen(SettingsSamples.birthDate(), SettingsActions.None, windowInsets = ReferenceInsets)
+            }
+        }
+        compose.waitForIdle()
+        captureScreenRoboImage(path("48-settings-birth-date", tour = true))
+    }
+
+    /**
+     * What comes next, chosen in Settings: the watch face shows the next feed and sleep (not poop), and the prediction
+     * notifications, one row per channel, the next poop's turned off. Scrolled to the notifications' hint.
+     */
+    @Test fun settingsPredictions() {
+        compose.setContent {
+            NightLightTheme(night = false) {
+                SettingsScreen(
+                    SettingsSamples.predictions(),
+                    SettingsActions.None,
+                    channels = SettingsSamples.predictionChannels,
+                    windowInsets = ReferenceInsets,
+                )
+            }
+        }
+        val hint = ApplicationProvider.getApplicationContext<Application>().getString(R.string.settings_forecast_notifications_hint)
+        compose.onNodeWithText(hint).performScrollTo()
+        compose.onRoot().captureRoboImage(path("49-settings-predictions", tour = true))
+    }
+
     @Test fun settingsBabiesWatchUpdate() = screen("32-settings-babies-watch-update", night = false) {
         SettingsScreen(SettingsSamples.state().copy(watchNeedsUpdate = true), SettingsActions.None, windowInsets = ReferenceInsets)
     }

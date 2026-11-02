@@ -187,7 +187,7 @@
     <string name="settings_remove_baby_body">Their log is deleted from this phone and your watch. This can\'t be undone.</string>
     <string name="settings_remove_baby_body_family">Their log is deleted for everyone in your family and from your backup. This can\'t be undone.</string>
     <string name="settings_remove_baby_confirm">Remove</string>
-    <string name="settings_babies_hint">Names stay on this phone and your watch.</string>
+    <string name="settings_babies_hint">Names and birth dates stay on this phone and your watch. A birth date tunes what comes next to the baby\'s age.</string>
     <string name="settings_appearance_hint">Auto uses Night in the evening and at night, while a sleep runs, and when the phone is in dark theme.</string>
     <string name="settings_section_watch">Watch</string>
     <string name="settings_sync_now">Sync now</string>
@@ -233,6 +233,26 @@
     <!-- Metric labels (Android 17): followed by a duration ("1h 07m"), a clock time -->
     <string name="notification_metric_asleep_for">Asleep for</string>
     <string name="notification_metric_since">Since</string>
+    <!-- Prediction notifications (DESIGN_SPEC §10.5): one channel per kind, in the "What comes next" group. -->
+    <string name="notification_group_forecasts">What comes next</string>
+    <string name="notification_channel_forecast_feed">Next feed</string>
+    <string name="notification_channel_forecast_feed_description">When the next feed is expected, from the past week</string>
+    <string name="notification_channel_forecast_poop">Next poop</string>
+    <string name="notification_channel_forecast_poop_description">When the next poop is expected, from the past week</string>
+    <string name="notification_channel_forecast_sleep">Next sleep and wake-up</string>
+    <string name="notification_channel_forecast_sleep_description">When the baby is expected to sleep next, or to wake up, from the past week</string>
+    <!-- Under a prediction: "Around 15:30". %1$s is a clock time. -->
+    <string name="notification_forecast_around">Around %1$s</string>
+    <!-- %1$s is a duration ("1h 05m"). -->
+    <string name="notification_forecast_feed_in">Next feed in %1$s</string>
+    <string name="notification_forecast_feed_soon">Next feed soon</string>
+    <string name="notification_forecast_feed_now">Feed due now</string>
+    <string name="notification_forecast_sleep_in">Next sleep in %1$s</string>
+    <string name="notification_forecast_sleep_soon">Next sleep soon</string>
+    <string name="notification_forecast_sleep_now">Sleep due now</string>
+    <string name="notification_forecast_wake_in">Expected to wake in %1$s</string>
+    <string name="notification_forecast_wake_soon">Expected to wake soon</string>
+    <string name="notification_forecast_wake_now">Wake-up due now</string>
     <!-- Settings › Notifications (DESIGN_SPEC §10.5) -->
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_live_updates">Live Updates</string>
@@ -241,6 +261,18 @@
     <string name="settings_notifications_summary">A running sleep shows a notification with Woke up</string>
     <string name="settings_notifications_off">Notifications are off</string>
     <string name="settings_notifications_off_summary">Turn them on to see a running sleep outside the app</string>
+    <string name="settings_forecast_notifications">What comes next</string>
+    <string name="settings_forecast_notifications_hint">What Home expects next, as a silent notification while the app is closed. Tap one to turn it on or off in Android's notification settings.</string>
+    <string name="settings_channel_on">On</string>
+    <string name="settings_channel_off">Off</string>
+    <!-- Settings › Watch: the estimates the watch face shows (its Ongoing Activity). -->
+    <string name="settings_watch_forecasts">On the watch face</string>
+    <string name="settings_watch_forecasts_hint">The watch face shows the earliest of these, while the baby sleeps and while awake.</string>
+    <!-- Settings › Babies: a baby's optional birth date. %1$s is a date ("14 Sep 2026"). -->
+    <string name="settings_birth_date">Born %1$s</string>
+    <string name="settings_birth_date_add">Add birth date</string>
+    <string name="settings_birth_date_title">Birth date</string>
+    <string name="settings_birth_date_remove">Remove</string>
 
     <!-- Account and backup (BABIES_AND_BACKUP §3) -->
     <string name="settings_section_account">Account</string>
@@ -286,7 +318,7 @@
     <string name="account_delete_google_prompt">You\'ll sign in with Google again to confirm.</string>
     <string name="account_delete_backup_failed">Couldn\'t delete your backup, so your account was kept. Try again.</string>
     <string name="account_delete_account_failed">Your backup was deleted, but your account wasn\'t. Try again.</string>
-    <string name="settings_babies_hint_family">Names are shared with your family and kept in your backup.</string>
+    <string name="settings_babies_hint_family">Names and birth dates are shared with your family and kept in your backup. A birth date tunes what comes next to the baby\'s age.</string>
     <!-- Sign-in without passwords (§3.3): Google, or a link sent by email -->
     <string name="account_email_link">Email me a sign-in link</string>
     <string name="account_link_sent_title">Check your email</string>
@@ -314,7 +346,7 @@
     <string name="consent_title">Back up to Google Firebase?</string>
     <string name="consent_intro">You\'re signed in as %1$s. Nothing has been uploaded yet. Before anything is, please agree to this:</string>
     <string name="consent_what_title">What is uploaded</string>
-    <string name="consent_what">Your log (feeds, diapers and sleep), your babies\' names and your email address. A log like this can say something about your baby\'s health.</string>
+    <string name="consent_what">Your log (feeds, diapers and sleep), your babies\' names and any birth dates you give, and your email address. A log like this can say something about your baby\'s health.</string>
     <string name="consent_who_title">Who sees it</string>
     <string name="consent_who">You and the members of your family: everyone in it sees the family\'s log, the babies\' names and the members\' email addresses.</string>
     <string name="consent_where_title">Where</string>

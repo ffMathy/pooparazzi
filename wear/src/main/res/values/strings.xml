@@ -96,8 +96,8 @@
     <string name="complication_preview_caption">Complication data preview</string>
 
     <!-- ===== Ongoing Activity (DESIGN_SPEC §3.8, §10.6) ===== -->
-    <string name="ongoing_channel_name">Running timers</string>
-    <string name="ongoing_channel_description">Shows a running sleep on the watch face.</string>
+    <string name="ongoing_channel_name">On the watch face</string>
+    <string name="ongoing_channel_description">Shows a running sleep and what comes next on the watch face.</string>
     <!-- TalkBack for the Ongoing Activity: "Asleep since 02:05". Keep the #start# token. -->
     <string name="ongoing_asleep_since">Asleep since #start#</string>
     <!-- The Ongoing Activity: the earliest of the week's estimates, relative and short, so it fits on a watch face ("Wakes 55m"). -->
@@ -110,6 +110,9 @@
     <string name="ongoing_wake_in">Wakes %1$s</string>
     <string name="ongoing_wake_soon">Wakes soon</string>
     <string name="ongoing_wake_now">Wakes now</string>
+    <string name="ongoing_sleep_in">Sleep %1$s</string>
+    <string name="ongoing_sleep_soon">Sleep soon</string>
+    <string name="ongoing_sleep_now">Sleep now</string>
     <!-- The Ongoing Activity when the week predicts nothing: how long the sleep has run ("Asleep 55m"). -->
     <string name="ongoing_asleep_for">Asleep %1$s</string>
     <!-- TalkBack, the place of a ticked side checkbox: "Left, first, checkbox, checked" -->

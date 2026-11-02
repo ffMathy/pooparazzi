@@ -44,7 +44,7 @@ class PooparazziTileService : Material3TileService(allowDynamicTheme = false, de
         val summary = summarize(graph.repository.observeEntries().first(), now, zone)
         val settings = graph.settings.current()
         val name = TileUiState.titleName(settings, LabelFormatter(this@PooparazziTileService))
-        val state = TileUiState.from(summary, name, memory.feedback, memory.guard, settings.selectedBaby.id)
+        val state = TileUiState.from(summary, name, memory.feedback, memory.guard, settings.selectedBaby.id, settings.selectedBaby.born)
         val dynamic = deviceConfiguration.rendererSchemaVersion.supportsDynamicText()
         return tile(state, SurfaceText.from(this@PooparazziTileService, zone), memory.nextToken(), dynamic)
     }

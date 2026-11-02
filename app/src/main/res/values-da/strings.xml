@@ -124,7 +124,7 @@
     <string name="settings_remove_baby_body">Barnets log bliver slettet fra telefonen og dit ur. Det kan ikke fortrydes.</string>
     <string name="settings_remove_baby_body_family">Barnets log bliver slettet for alle i din familie og fra din backup. Det kan ikke fortrydes.</string>
     <string name="settings_remove_baby_confirm">Fjern</string>
-    <string name="settings_babies_hint">Navnene bliver på telefonen og dit ur.</string>
+    <string name="settings_babies_hint">Navne og fødselsdatoer bliver på telefonen og dit ur. En fødselsdato tilpasser det næste til barnets alder.</string>
     <string name="settings_appearance_hint">Auto bruger Nat om aftenen og natten, mens barnet sover, og når telefonen bruger mørkt tema.</string>
     <string name="settings_section_watch">Ur</string>
     <string name="settings_sync_now">Synkroniser nu</string>
@@ -170,6 +170,33 @@
     <string name="settings_notifications_summary">En igangværende søvn vises som en notifikation med Vågnede</string>
     <string name="settings_notifications_off">Notifikationer er slået fra</string>
     <string name="settings_notifications_off_summary">Slå dem til for at se en igangværende søvn uden for appen</string>
+    <string name="notification_group_forecasts">Det næste</string>
+    <string name="notification_channel_forecast_feed">Næste måltid</string>
+    <string name="notification_channel_forecast_feed_description">Hvornår næste måltid ventes, ud fra den seneste uge</string>
+    <string name="notification_channel_forecast_poop">Næste bæ</string>
+    <string name="notification_channel_forecast_poop_description">Hvornår næste bæ ventes, ud fra den seneste uge</string>
+    <string name="notification_channel_forecast_sleep">Næste søvn og opvågning</string>
+    <string name="notification_channel_forecast_sleep_description">Hvornår barnet ventes at sove igen eller vågne, ud fra den seneste uge</string>
+    <string name="notification_forecast_around">Omkring kl. %1$s</string>
+    <string name="notification_forecast_feed_in">Næste måltid om %1$s</string>
+    <string name="notification_forecast_feed_soon">Næste måltid snart</string>
+    <string name="notification_forecast_feed_now">Måltid ventes nu</string>
+    <string name="notification_forecast_sleep_in">Næste søvn om %1$s</string>
+    <string name="notification_forecast_sleep_soon">Næste søvn snart</string>
+    <string name="notification_forecast_sleep_now">Søvn ventes nu</string>
+    <string name="notification_forecast_wake_in">Ventes at vågne om %1$s</string>
+    <string name="notification_forecast_wake_soon">Ventes at vågne snart</string>
+    <string name="notification_forecast_wake_now">Opvågning ventes nu</string>
+    <string name="settings_forecast_notifications">Det næste</string>
+    <string name="settings_forecast_notifications_hint">Det, appen venter næste gang, som en lydløs notifikation, mens appen er lukket. Tryk på en for at slå den til eller fra i Androids indstillinger for notifikationer.</string>
+    <string name="settings_channel_on">Til</string>
+    <string name="settings_channel_off">Fra</string>
+    <string name="settings_watch_forecasts">På urskiven</string>
+    <string name="settings_watch_forecasts_hint">Urskiven viser det første af disse, både mens barnet sover, og mens det er vågent.</string>
+    <string name="settings_birth_date">Født %1$s</string>
+    <string name="settings_birth_date_add">Tilføj fødselsdato</string>
+    <string name="settings_birth_date_title">Fødselsdato</string>
+    <string name="settings_birth_date_remove">Fjern</string>
 
     <!-- Konto og backup -->
     <string name="settings_section_account">Konto</string>
@@ -212,7 +239,7 @@
     <string name="account_delete_google_prompt">Du logger ind med Google igen for at bekræfte.</string>
     <string name="account_delete_backup_failed">Kunne ikke slette din backup, så din konto er bevaret. Prøv igen.</string>
     <string name="account_delete_account_failed">Din backup blev slettet, men din konto blev ikke. Prøv igen.</string>
-    <string name="settings_babies_hint_family">Navnene deles med din familie og gemmes i din backup.</string>
+    <string name="settings_babies_hint_family">Navne og fødselsdatoer deles med din familie og gemmes i din backup. En fødselsdato tilpasser det næste til barnets alder.</string>
     <string name="account_email_link">Send mig et login-link på e-mail</string>
     <string name="account_link_sent_title">Tjek din e-mail</string>
     <string name="account_link_sent">Vi har sendt et login-link til %1$s. Tryk på linket i den på denne telefon.</string>
@@ -235,7 +262,7 @@
     <string name="consent_title">Tag backup i Google Firebase?</string>
     <string name="consent_intro">Du er logget ind som %1$s. Der er ikke uploadet noget endnu. Før der bliver det, skal du sige ja til dette:</string>
     <string name="consent_what_title">Hvad der uploades</string>
-    <string name="consent_what">Din log (måltider, bleer og søvn), dine børns navne og din e-mailadresse. En log som denne kan sige noget om dit barns helbred.</string>
+    <string name="consent_what">Din log (måltider, bleer og søvn), dine børns navne og eventuelle fødselsdatoer samt din e-mailadresse. En log som denne kan sige noget om dit barns helbred.</string>
     <string name="consent_who_title">Hvem der ser det</string>
     <string name="consent_who">Du og medlemmerne af din familie: alle i den ser familiens log, børnenes navne og medlemmernes e-mailadresser.</string>
     <string name="consent_where_title">Hvor</string>

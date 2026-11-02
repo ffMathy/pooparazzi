@@ -11,7 +11,7 @@ The backend stores health data (feeds, sleep, diapers) about children, together 
 
 | | |
 |---|---|
-| What | The log (kind, times, feed type and side, formula amount, diaper details), the babies (id, name), the family (members' emails, join times, creator, invites), the account (email, user id, sign-in metadata). |
+| What | The log (kind, times, feed type and side, formula amount, diaper details), the babies (id, name, optional birth date), the family (members' emails, join times, creator, invites), the account (email, user id, sign-in metadata). |
 | What not | Location, contacts, photos, device or advertising ids, analytics, free text beyond baby names. The rules refuse any other field or document. |
 | Who | The parent who signs in; the members they invite; their babies. |
 | Why | So the log survives a lost or reset phone, and so the people who care for the same babies see the same log. |
@@ -21,7 +21,7 @@ The backend stores health data (feeds, sleep, diapers) about children, together 
 ## Necessity and proportionality
 
 - **Optional.** The app works fully without an account; the Welcome screen says the log then stays on the phone.
-- **Consent first.** A separate consent screen names the data (the log, the babies' names, the email), who sees it, where it is kept and how to withdraw, with an explicit "I agree". Nothing is uploaded before it; signing in again asks again.
+- **Consent first.** A separate consent screen names the data (the log, the babies' names and birth dates, the email), who sees it, where it is kept and how to withdraw, with an explicit "I agree". Nothing is uploaded before it; signing in again asks again.
 - **Minimisation.** Only what a restore and the sharing need. A deleted entry keeps only what the family's other phones need to learn of the deletion.
 - **Rights built in.** Download my data (a ZIP file of JSON files, which Import data reads back), edit and delete entries, rename babies, leave the family, delete the account; email for the rest.
 - **Storage limitation.** Delete account and leave family in the app; the daily retention job, which also deletes expired invites.

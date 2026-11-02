@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.ffmathy.pooparazzi.core.cloud.CloudBabies
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.SystemClock
+import com.ffmathy.pooparazzi.core.domain.ForecastKind
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.sync.EntrySync
 import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
@@ -24,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
+import java.time.LocalDate
 
 /**
  * The user's settings. Local changes are stamped and mirrored to the other device through `/settings`, except the
@@ -43,6 +45,15 @@ interface SettingsRepository {
      * (and the same name) change nothing.
      */
     suspend fun renameBaby(id: String, name: String): Settings
+
+    /**
+     * Sets baby [id]'s birth date (null: not given); a synced change stamped like [renameBaby]. Unknown ids (and the
+     * same date) change nothing.
+     */
+    suspend fun setBabyBirthDate(id: String, date: LocalDate?): Settings
+
+    /** Shows [kind] on the watch's Ongoing Activity, or not ([Settings.watchForecasts]); a synced change. */
+    suspend fun setWatchForecast(kind: ForecastKind, shown: Boolean): Settings
 
     /**
      * Appends a new, unnamed, stamped baby and returns it; a synced change. It does not become the current baby. With
@@ -127,6 +138,12 @@ class DataStoreSettingsRepository(
 
     override suspend fun renameBaby(id: String, name: String): Settings =
         updateLocal { current, at -> current.withBabyName(id, name, at) }
+
+    override suspend fun setBabyBirthDate(id: String, date: LocalDate?): Settings =
+        updateLocal { current, at -> current.withBabyBirthDate(id, date, at) }
+
+    override suspend fun setWatchForecast(kind: ForecastKind, shown: Boolean): Settings =
+        updateLocal { current, _ -> current.withWatchForecast(kind, shown) }
 
     override suspend fun addBaby(): Baby {
         val baby = Baby(Baby.newId())
@@ -325,6 +342,7 @@ class DataStoreSettingsRepository(
             language = this[KEY_LANGUAGE]?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } } ?: AppLanguage.SYSTEM,
             updatedAtMillis = this[KEY_UPDATED_AT] ?: 0L,
             removedBabies = this[KEY_REMOVED_BABIES]?.let(SettingsJson::decodeBabiesOrNull).orEmpty(),
+            watchForecasts = this[KEY_WATCH_FORECASTS]?.let(ForecastKindSetSerializer::decode) ?: ForecastKind.entries.toSet(),
         ).normalized()
         val selected = this[KEY_SELECTED_BABY]?.takeIf { id -> settings.babies.any { it.id == id } }
         return settings.copy(selectedBabyId = selected ?: settings.babies.first().id)
@@ -342,6 +360,7 @@ class DataStoreSettingsRepository(
         this[KEY_APPEARANCE] = settings.appearance.name
         this[KEY_LANGUAGE] = settings.language.name
         this[KEY_UPDATED_AT] = settings.updatedAtMillis
+        this[KEY_WATCH_FORECASTS] = ForecastKindSetSerializer.encode(settings.watchForecasts)
     }
 
     private companion object {
@@ -356,6 +375,9 @@ class DataStoreSettingsRepository(
         val KEY_APPEARANCE = stringPreferencesKey("appearance")
         val KEY_LANGUAGE = stringPreferencesKey("language")
         val KEY_UPDATED_AT = longPreferencesKey("updated_at")
+
+        /** [Settings.watchForecasts], comma-separated; absent until first written (all of them). */
+        val KEY_WATCH_FORECASTS = stringPreferencesKey("watch_forecasts")
 
         /** The ids of the babies not yet in the family's backup. This phone's alone: never mirrored, never synced. */
         val KEY_CLOUD_PENDING = stringSetPreferencesKey("cloud_pending_babies")

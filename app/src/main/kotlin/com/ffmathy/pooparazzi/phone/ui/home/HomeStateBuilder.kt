@@ -48,7 +48,7 @@ internal object HomeStateBuilder {
             row2 = row2(summary),
             today = summary.today,
             runningSleep = summary.runningSleep,
-            forecast = forecast(summary),
+            forecast = forecast(summary, (babies.firstOrNull { it.id == babyId } ?: babies.firstOrNull())?.born),
             card = card?.let { cardUi(it) },
             sheet = sheet?.let { sheetUi(it, entries, summary) },
             babies = babies,

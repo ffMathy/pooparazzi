@@ -79,7 +79,7 @@ data class WidgetSnapshot(
             babyId: String = settings.selectedBaby.id,
         ): WidgetSnapshot {
             val summary = summarize(entries, now, zone)
-            val week = forecast(summary)
+            val week = forecast(summary, (settings.babies.firstOrNull { it.id == babyId } ?: settings.selectedBaby).born)
             val sleep = summary.runningSleep
             val anyAsleep = sleep != null || allEntries.any { it.isSleep && it.isRunning }
             return WidgetSnapshot(

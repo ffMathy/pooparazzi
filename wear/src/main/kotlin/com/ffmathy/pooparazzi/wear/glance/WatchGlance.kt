@@ -9,6 +9,7 @@ import com.ffmathy.pooparazzi.core.domain.forecast
 import com.ffmathy.pooparazzi.core.format.EstimateText
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.model.Entry
+import java.time.LocalDate
 import java.time.ZoneId
 import com.ffmathy.pooparazzi.core.R as CoreR
 
@@ -55,15 +56,18 @@ data class WatchGlance(
     val nextPoop: Expected? get() = forecast.poop
 
     companion object {
-        /** The glance for [summary] (the current baby's entries), with the forecast the past week gives. */
-        fun from(summary: Summary, babyName: String): WatchGlance = WatchGlance(
+        /**
+         * The glance for [summary] (the current baby's entries), with the forecast the past week gives (tuned to the
+         * baby's age when its [birthDate] is known).
+         */
+        fun from(summary: Summary, babyName: String, birthDate: LocalDate? = null): WatchGlance = WatchGlance(
             now = summary.now,
             zone = summary.zone,
             babyName = babyName.trim(),
             lastFeed = summary.lastFeed,
             lastDiaper = summary.lastDiaper,
             runningSleep = summary.runningSleep,
-            forecast = forecast(summary),
+            forecast = forecast(summary, birthDate),
         )
     }
 }
