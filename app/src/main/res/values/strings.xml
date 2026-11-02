@@ -262,7 +262,7 @@
     <string name="settings_notifications_off">Notifications are off</string>
     <string name="settings_notifications_off_summary">Turn them on to see a running sleep outside the app</string>
     <string name="settings_forecast_notifications">What comes next</string>
-    <string name="settings_forecast_notifications_hint">What Home expects next, as a silent notification while the app is closed. Tap one to turn it on or off in Android's notification settings.</string>
+    <string name="settings_forecast_notifications_hint">What Home expects next, as a silent notification while the app is closed. Tap one to turn it on or off in Android\'s notification settings.</string>
     <string name="settings_channel_on">On</string>
     <string name="settings_channel_off">Off</string>
     <!-- Settings › Watch: the estimates the watch face shows (its Ongoing Activity). -->
