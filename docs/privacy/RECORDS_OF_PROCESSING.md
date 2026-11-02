@@ -2,7 +2,7 @@
 
 The controller's own record of what Pooparazzi's backend processes. The privacy policy ([../PRIVACY.md](../PRIVACY.md), and the hosted `/privacy` page) is the public side of it. Keep them in step, and review this record whenever the backend, the data or a processor changes.
 
-Last reviewed: 30 October 2026.
+Last reviewed: 2 November 2026.
 
 | | |
 |---|---|

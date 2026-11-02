@@ -33,11 +33,12 @@ The backend stores health data (feeds, sleep, diapers) about children, together 
 | Someone outside the family reads a family's log | Possible · significant | Rules: membership checked on every request; joining only with a single-use, 6-day invite from a current member; tested in CI. | Low |
 | An invite link reaches the wrong person | Possible · significant | The link is a 128-bit secret, works once, for 6 days, only while its maker is a member; every member sees who is in the family; the creator can remove members. | Low |
 | A former member keeps data | Likely · limited | What reached their phone stays there (stated in the policy); they see nothing new. Unavoidable for an offline-first app. | Accepted |
-| The log is linked to a named child | Certain within the family · significant | Names are shared only with the family the parent chose; nothing else about the child is stored. | Low |
+| The log is linked to a named child | Certain within the family · significant | Names are shared only with the family the parent chose; nothing else about the child is stored but the optional birth date. | Low |
+| A birth date makes the child easier to identify | Possible · limited | Optional, asked for with what it is for (predictions that follow the baby's age); used for nothing else; shared only with the family; can be changed or removed at any time; a removed baby's record keeps none. The consent screen names it, and accounts that agreed before it was added are asked again. | Low |
 | A leaked service account key | Unlikely · significant | Only in a GitHub Actions secret, used only by the retention workflow; rotate on exposure (BREACH_RESPONSE.md). | Low |
 | Data kept after it is no longer wanted | Likely without measures · limited | Deletion in the app, tombstones without content, 2-year inactivity deletion, deletion of orphaned data and of expired invites, daily. | Low |
 | Account data processed in the US | Certain · limited | Only account data, not the log; SCCs and the Data Privacy Framework; disclosed in the policy. | Low |
-| Consent not informed | Possible · limited | Plain words on a separate screen, the policy one tap away, asked again on every new sign-in. | Low |
+| Consent not informed | Possible · limited | Plain words on a separate screen, the policy one tap away (in English or Danish, after the browser's language), asked again on every new sign-in and whenever what is uploaded changes. | Low |
 
 ## Outcome
 

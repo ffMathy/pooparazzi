@@ -124,7 +124,7 @@
     <string name="settings_remove_baby_body">Barnets log bliver slettet fra telefonen og dit ur. Det kan ikke fortrydes.</string>
     <string name="settings_remove_baby_body_family">Barnets log bliver slettet for alle i din familie og fra din backup. Det kan ikke fortrydes.</string>
     <string name="settings_remove_baby_confirm">Fjern</string>
-    <string name="settings_babies_hint">Navne og fødselsdatoer bliver på telefonen og dit ur. En fødselsdato tilpasser det næste til barnets alder.</string>
+    <string name="settings_babies_hint">Navne og fødselsdatoer bliver på telefonen og dit ur.</string>
     <string name="settings_appearance_hint">Auto bruger Nat om aftenen og natten, mens barnet sover, og når telefonen bruger mørkt tema.</string>
     <string name="settings_section_watch">Ur</string>
     <string name="settings_sync_now">Synkroniser nu</string>
@@ -197,6 +197,9 @@
     <string name="settings_birth_date_add">Tilføj fødselsdato</string>
     <string name="settings_birth_date_title">Fødselsdato</string>
     <string name="settings_birth_date_remove">Fjern</string>
+    <string name="settings_add_baby_title">Tilføj et barn</string>
+    <string name="settings_add_baby_confirm">Tilføj</string>
+    <string name="settings_add_baby_birth_date_why">Fødselsdatoen er valgfri, men den gør forudsigelserne og estimaterne bedre: de følger så barnets alder.</string>
 
     <!-- Konto og backup -->
     <string name="settings_section_account">Konto</string>
@@ -239,7 +242,7 @@
     <string name="account_delete_google_prompt">Du logger ind med Google igen for at bekræfte.</string>
     <string name="account_delete_backup_failed">Kunne ikke slette din backup, så din konto er bevaret. Prøv igen.</string>
     <string name="account_delete_account_failed">Din backup blev slettet, men din konto blev ikke. Prøv igen.</string>
-    <string name="settings_babies_hint_family">Navne og fødselsdatoer deles med din familie og gemmes i din backup. En fødselsdato tilpasser det næste til barnets alder.</string>
+    <string name="settings_babies_hint_family">Navne og fødselsdatoer deles med din familie og gemmes i din backup.</string>
     <string name="account_email_link">Send mig et login-link på e-mail</string>
     <string name="account_link_sent_title">Tjek din e-mail</string>
     <string name="account_link_sent">Vi har sendt et login-link til %1$s. Tryk på linket i den på denne telefon.</string>

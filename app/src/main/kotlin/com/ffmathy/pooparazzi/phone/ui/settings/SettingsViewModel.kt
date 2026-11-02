@@ -82,6 +82,7 @@ sealed interface AccountSummary {
  * @property privacyUrl where Settings › About › Privacy policy opens ([PrivacyPolicy]).
  * @property watchForecasts the estimates the watch face shows (Settings › Watch; [Settings.watchForecasts]).
  * @property birthDateFor the baby whose birth date picker is open, or null.
+ * @property addingBaby the Add a baby dialog is open (the name and, optionally, the birth date).
  */
 @Immutable
 data class SettingsUiState(
@@ -99,6 +100,7 @@ data class SettingsUiState(
     val removing: Baby? = null,
     val watchForecasts: Set<ForecastKind> = ForecastKind.entries.toSet(),
     val birthDateFor: Baby? = null,
+    val addingBaby: Boolean = false,
 ) {
     val canRemoveBaby: Boolean get() = babies.size > 1
 }
@@ -112,8 +114,17 @@ interface SettingsActions {
     /** The keyboard's Done in baby [id]'s field: saves its name at once. */
     fun onBabyNameDone(id: String) {}
 
-    /** "Add a baby": appends an unnamed baby (the current baby stays). */
-    fun onAddBaby() {}
+    /** "Add a baby": opens the Add a baby dialog, which asks for the name and, optionally, the birth date. */
+    fun onStartAddBaby() {}
+
+    /**
+     * The Add a baby dialog's Add: appends a baby with [name] (empty: unnamed) and [birthDate] (null: not given); the
+     * current baby stays.
+     */
+    fun onAddBaby(name: String = "", birthDate: LocalDate? = null) {}
+
+    /** The Add a baby dialog's Cancel, or Back. */
+    fun onDismissAddBaby() {}
 
     /** A name field's remove button: asks "Remove <label>?" first. */
     fun onRemoveBaby(id: String) {}
@@ -217,6 +228,9 @@ class SettingsViewModel(
     /** The id of the baby whose birth date picker is open. */
     private val pickingBirthDate = MutableStateFlow<String?>(null)
 
+    /** The Add a baby dialog is open. */
+    private val addingBaby = MutableStateFlow(false)
+
     /**
      * The typed names not written yet, by baby id; a write takes its baby's name atomically, so no keystroke is lost or
      * written twice.
@@ -238,9 +252,9 @@ class SettingsViewModel(
 
     private val edits = combine(nameDrafts, removing, pickingBirthDate, ::Triple)
 
-    private val watch = combine(oldWatch, missingApp, ::Pair)
+    private val watch = combine(oldWatch, missingApp, addingBaby, ::Triple)
 
-    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, edits, account, watch) { s, status, (drafts, removingId, birthDateId), account, (old, missing) ->
+    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, edits, account, watch) { s, status, (drafts, removingId, birthDateId), account, (old, missing, adding) ->
         SettingsUiState(
             babies = s.babies.map { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
             appearance = s.appearance,
@@ -257,6 +271,7 @@ class SettingsViewModel(
             watchForecasts = s.watchForecasts,
             birthDateFor = s.babies.firstOrNull { it.id == birthDateId }
                 ?.let { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
+            addingBaby = adding && !old && s.babies.size < Settings.MAX_BABIES,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -280,9 +295,27 @@ class SettingsViewModel(
         nameJobs[id] = writeScope.launch { flushName(id) }
     }
 
-    override fun onAddBaby() {
+    override fun onStartAddBaby() {
         if (oldWatch.value) return
-        viewModelScope.launch { settings.addBaby() }
+        addingBaby.value = true
+    }
+
+    override fun onDismissAddBaby() {
+        addingBaby.value = false
+    }
+
+    /** In the app's scope, so leaving Settings at once cannot cut the writes short. */
+    override fun onAddBaby(name: String, birthDate: LocalDate?) {
+        addingBaby.value = false
+        if (oldWatch.value) return
+        writeScope.launch {
+            // At the cap nothing is added (and the last baby would come back): it must not be renamed.
+            if (settings.current().babies.size >= Settings.MAX_BABIES) return@launch
+            val baby = settings.addBaby()
+            val clean = Settings.sanitizeName(name)
+            if (clean.isNotEmpty()) settings.renameBaby(baby.id, clean)
+            if (birthDate != null) settings.setBabyBirthDate(baby.id, birthDate)
+        }
     }
 
     override fun onRemoveBaby(id: String) {

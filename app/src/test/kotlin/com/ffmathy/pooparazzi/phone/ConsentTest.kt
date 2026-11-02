@@ -75,4 +75,14 @@ class ConsentTest : CoreTestBase() {
         ConsentPrefs(app).withdraw("anna")
         assertEquals(setOf("bo"), ConsentPrefs(app).agreed.value)
     }
+
+    /** A consent to the text from before birth dates were uploaded does not count: the account is asked again. */
+    @Test
+    fun aConsentToAnOlderTextIsAskedAgain() {
+        val app: Application = ApplicationProvider.getApplicationContext()
+        val prefs = app.getSharedPreferences(ConsentPrefs.FILE, android.content.Context.MODE_PRIVATE)
+        prefs.edit().putStringSet("agreed", setOf("anna")).commit()
+        assertTrue(ConsentPrefs(app).agreed.value.isEmpty())
+        assertFalse(prefs.contains("agreed"))
+    }
 }

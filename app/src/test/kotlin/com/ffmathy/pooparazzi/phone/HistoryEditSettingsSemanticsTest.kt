@@ -86,7 +86,7 @@ class HistoryEditSettingsSemanticsTest {
         override fun onAppearance(appearance: Appearance) { calls += "appearance:$appearance" }
         override fun onLanguage(language: AppLanguage) { calls += "language:$language" }
         override fun onBabyNameChange(id: String, name: String) { calls += "name:$id:$name" }
-        override fun onAddBaby() { calls += "add-baby" }
+        override fun onStartAddBaby() { calls += "add-baby" }
     }
 
     @Before
@@ -228,7 +228,7 @@ class HistoryEditSettingsSemanticsTest {
         compose.onNodeWithText("Baby").assertExists()
         compose.onNode(hasSetTextAction()).assert(hasText("Noa")).assert(hasText("Name"))
         // Signed in, the names go to the family's backup too (BABIES_AND_BACKUP §1).
-        compose.onNodeWithText("Names are shared with your family and kept in your backup.").assertExists()
+        compose.onNodeWithText("Names and birth dates are shared with your family and kept in your backup.").assertExists()
         compose.onNodeWithText("Add a baby").performScrollTo().assertHasClickAction().performClick()
         compose.onNode(hasSetTextAction()).performTextReplacement("Maja")
         assertEquals(listOf("add-baby", "name:default:Maja"), calls)

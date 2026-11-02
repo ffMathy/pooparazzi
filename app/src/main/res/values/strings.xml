@@ -187,7 +187,7 @@
     <string name="settings_remove_baby_body">Their log is deleted from this phone and your watch. This can\'t be undone.</string>
     <string name="settings_remove_baby_body_family">Their log is deleted for everyone in your family and from your backup. This can\'t be undone.</string>
     <string name="settings_remove_baby_confirm">Remove</string>
-    <string name="settings_babies_hint">Names and birth dates stay on this phone and your watch. A birth date tunes what comes next to the baby\'s age.</string>
+    <string name="settings_babies_hint">Names and birth dates stay on this phone and your watch.</string>
     <string name="settings_appearance_hint">Auto uses Night in the evening and at night, while a sleep runs, and when the phone is in dark theme.</string>
     <string name="settings_section_watch">Watch</string>
     <string name="settings_sync_now">Sync now</string>
@@ -273,6 +273,10 @@
     <string name="settings_birth_date_add">Add birth date</string>
     <string name="settings_birth_date_title">Birth date</string>
     <string name="settings_birth_date_remove">Remove</string>
+    <!-- The Add a baby dialog: the name and, optionally, the birth date. -->
+    <string name="settings_add_baby_title">Add a baby</string>
+    <string name="settings_add_baby_confirm">Add</string>
+    <string name="settings_add_baby_birth_date_why">The birth date is optional, but it improves the predictions and estimates: they then follow the baby\'s age.</string>
 
     <!-- Account and backup (BABIES_AND_BACKUP §3) -->
     <string name="settings_section_account">Account</string>
@@ -318,7 +322,7 @@
     <string name="account_delete_google_prompt">You\'ll sign in with Google again to confirm.</string>
     <string name="account_delete_backup_failed">Couldn\'t delete your backup, so your account was kept. Try again.</string>
     <string name="account_delete_account_failed">Your backup was deleted, but your account wasn\'t. Try again.</string>
-    <string name="settings_babies_hint_family">Names and birth dates are shared with your family and kept in your backup. A birth date tunes what comes next to the baby\'s age.</string>
+    <string name="settings_babies_hint_family">Names and birth dates are shared with your family and kept in your backup.</string>
     <!-- Sign-in without passwords (§3.3): Google, or a link sent by email -->
     <string name="account_email_link">Email me a sign-in link</string>
     <string name="account_link_sent_title">Check your email</string>

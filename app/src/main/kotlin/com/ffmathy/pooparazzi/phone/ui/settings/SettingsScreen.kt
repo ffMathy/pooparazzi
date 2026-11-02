@@ -51,12 +51,11 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -289,26 +288,23 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 
 /**
  * Settings › Babies (BABIES_AND_BACKUP §2.4): one name field per baby (its label as the placeholder) with its birth
- * date under it ("Add birth date", or "Born 14 Sep 2026"; both open the date picker), "Add a baby"
- * (hidden at [Settings.MAX_BABIES]; the new baby's field takes the focus; disabled, with a line saying why, while the
- * paired watch runs a version from before several babies) and the hint that names stay on the parent's devices.
+ * date under it ("Add birth date", or "Born 14 Sep 2026"; both open the date picker), "Add a baby" (opens the Add a
+ * baby dialog, which asks for the name and, optionally, the birth date; hidden at [Settings.MAX_BABIES]; disabled, with
+ * a line saying why, while the paired watch runs a version from before several babies) and the hint that names and
+ * birth dates stay on the parent's devices (or go to the family and backup, signed in).
  */
 @Composable
 private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
     val labels = rememberFormatters(state.zone).labels
-    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    var focusAdded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         state.babies.forEach { baby ->
             key(baby.id) {
-                val requester = focusRequesters.getOrPut(baby.id) { FocusRequester() }
                 NameField(
                     name = baby.name,
                     // The label an empty name shows: "Baby", or "Baby 2" … with several.
                     placeholder = labels.baby(baby.copy(name = ""), state.babies),
                     onChange = { actions.onBabyNameChange(baby.id, it) },
                     onDone = { actions.onBabyNameDone(baby.id) },
-                    modifier = Modifier.focusRequester(requester),
                     removeLabel = if (state.canRemoveBaby) {
                         stringResource(R.string.settings_remove_baby_cd, labels.baby(baby, state.babies))
                     } else {
@@ -320,20 +316,10 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
             }
         }
     }
-    val newest = state.babies.last().id
-    LaunchedEffect(newest) {
-        if (focusAdded) {
-            focusAdded = false
-            focusRequesters[newest]?.requestFocus()
-        }
-    }
     if (state.canAddBaby) {
         OutlinePill(
             stringResource(R.string.settings_add_baby),
-            onClick = {
-                focusAdded = true
-                actions.onAddBaby()
-            },
+            onClick = actions::onStartAddBaby,
             icon = XIcons.plus,
             modifier = Modifier.padding(top = 4.dp),
             enabled = !state.watchNeedsUpdate,
@@ -350,6 +336,15 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
     // Signed in, the names go to the family's backup too (BABIES_AND_BACKUP §1).
     val signedIn = state.account is AccountSummary.SignedIn
     val hint = if (signedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint
+    // A baby without a birth date: why giving one helps.
+    if (state.babies.any { it.born == null }) {
+        Text(
+            stringResource(R.string.settings_add_baby_birth_date_why),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
+        )
+    }
     Text(
         stringResource(hint),
         style = MaterialTheme.typography.bodySmall,
@@ -357,13 +352,78 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
         modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
     )
     state.removing?.let { RemoveBabyDialog(labels.baby(it, state.babies), signedIn, actions) }
-    state.birthDateFor?.let { BirthDateDialog(it, actions) }
+    state.birthDateFor?.let { baby ->
+        BirthDateDialog(
+            initial = baby.born,
+            onPick = { actions.onBirthDate(baby.id, it) },
+            onDismiss = actions::onDismissBirthDate,
+        )
+    }
+    if (state.addingBaby) AddBabyDialog(placeholder = labels.baby(Baby(""), state.babies + Baby("")), signedIn, actions)
+}
+
+/**
+ * "Add a baby": the new baby's name (optional; its label shows until one is typed) and, optionally, its birth date
+ * ("Add birth date" opens the date picker), with why it is asked: a birth date makes the predictions and estimates fit
+ * the baby's age. A line under it says where names and birth dates go (this phone and the watch, or the family and the
+ * backup when signed in). Cancel adds nothing; Add adds the baby (the current baby stays).
+ */
+@Composable
+private fun AddBabyDialog(placeholder: String, signedIn: Boolean, actions: SettingsActions) {
+    val colors = MaterialTheme.colorScheme
+    var name by rememberSaveable { mutableStateOf("") }
+    var born by rememberSaveable { mutableStateOf<String?>(null) }
+    var picking by rememberSaveable { mutableStateOf(false) }
+    val date = born?.let { LocalDate.parse(it) }
+    AlertDialog(
+        onDismissRequest = actions::onDismissAddBaby,
+        title = { Text(stringResource(R.string.settings_add_baby_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                NameField(
+                    name = name,
+                    placeholder = placeholder,
+                    onChange = { name = it.take(Settings.MAX_BABY_NAME_LENGTH) },
+                    onDone = {},
+                )
+                BirthDatePill(date, onClick = { picking = true })
+                Text(
+                    stringResource(R.string.settings_add_baby_birth_date_why),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onSurface,
+                )
+                Text(
+                    stringResource(if (signedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { actions.onAddBaby(name, date) }) { Text(stringResource(R.string.settings_add_baby_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = actions::onDismissAddBaby) { Text(stringResource(android.R.string.cancel)) }
+        },
+    )
+    if (picking) {
+        BirthDateDialog(
+            initial = date,
+            onPick = {
+                born = it?.toString()
+                picking = false
+            },
+            onDismiss = { picking = false },
+        )
+    }
 }
 
 /** "Add birth date", or "Born 14 Sep 2026" (the date in the app language's medium style); opens the date picker. */
 @Composable
-private fun BirthDatePill(baby: Baby, onClick: () -> Unit) {
-    val born = baby.born
+private fun BirthDatePill(baby: Baby, onClick: () -> Unit) = BirthDatePill(baby.born, onClick)
+
+@Composable
+private fun BirthDatePill(born: LocalDate?, onClick: () -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val text = if (born == null) {
         stringResource(R.string.settings_birth_date_add)
@@ -374,15 +434,16 @@ private fun BirthDatePill(baby: Baby, onClick: () -> Unit) {
 }
 
 /**
- * The birth date picker (Material's date picker, today and earlier only): OK saves the picked date, Remove (when one
- * is set) forgets it, Cancel leaves it as it was. The birth date tunes what comes next to the baby's age.
+ * The birth date picker (Material's date picker, today and earlier only): OK picks the date, Remove (when one is
+ * set) forgets it ([onPick] with null), Cancel leaves it as it was. The birth date tunes what comes next to the baby's
+ * age.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BirthDateDialog(baby: Baby, actions: SettingsActions) {
+private fun BirthDateDialog(initial: LocalDate?, onPick: (LocalDate?) -> Unit, onDismiss: () -> Unit) {
     val today = remember { LocalDate.now() }
     val picker = rememberDatePickerState(
-        initialSelectedDateMillis = baby.born?.let { it.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() },
+        initialSelectedDateMillis = initial?.let { it.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() },
         yearRange = (today.year - MAX_AGE_YEARS)..today.year,
         selectableDates = remember(today) {
             object : SelectableDates {
@@ -394,21 +455,21 @@ private fun BirthDateDialog(baby: Baby, actions: SettingsActions) {
         },
     )
     DatePickerDialog(
-        onDismissRequest = actions::onDismissBirthDate,
+        onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(
                 onClick = {
                     val picked = picker.selectedDateMillis?.let { java.time.Instant.ofEpochMilli(it).atOffset(ZoneOffset.UTC).toLocalDate() }
-                    if (picked != null) actions.onBirthDate(baby.id, picked) else actions.onDismissBirthDate()
+                    if (picked != null) onPick(picked) else onDismiss()
                 },
             ) { Text(stringResource(android.R.string.ok)) }
         },
         dismissButton = {
             Row {
-                if (baby.born != null) {
-                    TextButton(onClick = { actions.onBirthDate(baby.id, null) }) { Text(stringResource(R.string.settings_birth_date_remove)) }
+                if (initial != null) {
+                    TextButton(onClick = { onPick(null) }) { Text(stringResource(R.string.settings_birth_date_remove)) }
                 }
-                TextButton(onClick = actions::onDismissBirthDate) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
             }
         },
     ) {

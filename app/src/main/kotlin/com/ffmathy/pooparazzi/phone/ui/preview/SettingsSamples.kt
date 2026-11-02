@@ -44,6 +44,9 @@ object SettingsSamples {
         return state(babies = listOf(noa)).copy(birthDateFor = noa)
     }
 
+    /** "Add a baby": the dialog asking for the new baby's name and, optionally, its birth date (and why). */
+    fun addBaby(): SettingsUiState = state().copy(addingBaby = true)
+
     /** The watch face shows the next feed and the next sleep, not the next poop (Settings › Watch). */
     fun predictions(): SettingsUiState = state().copy(watchForecasts = setOf(ForecastKind.FEED, ForecastKind.SLEEP))
 

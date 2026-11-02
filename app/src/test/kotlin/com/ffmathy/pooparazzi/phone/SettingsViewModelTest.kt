@@ -211,6 +211,28 @@ class SettingsViewModelTest : CoreTestBase() {
         assertFalse("the pill is hidden at the cap", vm.state.value!!.canAddBaby)
     }
 
+    /** "Add a baby" opens the dialog; Add adds the baby with its name and birth date, Cancel adds nothing. */
+    @Test
+    fun addingABabyAsksForItsNameAndBirthDate() = coreTest { core ->
+        val vm = settings(core)
+        vm.onStartAddBaby()
+        runCurrent()
+        assertTrue(vm.state.value!!.addingBaby)
+        vm.onDismissAddBaby()
+        runCurrent()
+        assertFalse(vm.state.value!!.addingBaby)
+        assertEquals(1, core.settings.current().babies.size)
+
+        vm.onStartAddBaby()
+        vm.onAddBaby("  Ida ", java.time.LocalDate.of(2026, 8, 14))
+        runCurrent()
+        assertFalse(vm.state.value!!.addingBaby)
+        val added = core.settings.current().babies.last()
+        assertEquals("Ida", added.name)
+        assertEquals(java.time.LocalDate.of(2026, 8, 14), added.born)
+        assertEquals("adding does not switch the current baby", Baby.FIRST_ID, core.settings.current().selectedBaby.id)
+    }
+
     /** A watch from before several babies would resolve conflicts across them: no second baby until it is updated. */
     @Test
     fun anOldWatchKeepsAddABabyDisabled() = coreTest { core ->

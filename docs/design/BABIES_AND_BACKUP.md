@@ -153,7 +153,7 @@ Signing in only creates the account. Before anything is uploaded to the backend 
 - **Changing your mind:** "Sign out to upload nothing more, leave the family, or delete your account (Settings › Account) to delete what is stored."
 - "Details are in the privacy policy." (a link), then **"I agree"** (filled) and **"Not now, sign out"** (text; Back does the same).
 
-The answer is kept per account on this phone (device-local, not in Android backup), so a new phone asks again; signing out (or deleting the account) withdraws it there. Until then nothing is read from or written to Firestore for the account and the backup is off. This is the explicit consent of GDPR Art. 6(1)(a) and 9(2)(a) the privacy policy rests on (PRIVACY.md §3).
+The answer is kept per account on this phone (device-local, not in Android backup), so a new phone asks again; signing out (or deleting the account) withdraws it there. It is kept per version of the text: when what is uploaded changes (version 2, November 2026: the babies' optional birth dates), every signed-in account sees the screen again before anything more is uploaded. Until then nothing is read from or written to Firestore for the account and the backup is off. This is the explicit consent of GDPR Art. 6(1)(a) and 9(2)(a) the privacy policy rests on (PRIVACY.md §3).
 
 ## 4. Sync with the backend
 

@@ -123,6 +123,18 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
         captureScreenRoboImage(path("48-settings-birth-date", tour = true))
     }
 
+    /** "Add a baby" asks for the name and, optionally, the birth date, saying why; dialogs live in their own window. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test fun settingsAddBaby() {
+        compose.setContent {
+            NightLightTheme(night = false) {
+                SettingsScreen(SettingsSamples.addBaby(), SettingsActions.None, windowInsets = ReferenceInsets)
+            }
+        }
+        compose.waitForIdle()
+        captureScreenRoboImage(path("51-settings-add-baby", tour = true))
+    }
+
     /**
      * What comes next, chosen in Settings: the watch face shows the next feed and sleep (not poop), and the prediction
      * notifications, one row per channel, the next poop's turned off. Scrolled to the notifications' hint.
