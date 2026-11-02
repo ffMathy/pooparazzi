@@ -29,6 +29,7 @@ import com.ffmathy.pooparazzi.phone.ui.preview.HistorySamples
 import com.ffmathy.pooparazzi.phone.ui.preview.SettingsSamples
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsActions
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsScreen
+import com.ffmathy.pooparazzi.phone.ui.settings.SettingsUiState
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -114,15 +115,20 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
         SettingsScreen(SettingsSamples.state().copy(watchNeedsUpdate = true), SettingsActions.None, windowInsets = ReferenceInsets)
     }
 
-    /** A connected watch without Pooparazzi: Settings › Watch offers "Install on your watch" in place of "No watch connected". */
-    @Test fun settingsWatchInstall() {
+    /** A connected watch without Pooparazzi: Settings › Watch offers "Install on your watch" in place of "No watch yet". */
+    @Test fun settingsWatchInstall() = watchSection("46-settings-watch-install", SettingsSamples.watchWithoutApp())
+
+    /** No watch: Settings › Watch says "No watch yet" and that Pooparazzi has a watch app for when the parent gets one. */
+    @Test fun settingsNoWatch() = watchSection("47-settings-no-watch", SettingsSamples.noWatch())
+
+    /** Settings scrolled to the About heading, so the whole Watch section (and the Notifications row after it) is in view. */
+    private fun watchSection(name: String, state: SettingsUiState) {
         compose.setContent {
-            NightLightTheme(night = false) { SettingsScreen(SettingsSamples.watchWithoutApp(), SettingsActions.None, windowInsets = ReferenceInsets) }
+            NightLightTheme(night = false) { SettingsScreen(state, SettingsActions.None, windowInsets = ReferenceInsets) }
         }
-        // Scrolled to the About heading, so the whole Watch section (and the Notifications row after it) is in view.
         val about = ApplicationProvider.getApplicationContext<Application>().getString(R.string.settings_section_about)
         compose.onNodeWithText(about).performScrollTo()
-        compose.onRoot().captureRoboImage(path("46-settings-watch-install", tour = true))
+        compose.onRoot().captureRoboImage(path(name, tour = true))
     }
 
     /** Not part of the tour (written under build/): the blocking validation line, and a past day. */

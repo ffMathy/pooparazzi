@@ -128,7 +128,8 @@
     <string name="settings_appearance_hint">Auto bruger Nat om aftenen og natten, mens barnet sover, og når telefonen bruger mørkt tema.</string>
     <string name="settings_section_watch">Ur</string>
     <string name="settings_sync_now">Synkroniser nu</string>
-    <string name="settings_sync_unavailable">Intet ur forbundet. Alt gemmes på telefonen.</string>
+    <string name="settings_no_watch">Intet ur endnu</string>
+    <string name="settings_no_watch_summary">Pooparazzi findes også til Wear OS-ure. Får du et ur, kan du logge med et tryk fra håndleddet, og det synkroniseres med telefonen.</string>
     <string name="settings_watch_install">Installer på dit ur</string>
     <string name="settings_watch_install_summary">Pooparazzi er ikke på dit ur endnu. Åbner Google Play på uret.</string>
     <string name="settings_watch_install_opened">Se på dit ur for at installere Pooparazzi.</string>

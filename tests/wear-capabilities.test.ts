@@ -1,6 +1,6 @@
 // Play Services reads the Wear capabilities (core's res/values/wear.xml) by name, never through R, so release builds'
 // resource shrinking drops them unless a res/raw keep file names them. Without them neither app advertises
-// pooparazzi_tracker, and the phone says "No watch connected" next to a watch with the app (data items still sync).
+// pooparazzi_tracker, and the phone says "No watch yet" (or offers to install the app) next to a watch with the app (data items still sync).
 // `bun test ./tests` from the repository root.
 import { describe, expect, test } from 'bun:test'
 import { readFileSync, readdirSync } from 'node:fs'

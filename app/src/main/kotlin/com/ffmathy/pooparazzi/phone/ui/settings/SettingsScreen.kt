@@ -454,9 +454,9 @@ private fun LanguageGroup(selected: AppLanguage, onSelect: (AppLanguage) -> Unit
 }
 
 /**
- * Settings › Watch: the sync line with "Sync now"; without a watch: "No watch connected. Everything is saved on this
- * phone." With a connected watch that lacks Pooparazzi, "Install on your watch" (opens its Play Store page on the
- * watch) takes the place of "No watch connected", or follows the sync line when another watch has the app.
+ * Settings › Watch: the sync line with "Sync now"; without a watch: "No watch yet" and that Pooparazzi has a watch app
+ * for when the parent gets one. With a connected watch that lacks Pooparazzi, "Install on your watch" (opens its Play
+ * Store page on the watch) takes the place of "No watch yet", or follows the sync line when another watch has the app.
  */
 @Composable
 private fun SyncRow(state: SettingsUiState, actions: SettingsActions) {
@@ -468,11 +468,14 @@ private fun SyncRow(state: SettingsUiState, actions: SettingsActions) {
             GroupRow(first = true, last = !state.watchWithoutApp) {
                 Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)) {
                     if (line == null) {
-                        Text(
-                            stringResource(R.string.settings_sync_unavailable),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colors.onSurfaceVariant,
-                        )
+                        Column(Modifier.semantics(mergeDescendants = true) {}) {
+                            Text(stringResource(R.string.settings_no_watch), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+                            Text(
+                                stringResource(R.string.settings_no_watch_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.onSurfaceVariant,
+                            )
+                        }
                     } else {
                         // The line first (Danish "Synkroniseret med ur · 14:31" needs the full width), "Sync now" under it.
                         val tint = if (state.sync is SyncStatus.Error) colors.error else colors.onSurfaceVariant

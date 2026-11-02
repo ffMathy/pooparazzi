@@ -191,7 +191,8 @@
     <string name="settings_appearance_hint">Auto uses Night in the evening and at night, while a sleep runs, and when the phone is in dark theme.</string>
     <string name="settings_section_watch">Watch</string>
     <string name="settings_sync_now">Sync now</string>
-    <string name="settings_sync_unavailable">No watch connected. Everything is saved on this phone.</string>
+    <string name="settings_no_watch">No watch yet</string>
+    <string name="settings_no_watch_summary">Pooparazzi has a Wear OS watch app too. If you get a watch, log with a tap from your wrist; it syncs with this phone.</string>
     <string name="settings_watch_install">Install on your watch</string>
     <string name="settings_watch_install_summary">Pooparazzi isn\'t on your watch yet. Opens Google Play on the watch.</string>
     <string name="settings_watch_install_opened">Check your watch to install Pooparazzi.</string>
