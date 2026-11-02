@@ -15,10 +15,14 @@ import androidx.wear.protolayout.LayoutElementBuilders.HORIZONTAL_ALIGN_START
 import androidx.wear.protolayout.LayoutElementBuilders.LayoutElement
 import androidx.wear.protolayout.LayoutElementBuilders.TEXT_ALIGN_CENTER
 import androidx.wear.protolayout.LayoutElementBuilders.TEXT_ALIGN_START
+import androidx.wear.protolayout.LayoutElementBuilders.VERTICAL_ALIGN_BOTTOM
 import androidx.wear.protolayout.LayoutElementBuilders.VERTICAL_ALIGN_CENTER
+import androidx.wear.protolayout.LayoutElementBuilders.VERTICAL_ALIGN_TOP
 import androidx.wear.protolayout.ModifiersBuilders.Clickable
+import androidx.wear.protolayout.ModifiersBuilders.SEMANTICS_ROLE_BUTTON
 import androidx.wear.protolayout.layout.androidImageResource
 import androidx.wear.protolayout.layout.basicImage
+import androidx.wear.protolayout.layout.box
 import androidx.wear.protolayout.layout.column
 import androidx.wear.protolayout.layout.imageResource
 import androidx.wear.protolayout.layout.row
@@ -32,14 +36,19 @@ import androidx.wear.protolayout.material3.button
 import androidx.wear.protolayout.material3.icon
 import androidx.wear.protolayout.material3.primaryLayout
 import androidx.wear.protolayout.material3.text
-import androidx.wear.protolayout.material3.textEdgeButton
 import androidx.wear.protolayout.modifiers.LayoutModifier
+import androidx.wear.protolayout.modifiers.background
 import androidx.wear.protolayout.modifiers.border
 import androidx.wear.protolayout.modifiers.clearSemantics
 import androidx.wear.protolayout.modifiers.clickable
+import androidx.wear.protolayout.modifiers.clip
+import androidx.wear.protolayout.modifiers.clipBottomLeft
+import androidx.wear.protolayout.modifiers.clipBottomRight
 import androidx.wear.protolayout.modifiers.contentDescription
 import androidx.wear.protolayout.modifiers.loadAction
 import androidx.wear.protolayout.modifiers.padding
+import androidx.wear.protolayout.modifiers.semanticsRole
+import androidx.wear.protolayout.modifiers.tag
 import androidx.wear.protolayout.types.LayoutColor
 import androidx.wear.protolayout.types.LayoutString
 import androidx.wear.protolayout.types.argb
@@ -435,26 +444,57 @@ private class TileContent(
         val modifier = LayoutModifier.contentDescription(description)
         // The tap says what it showed: "Woke up" for this sleep, or "Start sleep" (see TileActions).
         val clickId = state.runningSleep?.let { TileAction.SLEEP_END.clickId(token, it.id) } ?: TileAction.SLEEP_START.clickId(token)
-        textEdgeButton(
+        // Fixed-size type, as the stock EdgeButton's: a larger font would cut "Start sleep" at the button's width.
+        val word = plainText(label.layoutString, Typography.LABEL_MEDIUM, sleep.onContainer.layout, scalable = false)
+        val content = if (next == null) {
+            word
+        } else {
+            column(
+                word,
+                iconLine(XDrawables.upcoming, estimate(next, TEXT_ALIGN_CENTER), Typography.LABEL_SMALL, sleep.onContainer, LINE_ICON, scalable = false),
+                horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
+            )
+        }
+        tallEdgeButton(
             onClick = Clickable.Builder().setId(clickId).setOnClick(loadAction()).build(),
             modifier = if (asleep) modifier.border(LIT_BORDER, sleep.strong.layout) else modifier,
-            colors = ButtonColors(
-                containerColor = (if (asleep) sleep.containerLit else sleep.container).layout,
-                labelColor = sleep.onContainer.layout,
-            ),
-            labelContent = {
-                val word = plainText(label.layoutString, Typography.LABEL_MEDIUM, sleep.onContainer.layout)
-                if (next == null) {
-                    word
-                } else {
-                    // The smallest type: the EdgeButton's top is narrow ("⟳ 50m" must fit its width).
-                    column(
-                        word,
-                        iconLine(XDrawables.upcoming, estimate(next, TEXT_ALIGN_CENTER), Typography.BODY_EXTRA_SMALL, sleep.onContainer, EDGE_LINE_ICON),
-                        horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
-                    )
-                }
-            },
+            container = (if (asleep) sleep.containerLit else sleep.container).layout,
+            content = content,
+        )
+    }
+
+    /**
+     * The stock EdgeButton (`textEdgeButton`) with room for two lines: its shape, width, top padding and "EB" tag (so
+     * `primaryLayout` hugs it to the screen's bottom edge), but [EDGE_HEIGHT] tall instead of 46 dp, so the expected next
+     * sleep fits under the word at a readable size. The rows above are shorter for it.
+     */
+    private fun MaterialScope.tallEdgeButton(onClick: Clickable, modifier: LayoutModifier, container: LayoutColor, content: LayoutElement): LayoutElement {
+        val screen = deviceConfiguration.screenWidthDp.toFloat()
+        val marginPercent = if (screen >= SMALL_WATCH_DP) 26f else 24f
+        val width = screen * (100f - 2 * marginPercent) / 100f
+        val height = if (screen >= SMALL_WATCH_DP) EDGE_HEIGHT else EDGE_HEIGHT_SMALL
+        val button = box(
+            content,
+            modifier = modifier
+                .semanticsRole(SEMANTICS_ROLE_BUTTON)
+                .clickable(onClick)
+                .background(container)
+                .clip(EDGE_TOP_CORNER)
+                .clipBottomLeft(width / 2, height - EDGE_TOP_CORNER)
+                .clipBottomRight(width / 2, height - EDGE_TOP_CORNER)
+                .padding(start = EDGE_SIDE_PADDING, top = EDGE_TOP_PADDING, end = EDGE_SIDE_PADDING, bottom = 0f),
+            width = dp(width),
+            height = dp(height),
+            horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
+            verticalAlignment = VERTICAL_ALIGN_TOP,
+        )
+        return box(
+            button,
+            modifier = LayoutModifier.tag(EDGE_BUTTON_TAG).padding(start = 0f, top = 0f, end = 0f, bottom = EDGE_BOTTOM_MARGIN),
+            width = dp(screen),
+            height = dp(height + EDGE_BOTTOM_MARGIN),
+            horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
+            verticalAlignment = VERTICAL_ALIGN_BOTTOM,
         )
     }
 
@@ -483,8 +523,9 @@ private class TileContent(
         color: Color,
         iconSize: Float,
         alignment: Int = TEXT_ALIGN_CENTER,
+        scalable: Boolean = true,
     ): LayoutElement {
-        val line = plainText(value, typography, color.layout, alignment)
+        val line = plainText(value, typography, color.layout, alignment, scalable = scalable)
         return if (icon == null) line else row(glyph(icon, color, iconSize), spacer(width = dp(3f)), line, verticalAlignment = VERTICAL_ALIGN_CENTER)
     }
 
@@ -494,11 +535,14 @@ private class TileContent(
         color: LayoutColor,
         alignment: Int = TEXT_ALIGN_CENTER,
         bold: Boolean = false,
+        /** False keeps [typography] at its size whatever the font scale (as the stock EdgeButton's label). */
+        scalable: Boolean = true,
     ): LayoutElement = text(
         value,
         typography = typography,
         color = color,
         alignment = alignment,
+        scalable = scalable,
         settings = if (bold) listOf(FontSetting.weight(BOLD)) else emptyList(),
         modifier = LayoutModifier.clearSemantics(),
     )
@@ -520,7 +564,19 @@ private class TileContent(
 
         /** The `history` / `upcoming` icon before a row's labelMedium line, and before the EdgeButton's smallest line. */
         const val LINE_ICON = 14f
-        const val EDGE_LINE_ICON = 10f
+
+        /** The sleep toggle's height (the stock EdgeButton's is 46 dp), and below 225 dp. */
+        const val EDGE_HEIGHT = 62f
+        const val EDGE_HEIGHT_SMALL = 56f
+
+        /** The stock EdgeButton's shape and padding (EdgeButtonDefaults). */
+        const val EDGE_TOP_CORNER = 17f
+        const val EDGE_TOP_PADDING = 10f
+        const val EDGE_SIDE_PADDING = 8f
+        const val EDGE_BOTTOM_MARGIN = 3f
+
+        /** The tag `primaryLayout` knows the stock EdgeButton by (EdgeButtonDefaults.METADATA_TAG, internal). */
+        const val EDGE_BUTTON_TAG = "EB"
 
         /** The largest font scale at which a row's estimate still fits as its third line. */
         const val MAX_ESTIMATE_FONT_SCALE = 1.15f
