@@ -30,6 +30,7 @@ import com.ffmathy.pooparazzi.phone.account.NoAccounts
 import com.ffmathy.pooparazzi.phone.account.PrivacyPolicy
 import com.ffmathy.pooparazzi.phone.app.AppLocales
 import com.ffmathy.pooparazzi.phone.app.LocaleApplier
+import com.ffmathy.pooparazzi.phone.watch.WatchInstall
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -74,6 +75,8 @@ sealed interface AccountSummary {
  * @property canRemoveBaby true with two or more babies: each name field has a remove button then.
  * @property watchNeedsUpdate the paired watch runs a version from before several babies: "Add a baby" is disabled, with
  *   "Update Pooparazzi on your watch first." under it.
+ * @property watchWithoutApp a watch is connected that does not have Pooparazzi: Settings › Watch offers "Install on your
+ *   watch", which opens its Play Store page on the watch.
  * @property privacyUrl where Settings › About › Privacy policy opens ([PrivacyPolicy]).
  */
 @Immutable
@@ -87,6 +90,7 @@ data class SettingsUiState(
     val account: AccountSummary = AccountSummary.Unavailable,
     val canAddBaby: Boolean = babies.size < Settings.MAX_BABIES,
     val watchNeedsUpdate: Boolean = false,
+    val watchWithoutApp: Boolean = false,
     val privacyUrl: String = PrivacyPolicy.REPOSITORY_URL,
     val removing: Baby? = null,
 ) {
@@ -116,6 +120,9 @@ interface SettingsActions {
     fun onAppearance(appearance: Appearance) {}
     fun onLanguage(language: AppLanguage) {}
     fun onRetrySync() {}
+
+    /** Settings › Watch › "Install on your watch": opens Pooparazzi's Play Store page on the watch. */
+    fun onInstallOnWatch() {}
 
     /** Settings › Account: opens the Account screen. */
     fun onOpenAccount() {}
@@ -153,6 +160,9 @@ interface SettingsActions {
  * @param writeScope outlives this view model, so a pending name write still lands after the screen closed.
  * @param watchNeedsUpdate whether the paired watch runs a version from before several babies
  *   ([com.ffmathy.pooparazzi.core.sync.WatchVersionCheck]); asked once, when Settings opens.
+ * @param watchWithoutApp whether a connected watch lacks Pooparazzi ([com.ffmathy.pooparazzi.phone.watch.WatchInstall]);
+ *   asked whenever Settings resumes ([refreshWatchApp]), so it goes once the app is installed.
+ * @param openStoreOnWatch opens Pooparazzi's Play Store page on such a watch; true when it opened.
  */
 class SettingsViewModel(
     private val settings: SettingsRepository,
@@ -165,12 +175,17 @@ class SettingsViewModel(
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val nameDebounceMillis: Long = NAME_DEBOUNCE_MILLIS,
     private val watchNeedsUpdate: suspend () -> Boolean = { false },
+    private val watchWithoutApp: suspend () -> Boolean = { false },
+    private val openStoreOnWatch: suspend () -> Boolean = { false },
     private val entries: EntryRepository? = null,
     private val clock: Clock = SystemClock,
 ) : ViewModel(), SettingsActions {
 
     /** An old watch would resolve conflicts across babies: no second baby until it is updated. */
     private val oldWatch = MutableStateFlow(false)
+
+    /** A connected watch has no Pooparazzi yet. */
+    private val missingApp = MutableStateFlow(false)
 
     /** What each touched field shows, by baby id. */
     private val nameDrafts = MutableStateFlow<Map<String, String>>(emptyMap())
@@ -199,7 +214,9 @@ class SettingsViewModel(
 
     private val edits = combine(nameDrafts, removing, ::Pair)
 
-    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, edits, account, oldWatch) { s, status, (drafts, removingId), account, old ->
+    private val watch = combine(oldWatch, missingApp, ::Pair)
+
+    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, edits, account, watch) { s, status, (drafts, removingId), account, (old, missing) ->
         SettingsUiState(
             babies = s.babies.map { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
             appearance = s.appearance,
@@ -209,6 +226,7 @@ class SettingsViewModel(
             versionName = versionName,
             account = account,
             watchNeedsUpdate = old,
+            watchWithoutApp = missing,
             privacyUrl = PrivacyPolicy.url(accounts.hostingDomain),
             removing = s.babies.takeIf { it.size > 1 }?.firstOrNull { it.id == removingId }
                 ?.let { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
@@ -280,6 +298,14 @@ class SettingsViewModel(
         viewModelScope.launch { sync.retry() }
     }
 
+    /** Asks again whether a connected watch lacks Pooparazzi (Settings resumed: it may have been installed meanwhile). */
+    fun refreshWatchApp() {
+        viewModelScope.launch { missingApp.value = watchWithoutApp() }
+    }
+
+    /** "Install on your watch": opens the Play Store page on the watch. True when it opened, so the phone says "Check your watch". */
+    suspend fun installOnWatch(): Boolean = openStoreOnWatch()
+
     override fun onRetryBackup() {
         // In the app's scope: the Account screen opens over Settings while it runs.
         writeScope.launch { cloud.syncNow() }
@@ -329,9 +355,12 @@ class SettingsViewModel(
             initializer {
                 val app = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
                 val watch = WatchVersionCheck.create(app)
+                val install = WatchInstall.create(app)
                 SettingsViewModel(
                     Core.settings, Core.sync, AppLocales, Core.graph.scope, AppAccounts.accounts, Core.cloud,
                     watchNeedsUpdate = watch::needsUpdate,
+                    watchWithoutApp = { install.watchesWithoutApp().isNotEmpty() },
+                    openStoreOnWatch = install::openStoreOnWatches,
                     entries = Core.repository,
                     clock = Core.clock,
                 )

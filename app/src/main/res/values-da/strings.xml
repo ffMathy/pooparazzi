@@ -129,6 +129,10 @@
     <string name="settings_section_watch">Ur</string>
     <string name="settings_sync_now">Synkroniser nu</string>
     <string name="settings_sync_unavailable">Intet ur forbundet. Alt gemmes på telefonen.</string>
+    <string name="settings_watch_install">Installer på dit ur</string>
+    <string name="settings_watch_install_summary">Pooparazzi er ikke på dit ur endnu. Åbner Google Play på uret.</string>
+    <string name="settings_watch_install_opened">Se på dit ur for at installere Pooparazzi.</string>
+    <string name="settings_watch_install_failed">Kunne ikke nå dit ur. Installer Pooparazzi fra Google Play på uret.</string>
     <string name="settings_section_about">Om</string>
     <string name="settings_version">Version %1$s</string>
     <string name="settings_font_licences">Skrifttypelicenser</string>

@@ -192,6 +192,10 @@
     <string name="settings_section_watch">Watch</string>
     <string name="settings_sync_now">Sync now</string>
     <string name="settings_sync_unavailable">No watch connected. Everything is saved on this phone.</string>
+    <string name="settings_watch_install">Install on your watch</string>
+    <string name="settings_watch_install_summary">Pooparazzi isn\'t on your watch yet. Opens Google Play on the watch.</string>
+    <string name="settings_watch_install_opened">Check your watch to install Pooparazzi.</string>
+    <string name="settings_watch_install_failed">Couldn\'t reach your watch. Install Pooparazzi from Google Play on the watch.</string>
     <string name="settings_section_about">About</string>
     <!-- "Version 0.1.0" -->
     <string name="settings_version">Version %1$s</string>

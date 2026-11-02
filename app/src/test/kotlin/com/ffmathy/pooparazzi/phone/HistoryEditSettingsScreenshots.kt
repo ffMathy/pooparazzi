@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -111,6 +112,17 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
 
     @Test fun settingsBabiesWatchUpdate() = screen("32-settings-babies-watch-update", night = false) {
         SettingsScreen(SettingsSamples.state().copy(watchNeedsUpdate = true), SettingsActions.None, windowInsets = ReferenceInsets)
+    }
+
+    /** A connected watch without Pooparazzi: Settings › Watch offers "Install on your watch" in place of "No watch connected". */
+    @Test fun settingsWatchInstall() {
+        compose.setContent {
+            NightLightTheme(night = false) { SettingsScreen(SettingsSamples.watchWithoutApp(), SettingsActions.None, windowInsets = ReferenceInsets) }
+        }
+        // Scrolled to the About heading, so the whole Watch section (and the Notifications row after it) is in view.
+        val about = ApplicationProvider.getApplicationContext<Application>().getString(R.string.settings_section_about)
+        compose.onNodeWithText(about).performScrollTo()
+        compose.onRoot().captureRoboImage(path("46-settings-watch-install", tour = true))
     }
 
     /** Not part of the tour (written under build/): the blocking validation line, and a past day. */
