@@ -121,6 +121,8 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
     var notifications by remember { mutableStateOf(NotificationLink.current(context)) }
     LifecycleResumeEffect(context) {
         notifications = NotificationLink.current(context)
+        // A watch without Pooparazzi: asked again on every resume, so "Install on your watch" goes once it is installed.
+        viewModel.refreshWatchApp()
         onPauseOrDispose {}
     }
     val link by rememberUpdatedState(notifications)
@@ -150,6 +152,9 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
             }
             override fun onExport() = exporter.launch(LogExportFile.name(LocalDate.now()))
             override fun onImport() = importer.launch(LogExportFile.IMPORT_TYPES)
+            override fun onInstallOnWatch() {
+                scope.launch { context.installOnWatch(viewModel) }
+            }
         }
     }
     // "Invite someone": the share sheet with the invite's link and text.
@@ -169,7 +174,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
 /**
  * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the account and backup
  * (BABIES_AND_BACKUP §3.2), the babies, Appearance
- * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry, Notifications (the link
+ * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry (or "Install on your watch" for a watch without the app), Notifications (the link
  * to the system's Live Update setting, §10.5) and About (version, font licences), and at the bottom a footer: "Made with
  * ❤️ by a father in Aarhus, Denmark", that Pooparazzi is open source, and GitHub and LinkedIn logo buttons. Section
  * headings are labelMedium; grouped rows use the History list's r 20 / r 6 corners.
@@ -448,31 +453,51 @@ private fun LanguageGroup(selected: AppLanguage, onSelect: (AppLanguage) -> Unit
     RadioGroup(AppLanguage.entries, selected, onSelect, label = { stringResource(Labels.language(it)) })
 }
 
-/** The sync line with "Sync now"; without a watch: "No watch connected. Everything is saved on this phone." */
+/**
+ * Settings › Watch: the sync line with "Sync now"; without a watch: "No watch yet" and that Pooparazzi has a watch app
+ * for when the parent gets one. With a connected watch that lacks Pooparazzi, "Install on your watch" (opens its Play
+ * Store page on the watch) takes the place of "No watch yet", or follows the sync line when another watch has the app.
+ */
 @Composable
 private fun SyncRow(state: SettingsUiState, actions: SettingsActions) {
     val colors = MaterialTheme.colorScheme
     val formatters = rememberFormatters(state.zone)
     val line = syncLineText(state.sync, state.zone, formatters)
-    GroupRow(first = true, last = true) {
-        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)) {
-            if (line == null) {
-                Text(
-                    stringResource(R.string.settings_sync_unavailable),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant,
+    Column(verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
+        if (line != null || !state.watchWithoutApp) {
+            GroupRow(first = true, last = !state.watchWithoutApp) {
+                Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)) {
+                    if (line == null) {
+                        Column(Modifier.semantics(mergeDescendants = true) {}) {
+                            Text(stringResource(R.string.settings_no_watch), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+                            Text(
+                                stringResource(R.string.settings_no_watch_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.onSurfaceVariant,
+                            )
+                        }
+                    } else {
+                        // The line first (Danish "Synkroniseret med ur · 14:31" needs the full width), "Sync now" under it.
+                        val tint = if (state.sync is SyncStatus.Error) colors.error else colors.onSurfaceVariant
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            XIcon(watchGlyph(state.sync), contentDescription = null, tint = tint, size = 20.dp)
+                            Spacer(Modifier.width(12.dp))
+                            Text(line, style = PhoneType.dataMedium, color = tint)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            OutlinePill(stringResource(R.string.settings_sync_now), onClick = actions::onRetrySync)
+                        }
+                    }
+                }
+            }
+        }
+        if (state.watchWithoutApp) {
+            GroupRow(first = line == null, last = true) {
+                LinkRow(
+                    stringResource(R.string.settings_watch_install),
+                    stringResource(R.string.settings_watch_install_summary),
+                    actions::onInstallOnWatch,
                 )
-            } else {
-                // The line first (Danish "Synkroniseret med ur · 14:31" needs the full width), "Sync now" under it.
-                val tint = if (state.sync is SyncStatus.Error) colors.error else colors.onSurfaceVariant
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    XIcon(watchGlyph(state.sync), contentDescription = null, tint = tint, size = 20.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Text(line, style = PhoneType.dataMedium, color = tint)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    OutlinePill(stringResource(R.string.settings_sync_now), onClick = actions::onRetrySync)
-                }
             }
         }
     }
@@ -613,6 +638,13 @@ private suspend fun Context.exportLog(viewModel: SettingsViewModel, uri: Uri) {
         getString(R.string.settings_export_failed)
     }
     Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+}
+
+/** "Install on your watch": opens the Play Store page on the watch, and says to look there (or that it couldn't). */
+private suspend fun Context.installOnWatch(viewModel: SettingsViewModel) {
+    val opened = viewModel.installOnWatch()
+    val message = if (opened) R.string.settings_watch_install_opened else R.string.settings_watch_install_failed
+    Toast.makeText(this, getString(message), Toast.LENGTH_LONG).show()
 }
 
 /** Merges the export at [uri] into the log ("Import data") and says how it went. */

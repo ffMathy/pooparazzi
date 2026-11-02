@@ -230,6 +230,30 @@ class SettingsViewModelTest : CoreTestBase() {
         assertFalse(settings(core).state.value!!.watchNeedsUpdate)
     }
 
+    /** A connected watch without Pooparazzi: "Install on your watch" until it is installed, asked again on resume. */
+    @Test
+    fun aWatchWithoutTheAppOffersToInstallIt() = coreTest { core ->
+        var missing = true
+        var opened = 0
+        val vm = SettingsViewModel(
+            core.settings, NoopEntrySync, LocaleApplier { applied += it }, backgroundScope, versionName = "0.1.0",
+            watchWithoutApp = { missing },
+            openStoreOnWatch = { opened++; true },
+        ).also { core.collect(it.state) }
+        runCurrent()
+        assertFalse("not asked until Settings resumes", vm.state.value!!.watchWithoutApp)
+        vm.refreshWatchApp()
+        runCurrent()
+        assertTrue(vm.state.value!!.watchWithoutApp)
+        assertTrue(vm.installOnWatch())
+        assertEquals(1, opened)
+
+        missing = false
+        vm.refreshWatchApp()
+        runCurrent()
+        assertFalse("installed meanwhile", vm.state.value!!.watchWithoutApp)
+    }
+
     @Test
     fun removingABabyAsksFirstThenDeletesItAndItsLog() = coreTest { core ->
         val twin = core.settings.addBaby()

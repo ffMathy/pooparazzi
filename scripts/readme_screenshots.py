@@ -72,6 +72,8 @@ PHONE = {
     "41-family-remove.png": "family-remove",
     "42-account-delete-link.png": "account-delete-link",
     "43-settings-about.png": "settings-about",
+    "46-settings-watch-install.png": "settings-watch-install",
+    "47-settings-no-watch.png": "settings-no-watch",
 }
 
 # Recorded file (wear/screenshots/<lang>/) -> README file (docs/screenshots/<lang>/watch-<name>.png).

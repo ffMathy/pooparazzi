@@ -30,6 +30,12 @@ object SettingsSamples {
     /** Twins: Noa and Ida, plus a third baby not named yet (its field shows "Baby 3"). */
     fun babies(): SettingsUiState = state(babies = SampleData.twinSettings.babies + Baby("sample-baby-3"))
 
+    /** No watch at all: Settings › Watch says "No watch yet" and that Pooparazzi has a watch app. */
+    fun noWatch(): SettingsUiState = state(sync = SyncStatus.Unavailable)
+
+    /** A watch is connected but has no Pooparazzi: Settings › Watch offers "Install on your watch". */
+    fun watchWithoutApp(): SettingsUiState = state(sync = SyncStatus.Unavailable).copy(watchWithoutApp = true)
+
     /** "Remove Baby 3?" over Settings › Babies, signed in: the log goes for the whole family. */
     fun removeBaby(): SettingsUiState = babies().let { it.copy(removing = it.babies.last()) }
 }

@@ -115,6 +115,8 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
     implementation(libs.kotlinx.coroutines.play.services)
+    // Settings › Watch › "Install on your watch": opens the Play Store on a watch without the app.
+    implementation(libs.wear.interactions.remote)
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)
