@@ -195,8 +195,8 @@ class TwoDeviceSyncTest {
         clock.set(SampleData.NOW_1432)
         phone.repo.logDiaper(clock.now(), pee = true, poop = false)
         watch.repo.logDiaper(clock.now() + 2_000, pee = true, poop = false)
-        phone.repo.logFeed(FeedType.FORMULA, clock.now() - 3_000)
-        watch.repo.logFeed(FeedType.FORMULA, clock.now())
+        phone.repo.logFeed(FeedType.BOTTLE, clock.now() - 3_000)
+        watch.repo.logFeed(FeedType.BOTTLE, clock.now())
         clock.advanceBy(10_000)
         settle()
 
@@ -211,7 +211,7 @@ class TwoDeviceSyncTest {
         clock.set(SampleData.NOW_1432)
         phone.repo.logDiaper(clock.now(), pee = true, poop = false)
         watch.repo.logDiaper(clock.now() + 2_000, pee = true, poop = true)
-        phone.repo.logFeed(FeedType.FORMULA, clock.now())
+        phone.repo.logFeed(FeedType.BOTTLE, clock.now())
         watch.repo.logFeed(FeedType.FOOD, clock.now())
         watch.repo.logDiaper(clock.now() - 6 * minute, pee = true, poop = false)
         clock.advanceBy(10_000)
@@ -228,8 +228,8 @@ class TwoDeviceSyncTest {
         watch.baby.value = TWIN
         phone.repo.logDiaper(clock.now(), pee = true, poop = false)
         watch.repo.logDiaper(clock.now() + 2_000, pee = true, poop = false)
-        phone.repo.logFeed(FeedType.FORMULA, clock.now() - 3_000)
-        watch.repo.logFeed(FeedType.FORMULA, clock.now())
+        phone.repo.logFeed(FeedType.BOTTLE, clock.now() - 3_000)
+        watch.repo.logFeed(FeedType.BOTTLE, clock.now())
         // The same diaper for the first baby, logged on the watch too, is still one entry.
         watch.baby.value = Baby.FIRST_ID
         watch.repo.logDiaper(clock.now() + 1_000, pee = true, poop = false)

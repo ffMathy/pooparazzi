@@ -256,7 +256,7 @@ private fun ReceiptCircle(receipt: Receipt, ambient: Boolean, size: Dp) {
     }
 }
 
-/** "Formula at 14:32" with the time in the event colour; "Sleep cancelled" is time-free. */
+/** "Bottle at 14:32" with the time in the event colour; "Sleep cancelled" is time-free. */
 @Composable
 private fun ReceiptTitle(receipt: Receipt, f: Formatters, ambient: Boolean) {
     val events = events()

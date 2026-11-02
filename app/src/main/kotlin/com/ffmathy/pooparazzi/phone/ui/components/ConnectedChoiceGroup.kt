@@ -48,7 +48,7 @@ internal object ConnectedGroupDefaults {
 }
 
 /**
- * A single-select connected button group (V1_ADDITIONS §4: "Breast | Formula | Food", the four sides; Settings:
+ * A single-select connected button group (V1_ADDITIONS §4: "Breast | Bottle | Food", the four sides; Settings:
  * "Auto | Night | Day"). Neutral chrome, never an event hue, in the chips' language (DESIGN_SPEC §3.3.1): every button
  * has a 1 dp outline border and a transparent fill; the selected one fills primaryContainer, keeps the border, gains a
  * leading `check` 16 and keeps its corners (the shape never changes with the state; check and fill tell the selection).

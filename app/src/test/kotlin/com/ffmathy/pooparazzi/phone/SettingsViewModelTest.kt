@@ -233,7 +233,7 @@ class SettingsViewModelTest : CoreTestBase() {
     @Test
     fun removingABabyAsksFirstThenDeletesItAndItsLog() = coreTest { core ->
         val twin = core.settings.addBaby()
-        val noa = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432 - 30 * MINUTE)
+        val noa = Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432 - 30 * MINUTE)
         val ida = Entry.diaper(SampleData.NOW_1432 - 20 * MINUTE, pee = true, poop = false, babyId = twin.id)
         core.seed(listOf(noa))
         // From the other device: an entry of the twin (Add past entry would log it for the current baby).
@@ -272,7 +272,7 @@ class SettingsViewModelTest : CoreTestBase() {
     @Test
     fun downloadMyDataWritesTheWholeLogAndTheNames() = coreTest { core ->
         core.settings.renameBaby(Baby.FIRST_ID, "Noa")
-        val feed = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432 - 30 * MINUTE)
+        val feed = Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432 - 30 * MINUTE)
         val twin = Entry.diaper(SampleData.NOW_1432 - 20 * MINUTE, pee = true, poop = false, babyId = "baby-2")
         val gone = Entry.feed(FeedType.FOOD, SampleData.NOW_1432 - 10 * MINUTE)
         core.seed(listOf(feed, twin, gone))
@@ -307,7 +307,7 @@ class SettingsViewModelTest : CoreTestBase() {
             versionName = "0.1.0", entries = core.repository, clock = core.clock,
         ).also { core.collect(it.state) }
         runCurrent()
-        val feed = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432 - 30 * MINUTE, amountMl = 120)
+        val feed = Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432 - 30 * MINUTE, amountMl = 120)
         val twin = Entry.diaper(SampleData.NOW_1432 - 20 * MINUTE, pee = true, poop = false, babyId = "baby-2")
         val file = ByteArrayOutputStream().also {
             LogExport.write(it, listOf(Baby(Baby.FIRST_ID, "Lea"), Baby("baby-2", "Ida", updatedAtMillis = 1L)), listOf(feed, twin), SampleData.NOW_1432)

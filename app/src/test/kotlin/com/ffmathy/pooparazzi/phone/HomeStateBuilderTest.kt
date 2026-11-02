@@ -23,7 +23,7 @@ class HomeStateBuilderTest {
     fun idleAt1432() {
         val state = HomeSamples.idle()
         val lamp = state.lamp as LampState.FeedIdle
-        assertEquals(FeedType.FORMULA, lamp.lastFeed!!.feedType)
+        assertEquals(FeedType.BOTTLE, lamp.lastFeed!!.feedType)
         assertEquals(130 * minute, lamp.sinceMillis)
         val awake = state.row1 as SinceRow.Awake
         assertEquals(SampleData.at(13, 27), awake.sinceMillis)

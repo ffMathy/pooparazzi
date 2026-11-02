@@ -102,7 +102,7 @@ internal class WidgetStrings(private val context: Context, private val zone: Zon
     private val duration = formatters.duration
     private val relative = formatters.relative
 
-    /** Receipts keep their clock time: "Sleep started at 14:32", "Formula logged at 14:32". */
+    /** Receipts keep their clock time: "Sleep started at 14:32", "Bottle logged at 14:32". */
     private fun atTime(label: String, millis: Long): String = string(CoreR.string.receipt_at_time, label, time(millis))
 
     /**

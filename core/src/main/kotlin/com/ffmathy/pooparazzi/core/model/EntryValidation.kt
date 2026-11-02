@@ -17,14 +17,17 @@ enum class EntryViolation {
     /** A non-FEED has a feed type or breast side. */
     FEED_FIELDS_ON_NON_FEED,
 
-    /** A breast side on a FORMULA, FOOD or untyped feed. */
+    /** A breast side on a BOTTLE, FOOD or untyped feed. */
     SIDE_ON_NON_BREAST,
 
-    /** An amount on a non-FORMULA entry. */
-    AMOUNT_ON_NON_FORMULA,
+    /** An amount on a non-BOTTLE entry. */
+    AMOUNT_ON_NON_BOTTLE,
 
-    /** A formula amount of zero or less. */
+    /** A bottle amount of zero or less. */
     AMOUNT_NOT_POSITIVE,
+
+    /** Bottle contents on a non-BOTTLE entry. */
+    CONTENTS_ON_NON_BOTTLE,
 
     /** A non-DIAPER has diaper flags, colour or texture. */
     DIAPER_FIELDS_ON_NON_DIAPER,
@@ -69,8 +72,11 @@ fun validate(entry: Entry): EntryViolation? {
     }
 
     entry.amountMl?.let { amount ->
-        if (entry.kind != EntryKind.FEED || entry.feedType != FeedType.FORMULA) return EntryViolation.AMOUNT_ON_NON_FORMULA
+        if (entry.kind != EntryKind.FEED || entry.feedType != FeedType.BOTTLE) return EntryViolation.AMOUNT_ON_NON_BOTTLE
         if (amount <= 0) return EntryViolation.AMOUNT_NOT_POSITIVE
+    }
+    if (entry.bottleContents != null && (entry.kind != EntryKind.FEED || entry.feedType != FeedType.BOTTLE)) {
+        return EntryViolation.CONTENTS_ON_NON_BOTTLE
     }
 
     if (entry.kind == EntryKind.DIAPER) {

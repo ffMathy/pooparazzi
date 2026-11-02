@@ -110,7 +110,8 @@ export async function purgeInactive({ auth, db, now = Date.now(), inactiveDays =
 export function carriesContent(entry) {
   if (!entry.deleted) return false
   return (entry.startMillis ?? 0) !== 0 || entry.endMillis != null || entry.feedType != null || entry.breastSide != null ||
-    Boolean(entry.pee) || Boolean(entry.poop) || entry.poopColor != null || entry.poopTexture != null || entry.amountMl != null
+    Boolean(entry.pee) || Boolean(entry.poop) || entry.poopColor != null || entry.poopTexture != null || entry.amountMl != null ||
+    entry.bottleContents != null
 }
 
 /** A deleted entry as the app uploads it (Entry.forCloud in the app): what was logged cleared. */

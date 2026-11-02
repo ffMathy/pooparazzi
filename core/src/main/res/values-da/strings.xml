@@ -8,8 +8,7 @@
 
     <!-- Feed types -->
     <string name="feed_type_breast">Amning</string>
-    <string name="feed_type_formula">Modermælkserstatning</string>
-    <string name="feed_type_formula_compact">Modermælks&#173;erstatning</string>
+    <string name="feed_type_bottle">Flaske</string>
     <string name="feed_type_food">Mad</string>
     <string name="feed_breast_sides_next">Derefter siderne, hvis du vil</string>
     <string name="feed_type_none">Kun tidspunktet</string>
@@ -28,7 +27,11 @@
     <string name="side_none">Ingen side</string>
     <string name="volume_ml">%1$s ml</string>
     <string name="volume_fl_oz">%1$s fl oz</string>
-    <string name="feed_formula_amount_next">Derefter mængden, hvis du vil</string>
+    <string name="feed_bottle_next">Derefter modermælk eller erstatning og mængden, hvis du vil</string>
+    <string name="bottle_contents">Indhold</string>
+    <string name="bottle_milk">Modermælk</string>
+    <string name="bottle_formula">Modermælkserstatning</string>
+    <string name="bottle_formula_compact">Modermælks&#173;erstatning</string>
     <string name="amount">Mængde</string>
     <string name="amount_none">Ingen mængde</string>
 

@@ -74,7 +74,7 @@ object XDrawables {
     fun forFeedType(type: FeedType?): Int = when (type) {
         null -> feed
         FeedType.BREAST -> breast
-        FeedType.FORMULA -> feed
+        FeedType.BOTTLE -> feed
         FeedType.FOOD -> food
     }
 

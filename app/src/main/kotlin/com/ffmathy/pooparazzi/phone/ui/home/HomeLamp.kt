@@ -70,7 +70,7 @@ internal object HomeLampDefaults {
     /** The hero's usable chord: 223 dp in the Ø264 Lamp. */
     const val HERO_CHORD = 223f / 264f
 
-    /** The sub-line's chord (the "· Formula" type word is dropped beyond it). */
+    /** The sub-line's chord (the "· Bottle" type word is dropped beyond it). */
     const val SUB_CHORD = 0.82f
 
     /** Hero autosize range (sp) and the unit/number ratio (34/76). */
@@ -174,7 +174,7 @@ private fun LampText(
             }
         }
         Spacer(Modifier.height(4.dp))
-        // `history` says the hero is time since, so the line needs no "ago" / "since": "⟲ 12:22 · Formula".
+        // `history` says the hero is time since, so the line needs no "ago" / "since": "⟲ 12:22 · Bottle".
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(SUB_ICON_GAP)) {
             XIcon(XIcons.history, contentDescription = null, tint = colors.onSurfaceVariant, size = SUB_ICON)
             Text(
@@ -223,7 +223,7 @@ private fun lampTexts(lamp: LampState, zone: ZoneId, size: Dp, formatters: Forma
                 val spokenDetail = spokenFeedDetail(feed, clock.locale)
                 val time = clock.format(feed.startMillis, zone)
                 val under = DurationFormatter.isUnderAMinute(since)
-                // After the `history` icon: "12:22 · Formula", or the breast order "12:22 · Left → Right". When that
+                // After the `history` icon: "12:22 · Bottle", or the breast order "12:22 · Left → Right". When that
                 // would exceed the Lamp chord the order shortens to "L → R" (it is what the next feed starts from); a
                 // type word is simply dropped. A feed logged with just its time has neither.
                 val sub = if (detail == null) {

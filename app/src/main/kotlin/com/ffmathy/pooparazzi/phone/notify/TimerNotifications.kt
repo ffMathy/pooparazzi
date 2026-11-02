@@ -381,7 +381,7 @@ private class NotificationText(private val strings: Context, private val zone: Z
         day.today?.let(::today),
     ).joinToString("\n")
 
-    /** "Fed 1h 32m ago · 01:40 · L → R"; "Formula" in place of the order for other feeds. */
+    /** "Fed 1h 32m ago · 01:40 · L → R"; "Bottle" in place of the order for other feeds. */
     private fun fed(feed: Entry, now: Long): String =
         listOfNotNull(ago(strings.getString(CoreR.string.status_fed), feed.startMillis, now), time(feed.startMillis), feedDetail(feed))
             .joinToString(DOT)

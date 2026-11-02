@@ -76,9 +76,9 @@ object WearSamples {
         return Receipt(ReceiptKind.FEED_LOGGED, entry, Undo.Delete(entry.id), zone)
     }
 
-    /** "Formula at 14:32". */
+    /** "Bottle at 14:32". */
     fun receiptFormula(): Receipt {
-        val entry = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432, id = "sample-formula-1432")
+        val entry = Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432, id = "sample-formula-1432")
         return Receipt(ReceiptKind.FEED_LOGGED, entry, Undo.Delete(entry.id), zone)
     }
 

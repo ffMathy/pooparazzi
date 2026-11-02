@@ -15,9 +15,7 @@
 
     <!-- Feed types -->
     <string name="feed_type_breast">Breast</string>
-    <string name="feed_type_formula">Formula</string>
-    <!-- Same word with a soft hyphen (U+00AD) where it may break in tight places; use with Hyphens.Auto. -->
-    <string name="feed_type_formula_compact">Formula</string>
+    <string name="feed_type_bottle">Bottle</string>
     <string name="feed_type_food">Food</string>
     <!-- Under Breast in the Feed sheet: the next step offers the side order -->
     <string name="feed_breast_sides_next">Then the sides, if you like</string>
@@ -41,7 +39,14 @@
     <string name="side_none">No side</string>
     <string name="volume_ml">%1$s ml</string>
     <string name="volume_fl_oz">%1$s fl oz</string>
-    <string name="feed_formula_amount_next">Then the amount, if you like</string>
+    <!-- Under Bottle in the Feed sheet: the next step offers milk or formula and the amount -->
+    <string name="feed_bottle_next">Then milk or formula and the amount, if you like</string>
+    <!-- What a bottle held (optional) -->
+    <string name="bottle_contents">Contents</string>
+    <string name="bottle_milk">Milk</string>
+    <string name="bottle_formula">Formula</string>
+    <!-- Same word with a soft hyphen (U+00AD) where it may break in tight places; use with Hyphens.Auto. -->
+    <string name="bottle_formula_compact">Formula</string>
     <string name="amount">Amount</string>
     <string name="amount_none">No amount</string>
 
@@ -97,9 +102,9 @@
     <string name="action_adjust_start">Adjust start</string>
     <string name="action_retry">Tap to retry</string>
 
-    <!-- Receipts (undo card, watch Logged). %1$s is a label such as "Formula" or "Pee + poop". -->
+    <!-- Receipts (undo card, watch Logged). %1$s is a label such as "Bottle" or "Pee + poop". -->
     <string name="receipt_logged">%1$s logged</string>
-    <!-- Watch Logged title: "Formula at 14:32" -->
+    <!-- Watch Logged title: "Bottle at 14:32" -->
     <string name="receipt_at_time">%1$s at %2$s</string>
     <string name="receipt_sleep_started">Sleep started</string>
     <string name="receipt_sleep_cancelled">Sleep cancelled</string>
@@ -177,7 +182,7 @@
         <item quantity="other">%d minutes</item>
     </plurals>
     <string name="spoken_less_than_minute">less than a minute</string>
-    <!-- TalkBack prefixes (§9.4, §9.5): "Last feed, formula, 2 hours 10 minutes ago, at 12:22" -->
+    <!-- TalkBack prefixes (§9.4, §9.5): "Last feed, bottle, 2 hours 10 minutes ago, at 12:22" -->
     <string name="spoken_last_feed">Last feed</string>
     <string name="spoken_last_diaper">Last diaper</string>
     <string name="spoken_earlier_format">%1$s earlier</string>

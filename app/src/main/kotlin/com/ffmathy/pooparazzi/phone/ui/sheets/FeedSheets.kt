@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.format.VolumeFormatter
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -54,6 +55,7 @@ import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.tokens.LocalXPalette
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
+import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
 import com.ffmathy.pooparazzi.phone.ui.components.OffsetChipRow
 import com.ffmathy.pooparazzi.phone.ui.history.spokenSideCapitalised
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
@@ -70,17 +72,18 @@ internal class FeedSheetCallbacks(
     val onType: (FeedType?) -> Unit,
     val onTick: (Breast) -> Unit,
     val onLogBreast: () -> Unit,
+    val onContents: (BottleContents?) -> Unit,
     val onAmount: (Int?) -> Unit,
-    val onLogFormula: () -> Unit,
+    val onLogBottle: () -> Unit,
     val onCancel: () -> Unit,
 )
 
 /**
  * The Feed sheet (V1_ADDITIONS §2.1): "Feed · 14:32" stamped on the first tap, Now · −5m · −10m · −15m, three
  * full-width type rows and an outlined "Just the time" row. Food logs an instant at stamp + offset; "Just the time"
- * logs a feed with no type (the type is optional). Breast and Formula are instants too: Breast opens the sheet's
- * Breast step ([BreastStep]) for the optional side order, Formula its Formula step ([FormulaStep]) for the optional
- * amount, then "Log feed".
+ * logs a feed with no type (the type is optional). Breast and Bottle are instants too: Breast opens the sheet's
+ * Breast step ([BreastStep]) for the optional side order, Bottle its Bottle step ([BottleStep]) for the optional
+ * contents (Milk | Formula) and amount, then "Log feed".
  */
 @Composable
 internal fun FeedSheetContent(
@@ -93,8 +96,7 @@ internal fun FeedSheetContent(
     val time = formatters.clock.format(sheet.time, zone)
     val titleRes = when {
         sheet.breast -> CoreR.string.feed_type_breast
-        // The soft-hyphen form, so Danish "Modermælks­erstatning" breaks at its hyphen, not inside a word.
-        sheet.formula -> CoreR.string.feed_type_formula_compact
+        sheet.bottle -> CoreR.string.feed_type_bottle
         else -> CoreR.string.kind_feed
     }
     val title = titleWithTime(titleRes, time)
@@ -105,8 +107,8 @@ internal fun FeedSheetContent(
         Spacer(Modifier.height(12.dp))
         if (sheet.breast) {
             BreastStep(sheet, readiness, callbacks)
-        } else if (sheet.formula) {
-            FormulaStep(sheet, formatters, readiness, callbacks)
+        } else if (sheet.bottle) {
+            BottleStep(sheet, formatters, readiness, callbacks)
         } else {
             Column(Modifier.alpha(readiness.alpha), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 FeedType.entries.forEach { type ->
@@ -114,7 +116,7 @@ internal fun FeedSheetContent(
                         type = type,
                         supporting = when (type) {
                             FeedType.BREAST -> stringResource(CoreR.string.feed_breast_sides_next)
-                            FeedType.FORMULA -> stringResource(CoreR.string.feed_formula_amount_next)
+                            FeedType.BOTTLE -> stringResource(CoreR.string.feed_bottle_next)
                             FeedType.FOOD -> null
                         },
                         enabled = readiness.ready,
@@ -151,16 +153,26 @@ private fun BreastStep(sheet: HomeSheetUi.Feed, readiness: PickerReadiness, call
 }
 
 /**
- * The Feed sheet's Formula step: the time stays on the chips above; "Amount · Optional", the amount ("120 ml",
+ * The Feed sheet's Bottle step: the time stays on the chips above; "Contents · Optional" with Milk | Formula (tapping
+ * the selected one clears it), "Amount · Optional", the amount ("120 ml",
  * "4 fl oz", or "No amount"), a slider from no amount up to 300 ml in 10 ml steps (10 fl oz in ½ fl oz
  * steps where the region uses ounces, [com.ffmathy.pooparazzi.core.format.VolumeUnit]), and "Log feed". The amount is
  * optional: logging with the slider at its start records only the time.
  */
 @Composable
-private fun FormulaStep(sheet: HomeSheetUi.Feed, formatters: Formatters, readiness: PickerReadiness, callbacks: FeedSheetCallbacks) {
+private fun BottleStep(sheet: HomeSheetUi.Feed, formatters: Formatters, readiness: PickerReadiness, callbacks: FeedSheetCallbacks) {
+    SectionHeading(stringResource(R.string.join_dot, stringResource(CoreR.string.bottle_contents), stringResource(CoreR.string.optional)))
+    Spacer(Modifier.height(8.dp))
+    BottleContentsChoice(
+        selected = sheet.contents,
+        onContents = callbacks.onContents,
+        enabled = readiness.ready,
+        modifier = Modifier.alpha(readiness.alpha),
+    )
+    Spacer(Modifier.height(16.dp))
     SectionHeading(stringResource(R.string.join_dot, stringResource(CoreR.string.amount), stringResource(CoreR.string.optional)))
     Spacer(Modifier.height(4.dp))
-    FormulaAmountSlider(
+    AmountSlider(
         amountMl = sheet.amountMl,
         volume = formatters.volume,
         onAmount = callbacks.onAmount,
@@ -171,19 +183,41 @@ private fun FormulaStep(sheet: HomeSheetUi.Feed, formatters: Formatters, readine
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         SaveButton(
             enabled = readiness.ready,
-            onClick = callbacks.onLogFormula,
+            onClick = callbacks.onLogBottle,
             label = stringResource(CoreR.string.action_log_feed),
         )
     }
 }
 
 /**
- * The formula amount ([amountMl], null for none) in titleLarge over a FEED-coloured slider of [volume]'s steps (no
- * tick marks: 31 would crowd the track); step 0 is "No amount". Shared by the Feed sheet's Formula step and the edit
+ * Milk | Formula, what a bottle held; tapping the selected one clears it ([onContents] null). Shared by the Feed sheet's
+ * Bottle step and the edit sheet. Formula gets more room so Danish "Modermælks­erstatning" breaks at its soft hyphen.
+ */
+@Composable
+internal fun BottleContentsChoice(
+    selected: BottleContents?,
+    onContents: (BottleContents?) -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    ConnectedChoiceGroup(
+        options = BottleContents.entries,
+        selected = selected,
+        onSelect = { onContents(it.takeIf { option -> option != selected }) },
+        label = { stringResource(Labels.bottleContents(it, compact = true)) },
+        weight = { if (it == BottleContents.FORMULA) 1.5f else 1f },
+        enabled = enabled,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The bottle amount ([amountMl], null for none) in titleLarge over a FEED-coloured slider of [volume]'s steps (no
+ * tick marks: 31 would crowd the track); step 0 is "No amount". Shared by the Feed sheet's Bottle step and the edit
  * sheet. TalkBack reads "Amount, 120 ml, slider".
  */
 @Composable
-internal fun FormulaAmountSlider(
+internal fun AmountSlider(
     amountMl: Int?,
     volume: VolumeFormatter,
     onAmount: (Int?) -> Unit,

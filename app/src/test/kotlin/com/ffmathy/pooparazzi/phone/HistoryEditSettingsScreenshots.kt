@@ -65,8 +65,8 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
     /** The breastfeed form: type, one time block and the sides group (it fits without scrolling). */
     @Test fun editBreastfeed() = sheet("13-edit-breastfeed", night = false, EditSamples.breastfeed())
 
-    /** The formula form: type, one time block and the amount slider at 120 ml. */
-    @Test fun editFormula() = sheet("13b-edit-formula", night = true, EditSamples.formula())
+    /** The bottle form: type, one time block, Formula and the amount slider at 120 ml. */
+    @Test fun editBottle() = sheet("13b-edit-bottle", night = true, EditSamples.bottle())
 
     @Test fun editDiaper() = sheet("14-edit-diaper", night = true, EditSamples.diaperPoop())
 

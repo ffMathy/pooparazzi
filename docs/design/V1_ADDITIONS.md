@@ -4,8 +4,8 @@
 
 This document extends [`DESIGN_SPEC.md`](DESIGN_SPEC.md), which stays the source of truth for everything it covers: the Lamp, tokens, typography, icons, formatting grammar, night behaviour and accessibility. This file covers what the user asked for after approving the mockups:
 
-1. **Feed types**: Breast, Formula or Food. The type is **optional**: a feed can be logged with just its time.
-2. **A breast feed is one time, not a timer.** Like Formula and Food it records only its time (Now or −5m / −10m / −15m), plus an optional **side order**, ticked with two checkboxes, Left and Right, before it is logged. The **order of the ticks is the order recorded** (Left then Right = Left → Right). Nothing asks for a duration. (An earlier version timed breastfeeds with a start and an end; see "Compatibility" in §1.)
+1. **Feed types**: Breast, Bottle or Food (a bottle optionally records Milk or Formula). The type is **optional**: a feed can be logged with just its time.
+2. **A breast feed is one time, not a timer.** Like Bottle and Food it records only its time (Now or −5m / −10m / −15m), plus an optional **side order**, ticked with two checkboxes, Left and Right, before it is logged. The **order of the ticks is the order recorded** (Left then Right = Left → Right). Nothing asks for a duration. (An earlier version timed breastfeeds with a start and an end; see "Compatibility" in §1.)
 3. **Diaper Pee and Poop are independent toggles** (checkboxes). When Poop is on, the parent can also pick a **colour** and a **texture**. All of these are **optional**: a diaper with nothing ticked is a plain diaper change.
 4. **The whole app is in English and Danish**, through Android string resources, with an in-app language choice.
 5. **Statistics** (§8): averages per day of feeds, pee, poop and sleep over a chosen range, with a bar chart. It opens from History.
@@ -20,7 +20,8 @@ Where this file and `DESIGN_SPEC.md` disagree, this file wins.
 
 ```kotlin
 enum class EntryKind { SLEEP, FEED, DIAPER }
-enum class FeedType { BREAST, FORMULA, FOOD }
+enum class FeedType { BREAST, BOTTLE, FOOD } // BOTTLE is stored as "FORMULA" (its name before Room v4)
+enum class BottleContents { MILK, FORMULA }
 enum class Breast { LEFT, RIGHT }  // one ticked checkbox (UI only, not stored)
 enum class BreastSide { LEFT, RIGHT, LEFT_THEN_RIGHT, RIGHT_THEN_LEFT } // stored; = the tick order
 enum class PoopColor { YELLOW, GREEN, BROWN, BLACK, RED, PALE }
@@ -33,7 +34,8 @@ data class Entry(
     val endMillis: Long? = null,    // SLEEP only; null while running
     val feedType: FeedType? = null, // FEED only; optional (null = just the time)
     val breastSide: BreastSide? = null, // FEED+BREAST only; optional side order
-    val amountMl: Int? = null,      // FEED+FORMULA only; optional amount in millilitres (Room v3)
+    val amountMl: Int? = null,      // FEED+BOTTLE only; optional amount in millilitres (Room v3)
+    val bottleContents: BottleContents? = null, // FEED+BOTTLE only; optional, milk or formula (Room v4)
     val pee: Boolean = false,       // DIAPER only
     val poop: Boolean = false,      // DIAPER only
     val poopColor: PoopColor? = null,     // DIAPER with poop only (optional)
@@ -49,7 +51,8 @@ data class Entry(
 - **Feed type:** optional. A FEED with `feedType == null` is an instant that records only its time; it can never carry a side.
 - **Diapers:** `pee` and `poop` are optional. A DIAPER with neither is a *plain change* (display kind `PLAIN`, label "Diaper"). `poopColor` and `poopTexture` must be null when `!poop`.
 - **Breast side:** optional. A breastfeed logged with nothing ticked has `breastSide == null` (only its time was recorded). Other feed types never carry a side.
-- **Formula amount:** optional. A formula feed logged at "No amount" has `amountMl == null`; a set amount is positive and always stored in millilitres, whatever unit it was picked in. Other feed types (and non-feeds) never carry an amount.
+- **Bottle contents:** optional. A bottle logged with neither Milk nor Formula picked has `bottleContents == null`, as has every bottle logged before Room v4 (then called "Formula"). Other feed types never carry contents.
+- **Bottle amount:** optional. A bottle feed logged at "No amount" has `amountMl == null`; a set amount is positive and always stored in millilitres, whatever unit it was picked in. Other feed types (and non-feeds) never carry an amount.
 - **Tick order → side:** `BreastSide.fromOrder(ticks)` maps the ticked `Breast`es, in tick order, to the stored value: `[]` → null, `[L]` → LEFT, `[R]` → RIGHT, `[L, R]` → LEFT_THEN_RIGHT, `[R, L]` → RIGHT_THEN_LEFT. `BreastSide.toggle(ticks, b)` unticks `b` when ticked, otherwise appends it (so re-ticking puts it last). `side.order` maps back for editing. The stored enum is unchanged, so storage and sync stay compatible.
 - **Mis-taps:** a sleep that ends **less than 60 s** after its start is discarded as a mis-tap. The UI then shows "Sleep cancelled", with Undo.
 - **Dedupe:** two feeds of the same type (breastfeeds included, whatever their side) less than 5 s apart are one entry ("Already logged at …"), as for every instant.
@@ -71,12 +74,12 @@ data class Entry(
   - Nudge chips: −15m · −10m · −5m · +5m. Taps add up (like the edit sheet's nudges); the title follows, with "was 14:32" beside it once moved.
   - Three **full-width option rows**, each 72 dp tall with radius 28, filled `feed-container`. Each row has a 32 dp icon in `feed-strong`, a label in headlineSmall `feed-on-container`, and an optional supporting line in bodyMedium:
     - **Breast**: icon `breast`, supporting line "Then the sides, if you like" ("Derefter siderne, hvis du vil").
-    - **Formula**: icon `feed` (the bottle), supporting line "Then the amount, if you like" ("Derefter mængden, hvis du vil").
+    - **Bottle**: icon `feed` (the bottle), supporting line "Then milk or formula and the amount, if you like" ("Derefter modermælk eller erstatning og mængden, hvis du vil").
     - **Food**: icon `food` (bowl and spoon).
   - A fourth row, **"Just the time"** ("Kun tidspunktet"): same size, but *outlined* (1 dp `outline`, no fill), icon `clock`, label in `on-surface`. It logs a feed with no type.
   - Tapping **Food** logs an instant at `stamp + offset`, and closes the sheet; no receipt follows (the sheet already picked the time). **Just the time** does the same with no type.
-  - Tapping **Breast** logs nothing yet: the same sheet moves to its **Breast step** (below). Tapping **Formula** likewise moves to its **Formula step**. The stamp and the selected chip are kept.
-  - The rows are full width because the Danish labels are long ("Modermælkserstatning").
+  - Tapping **Breast** logs nothing yet: the same sheet moves to its **Breast step** (below). Tapping **Bottle** likewise moves to its **Bottle step**. The stamp and the selected chip are kept.
+  - The rows are full width so the labels and their supporting lines have room in Danish.
 - **Breast step** (the Feed sheet after Breast):
   - Title "Breast · 14:32" ("Amning · 14:32"), following the chips, which stay: −15m · −10m · −5m · +5m.
   - Hint (bodyMedium, `on-surface-variant`): "Tick the sides in the order you fed. Optional." / "Sæt flueben i den rækkefølge, du ammede. Valgfrit."
@@ -88,14 +91,15 @@ data class Entry(
   - A **summary line** under the tiles (titleMedium, live region): "Left → Right" in FEED text, or "No side" in `on-surface-variant` while nothing is ticked. TalkBack reads "Left then right".
   - **"Log feed"** ("Registrér"): the primary button bottom-right (as Save in the Diaper sheet). It is always enabled, because the side is optional. It logs a breast feed instant at `stamp + offset` with the ticked order (none ticked: just the time), and closes the sheet; no receipt follows.
   - "Cancel" (or a scrim tap) closes the sheet and logs nothing.
-- **Formula step** (the Feed sheet after Formula):
-  - Title "Formula · 14:32" ("Modermælkserstatning · 14:32"), following the chips, which stay.
+- **Bottle step** (the Feed sheet after Bottle):
+  - Title "Bottle · 14:32" ("Flaske · 14:32"), following the chips, which stay.
+  - Section heading "Contents · Optional" ("Indhold · Valgfri"), then a connected button group **Milk | Formula** ("Modermælk | Modermælks­erstatning", Formula given more room so it breaks at its soft hyphen). Tapping the selected one again clears it.
   - Section heading "Amount · Optional" ("Mængde · Valgfri"), then the amount in titleLarge FEED text ("120 ml"), or "No amount" ("Ingen mængde") in `on-surface-variant`.
   - A full-width **slider** (min 48 dp tall) in FEED colours: thumb and active track `feed-strong`, inactive track `feed-container`. Its start is **No amount**; each step adds **10 ml** up to **300 ml**, or **½ fl oz** up to **10 fl oz** where the region measures in fluid ounces (the US, Liberia, Myanmar: the app's region, else the device's, since the in-app languages carry none). Ounces are shown to the nearest half ("4 fl oz", "4.5 fl oz", Danish "4,5 fl oz") and stored as millilitres. TalkBack reads "Amount, 120 ml, slider".
-  - **"Log feed"** ("Registrér") bottom-right, always enabled (the amount is optional). It logs a formula feed at `stamp + offset` with the amount (at No amount: just the time) and closes the sheet; no receipt follows.
-  - The amount shows in History's supporting line ("12:22 · 120 ml"; TalkBack "Formula, 12:22, 120 ml") and on the watch's Today list. The watch logs formula without an amount.
+  - **"Log feed"** ("Registrér") bottom-right, always enabled (the amount is optional). It logs a bottle feed at `stamp + offset` with the contents and amount (neither: just the time) and closes the sheet; no receipt follows.
+  - The contents show in History's title ("Bottle · Formula"), the amount in its supporting line ("12:22 · 120 ml"; TalkBack "Bottle, Formula, 12:22, 120 ml"), and the amount on the watch's Today list. The watch logs a bottle without contents or an amount.
 - **Running sleep and a feed:** logging any feed (a breast feed included) while a sleep runs leaves the sleep running; it keeps the Lamp.
-- **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line, after the `history` icon: "12:22 · Formula". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, formula, 2 hours 10 minutes ago, at 12:22". A feed with no type shows the generic `feed` icon and no type word ("12:22"; TalkBack "Last feed, 2 hours 10 minutes ago, at 12:22").
+- **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line, after the `history` icon: "12:22 · Bottle". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, bottle, formula, 2 hours 10 minutes ago, at 12:22". A feed with no type shows the generic `feed` icon and no type word ("12:22"; TalkBack "Last feed, 2 hours 10 minutes ago, at 12:22").
 - **Breast order on every last-feed line.** A breastfeed with a recorded side shows the order instead of the word "Breast", because it is what the next feed starts from:
   - Lamp sub-line (after `history`) "14:32 · Left → Right". When that would exceed the chord it shortens to "14:32 · L → R".
   - Since-row 1 while asleep "Last fed" / `history` "1h 32m · 01:40 · L → R" (short, so the row stays on one line).
@@ -107,10 +111,10 @@ data class Entry(
 ### 2.2 Watch
 
 - **Main:** Feed opens the **Feed type** screen.
-  - Three stacked buttons (full width, 52 dp tall, `feed-container`): Breast, Formula, Food.
+  - Three stacked buttons (full width, 52 dp tall, `feed-container`): Breast, Bottle, Food.
   - A fourth, outlined button: **"Just the time"** (icon `clock`), which logs a feed with no type.
   - A CompactButton "Earlier" cycles the stamp through −5m / −10m / −15m, as on the diaper picker.
-  - Formula, Food and Just the time lead to **Logged** ("Formula at 14:32" / "Feed at 14:32" + Undo).
+  - Bottle, Food and Just the time lead to **Logged** ("Bottle at 14:32" / "Feed at 14:32" + Undo).
   - Breast leads to the **Side screen**; nothing is logged yet, and swiping back returns to Feed type with its time.
 - **Side screen** (after Breast):
   - Title "Which side?", with "Breast · 14:32" (the Feed type screen's time, with its Earlier offset) under it.
@@ -185,18 +189,18 @@ The since-row never shows colour or texture.
 
 **List rows:**
 - **Breastfeed:** title "Breast · Left → Right" (just "Breast" with no side), supporting "12:00": its time, like every feed (no end, no duration).
-- **Formula / Food:** title "Formula" / "Food", supporting "12:22". A feed with no type: title "Feed" ("Måltid"), generic `feed` icon, and a formula-style tick in the ribbon.
+- **Bottle / Food:** title "Bottle" (with its contents: "Bottle · Formula") / "Food", supporting "12:22". A feed with no type: title "Feed" ("Måltid"), generic `feed` icon, and a bottle-style tick in the ribbon.
 - **Diaper:** title "Pee" / "Poop" / "Pee + poop", or "Diaper" for a plain change, supporting "13:44" plus " · {colour}" and " · {texture}" when set.
 
 **Ribbon feed lane:**
-- **Formula** keeps the tick mark.
+- **Bottle** keeps the tick mark.
 - **Food** is a tick with a small square cap.
 - **Breastfeeds** are ticks too (they are instants), with a round foot (an 8 dp disc at the bottom). Shape stays the redundant cue.
 
 **Edit sheet:**
 - **Feed:**
-  - Type selector: a connected button group, Breast | Formula | Food, labelled "Type · Optional". Tapping the selected type again **clears it** (a feed with just its time).
-  - Every feed shows one time block. Breast adds "Side · Optional": the **same Left / Right checkboxes** as the Feed sheet's Breast step (order badges, tick order = side) and the summary line. Formula adds "Amount · Optional": the **same amount slider** as the Feed sheet's Formula step. Switching to another type drops the side or amount; switching back restores the original's. There is no end time and no duration.
+  - Type selector: a connected button group, Breast | Bottle | Food, labelled "Type · Optional". Tapping the selected type again **clears it** (a feed with just its time).
+  - Every feed shows one time block. Breast adds "Side · Optional": the **same Left / Right checkboxes** as the Feed sheet's Breast step (order badges, tick order = side) and the summary line. Bottle adds "Contents · Optional" (the same Milk | Formula group) and "Amount · Optional": the **same amount slider** as the Feed sheet's Bottle step. Switching to another type drops the side, contents or amount; switching back restores the original's. There is no end time and no duration.
 - **Diaper:** the toggles, colour chips and texture chips from §3.1, plus one time block. Save is enabled with both toggles off (a plain change).
 - **Save** is disabled only by a blocking issue (end before start, a time in the future, the entry deleted elsewhere). Nothing beyond the times is required.
 
@@ -239,15 +243,18 @@ The since-row never shows colour or texture.
 |---|---|---|
 | Feed (category / button) | Feed | Måltid |
 | Breast (type) | Breast | Amning |
-| Formula | Formula | Modermælkserstatning |
+| Bottle (type) | Bottle | Flaske |
+| Milk (bottle contents) | Milk | Modermælk |
+| Formula (bottle contents) | Formula | Modermælkserstatning |
+| Contents | Contents | Indhold |
 | Food (solids) | Food | Mad |
 | Log feed (Breast step button) | Log feed | Registrér |
 | Which side? | Which side? | Hvilken side? |
 | Tick the sides in the order you fed. Optional. | — | Sæt flueben i den rækkefølge, du ammede. Valgfrit. |
 | No side | No side | Ingen side |
-| Amount (formula) | Amount | Mængde |
+| Amount (bottle) | Amount | Mængde |
 | No amount | No amount | Ingen mængde |
-| Then the amount, if you like | Then the amount, if you like | Derefter mængden, hvis du vil |
+| Then milk or formula and the amount, if you like | Then milk or formula and the amount, if you like | Derefter modermælk eller erstatning og mængden, hvis du vil |
 | Just the time (untyped feed) | Just the time | Kun tidspunktet |
 | Feed (untyped feed, history title) | Feed | Måltid |
 | Diaper (plain change) | Diaper | Ble |
@@ -285,7 +292,7 @@ Baby **Noa**, 7 months. Today is **Mon 26 Oct 2026** and now is **14:32**, in ti
 | 01:40 | Breast, Left → Right |
 | 01:52 | Pee |
 | 02:05 – 05:20 | Sleep |
-| 05:25 | Formula |
+| 05:25 | Bottle, Milk, 90 ml |
 | 05:41 | Pee + poop, Yellow, Seedy |
 | 06:10 – 07:45 | Sleep |
 | 08:00 | Breast, Right → Left |
@@ -293,12 +300,12 @@ Baby **Noa**, 7 months. Today is **Mon 26 Oct 2026** and now is **14:32**, in ti
 | 09:30 – 10:15 | Sleep |
 | 10:30 | Food |
 | 11:05 | Pee |
-| 12:22 | Formula |
+| 12:22 | Bottle, Formula, 120 ml |
 | 12:40 – 13:27 | Sleep |
 | 13:44 | Pee |
 
 **Derived values at 14:32:**
-- Last fed 2h 10m ago · 12:22 · Formula.
+- Last fed 2h 10m ago · 12:22 · Bottle.
 - Awake 1h 05m · since 13:27.
 - Pee 48m ago · 13:44.
 - Today: 5 feeds · 4 pee · 2 poop · 7h 57m sleep.

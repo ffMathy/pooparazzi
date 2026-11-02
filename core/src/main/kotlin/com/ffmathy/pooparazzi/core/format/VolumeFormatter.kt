@@ -10,7 +10,7 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** How a formula amount is shown and picked: millilitres, or US fluid ounces where those are the custom. */
+/** How a bottle amount is shown and picked: millilitres, or US fluid ounces where those are the custom. */
 enum class VolumeUnit {
     MILLILITRES, FLUID_OUNCES;
 
@@ -25,7 +25,7 @@ enum class VolumeUnit {
 }
 
 /**
- * Formula amounts (stored in millilitres, [com.ffmathy.pooparazzi.core.model.Entry.amountMl]) in [unit]: "120 ml",
+ * Bottle amounts (stored in millilitres, [com.ffmathy.pooparazzi.core.model.Entry.amountMl]) in [unit]: "120 ml",
  * or "4 fl oz" / "4.5 fl oz" ("4,5 fl oz" in Danish) to the nearest half ounce. Also the amount slider's steps
  * ([steps], [stepOf], [amountAt]): step 0 is "no amount", then 10 ml (up to 300 ml) or ½ fl oz (up to 10 fl oz) each.
  */

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.R
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -63,7 +64,9 @@ class EnglishResourceFormattersTest {
     fun labels() {
         val l = f.labels
         assertEquals("Feed", l.kind(EntryKind.FEED))
-        assertEquals("Formula", l.feedType(FeedType.FORMULA))
+        assertEquals("Bottle", l.feedType(FeedType.BOTTLE))
+        assertEquals("Milk", l.bottleContents(BottleContents.MILK))
+        assertEquals("Formula", l.bottleContents(BottleContents.FORMULA))
         assertEquals("Breast", l.feedType(FeedType.BREAST))
         assertEquals("Food", l.feedType(FeedType.FOOD))
         assertEquals("Left → Right", l.side(BreastSide.LEFT_THEN_RIGHT))
@@ -199,8 +202,10 @@ class DanishResourceFormattersTest {
         assertEquals("Søvn", l.kind(EntryKind.SLEEP))
         assertEquals("Ble", l.kind(EntryKind.DIAPER))
         assertEquals("Amning", l.feedType(FeedType.BREAST))
-        assertEquals("Modermælkserstatning", l.feedType(FeedType.FORMULA))
-        assertEquals("Modermælks­erstatning", l.feedType(FeedType.FORMULA, compact = true))
+        assertEquals("Flaske", l.feedType(FeedType.BOTTLE))
+        assertEquals("Modermælk", l.bottleContents(BottleContents.MILK))
+        assertEquals("Modermælkserstatning", l.bottleContents(BottleContents.FORMULA))
+        assertEquals("Modermælks­erstatning", l.bottleContents(BottleContents.FORMULA, compact = true))
         assertEquals("Mad", l.feedType(FeedType.FOOD))
         assertEquals("Venstre → Højre", l.side(BreastSide.LEFT_THEN_RIGHT))
         assertEquals("Højre → Venstre", l.side(BreastSide.RIGHT_THEN_LEFT))

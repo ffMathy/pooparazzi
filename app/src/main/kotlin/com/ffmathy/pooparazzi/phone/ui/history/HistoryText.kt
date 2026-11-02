@@ -43,14 +43,15 @@ internal fun dayLabel(day: LocalDate, today: LocalDate, formatters: Formatters):
 }
 
 /**
- * "Sleep · 47m", "Breast · Left → Right", "Breast", "Formula", "Pee + poop" (V1_ADDITIONS §4). Formula uses
- * the soft-hyphen form so Danish can break it in the list.
+ * "Sleep · 47m", "Breast · Left → Right", "Breast", "Bottle", "Bottle · Formula", "Pee + poop" (V1_ADDITIONS §4). The
+ * bottle's contents use the soft-hyphen form so Danish "Modermælks­erstatning" can break in the list.
  */
 @Composable
 @ReadOnlyComposable
 internal fun historyTitle(entry: Entry, now: Long, formatters: Formatters): String =
     if (entry.kind == EntryKind.FEED && !entry.isBreastfeed) {
-        stringResource(Labels.feedType(entry.feedType, compact = true))
+        val type = stringResource(Labels.feedType(entry.feedType, compact = true))
+        entry.bottleContents?.let { stringResource(R.string.join_dot, type, stringResource(Labels.bottleContents(it, compact = true))) } ?: type
     } else {
         formatters.labels.historyTitle(entry, formatters.duration, now)
     }
@@ -63,7 +64,7 @@ internal fun historySupporting(entry: Entry, day: LocalDate, zone: ZoneId, now: 
 
 /**
  * The row's TalkBack name: "Sleep, 47 minutes, 12:40 to 13:27", "Breast, left then right, 12:00",
- * "Sleep, running, since 14:32", "Formula, 12:22, 120 ml", "Pee and poop, 05:41, Yellow, Seedy".
+ * "Sleep, running, since 14:32", "Bottle, Formula, 12:22, 120 ml", "Pee and poop, 05:41, Yellow, Seedy".
  */
 @Composable
 @ReadOnlyComposable
@@ -85,6 +86,7 @@ internal fun historySpoken(entry: Entry, day: LocalDate, zone: ZoneId, now: Long
         }
         else -> {
             if (entry.isBreastfeed) entry.breastSide?.let { parts += spokenSide(it) }
+            entry.bottleContents?.let { parts += stringResource(Labels.bottleContents(it)) }
             parts += clock.format(entry.startMillis, zone)
             entry.amountMl?.let { parts += formatters.volume.format(it) }
             if (entry.poop) {
@@ -96,7 +98,7 @@ internal fun historySpoken(entry: Entry, day: LocalDate, zone: ZoneId, now: Long
     return parts.joinToString(SPOKEN_SEPARATOR)
 }
 
-/** "Sleep", "Breast", "Formula", "Pee", "Pee and poop" (spoken; the "+" of "Pee + poop" reads badly). */
+/** "Sleep", "Breast", "Bottle", "Pee", "Pee and poop" (spoken; the "+" of "Pee + poop" reads badly). */
 @Composable
 @ReadOnlyComposable
 internal fun spokenEntryName(entry: Entry): String = when (entry.kind) {
@@ -127,7 +129,7 @@ internal fun spokenDiaperKind(kind: DiaperKind): String =
     if (kind == DiaperKind.BOTH) stringResource(R.string.spoken_pee_and_poop) else stringResource(Labels.diaperKind(kind))
 
 /**
- * The receipt label of a deleted entry: "Sleep", "Feed" (a breastfeed), "Formula", "Food", "Pee", "Pee + poop", used in
+ * The receipt label of a deleted entry: "Sleep", "Feed" (a breastfeed), "Bottle", "Food", "Pee", "Pee + poop", used in
  * "Sleep deleted".
  */
 @Composable

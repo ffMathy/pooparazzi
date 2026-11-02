@@ -48,7 +48,7 @@ class CloudPendingTest {
     @Test
     fun theFlagTable() = test {
         // A local write: pending for both.
-        val local = phone.logFeed(FeedType.FORMULA, now - 10 * minute)
+        val local = phone.logFeed(FeedType.BOTTLE, now - 10 * minute)
         assertEquals(true to true, flags(local.id))
 
         // From the other device: not pending for it, pending for the backend (the phone uploads what the watch logged).
@@ -72,7 +72,7 @@ class CloudPendingTest {
     @Test
     fun withoutABackendNothingIsPendingForIt() = test {
         val watchRepo = RoomEntryRepository(db, clock, watch)
-        val local = watchRepo.logFeed(FeedType.FORMULA, now)
+        val local = watchRepo.logFeed(FeedType.BOTTLE, now)
         assertEquals(true to false, flags(local.id))
         watchRepo.applyRemoteAll(listOf(Entry.feed(FeedType.FOOD, now - minute, id = "p", updatedAtMillis = now)))
         assertEquals(false to false, flags("p"))
@@ -93,7 +93,7 @@ class CloudPendingTest {
 
     @Test
     fun anIdenticalCloudVersionClearsCloudPending() = test {
-        val local = phone.logFeed(FeedType.FORMULA, now - 10 * minute)
+        val local = phone.logFeed(FeedType.BOTTLE, now - 10 * minute)
         val edited = phone.update(local.copy(startMillis = now - 12 * minute))
         assertEquals(true to true, flags(local.id))
 
@@ -109,7 +109,7 @@ class CloudPendingTest {
     @Test
     fun aCloudVersionThatLosesToTheStoredRowFlagsItForUploadAgain() = test {
         // The row is backed up (not pending), then another phone's stale offline edit overwrites the backup.
-        val local = phone.logFeed(FeedType.FORMULA, now - 10 * minute)
+        val local = phone.logFeed(FeedType.BOTTLE, now - 10 * minute)
         val edited = phone.update(local.copy(startMillis = now - 12 * minute))
         phone.markCloudSynced(listOf(edited))
         assertEquals(true to false, flags(local.id))
@@ -137,7 +137,7 @@ class CloudPendingTest {
 
     @Test
     fun pendingRowsAreListedAndClearedOnlyForTheVersionSent() = test {
-        val a = phone.logFeed(FeedType.FORMULA, now - 30 * minute)
+        val a = phone.logFeed(FeedType.BOTTLE, now - 30 * minute)
         clock.advanceBy(1)
         val b = phone.logFeed(FeedType.FOOD, now - 20 * minute)
         clock.advanceBy(1)
@@ -175,7 +175,7 @@ class CloudPendingTest {
     @Test
     fun aMigratedRowWaitsForTheBackendOnlyAfterTheFirstSync() = test {
         // Rows from before the backup are not pending for it until an account's first sync flags them all.
-        val old = Entry.feed(FeedType.FORMULA, now - minute, id = "old")
+        val old = Entry.feed(FeedType.BOTTLE, now - minute, id = "old")
         db.entryDao().write(EntryEntity.from(old, pendingSync = false))
         assertTrue(phone.cloudPending(10).isEmpty())
         phone.markAllForCloud()

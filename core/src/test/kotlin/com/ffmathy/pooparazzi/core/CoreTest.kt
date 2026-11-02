@@ -56,7 +56,7 @@ class CoreTest {
         assertSame(clock, Core.clock)
         assertTrue(Core.isInitialized)
 
-        val feed = Core.repository.logFeed(FeedType.FORMULA, SampleData.NOW_1432)
+        val feed = Core.repository.logFeed(FeedType.BOTTLE, SampleData.NOW_1432)
         assertEquals(listOf(feed), Core.repository.observeEntries().first())
         Core.settings.setBabyName("Noa")
         assertEquals("Noa", Core.settings.current().babyName)
@@ -92,7 +92,7 @@ class CoreTest {
                 listOf(
                     Entry.diaper(SampleData.at(10, 0), pee = true, poop = false, id = "d", babyId = "b3"),
                     Entry.feed(FeedType.FOOD, SampleData.at(9, 0), id = "f", babyId = "b2"),
-                    Entry.feed(FeedType.FORMULA, SampleData.at(11, 0), id = "g"),
+                    Entry.feed(FeedType.BOTTLE, SampleData.at(11, 0), id = "g"),
                 ),
             )
             graph.adoptBabiesFromEntries()

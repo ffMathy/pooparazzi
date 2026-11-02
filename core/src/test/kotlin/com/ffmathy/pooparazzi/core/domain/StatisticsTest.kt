@@ -39,13 +39,13 @@ private fun StatsWindow.averages(): List<Long?> = listOf(
  * sleep; Sun 18 only a poop; Mon 19 nothing; Tue 20 a feed, a plain change and a sleep; nothing after.
  */
 private val F1 = listOf(
-    Entry.feed(FeedType.FORMULA, at(oct(16), 10), id = "fri-feed"),
-    Entry.feed(FeedType.FORMULA, at(oct(17), 8), id = "sat-feed-1"),
+    Entry.feed(FeedType.BOTTLE, at(oct(16), 10), id = "fri-feed"),
+    Entry.feed(FeedType.BOTTLE, at(oct(17), 8), id = "sat-feed-1"),
     Entry.diaper(at(oct(17), 9), pee = true, poop = false, id = "sat-pee"),
-    Entry.feed(FeedType.FORMULA, at(oct(17), 12), id = "sat-feed-2"),
+    Entry.feed(FeedType.BOTTLE, at(oct(17), 12), id = "sat-feed-2"),
     Entry.sleep(at(oct(17), 13), at(oct(17), 14, 30), id = "sat-sleep"),
     Entry.diaper(at(oct(18), 9), pee = false, poop = true, id = "sun-poop"),
-    Entry.feed(FeedType.FORMULA, at(oct(20), 8), id = "tue-feed"),
+    Entry.feed(FeedType.BOTTLE, at(oct(20), 8), id = "tue-feed"),
     Entry.diaper(at(oct(20), 9), pee = false, poop = false, id = "tue-plain"),
     Entry.sleep(at(oct(20), 13), at(oct(20), 15), id = "tue-sleep"),
 )

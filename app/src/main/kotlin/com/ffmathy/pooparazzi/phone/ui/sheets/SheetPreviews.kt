@@ -38,14 +38,14 @@ private fun BreastSheetPreview() = SheetPreview(night = false) {
     FeedSheetContent(HomeSamples.breastSheet().sheet as HomeSheetUi.Feed, SampleData.ZONE, formatters, NoFeedCallbacks)
 }
 
-@Preview(name = "Feed sheet · Formula step", widthDp = 390)
+@Preview(name = "Feed sheet · Bottle step", widthDp = 390)
 @Composable
-private fun FormulaSheetPreview() = SheetPreview(night = false) {
+private fun BottleSheetPreview() = SheetPreview(night = false) {
     val formatters = rememberFormatters(SampleData.ZONE)
-    FeedSheetContent(HomeSamples.formulaSheet().sheet as HomeSheetUi.Feed, SampleData.ZONE, formatters, NoFeedCallbacks)
+    FeedSheetContent(HomeSamples.bottleSheet().sheet as HomeSheetUi.Feed, SampleData.ZONE, formatters, NoFeedCallbacks)
 }
 
-private val NoFeedCallbacks = FeedSheetCallbacks({}, {}, {}, {}, {}, {}, {})
+private val NoFeedCallbacks = FeedSheetCallbacks({}, {}, {}, {}, {}, {}, {}, {})
 
 @Preview(name = "Diaper sheet", widthDp = 390)
 @Composable

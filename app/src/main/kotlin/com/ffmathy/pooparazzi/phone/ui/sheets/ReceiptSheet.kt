@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.unit.dp
+import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
 import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
@@ -163,7 +164,10 @@ private fun receiptContent(variant: ReceiptVariant, formatters: Formatters): Rec
         is ReceiptVariant.FeedLogged -> ReceiptContent(
             TintedIcon(XIcons.forFeedType(variant.type), events.feed.strong),
             stringResource(CoreR.string.receipt_logged, feedTypeLabel(variant.type, compact = true)),
-            variant.side?.let { stringResource(Labels.side(it)) } ?: variant.amountMl?.let(formatters.volume::format),
+            variant.side?.let { stringResource(Labels.side(it)) } ?: listOfNotNull(
+                variant.contents?.let { stringResource(Labels.bottleContents(it)) },
+                variant.amountMl?.let(formatters.volume::format),
+            ).takeIf { it.isNotEmpty() }?.joinToString(DOT_SEPARATOR),
             variant.side?.let { spokenSideCapitalised(it) },
         )
         is ReceiptVariant.DiaperLogged -> ReceiptContent(

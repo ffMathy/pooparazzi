@@ -50,8 +50,8 @@ class DailyCountsTest {
     @Test
     fun deletedAndFutureEntriesAreLeftOut() {
         val entries = listOf(
-            Entry.feed(FeedType.FORMULA, SampleData.at(9, 0), id = "deleted").copy(deleted = true),
-            Entry.feed(FeedType.FORMULA, SampleData.at(15, 0), id = "future"),
+            Entry.feed(FeedType.BOTTLE, SampleData.at(9, 0), id = "deleted").copy(deleted = true),
+            Entry.feed(FeedType.BOTTLE, SampleData.at(15, 0), id = "future"),
             Entry.diaper(SampleData.at(10, 0), pee = true, poop = true, id = "both"),
         )
         assertEquals(listOf(DayCounts(feeds = 0, pee = 1, poop = 1, sleepMinutes = 0)), dailyCounts(entries, TODAY, TODAY, NOW_1432, ZONE))

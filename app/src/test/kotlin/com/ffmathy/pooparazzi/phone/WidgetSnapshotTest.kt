@@ -36,7 +36,7 @@ class WidgetSnapshotTest {
     fun theReferenceScenarioAt1432() {
         val idle = WidgetSamples.idle(night = true)
         assertEquals(SampleData.at(12, 22), idle.lastFeed!!.startMillis)
-        assertEquals(FeedType.FORMULA, idle.lastFeed!!.feedType)
+        assertEquals(FeedType.BOTTLE, idle.lastFeed!!.feedType)
         assertEquals(SampleData.at(13, 44), idle.lastDiaper!!.startMillis)
         assertEquals(SampleData.at(13, 27), idle.awakeSinceMillis)
         assertFalse(idle.asleep)
