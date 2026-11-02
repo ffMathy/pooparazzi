@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.core.sample
 import com.ffmathy.pooparazzi.core.domain.epochMillis
 import com.ffmathy.pooparazzi.core.domain.localDate
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -60,7 +61,7 @@ object SampleData {
             Entry.breastfeed(t(1, 40), BreastSide.LEFT_THEN_RIGHT, id = "sample-breast-0140"),
             Entry.diaper(t(1, 52), pee = true, poop = false, id = "sample-pee-0152"),
             Entry.sleep(t(2, 5), t(5, 20), id = "sample-sleep-0205"),
-            Entry.feed(FeedType.FORMULA, t(5, 25), id = "sample-formula-0525", amountMl = 90),
+            Entry.feed(FeedType.BOTTLE, t(5, 25), id = "sample-formula-0525", amountMl = 90, contents = BottleContents.MILK),
             Entry.diaper(t(5, 41), pee = true, poop = true, color = PoopColor.YELLOW, texture = PoopTexture.SEEDY, id = "sample-both-0541"),
             Entry.sleep(t(6, 10), t(7, 45), id = "sample-sleep-0610"),
             Entry.breastfeed(t(8, 0), BreastSide.RIGHT_THEN_LEFT, id = "sample-breast-0800"),
@@ -68,7 +69,7 @@ object SampleData {
             Entry.sleep(t(9, 30), t(10, 15), id = "sample-sleep-0930"),
             Entry.feed(FeedType.FOOD, t(10, 30), id = "sample-food-1030"),
             Entry.diaper(t(11, 5), pee = true, poop = false, id = "sample-pee-1105"),
-            Entry.feed(FeedType.FORMULA, t(12, 22), id = "sample-formula-1222", amountMl = 120),
+            Entry.feed(FeedType.BOTTLE, t(12, 22), id = "sample-formula-1222", amountMl = 120, contents = BottleContents.FORMULA),
             Entry.sleep(t(12, 40), t(13, 27), id = "sample-sleep-1240"),
             Entry.diaper(t(13, 44), pee = true, poop = false, id = "sample-pee-1344"),
         )
@@ -120,8 +121,8 @@ object SampleData {
             at += minutes(3 + random.nextInt(10))
             cycle += when (random.nextInt(10)) {
                 in 0..5 -> Entry.breastfeed(at, BreastSide.entries[random.nextInt(BreastSide.entries.size)], id = "$id-feed")
-                in 6..7 -> Entry.feed(FeedType.FORMULA, at, id = "$id-feed")
-                8 -> Entry.feed(if (night) FeedType.FORMULA else FeedType.FOOD, at, id = "$id-feed")
+                in 6..7 -> Entry.feed(FeedType.BOTTLE, at, id = "$id-feed")
+                8 -> Entry.feed(if (night) FeedType.BOTTLE else FeedType.FOOD, at, id = "$id-feed")
                 else -> Entry.feed(null, at, id = "$id-feed")
             }
             at += minutes(10 + random.nextInt(15))

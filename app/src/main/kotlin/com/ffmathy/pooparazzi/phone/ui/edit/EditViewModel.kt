@@ -11,6 +11,7 @@ import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EntryRepository
 import com.ffmathy.pooparazzi.core.domain.localDate
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
@@ -168,6 +169,8 @@ class EditViewModel(
     override fun onSideTick(breast: Breast) = edit { s -> EditRules.withSideTick(s.draft, breast) }
 
     override fun onAmount(amountMl: Int?) = edit { s -> EditRules.withAmount(s.draft, amountMl) }
+
+    override fun onContents(contents: BottleContents?) = edit { s -> EditRules.withContents(s.draft, contents) }
 
     override fun onNudge(field: TimeField, minutes: Int) = edit(HomeHaptic.SEGMENT_TICK) { s -> EditRules.nudge(s.draft, field, minutes) }
 

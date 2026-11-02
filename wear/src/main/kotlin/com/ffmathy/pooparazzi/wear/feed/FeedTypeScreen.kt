@@ -43,14 +43,14 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 
 @Immutable
 data class FeedTypeActions(
-    /** Breast / Formula / Food, or null for "Just the time" (a feed with no type). */
+    /** Breast / Bottle / Food, or null for "Just the time" (a feed with no type). */
     val onType: (FeedType?) -> Unit = {},
     val onEarlier: () -> Unit = {},
 )
 
 /**
  * Feed type (V1_ADDITIONS §2.2): "Feed · 14:32" (stamped on the Feed tap), three full-width FEED buttons
- * (Breast / Formula / Food), an outlined "Just the time" button (the type is optional: logs a feed with no type) and
+ * (Breast / Bottle / Food), an outlined "Just the time" button (the type is optional: logs a feed with no type) and
  * an Earlier CompactButton that cycles the time through −5m / −10m / −15m. Breast opens Side for the optional side
  * order (logged there, at this screen's time); the others log at once.
  * Taps are ignored for 500 ms after the screen appears (DESIGN_SPEC §5.9).
@@ -110,7 +110,7 @@ fun FeedTypeScreen(draft: FeedDraft, actions: FeedTypeActions, modifier: Modifie
 }
 
 /** The order of §2.2. */
-private val FEED_TYPES = listOf(FeedType.BREAST, FeedType.FORMULA, FeedType.FOOD)
+private val FEED_TYPES = listOf(FeedType.BREAST, FeedType.BOTTLE, FeedType.FOOD)
 
 /**
  * The Earlier CompactButton shared by Feed type and Diaper: "Earlier" at no offset, then the offset ("−5m");

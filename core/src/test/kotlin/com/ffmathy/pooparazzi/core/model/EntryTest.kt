@@ -28,7 +28,7 @@ class EntryJsonTest {
 
     @Test
     fun encodesEnumsByNameAndAllFields() {
-        val json = EntryJson.encode(Entry.feed(FeedType.FORMULA, 42L, id = "f"))
+        val json = EntryJson.encode(Entry.feed(FeedType.BOTTLE, 42L, id = "f"))
         assertTrue(json, json.contains("\"kind\":\"FEED\""))
         assertTrue(json, json.contains("\"feedType\":\"FORMULA\""))
         assertTrue(json, json.contains("\"updatedAtMillis\":42"))
@@ -101,7 +101,7 @@ class EntryJsonTest {
         // JSON from before several babies has no babyId: the first baby's. A blank one is read the same way.
         val older = EntryJson.decode("""{"id":"x","kind":"FEED","startMillis":1,"feedType":"FORMULA","updatedAtMillis":1}""")
         assertEquals(Baby.FIRST_ID, older.babyId)
-        assertEquals(Entry.feed(FeedType.FORMULA, 1L, id = "x"), older)
+        assertEquals(Entry.feed(FeedType.BOTTLE, 1L, id = "x"), older)
         val blank = EntryJson.decode("""{"id":"y","kind":"DIAPER","startMillis":1,"updatedAtMillis":1,"babyId":" "}""")
         assertEquals(Baby.FIRST_ID, blank.babyId)
         assertEquals(Baby.FIRST_ID, Entry.sleep(0L).copy(babyId = "").normalized().babyId)
@@ -129,7 +129,7 @@ class EntryExtensionsTest {
         assertFalse(breast.isInterval)
         assertFalse(breast.isRunning)
 
-        val formula = Entry.feed(FeedType.FORMULA, 0L)
+        val formula = Entry.feed(FeedType.BOTTLE, 0L)
         assertFalse(formula.isInterval)
         assertFalse(formula.isRunning)
         assertFalse(Entry.diaper(0L, pee = true, poop = false).isInterval)
@@ -173,7 +173,7 @@ class EntryValidationTest {
     fun intervals() {
         assertEquals(EntryViolation.END_BEFORE_START, violation(Entry.sleep(10L, 5L)))
         assertNull(violation(Entry.sleep(10L, 10L)))
-        assertEquals(EntryViolation.INSTANT_HAS_END, violation(Entry.feed(FeedType.FORMULA, 10L).copy(endMillis = 20L)))
+        assertEquals(EntryViolation.INSTANT_HAS_END, violation(Entry.feed(FeedType.BOTTLE, 10L).copy(endMillis = 20L)))
         assertEquals(EntryViolation.INSTANT_HAS_END, violation(Entry.diaper(10L, pee = true, poop = false).copy(endMillis = 20L)))
     }
 
@@ -186,25 +186,49 @@ class EntryValidationTest {
         // A breastfeed is an instant: new data never has an end.
         assertEquals(EntryViolation.INSTANT_HAS_END, violation(Entry.breastfeed(0L).copy(endMillis = 120_000L)))
         // The factory drops a side on other feed types.
-        assertNull(Entry.feed(FeedType.FORMULA, 0L, BreastSide.LEFT).breastSide)
+        assertNull(Entry.feed(FeedType.BOTTLE, 0L, BreastSide.LEFT).breastSide)
         assertEquals(
             EntryViolation.SIDE_ON_NON_BREAST,
-            violation(Entry.feed(FeedType.FORMULA, 0L).copy(breastSide = BreastSide.RIGHT)),
+            violation(Entry.feed(FeedType.BOTTLE, 0L).copy(breastSide = BreastSide.RIGHT)),
         )
     }
 
     @Test
     fun formulaAmount() {
         // The amount is optional, positive, and only on formula.
-        assertNull(violation(Entry.feed(FeedType.FORMULA, 0L)))
-        assertNull(violation(Entry.feed(FeedType.FORMULA, 0L, amountMl = 120)))
-        assertEquals(120, EntryJson.decode(EntryJson.encode(Entry.feed(FeedType.FORMULA, 0L, id = "f", amountMl = 120))).amountMl)
+        assertNull(violation(Entry.feed(FeedType.BOTTLE, 0L)))
+        assertNull(violation(Entry.feed(FeedType.BOTTLE, 0L, amountMl = 120)))
+        assertEquals(120, EntryJson.decode(EntryJson.encode(Entry.feed(FeedType.BOTTLE, 0L, id = "f", amountMl = 120))).amountMl)
         // The factory drops an amount on other feed types.
         assertNull(Entry.feed(FeedType.FOOD, 0L, amountMl = 120).amountMl)
         assertNull(Entry.breastfeed(0L).amountMl)
-        assertEquals(EntryViolation.AMOUNT_NOT_POSITIVE, violation(Entry.feed(FeedType.FORMULA, 0L).copy(amountMl = 0)))
-        assertEquals(EntryViolation.AMOUNT_ON_NON_FORMULA, violation(Entry.feed(null, 0L).copy(amountMl = 60)))
-        assertEquals(EntryViolation.AMOUNT_ON_NON_FORMULA, violation(Entry.sleep(0L).copy(amountMl = 60)))
+        assertEquals(EntryViolation.AMOUNT_NOT_POSITIVE, violation(Entry.feed(FeedType.BOTTLE, 0L).copy(amountMl = 0)))
+        assertEquals(EntryViolation.AMOUNT_ON_NON_BOTTLE, violation(Entry.feed(null, 0L).copy(amountMl = 60)))
+        assertEquals(EntryViolation.AMOUNT_ON_NON_BOTTLE, violation(Entry.sleep(0L).copy(amountMl = 60)))
+    }
+
+    @Test
+    fun bottleContents() {
+        // Milk or formula is optional, and only on a bottle; the bottle keeps the stored name "FORMULA".
+        assertNull(violation(Entry.feed(FeedType.BOTTLE, 0L, contents = BottleContents.MILK)))
+        val milk = Entry.feed(FeedType.BOTTLE, 0L, id = "b", amountMl = 90, contents = BottleContents.MILK)
+        val json = EntryJson.encode(milk)
+        assertTrue(json, json.contains("\"feedType\":\"FORMULA\""))
+        assertTrue(json, json.contains("\"bottleContents\":\"MILK\""))
+        assertEquals(milk, EntryJson.decode(json))
+        assertEquals(FeedType.BOTTLE, FeedType.fromStored("FORMULA"))
+        assertNull(FeedType.fromStored("BOTTLE"))
+        assertEquals("FORMULA", FeedType.BOTTLE.storedName)
+        // The factory drops contents on other feed types.
+        assertNull(Entry.feed(FeedType.FOOD, 0L, contents = BottleContents.FORMULA).bottleContents)
+        assertEquals(
+            EntryViolation.CONTENTS_ON_NON_BOTTLE,
+            violation(Entry.breastfeed(0L).copy(bottleContents = BottleContents.MILK)),
+        )
+        assertEquals(EntryViolation.CONTENTS_ON_NON_BOTTLE, violation(Entry.sleep(0L).copy(bottleContents = BottleContents.FORMULA)))
+        // An unknown contents value from a newer app reads as none.
+        val newer = EntryJson.decode("""{"id":"x","kind":"FEED","startMillis":1,"feedType":"FORMULA","bottleContents":"DONOR","updatedAtMillis":1}""")
+        assertNull(newer.bottleContents)
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.ffmathy.pooparazzi.core.domain.DayCounts
 import com.ffmathy.pooparazzi.core.domain.Forecast
 import com.ffmathy.pooparazzi.core.domain.LampState
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
@@ -100,22 +101,27 @@ sealed interface NoticeVariant {
     /** "Undone", after Undo in a receipt. */
     data object Undone : NoticeVariant
 
-    /** The logged entry's word ("Formula", "Pee") + "Already logged at 14:32": a repeat log found [existing]. */
+    /** The logged entry's word ("Bottle", "Pee") + "Already logged at 14:32": a repeat log found [existing]. */
     data class Duplicate(val existing: Entry) : NoticeVariant
 }
 
 /** The guard lines (DESIGN_SPEC §4.4). */
 enum class GuardKind { ASLEEP, AWAKE }
 
-/** What a receipt says. Titles carry the effective time where there is one ("Formula logged · 14:27"). */
+/** What a receipt says. Titles carry the effective time where there is one ("Bottle logged · 14:27"). */
 @Immutable
 sealed interface ReceiptVariant {
     /**
-     * "Breast logged" / "Formula logged" / "Food logged"; "Feed logged" for a feed with no type (null). A breast feed
-     * with a side order adds it after the time ("14:32 · Left → Right"), a formula feed with an amount the amount
-     * ("14:32 · 120 ml").
+     * "Breast logged" / "Bottle logged" / "Food logged"; "Feed logged" for a feed with no type (null). A breast feed
+     * with a side order adds it after the time ("14:32 · Left → Right"), a bottle feed its contents and amount
+     * ("14:32 · Formula · 120 ml").
      */
-    data class FeedLogged(val type: FeedType?, val side: BreastSide? = null, val amountMl: Int? = null) : ReceiptVariant
+    data class FeedLogged(
+        val type: FeedType?,
+        val side: BreastSide? = null,
+        val amountMl: Int? = null,
+        val contents: BottleContents? = null,
+    ) : ReceiptVariant
 
     /** "Pee logged" / "Poop logged" / "Pee + poop logged" / "Diaper logged". */
     data class DiaperLogged(val kind: DiaperKind) : ReceiptVariant
@@ -145,10 +151,11 @@ sealed interface HomeSheetUi {
     val was: Long? get() = stamp.takeIf { offsetMinutes != 0 }
 
     /**
-     * Feed sheet (V1_ADDITIONS §2.1): Breast / Formula / Food / Just the time. Once Breast is tapped ([breast]), the
+     * Feed sheet (V1_ADDITIONS §2.1): Breast / Bottle / Food / Just the time. Once Breast is tapped ([breast]), the
      * sheet shows the optional side [ticks] (Left / Right checkboxes, in the order ticked; [side] is what that order
-     * records, null for none) and "Log feed", which logs the breast feed at [time]. Once Formula is tapped
-     * ([formula]), the sheet shows the optional amount slider ([amountMl], null for none) and "Log feed".
+     * records, null for none) and "Log feed", which logs the breast feed at [time]. Once Bottle is tapped
+     * ([bottle]), the sheet shows the optional contents ([contents], Milk | Formula, null for none), the optional amount
+     * slider ([amountMl], null for none) and "Log feed".
      */
     data class Feed(
         override val stamp: Long,
@@ -156,8 +163,9 @@ sealed interface HomeSheetUi {
         override val chips: List<OffsetChipUi>,
         val breast: Boolean = false,
         val ticks: List<Breast> = emptyList(),
-        val formula: Boolean = false,
+        val bottle: Boolean = false,
         val amountMl: Int? = null,
+        val contents: BottleContents? = null,
     ) : HomeSheetUi {
         val side: BreastSide? get() = BreastSide.fromOrder(ticks)
     }

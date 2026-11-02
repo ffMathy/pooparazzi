@@ -106,7 +106,7 @@ object XIcons {
     fun forFeedType(type: FeedType?): ImageVector = when (type) {
         null -> feed
         FeedType.BREAST -> breast
-        FeedType.FORMULA -> feed
+        FeedType.BOTTLE -> feed
         FeedType.FOOD -> food
     }
 

@@ -80,7 +80,7 @@ class DataLayerEntrySyncTest {
     private val layer = FakeDataLayer()
     private val sink = FakeSink()
     private val sync = DataLayerEntrySync(layer, clock).also { it.attach(sink) }
-    private val feed = Entry.feed(FeedType.FORMULA, 900_000L, id = "f1")
+    private val feed = Entry.feed(FeedType.BOTTLE, 900_000L, id = "f1")
 
     @Test
     fun pushWritesTheJsonEntryUrgentlyAtItsPath() = runBlocking {

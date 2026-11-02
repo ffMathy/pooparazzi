@@ -70,7 +70,8 @@ import com.ffmathy.pooparazzi.phone.ui.preview.EditSamples
 import com.ffmathy.pooparazzi.phone.ui.home.feedbackType
 import com.ffmathy.pooparazzi.phone.ui.sheets.BreastSideCheckboxes
 import com.ffmathy.pooparazzi.phone.ui.sheets.DiaperToggleTiles
-import com.ffmathy.pooparazzi.phone.ui.sheets.FormulaAmountSlider
+import com.ffmathy.pooparazzi.phone.ui.sheets.AmountSlider
+import com.ffmathy.pooparazzi.phone.ui.sheets.BottleContentsChoice
 import com.ffmathy.pooparazzi.phone.ui.sheets.PoopDetails
 import com.ffmathy.pooparazzi.phone.ui.sheets.SaveButton
 import com.ffmathy.pooparazzi.phone.ui.sheets.SectionHeading
@@ -237,9 +238,9 @@ private fun SleepForm(state: EditUiState, formatters: Formatters, actions: EditA
 }
 
 /**
- * The optional type (Breast | Formula | Food; tapping the selected one clears it, leaving a feed with just its time)
+ * The optional type (Breast | Bottle | Food; tapping the selected one clears it, leaving a feed with just its time)
  * and one time block: every feed is an instant. A breastfeed adds the optional side (Left / Right checkboxes in tick
- * order), a formula feed the optional amount (the Feed sheet's slider).
+ * order), a bottle feed the optional contents (Milk | Formula) and amount (the Feed sheet's slider).
  */
 @Composable
 private fun FeedForm(state: EditUiState, formatters: Formatters, actions: EditActions) {
@@ -250,8 +251,6 @@ private fun FeedForm(state: EditUiState, formatters: Formatters, actions: EditAc
         selected = draft.feedType,
         onSelect = actions::onFeedType,
         label = { stringResource(Labels.feedType(it, compact = true)) },
-        // Danish "Modermælks­erstatning" needs the room to break at its soft hyphen, beside the selection check.
-        weight = { if (it == FeedType.FORMULA) 1.5f else 1f },
     )
     Spacer(Modifier.height(9.dp))
     InstantBlock(state, formatters, actions)
@@ -260,10 +259,13 @@ private fun FeedForm(state: EditUiState, formatters: Formatters, actions: EditAc
         SectionLabel(stringResource(R.string.join_dot, stringResource(R.string.edit_side), stringResource(CoreR.string.optional)))
         SideCheckboxes(draft.side, actions::onSideTick)
     }
-    if (draft.isFormula) {
+    if (draft.isBottle) {
+        Spacer(Modifier.height(16.dp))
+        SectionLabel(stringResource(R.string.join_dot, stringResource(CoreR.string.bottle_contents), stringResource(CoreR.string.optional)))
+        BottleContentsChoice(draft.contents, actions::onContents, enabled = true)
         Spacer(Modifier.height(16.dp))
         SectionLabel(stringResource(R.string.join_dot, stringResource(CoreR.string.amount), stringResource(CoreR.string.optional)))
-        FormulaAmountSlider(draft.amountMl, formatters.volume, actions::onAmount, enabled = true, modifier = Modifier.testTag(EditTags.AMOUNT))
+        AmountSlider(draft.amountMl, formatters.volume, actions::onAmount, enabled = true, modifier = Modifier.testTag(EditTags.AMOUNT))
     }
 }
 

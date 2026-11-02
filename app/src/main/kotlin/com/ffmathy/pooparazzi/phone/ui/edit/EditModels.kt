@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.phone.ui.edit
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -36,21 +37,23 @@ data class EditDraft(
     val poop: Boolean = false,
     val color: PoopColor? = null,
     val texture: PoopTexture? = null,
-    /** A formula feed's optional amount in millilitres. */
+    /** A bottle feed's optional amount in millilitres. */
     val amountMl: Int? = null,
+    /** A bottle feed's optional contents. */
+    val contents: BottleContents? = null,
 ) {
     val isBreastfeed: Boolean get() = kind == EntryKind.FEED && feedType == FeedType.BREAST
-    val isFormula: Boolean get() = kind == EntryKind.FEED && feedType == FeedType.FORMULA
+    val isBottle: Boolean get() = kind == EntryKind.FEED && feedType == FeedType.BOTTLE
     val isInterval: Boolean get() = kind == EntryKind.SLEEP
     val running: Boolean get() = isInterval && end == null
 
     /**
-     * The entry this draft describes (instants drop any end; the side only on a breastfeed, the amount only on formula;
+     * The entry this draft describes (instants drop any end; the side only on a breastfeed, the contents and amount only on a bottle;
      * colour and texture only with poop).
      */
     fun toEntry(updatedAtMillis: Long): Entry = when (kind) {
         EntryKind.SLEEP -> Entry.sleep(start, end, id = id, updatedAtMillis = updatedAtMillis)
-        EntryKind.FEED -> Entry.feed(feedType, start, side, id = id, updatedAtMillis = updatedAtMillis, amountMl = amountMl)
+        EntryKind.FEED -> Entry.feed(feedType, start, side, id = id, updatedAtMillis = updatedAtMillis, amountMl = amountMl, contents = contents)
         EntryKind.DIAPER -> Entry.diaper(start, pee, poop, color, texture, id = id, updatedAtMillis = updatedAtMillis)
     }
 
@@ -67,6 +70,7 @@ data class EditDraft(
             color = entry.poopColor,
             texture = entry.poopTexture,
             amountMl = entry.amountMl,
+            contents = entry.bottleContents,
         )
     }
 }
@@ -159,8 +163,11 @@ interface EditActions {
     /** Ticks or unticks [breast] on a breastfeed; the tick order is the side recorded. */
     fun onSideTick(breast: Breast) {}
 
-    /** The amount slider of a formula feed, in millilitres; null is no amount. */
+    /** The amount slider of a bottle feed, in millilitres; null is no amount. */
     fun onAmount(amountMl: Int?) {}
+
+    /** What a bottle feed held; null clears it (tapping the selected one again). */
+    fun onContents(contents: BottleContents?) {}
 
     /** ±1m / ±5m. */
     fun onNudge(field: TimeField, minutes: Int) {}

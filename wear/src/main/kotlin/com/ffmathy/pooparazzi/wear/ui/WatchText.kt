@@ -24,7 +24,7 @@ import com.ffmathy.pooparazzi.core.R as CoreR
  * ([SpokenText]), so word order and punctuation belong to each language.
  */
 
-/** The feed type word ("Formula"), or "Feed" for a feed with no type; [compact] adds the soft hyphen for tight places. */
+/** The feed type word ("Bottle"), or "Feed" for a feed with no type; [compact] adds the soft hyphen for tight places. */
 @Composable
 @ReadOnlyComposable
 fun feedTypeLabel(entry: Entry, compact: Boolean = false): String =
@@ -73,7 +73,7 @@ class SpokenText(private val res: Resources) {
     /** "{first}, {second}". */
     fun pair(first: String, second: String): String = res.getString(R.string.spoken_pair, first, second)
 
-    /** Facts read in a row: "Last feed, formula, 2 hours 10 minutes ago, at 12:22". */
+    /** Facts read in a row: "Last feed, bottle, 2 hours 10 minutes ago, at 12:22". */
     fun all(facts: List<String>): String = facts.reduce(::pair)
 
     /** "Asleep, 1 hour 7 minutes, since 02:05". */

@@ -145,7 +145,7 @@ class CloudBackupTest {
     @Test
     fun theFirstSyncBacksUpEverythingLoggedSoFar() = runTest {
         val phone = Phone(this)
-        val feed = phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        val feed = phone.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         // A row from before the backup existed: never flagged for it.
         val old = Entry.sleep(now - 120 * minute, now - 90 * minute, id = "old")
         phone.db.entryDao().write(EntryEntity.from(old, pendingSync = false))
@@ -205,7 +205,7 @@ class CloudBackupTest {
     @Test
     fun signingInAgainUploadsOnlyTheDifferences() = runTest {
         val phone = Phone(this, alice)
-        phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        phone.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         phone.repo.logFeed(FeedType.FOOD, now - 20 * minute)
         phone.backup.start()
         advanceUntilIdle()
@@ -237,7 +237,7 @@ class CloudBackupTest {
     @Test
     fun anotherAccountGetsEverythingAndSwitchingBackSendsOnlyWhatItLacks() = runTest {
         val phone = Phone(this, alice)
-        val a = phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        val a = phone.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         val b = phone.repo.logDiaper(now - 20 * minute, pee = true, poop = true)
         phone.backup.start()
         advanceUntilIdle()
@@ -375,7 +375,7 @@ class CloudBackupTest {
         advanceUntilIdle()
         val pulls = store.pulls
 
-        val feed = phone.repo.logFeed(FeedType.FORMULA, now - minute)
+        val feed = phone.repo.logFeed(FeedType.BOTTLE, now - minute)
         runCurrent()
         advanceTimeBy(CloudBackup.PUSH_DELAY_MILLIS - 500)
         runCurrent()
@@ -465,7 +465,7 @@ class CloudBackupTest {
     fun offlineKeepsTheEntriesOnThePhoneUntilTheBackendIsBack() = runTest {
         store.failure = CloudError.OFFLINE
         val phone = Phone(this, alice)
-        val feed = phone.repo.logFeed(FeedType.FORMULA, now - minute)
+        val feed = phone.repo.logFeed(FeedType.BOTTLE, now - minute)
         phone.backup.start()
         advanceUntilIdle()
         assertEquals(CloudStatus.Offline, phone.status)
@@ -490,7 +490,7 @@ class CloudBackupTest {
     @Test
     fun failuresBecomeTheStatusAndNeverThrow() = runTest {
         val phone = Phone(this, alice)
-        val feed = phone.repo.logFeed(FeedType.FORMULA, now - minute)
+        val feed = phone.repo.logFeed(FeedType.BOTTLE, now - minute)
         store.uploadFailure = CloudError.OTHER
         phone.backup.start()
         advanceUntilIdle()
@@ -511,7 +511,7 @@ class CloudBackupTest {
     @Test
     fun signedOutNothingIsSent() = runTest {
         val phone = Phone(this)
-        phone.repo.logFeed(FeedType.FORMULA, now - minute)
+        phone.repo.logFeed(FeedType.BOTTLE, now - minute)
         phone.backup.start()
         advanceUntilIdle()
         phone.backup.requestSync()
@@ -549,7 +549,7 @@ class CloudBackupTest {
 
         // Signing in again backs up everything (the first sync for the account again), from the start of the backup.
         store.failure = null
-        val later = phone.repo.logFeed(FeedType.FORMULA, now - minute)
+        val later = phone.repo.logFeed(FeedType.BOTTLE, now - minute)
         phone.account.value = alice
         advanceUntilIdle()
         assertEquals(CloudStatus.Synced(now), phone.status)
@@ -563,7 +563,7 @@ class CloudBackupTest {
         val phone = Phone(this, alice, InMemoryCloudBookkeepingStore(CloudBookkeeping(lastSyncFamilyId = alice.fid, lastSyncAtMillis = 42)))
         val seen = mutableListOf<CloudStatus>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { phone.backup.status.collect { seen += it } }
-        phone.repo.logFeed(FeedType.FORMULA, now - minute)
+        phone.repo.logFeed(FeedType.BOTTLE, now - minute)
         phone.backup.start()
         runCurrent()
         assertEquals("the last backup at once, then the sync", listOf(CloudStatus.Off, CloudStatus.Synced(42), CloudStatus.Syncing), seen)
@@ -581,7 +581,7 @@ class CloudBackupTest {
     @Test
     fun deletingTheBackupStopsUploadsUntilTheAccountChanges() = runTest {
         val phone = Phone(this, alice)
-        val a = phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        val a = phone.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         phone.backup.start()
         advanceUntilIdle()
         assertEquals(setOf(a.id), store.entries(alice.fid).keys)
@@ -610,7 +610,7 @@ class CloudBackupTest {
     @Test
     fun aDeletedBackupStaysDeletedAfterARestartUntilBackUpNow() = runTest {
         val phone = Phone(this, alice)
-        val a = phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        val a = phone.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         phone.backup.start()
         advanceUntilIdle()
         assertTrue(phone.backup.deleteBackup())
@@ -633,7 +633,7 @@ class CloudBackupTest {
     @Test
     fun aFailedDeletionSaysSo() = runTest {
         val phone = Phone(this, alice)
-        phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        phone.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         phone.backup.start()
         advanceUntilIdle()
         store.failure = CloudError.OFFLINE
@@ -654,7 +654,7 @@ class CloudBackupTest {
     fun aPushPullsFirstSoAnOlderEditNeverOverwritesANewerOne() = runTest {
         val a = Phone(this, alice)
         val b = Phone(this, alice)
-        val feed = a.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        val feed = a.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         a.backup.start()
         advanceUntilIdle()
         b.backup.start()
@@ -713,7 +713,7 @@ class CloudBackupTest {
         advanceUntilIdle()
 
         store.latencyMillis = 1_000
-        val feed = phone.repo.logFeed(FeedType.FORMULA, now - 10 * minute)
+        val feed = phone.repo.logFeed(FeedType.BOTTLE, now - 10 * minute)
         runCurrent()
         advanceTimeBy(CloudBackup.PUSH_DELAY_MILLIS + 500)
         runCurrent()
@@ -727,7 +727,7 @@ class CloudBackupTest {
     @Test
     fun switchingBackFromAnEmptyAccountSendsNothingAgain() = runTest {
         val phone = Phone(this, alice)
-        phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        phone.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         phone.repo.logDiaper(now - 20 * minute, pee = true, poop = true)
         phone.backup.start()
         advanceUntilIdle()
@@ -820,7 +820,7 @@ class CloudBackupTest {
         a.settings.setBabyName("Noa")
         val ida = a.settings.addBaby()
         a.settings.renameBaby(ida.id, "Ida")
-        val noasFeed = a.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        val noasFeed = a.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         a.baby.value = ida.id
         val idasDiaper = a.repo.logDiaper(now - 20 * minute, pee = true, poop = false)
         a.backup.start()
@@ -898,7 +898,7 @@ class CloudBackupTest {
         a.settings.setBabyName("Noa")
         val ida = a.settings.addBaby()
         a.settings.renameBaby(ida.id, "Ida")
-        val alicesFeed = a.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        val alicesFeed = a.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         a.backup.start()
         advanceUntilIdle()
 
@@ -945,7 +945,7 @@ class CloudBackupTest {
         val shared = "family-shared"
         val a = Phone(this, alice.copy(familyId = shared))
         a.settings.setBabyName("Noa")
-        val feed = a.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        val feed = a.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         a.backup.start()
         advanceUntilIdle()
         val b = Phone(this, bob.copy(familyId = shared))
@@ -997,7 +997,7 @@ class CloudBackupTest {
     @Test
     fun withoutAFamilyYetNothingIsSentAndTheFlagsStay() = runTest {
         val phone = Phone(this, alice.copy(familyId = null))
-        val feed = phone.repo.logFeed(FeedType.FORMULA, now - minute)
+        val feed = phone.repo.logFeed(FeedType.BOTTLE, now - minute)
         phone.settings.setBabyName("Noa")
         phone.backup.start()
         advanceUntilIdle()
@@ -1022,7 +1022,7 @@ class CloudBackupTest {
         val phone = Phone(this, alice)
         store.addMember(alice.fid, alice.uid)
         store.addMember(alice.fid, bob.uid)
-        val a = phone.repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        val a = phone.repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         phone.backup.start()
         advanceUntilIdle()
 

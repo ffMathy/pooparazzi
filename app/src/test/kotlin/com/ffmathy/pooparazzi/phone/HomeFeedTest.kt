@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.phone
 
 import android.app.Application
 import com.ffmathy.pooparazzi.core.domain.LampState
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -65,14 +66,14 @@ class HomeFeedTest : HomeViewModelTestBase() {
         home.viewModel.onSheetOffset(-10)
         home.settle()
         home.clock.advanceBy(20_000) // the stamp was taken on the first tap
-        home.viewModel.onFeedType(FeedType.FORMULA)
+        home.viewModel.onFeedType(FeedType.BOTTLE)
         val step = home.settle().sheet as HomeSheetUi.Feed
-        assertTrue("Formula offers the optional amount first", step.formula)
+        assertTrue("Bottle offers the optional contents and amount first", step.bottle)
         assertNull(step.amountMl)
-        home.viewModel.onLogFormula()
+        home.viewModel.onLogBottle()
         val state = home.settle()
 
-        val feed = home.entries().single { it.feedType == FeedType.FORMULA && it.startMillis > SampleData.at(13, 0) }
+        val feed = home.entries().single { it.feedType == FeedType.BOTTLE && it.startMillis > SampleData.at(13, 0) }
         assertEquals(SampleData.NOW_1432 - 10 * MINUTE, feed.startMillis)
         assertNull(feed.endMillis)
         assertNull("the amount is optional", feed.amountMl)
@@ -84,27 +85,46 @@ class HomeFeedTest : HomeViewModelTestBase() {
     @Test
     fun formulaRecordsTheAmountFromTheSlider() = homeTest { home ->
         home.tapFeed()
-        home.viewModel.onFeedType(FeedType.FORMULA)
-        home.viewModel.onFormulaAmount(120)
+        home.viewModel.onFeedType(FeedType.BOTTLE)
+        home.viewModel.onBottleAmount(120)
         assertEquals(120, (home.settle().sheet as HomeSheetUi.Feed).amountMl)
-        home.viewModel.onFormulaAmount(null)
+        home.viewModel.onBottleAmount(null)
         assertNull("back to no amount", (home.settle().sheet as HomeSheetUi.Feed).amountMl)
-        home.viewModel.onFormulaAmount(150)
-        home.viewModel.onLogFormula()
+        home.viewModel.onBottleAmount(150)
+        home.viewModel.onLogBottle()
         val state = home.settle()
 
-        val feed = home.entries().single { it.feedType == FeedType.FORMULA && it.startMillis >= SampleData.NOW_1432 }
+        val feed = home.entries().single { it.feedType == FeedType.BOTTLE && it.startMillis >= SampleData.NOW_1432 }
         assertEquals(150, feed.amountMl)
         assertNull(state.sheet)
     }
 
     @Test
+    fun aBottleRecordsMilkOrFormulaAndTappingTheSelectedOneClearsIt() = homeTest { home ->
+        home.tapFeed()
+        home.viewModel.onFeedType(FeedType.BOTTLE)
+        assertNull("nothing picked yet", (home.settle().sheet as HomeSheetUi.Feed).contents)
+        home.viewModel.onBottleContents(BottleContents.FORMULA)
+        assertEquals(BottleContents.FORMULA, (home.settle().sheet as HomeSheetUi.Feed).contents)
+        home.viewModel.onBottleContents(null)
+        assertNull("cleared", (home.settle().sheet as HomeSheetUi.Feed).contents)
+        home.viewModel.onBottleContents(BottleContents.MILK)
+        home.viewModel.onBottleAmount(90)
+        home.viewModel.onLogBottle()
+        home.settle()
+
+        val feed = home.entries().single { it.feedType == FeedType.BOTTLE && it.startMillis >= SampleData.NOW_1432 }
+        assertEquals(BottleContents.MILK, feed.bottleContents)
+        assertEquals(90, feed.amountMl)
+    }
+
+    @Test
     fun theAmountIsOnlyTakenInTheFormulaStep() = homeTest { home ->
         home.tapFeed()
-        home.viewModel.onFormulaAmount(120)
-        home.viewModel.onLogFormula()
+        home.viewModel.onBottleAmount(120)
+        home.viewModel.onLogBottle()
         val sheet = home.settle().sheet as HomeSheetUi.Feed
-        assertFalse(sheet.formula)
+        assertFalse(sheet.bottle)
         assertNull(sheet.amountMl)
         assertTrue("nothing logged", home.entries().none { it.startMillis >= SampleData.NOW_1432 })
     }

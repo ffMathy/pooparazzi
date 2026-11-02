@@ -4,7 +4,9 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.TypeConverter
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
@@ -14,7 +16,7 @@ import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 
 /**
- * Room row for an [Entry]. Enums are stored by name. Apps work with [Entry]; this type is storage only.
+ * Room row for an [Entry]. Enums are stored by name (a bottle feed's type as "FORMULA", see [FeedTypeConverter]). Apps work with [Entry]; this type is storage only.
  *
  * A row has two pending flags (BABIES_AND_BACKUP §4.2): [pendingSync] for the other device and [cloudPending] for the
  * backend. A soft-deleted row is purged only once both are clear.
@@ -53,8 +55,10 @@ data class EntryEntity(
      */
     @ColumnInfo(defaultValue = "0")
     val cloudPending: Boolean = false,
-    /** A formula feed's optional amount in millilitres ([Entry.amountMl]). */
+    /** A bottle feed's optional amount in millilitres ([Entry.amountMl]). */
     val amountMl: Int? = null,
+    /** A bottle feed's optional contents ([Entry.bottleContents]). */
+    val bottleContents: BottleContents? = null,
 ) {
     /** The entry this row holds, [normalized] (a timed breastfeed stored by an older version reads as an instant). */
     fun toEntry(): Entry = Entry(
@@ -72,6 +76,7 @@ data class EntryEntity(
         deleted = deleted,
         babyId = babyId,
         amountMl = amountMl,
+        bottleContents = bottleContents,
     ).normalized()
 
     companion object {
@@ -98,6 +103,7 @@ data class EntryEntity(
             babyId = entry.babyId,
             cloudPending = cloudPending,
             amountMl = entry.amountMl,
+            bottleContents = entry.bottleContents,
         )
     }
 }
@@ -111,3 +117,13 @@ data class PurgedEntryEntity(
     @PrimaryKey val id: String,
     val purgedAtMillis: Long,
 )
+
+/**
+ * Stores a [FeedType] by its [FeedType.storedName], so a bottle feed keeps the "FORMULA" of rows written before the
+ * bottle could hold breast milk. An unknown name reads as no type.
+ */
+class FeedTypeConverter {
+    @TypeConverter fun toStored(type: FeedType?): String? = type?.storedName
+
+    @TypeConverter fun fromStored(stored: String?): FeedType? = FeedType.fromStored(stored)
+}

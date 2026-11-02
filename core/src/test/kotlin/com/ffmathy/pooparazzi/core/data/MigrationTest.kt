@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.BreastSide
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.sample.SampleData
@@ -107,7 +108,50 @@ class MigrationTest {
         try {
             val repo = RoomEntryRepository(db, FixedClock(SampleData.NOW_1432))
             runBlocking {
-                assertEquals(Entry.feed(FeedType.FORMULA, 1000, id = "formula", updatedAtMillis = 1000), repo.get("formula"))
+                assertEquals(Entry.feed(FeedType.BOTTLE, 1000, id = "formula", updatedAtMillis = 1000), repo.get("formula"))
+            }
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun version3FormulaRowsAreBottlesWithNoContentsAndBottlesAreStillStoredAsFormula() {
+        helper.createDatabase(NAME, 3).apply {
+            execSQL(
+                "INSERT INTO entries (id, kind, startMillis, endMillis, feedType, breastSide, pee, poop, poopColor, " +
+                    "poopTexture, updatedAtMillis, deleted, pendingSync, createdLocally, babyId, cloudPending, amountMl) VALUES " +
+                    "('formula', 'FEED', 1000, NULL, 'FORMULA', NULL, 0, 0, NULL, NULL, 1000, 0, 0, 1, 'default', 0, 120)",
+            )
+            close()
+        }
+
+        // Validates the migrated schema against 4.json (the new nullable bottleContents column).
+        helper.runMigrationsAndValidate(NAME, 4, true).apply {
+            query("SELECT id, bottleContents FROM entries").use { rows ->
+                assertTrue(rows.moveToNext())
+                assertEquals("formula", rows.getString(0))
+                assertTrue(rows.isNull(1))
+            }
+            close()
+        }
+
+        val db = Room.databaseBuilder(context, PooparazziDatabase::class.java, NAME).allowMainThreadQueries().build()
+        try {
+            val repo = RoomEntryRepository(db, FixedClock(SampleData.NOW_1432))
+            runBlocking {
+                assertEquals(
+                    Entry.feed(FeedType.BOTTLE, 1000, id = "formula", updatedAtMillis = 1000, amountMl = 120),
+                    repo.get("formula"),
+                )
+                val milk = repo.logFeed(FeedType.BOTTLE, SampleData.NOW_1432, amountMl = 90, contents = BottleContents.MILK)
+                assertEquals(BottleContents.MILK, repo.get(milk.id)!!.bottleContents)
+            }
+            // An older app reads the type it knows: a new bottle is still stored as "FORMULA".
+            db.openHelper.readableDatabase.query("SELECT DISTINCT feedType FROM entries").use { rows ->
+                assertTrue(rows.moveToNext())
+                assertEquals("FORMULA", rows.getString(0))
+                assertTrue(!rows.moveToNext())
             }
         } finally {
             db.close()

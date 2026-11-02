@@ -14,7 +14,7 @@ sealed interface HomeLaunch {
     /** Home with nothing extra (the widget background, a notification body). */
     data object Home : HomeLaunch
 
-    /** The Feed sheet (Breast / Formula / Food / Just the time). */
+    /** The Feed sheet (Breast / Bottle / Food / Just the time). */
     data object Feed : HomeLaunch
 
     /** The Diaper sheet. */

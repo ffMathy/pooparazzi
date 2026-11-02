@@ -43,14 +43,14 @@ fun entryIcon(entry: Entry, events: EventPalette): TintedIcon = when (entry.kind
     EntryKind.DIAPER -> diaperIcon(entry.diaperKind ?: DiaperKind.PLAIN, events)
 }
 
-/** "Formula" (with a soft hyphen in Danish where [compact]); "Breast"; "Food"; "Feed" for no type (null). */
+/** "Breast"; "Bottle"; "Food"; "Feed" for no type (null). */
 @Composable
 @ReadOnlyComposable
 fun feedTypeLabel(type: FeedType?, compact: Boolean = false): String = stringResource(Labels.feedType(type, compact))
 
 /**
  * What a feed was, for the last-feed status lines: the breast order when one was recorded ("Left → Right", or "L → R"
- * where [short]), else the type word ("Formula"); null for a feed logged with just its time.
+ * where [short]), else the type word ("Bottle"); null for a feed logged with just its time.
  */
 @Composable
 @ReadOnlyComposable
@@ -58,13 +58,18 @@ fun feedDetail(feed: Entry, short: Boolean = false): String? =
     feed.breastSide?.takeIf { feed.isBreastfeed }?.let { stringResource(if (short) Labels.sideShort(it) else Labels.side(it)) }
         ?: feed.feedType?.let { feedTypeLabel(it) }
 
-/** [feedDetail] for TalkBack, in lower case: "breast, left then right", "formula"; null with no type. */
+/** [feedDetail] for TalkBack, in lower case: "breast, left then right", "bottle, formula", "bottle"; null with no type. */
 @Composable
 @ReadOnlyComposable
 fun spokenFeedDetail(feed: Entry, locale: Locale): String? {
     val type = feed.feedType ?: return null
     val side = feed.breastSide?.takeIf { feed.isBreastfeed }
-    val words = if (side == null) feedTypeLabel(type) else stringResource(R.string.spoken_pair, feedTypeLabel(type), spokenSide(side))
+    val contents = feed.bottleContents?.takeIf { type == FeedType.BOTTLE }
+    val words = when {
+        side != null -> stringResource(R.string.spoken_pair, feedTypeLabel(type), spokenSide(side))
+        contents != null -> stringResource(R.string.spoken_pair, feedTypeLabel(type), stringResource(Labels.bottleContents(contents)))
+        else -> feedTypeLabel(type)
+    }
     return words.lowercase(locale)
 }
 

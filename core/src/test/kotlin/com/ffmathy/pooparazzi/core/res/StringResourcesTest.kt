@@ -52,7 +52,7 @@ class StringResourcesTest {
         // The glossary needs real æ/ø/å, the arrow and the middle dot, not ASCII stand-ins.
         assertEquals("Venstre → Højre", danish.strings["side_left_then_right"])
         assertEquals("Synkroniseret med ur · %1\$s", danish.strings["sync_synced_with_watch"])
-        assertEquals("Modermælks­erstatning", danish.strings["feed_type_formula_compact"])
+        assertEquals("Modermælks­erstatning", danish.strings["bottle_formula_compact"])
     }
 
     private fun placeholders(text: String): List<String> =

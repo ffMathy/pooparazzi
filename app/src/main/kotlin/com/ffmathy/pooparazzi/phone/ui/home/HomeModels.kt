@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.phone.ui.home
 
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
@@ -24,13 +25,14 @@ internal sealed interface CardSpec {
 internal sealed interface ReceiptSpec {
     /**
      * [type] null: a feed logged with just its time ("Feed logged"). [side]: a breast feed's ticked order, if any;
-     * [amountMl]: a formula feed's amount, if any.
+     * [amountMl] and [contents]: a bottle feed's amount and contents, if any.
      */
     data class FeedLogged(
         val entryId: String,
         val type: FeedType?,
         val side: BreastSide? = null,
         val amountMl: Int? = null,
+        val contents: BottleContents? = null,
     ) : ReceiptSpec
     data class DiaperLogged(val entryId: String, val kind: DiaperKind) : ReceiptSpec
     data class SleepStarted(val entryId: String) : ReceiptSpec
@@ -74,16 +76,18 @@ internal sealed interface SheetModel {
 
     /**
      * The Feed sheet. [breast] is true once Breast was tapped: the sheet then shows the side checkboxes and "Log feed";
-     * [ticks] are the breasts ticked so far, in tick order (V1_ADDITIONS §2.1). [formula] is true once Formula was
-     * tapped: the sheet then shows the amount slider and "Log feed"; [amountMl] is the amount picked (null: none).
+     * [ticks] are the breasts ticked so far, in tick order (V1_ADDITIONS §2.1). [bottle] is true once Bottle was
+     * tapped: the sheet then shows Milk | Formula, the amount slider and "Log feed"; [contents] and [amountMl] are what
+     * was picked (null: none).
      */
     data class Feed(
         override val stamp: Long,
         override val offsetMinutes: Int = 0,
         val breast: Boolean = false,
         val ticks: List<Breast> = emptyList(),
-        val formula: Boolean = false,
+        val bottle: Boolean = false,
         val amountMl: Int? = null,
+        val contents: BottleContents? = null,
     ) : SheetModel
 
     data class Diaper(

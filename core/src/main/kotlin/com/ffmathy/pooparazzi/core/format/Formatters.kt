@@ -8,7 +8,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import java.time.ZoneId
 
-/** All formatters for one locale, 12/24 h setting, region (the formula [volume] unit) and time zone. */
+/** All formatters for one locale, 12/24 h setting, region (the bottle [volume] unit) and time zone. */
 @Immutable
 class Formatters(
     val duration: DurationFormatter,

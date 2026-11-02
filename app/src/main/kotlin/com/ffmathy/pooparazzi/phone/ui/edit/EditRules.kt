@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone.ui.edit
 
 import com.ffmathy.pooparazzi.core.domain.localDate
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -46,19 +47,25 @@ internal object EditRules {
 
     /**
      * Changes a feed's type, keeping its time. A breastfeed gets back the original's side when [original] was one,
-     * otherwise no side; a formula feed gets back the original's amount when [original] was formula, otherwise none.
-     * Other types drop the side and the amount. Feeds never have an end.
+     * otherwise no side; a bottle feed gets back the original's contents and amount when [original] was a bottle,
+     * otherwise none. Other types drop the side, the contents and the amount. Feeds never have an end.
      */
     fun withFeedType(draft: EditDraft, type: FeedType?, original: Entry?): EditDraft {
         if (draft.kind != EntryKind.FEED || draft.feedType == type) return draft
         val side = if (type == FeedType.BREAST && original?.isBreastfeed == true) original.breastSide else null
-        val amount = if (type == FeedType.FORMULA && original?.feedType == FeedType.FORMULA) original.amountMl else null
-        return draft.copy(feedType = type, end = null, side = side, amountMl = amount)
+        val bottle = type == FeedType.BOTTLE && original?.feedType == FeedType.BOTTLE
+        val amount = if (bottle) original?.amountMl else null
+        val contents = if (bottle) original?.bottleContents else null
+        return draft.copy(feedType = type, end = null, side = side, amountMl = amount, contents = contents)
     }
 
-    /** Sets a formula feed's amount ([amountMl] null or not positive: none); other drafts are unchanged. */
+    /** Sets a bottle feed's amount ([amountMl] null or not positive: none); other drafts are unchanged. */
     fun withAmount(draft: EditDraft, amountMl: Int?): EditDraft =
-        if (draft.isFormula) draft.copy(amountMl = amountMl?.takeIf { it > 0 }) else draft
+        if (draft.isBottle) draft.copy(amountMl = amountMl?.takeIf { it > 0 }) else draft
+
+    /** Sets a bottle feed's contents ([contents] null: none); other drafts are unchanged. */
+    fun withContents(draft: EditDraft, contents: BottleContents?): EditDraft =
+        if (draft.isBottle) draft.copy(contents = contents) else draft
 
     /** Moves [field] by [minutes]; a running end does not move. */
     fun nudge(draft: EditDraft, field: TimeField, minutes: Int): EditDraft = when (field) {
@@ -149,18 +156,19 @@ internal object EditRules {
             color = pick(draft.color, base.color, theirs.color),
             texture = pick(draft.texture, base.texture, theirs.texture),
             amountMl = pick(draft.amountMl, base.amountMl, theirs.amountMl),
+            contents = pick(draft.contents, base.contents, theirs.contents),
         )
         return when {
             merged.kind == EntryKind.DIAPER ->
                 if (merged.poop) {
-                    merged.copy(end = null, side = null, amountMl = null)
+                    merged.copy(end = null, side = null, amountMl = null, contents = null)
                 } else {
-                    merged.copy(end = null, side = null, color = null, texture = null, amountMl = null)
+                    merged.copy(end = null, side = null, color = null, texture = null, amountMl = null, contents = null)
                 }
-            merged.isInterval -> merged.copy(side = null, amountMl = null)
-            merged.isBreastfeed -> merged.copy(end = null, amountMl = null)
-            merged.isFormula -> merged.copy(end = null, side = null)
-            else -> merged.copy(end = null, side = null, amountMl = null)
+            merged.isInterval -> merged.copy(side = null, amountMl = null, contents = null)
+            merged.isBreastfeed -> merged.copy(end = null, amountMl = null, contents = null)
+            merged.isBottle -> merged.copy(end = null, side = null)
+            else -> merged.copy(end = null, side = null, amountMl = null, contents = null)
         }
     }
 

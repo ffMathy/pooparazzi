@@ -163,7 +163,7 @@ class RoomEntryRepositoryTest {
         val again = repo.logFeedChecked(FeedType.BREAST, now - 4_000, BreastSide.RIGHT)
         assertTrue(again is LogResult.Duplicate)
         assertEquals(first.entry, again.entry)
-        assertTrue(repo.logFeedChecked(FeedType.FORMULA, now) is LogResult.Logged)
+        assertTrue(repo.logFeedChecked(FeedType.BOTTLE, now) is LogResult.Logged)
         assertTrue(repo.logFeedChecked(FeedType.BREAST, now - 5_000) is LogResult.Logged)
         // Breastfeeds never block each other or a sleep.
         assertTrue(repo.startSleep(now - minute).isSuccess)
@@ -211,7 +211,7 @@ class RoomEntryRepositoryTest {
         val again = repo.logFeedChecked(null, now + 2_000)
         assertTrue(again is LogResult.Duplicate)
         assertEquals(feed, again.entry)
-        assertTrue(repo.logFeedChecked(FeedType.FORMULA, now) is LogResult.Logged)
+        assertTrue(repo.logFeedChecked(FeedType.BOTTLE, now) is LogResult.Logged)
         assertTrue(repo.logFeedChecked(null, now - 5_000) is LogResult.Logged)
         // A type can be set later, and cleared again.
         assertEquals(FeedType.FOOD, repo.update(feed.copy(feedType = FeedType.FOOD)).feedType)
@@ -222,7 +222,7 @@ class RoomEntryRepositoryTest {
 
     @Test
     fun formulaAndFoodAreInstants() = test {
-        val formula = repo.logFeed(FeedType.FORMULA, now)
+        val formula = repo.logFeed(FeedType.BOTTLE, now)
         val food = repo.logFeed(FeedType.FOOD, now - 5 * minute)
         assertNull(formula.endMillis)
         assertEquals(FeedType.FOOD, food.feedType)
@@ -230,14 +230,14 @@ class RoomEntryRepositoryTest {
 
     @Test
     fun repeatedLogsWithin5SecondsAreOneEntry() = test {
-        val first = repo.logFeedChecked(FeedType.FORMULA, now)
+        val first = repo.logFeedChecked(FeedType.BOTTLE, now)
         assertTrue(first is LogResult.Logged)
-        val again = repo.logFeedChecked(FeedType.FORMULA, now + 4_000)
+        val again = repo.logFeedChecked(FeedType.BOTTLE, now + 4_000)
         assertTrue(again is LogResult.Duplicate)
         assertEquals(first.entry, again.entry)
         // Another type, or 5 s apart, is a new entry.
         assertTrue(repo.logFeedChecked(FeedType.FOOD, now) is LogResult.Logged)
-        assertTrue(repo.logFeedChecked(FeedType.FORMULA, now - 5_000) is LogResult.Logged)
+        assertTrue(repo.logFeedChecked(FeedType.BOTTLE, now - 5_000) is LogResult.Logged)
 
         val pee = repo.logDiaper(now, pee = true, poop = false)
         assertEquals(pee, repo.logDiaper(now - 1_000, pee = true, poop = false))
@@ -278,7 +278,7 @@ class RoomEntryRepositoryTest {
 
     @Test
     fun updateBumpsTheClockEvenWhenTimeStandsStill() = test {
-        val feed = repo.logFeed(FeedType.FORMULA, now)
+        val feed = repo.logFeed(FeedType.BOTTLE, now)
         val moved = repo.update(feed.copy(startMillis = now - 10 * minute))
         assertEquals(feed.updatedAtMillis + 1, moved.updatedAtMillis)
         val again = repo.update(moved.copy(startMillis = now - 15 * minute))
@@ -328,9 +328,9 @@ class RoomEntryRepositoryTest {
 
     @Test
     fun purgeRemovesOnlyDeletionsOlderThan7Days() = test {
-        val old = repo.logFeed(FeedType.FORMULA, now - 60 * minute)
+        val old = repo.logFeed(FeedType.BOTTLE, now - 60 * minute)
         val recent = repo.logFeed(FeedType.FOOD, now - 30 * minute)
-        val kept = repo.logFeed(FeedType.FORMULA, now - 10 * minute)
+        val kept = repo.logFeed(FeedType.BOTTLE, now - 10 * minute)
         repo.delete(old.id)
         clock.advanceBy(2 * 24 * 60 * minute)
         repo.delete(recent.id)
@@ -351,7 +351,7 @@ class RoomEntryRepositoryTest {
 
     @Test
     fun applyRemoteIsLastWriterWinsWithoutEcho() = test {
-        val local = repo.logFeed(FeedType.FORMULA, now - 10 * minute)
+        val local = repo.logFeed(FeedType.BOTTLE, now - 10 * minute)
         sync.pushed.clear()
 
         val older = local.copy(startMillis = now - 20 * minute, updatedAtMillis = local.updatedAtMillis - 1)
@@ -430,7 +430,7 @@ class RoomEntryRepositoryTest {
 
     @Test
     fun localWritesArePushedAndMarkedSynced() = test {
-        val feed = repo.logFeed(FeedType.FORMULA, now)
+        val feed = repo.logFeed(FeedType.BOTTLE, now)
         assertEquals(listOf(feed), sync.pushed)
         assertTrue(repo.pendingSync().isEmpty())
 
@@ -485,7 +485,7 @@ class RoomEntryRepositoryTest {
         val local = repo.logFeed(FeedType.FOOD, now)
         repo.applyRemote(local.copy(startMillis = now - minute, updatedAtMillis = local.updatedAtMillis + 1))
         assertTrue(db.entryDao().get(local.id)!!.createdLocally)
-        repo.applyRemote(Entry.feed(FeedType.FORMULA, now - 30 * minute, id = "w"))
+        repo.applyRemote(Entry.feed(FeedType.BOTTLE, now - 30 * minute, id = "w"))
         assertFalse(db.entryDao().get("w")!!.createdLocally)
     }
 
@@ -505,7 +505,7 @@ class RoomEntryRepositoryTest {
     @Test
     fun observeEntriesIsSortedOldestFirst() = test {
         repo.logFeed(FeedType.FOOD, now - minute)
-        repo.logFeed(FeedType.FORMULA, now - 30 * minute)
+        repo.logFeed(FeedType.BOTTLE, now - 30 * minute)
         repo.logDiaper(now - 10 * minute, pee = true, poop = false)
         val starts = repo.observeEntries().first().map { it.startMillis }
         assertEquals(starts.sorted(), starts)

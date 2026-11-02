@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.phone
 
 import android.app.Application
 import androidx.lifecycle.SavedStateHandle
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.EntryKind
@@ -152,7 +153,7 @@ class EditViewModelTest : CoreTestBase() {
         assertEquals(BreastSide.LEFT, core.entry("sample-breast-0800")!!.breastSide)
 
         sheet.vm.openEntry("sample-breast-0800")
-        sheet.vm.onFeedType(FeedType.FORMULA)
+        sheet.vm.onFeedType(FeedType.BOTTLE)
         val formula = state(sheet)
         assertNull("formula is an instant", formula.draft.end)
         assertNull(formula.draft.side)
@@ -161,11 +162,11 @@ class EditViewModelTest : CoreTestBase() {
         assertNull("a breast feed is an instant too", state(sheet).draft.end)
         assertNull(state(sheet).durationMillis)
         assertEquals("switching back restores the original's side", BreastSide.LEFT, state(sheet).draft.side)
-        sheet.vm.onFeedType(FeedType.FORMULA)
+        sheet.vm.onFeedType(FeedType.BOTTLE)
         sheet.vm.onSave()
         runCurrent()
         val saved = core.entry("sample-breast-0800")!!
-        assertEquals(FeedType.FORMULA, saved.feedType)
+        assertEquals(FeedType.BOTTLE, saved.feedType)
         assertNull(saved.endMillis)
         assertNull(saved.breastSide)
     }
@@ -179,7 +180,7 @@ class EditViewModelTest : CoreTestBase() {
         assertEquals(150, state(sheet).draft.amountMl)
         sheet.vm.onFeedType(FeedType.FOOD)
         assertNull("food has no amount", state(sheet).draft.amountMl)
-        sheet.vm.onFeedType(FeedType.FORMULA)
+        sheet.vm.onFeedType(FeedType.BOTTLE)
         assertEquals("switching back restores the original's amount", 120, state(sheet).draft.amountMl)
         sheet.vm.onAmount(180)
         sheet.vm.onSave()
@@ -197,6 +198,33 @@ class EditViewModelTest : CoreTestBase() {
         sheet.vm.openEntry("sample-breast-0800")
         sheet.vm.onAmount(90)
         assertNull(state(sheet).draft.amountMl)
+    }
+
+    @Test
+    fun theBottleContentsAreOptionalAndKeptAcrossTypeChanges() = coreTest { core ->
+        val sheet = core.sheet()
+        sheet.vm.openEntry("sample-formula-1222")
+        assertEquals(BottleContents.FORMULA, state(sheet).draft.contents)
+        sheet.vm.onFeedType(FeedType.FOOD)
+        assertNull("food has no contents", state(sheet).draft.contents)
+        sheet.vm.onFeedType(FeedType.BOTTLE)
+        assertEquals("switching back restores the original's contents", BottleContents.FORMULA, state(sheet).draft.contents)
+        sheet.vm.onContents(BottleContents.MILK)
+        sheet.vm.onSave()
+        runCurrent()
+        assertEquals(BottleContents.MILK, core.entry("sample-formula-1222")!!.bottleContents)
+
+        sheet.vm.openEntry("sample-formula-1222")
+        sheet.vm.onContents(null)
+        assertTrue("the contents are optional", state(sheet).canSave)
+        sheet.vm.onSave()
+        runCurrent()
+        assertNull(core.entry("sample-formula-1222")!!.bottleContents)
+
+        // A breast feed takes no contents.
+        sheet.vm.openEntry("sample-breast-0800")
+        sheet.vm.onContents(BottleContents.MILK)
+        assertNull(state(sheet).draft.contents)
     }
 
     @Test
@@ -227,7 +255,7 @@ class EditViewModelTest : CoreTestBase() {
     fun tappingTheSelectedFeedTypeClearsIt() = coreTest { core ->
         val sheet = core.sheet()
         sheet.vm.openEntry("sample-formula-1222")
-        sheet.vm.onFeedType(FeedType.FORMULA)
+        sheet.vm.onFeedType(FeedType.BOTTLE)
         assertNull(state(sheet).draft.feedType)
         assertTrue(state(sheet).canSave)
         sheet.vm.onSave()
@@ -278,14 +306,14 @@ class EditViewModelTest : CoreTestBase() {
         val state = state(sheet)
         assertEquals(EditMode.ADD, state.mode)
         assertEquals(EntryKind.FEED, state.draft.kind)
-        assertEquals("the last feed was formula", FeedType.FORMULA, state.draft.feedType)
+        assertEquals("the last feed was formula", FeedType.BOTTLE, state.draft.feedType)
         assertEquals(at(14, 17), state.draft.start)
         assertTrue(state.canSave)
 
         sheet.vm.onSave()
         runCurrent()
         val added = core.entries().single { it.startMillis == at(14, 17) }
-        assertEquals(FeedType.FORMULA, added.feedType)
+        assertEquals(FeedType.BOTTLE, added.feedType)
         assertEquals(16, core.entries().size)
     }
 

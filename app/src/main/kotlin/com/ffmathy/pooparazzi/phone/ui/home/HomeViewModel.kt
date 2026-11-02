@@ -17,6 +17,7 @@ import com.ffmathy.pooparazzi.core.data.observeCurrentLog
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
@@ -419,10 +420,10 @@ class HomeViewModel(
             }
             return@act
         }
-        if (type == FeedType.FORMULA) {
-            // Formula is an instant too, but first offers the optional amount: the sheet stays open.
-            if (!feedSheet.formula) {
-                sheet.value = feedSheet.copy(formula = true)
+        if (type == FeedType.BOTTLE) {
+            // Bottle is an instant too, but first offers the optional contents and amount: the sheet stays open.
+            if (!feedSheet.bottle) {
+                sheet.value = feedSheet.copy(bottle = true)
                 haptic(HomeHaptic.SEGMENT_TICK)
             }
             return@act
@@ -442,24 +443,36 @@ class HomeViewModel(
         logFeed(feedSheet, FeedType.BREAST, BreastSide.fromOrder(feedSheet.ticks))
     }
 
-    override fun onFormulaAmount(amountMl: Int?) = act {
+    override fun onBottleAmount(amountMl: Int?) = act {
         val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
-        if (!feedSheet.formula) return@act
+        if (!feedSheet.bottle) return@act
         val amount = amountMl?.takeIf { it > 0 }
         if (amount != feedSheet.amountMl) sheet.value = feedSheet.copy(amountMl = amount)
     }
 
-    override fun onLogFormula() = act {
+    override fun onBottleContents(contents: BottleContents?) = act {
         val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
-        if (!feedSheet.formula) return@act
-        logFeed(feedSheet, FeedType.FORMULA, side = null, amountMl = feedSheet.amountMl)
+        if (!feedSheet.bottle) return@act
+        if (contents != feedSheet.contents) sheet.value = feedSheet.copy(contents = contents)
+    }
+
+    override fun onLogBottle() = act {
+        val feedSheet = sheet.value as? SheetModel.Feed ?: return@act
+        if (!feedSheet.bottle) return@act
+        logFeed(feedSheet, FeedType.BOTTLE, side = null, amountMl = feedSheet.amountMl, contents = feedSheet.contents)
     }
 
     /** Logs a feed instant of [type] at the sheet's stamp + offset, closing the sheet. */
-    private suspend fun logFeed(feedSheet: SheetModel.Feed, type: FeedType?, side: BreastSide?, amountMl: Int? = null) {
+    private suspend fun logFeed(
+        feedSheet: SheetModel.Feed,
+        type: FeedType?,
+        side: BreastSide?,
+        amountMl: Int? = null,
+        contents: BottleContents? = null,
+    ) {
         val at = feedSheet.stamp + feedSheet.offsetMinutes * MINUTE_MILLIS
         closeSheet(committed = true)
-        attempt { repository.logFeedChecked(type, at, side, amountMl) }
+        attempt { repository.logFeedChecked(type, at, side, amountMl, contents) }
             .onSuccess { result ->
                 when (result) {
                     // The sheet already picked the time: no receipt follows (the since-rows show the log).
@@ -566,7 +579,7 @@ class HomeViewModel(
                 if (entry.deleted) return
                 val spec = when (entry.kind) {
                     EntryKind.DIAPER -> ReceiptSpec.DiaperLogged(entry.id, entry.diaperKind ?: DiaperKind.PLAIN)
-                    EntryKind.FEED -> ReceiptSpec.FeedLogged(entry.id, entry.feedType, entry.breastSide, entry.amountMl)
+                    EntryKind.FEED -> ReceiptSpec.FeedLogged(entry.id, entry.feedType, entry.breastSide, entry.amountMl, entry.bottleContents)
                     EntryKind.SLEEP -> ReceiptSpec.SleepStarted(entry.id)
                 }
                 val sleep = summary().runningSleep

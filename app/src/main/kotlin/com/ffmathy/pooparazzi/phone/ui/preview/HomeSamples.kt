@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone.ui.preview
 
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -28,11 +29,11 @@ object HomeSamples {
     private const val SLEEP_0205 = "sample-sleep-0205"
     private val synced1431 = SyncStatus.Synced(SampleData.SYNCED_1431)
 
-    /** The Formula logged at 14:32 in [justLogged]. */
-    val formula1432: Entry = Entry.feed(FeedType.FORMULA, SampleData.NOW_1432, id = "sample-formula-1432")
+    /** The bottle logged at 14:32 in [justLogged]. */
+    val formula1432: Entry = Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432, id = "sample-formula-1432")
 
     /**
-     * 14:32, idle: "Last fed 2h 10m ago · 12:22 · Formula", Awake 1h 05m, Pee 48m ago, Today 5 · 4 · 2 · 7h 57m. The
+     * 14:32, idle: "Last fed 2h 10m ago · 12:22 · Bottle", Awake 1h 05m, Pee 48m ago, Today 5 · 4 · 2 · 7h 57m. The
      * weeks of [SampleData.history] before it give the buttons their forecast: sleep in 50m, feed in 1h (poop varies too
      * much to predict).
      */
@@ -69,7 +70,7 @@ object HomeSamples {
     )
 
     /**
-     * 14:32, a receipt for a Formula logged at 14:32 (as a deep link to a feed's receipt shows it): "Formula logged ·
+     * 14:32, a receipt for a bottle logged at 14:32 (as a deep link to a feed's receipt shows it): "Bottle logged ·
      * 14:32" with Undo, the offset chips (+5m disabled: it would be in the future), Edit and Done. The log is on its way to the watch ("Syncing with
      * watch…").
      */
@@ -80,7 +81,7 @@ object HomeSamples {
         sheet = SheetModel.Receipt(
             stamp = SampleData.NOW_1432,
             key = 1,
-            spec = ReceiptSpec.FeedLogged(formula1432.id, FeedType.FORMULA),
+            spec = ReceiptSpec.FeedLogged(formula1432.id, FeedType.BOTTLE),
             undo = Undo.Delete(formula1432.id),
         ),
     )
@@ -115,7 +116,7 @@ object HomeSamples {
         )
     }
 
-    /** 14:32, a Formula logged again within 5 s of [formula1432]: the notice "Formula" + "Already logged at 14:32". */
+    /** 14:32, a bottle logged again within 5 s of [formula1432]: the notice "Bottle" + "Already logged at 14:32". */
     fun duplicateNotice(): HomeUiState = build(
         SampleData.scenario(zone) + formula1432,
         SampleData.NOW_1432,
@@ -156,11 +157,14 @@ object HomeSamples {
         sheet = SheetModel.Feed(SampleData.NOW_1432, breast = true, ticks = ticks),
     )
 
-    /** The Feed sheet opened at 14:32 after tapping Formula: the amount slider at [amountMl] (null: no amount). */
-    fun formulaSheet(amountMl: Int? = 120): HomeUiState = build(
+    /**
+     * The Feed sheet opened at 14:32 after tapping Bottle: [contents] picked (null: none) and the amount slider at
+     * [amountMl] (null: no amount).
+     */
+    fun bottleSheet(amountMl: Int? = 120, contents: BottleContents? = BottleContents.FORMULA): HomeUiState = build(
         SampleData.scenario(zone),
         SampleData.NOW_1432,
-        sheet = SheetModel.Feed(SampleData.NOW_1432, formula = true, amountMl = amountMl),
+        sheet = SheetModel.Feed(SampleData.NOW_1432, bottle = true, amountMl = amountMl, contents = contents),
     )
 
     /** The Diaper sheet with Pee and Poop on, Yellow and Seedy selected. */

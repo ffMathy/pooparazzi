@@ -219,7 +219,7 @@ class HomeSemanticsTest {
     @Test
     fun theReceiptShowsTheLogWithItsTimeAndItsChipsSpeakTheirMinutes() {
         show(HomeSamples.justLogged())
-        compose.onNodeWithText("Formula logged").assertExists()
+        compose.onNodeWithText("Bottle logged").assertExists()
         compose.onNodeWithText("14:32").assertExists()
         compose.onNodeWithContentDescription("5 minutes earlier").assertExists()
         compose.onNodeWithContentDescription("15 minutes earlier").assertExists()

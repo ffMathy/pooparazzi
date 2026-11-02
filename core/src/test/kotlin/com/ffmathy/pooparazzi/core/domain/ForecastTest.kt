@@ -22,7 +22,7 @@ private fun forecastAt(entries: List<Entry>, now: Long) = forecast(summarize(ent
 class ForecastTest {
     /** A feed every 3 hours, on the hour, for the days before [until]. */
     private fun feedsEvery3h(until: Long): List<Entry> =
-        generateSequence(at(0, 0)) { it + 3 * HOUR }.takeWhile { it <= until }.mapIndexed { i, t -> Entry.feed(FeedType.FORMULA, t, id = "f$i") }.toList()
+        generateSequence(at(0, 0)) { it + 3 * HOUR }.takeWhile { it <= until }.mapIndexed { i, t -> Entry.feed(FeedType.BOTTLE, t, id = "f$i") }.toList()
 
     @Test
     fun regularFeedsPredictTheNextOneAGapLater() {

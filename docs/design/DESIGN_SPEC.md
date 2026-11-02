@@ -266,10 +266,10 @@ The detail line and the Lamp's sub-line start with `history` (18, onSurfaceVaria
 | Guard, asleep (§4.4) | `sleep` SLEEP strong | "Asleep" | "Already asleep since 14:32" |
 | Guard, awake | `awake` SLEEP strong | "Awake" | "Already awake since 14:40" |
 | Undone (after Undo in a receipt) | `undo` onSurfaceVariant | "Undone" | — |
-| Repeat log (§4.4) | the entry's icon | "Formula" / "Pee" (the logged kind) | "Already logged at 14:32" dataMedium onSurfaceVariant |
+| Repeat log (§4.4) | the entry's icon | "Bottle" / "Pee" (the logged kind) | "Already logged at 14:32" dataMedium onSurfaceVariant |
 
 **Receipt sheet** (after a log that had no sheet of its own: Start sleep, Woke up, End sleep, a widget log opened in the app, and a delete in the edit sheet). A modal sheet like the logging sheets (§3.3.2). A Feed or Diaper sheet already picks the time, so saving it just closes it: no receipt follows, and the since-row (tap → edit sheet, with Delete) is the correction path. **No timeout**: it stays until Done, Undo, Edit or a dismiss (scrim, back, swipe), and the log stays as shown.
-- Header (≥56): event icon 24 (event strong) + 12 · title titleLarge onSurface (time-free, as below) over the **effective time** in dataMedium onSurfaceVariant, joined with the sub-line ("14:27", "14:32 · Left → Right", "14:32 · Slept 1h 07m"); after a nudge "was 14:32" follows the time ("14:22 · was 14:32 · Left → Right"); the time line follows every chip tap and is a polite live region · Undo text button at the end (48 tall, r 24, `undo` 18 + 6 + "Undo" labelLarge, primary). The pane title is "Formula logged · 14:27".
+- Header (≥56): event icon 24 (event strong) + 12 · title titleLarge onSurface (time-free, as below) over the **effective time** in dataMedium onSurfaceVariant, joined with the sub-line ("14:27", "14:32 · Left → Right", "14:32 · Slept 1h 07m"); after a nudge "was 14:32" follows the time ("14:22 · was 14:32 · Left → Right"); the time line follows every chip tap and is a polite live region · Undo text button at the end (48 tall, r 24, `undo` 18 + 6 + "Undo" labelLarge, primary). The pane title is "Bottle logged · 14:27".
 - Nudge chips "−15m" "−10m" "−5m" "+5m" (one row, equal widths, never selected) when the receipt moves a time.
 - "End sleep" chip (`wake` 18, hugs its content) for a feed or diaper logged while a sleep still runs.
 - Bottom row: outlined "Edit" (56 tall, r 28, `edit` 20 + 8 + labelLarge) at the start when there is an entry to edit, and "Done" (the Save button style, `check`) at the end.
@@ -277,7 +277,7 @@ The detail line and the Lamp's sub-line start with `history` (18, onSurfaceVaria
 
 | Receipt | Icon | Title | Time line | Chips move |
 |---|---|---|---|---|
-| Feed | `feed` (or the type's icon) | "Formula logged" / "Breast logged" / "Feed logged" | "14:27", breast adds " · Left → Right" | the time |
+| Feed | `feed` (or the type's icon) | "Bottle logged" / "Breast logged" / "Feed logged" | "14:27", breast adds " · Left → Right", a bottle its contents and amount (" · Formula · 120 ml") | the time |
 | Pee / Poop / Both / plain | `pee` / `poop` / `both` / `diaper` | "Pee logged" / "Poop logged" / "Pee + poop logged" / "Diaper logged" | "14:27" | the time |
 | Sleep start | `sleep` | "Sleep started" | "14:32" | the start |
 | Woke up | `wake` | "Woke up" | "14:32 · Slept 1h 07m" | the end |

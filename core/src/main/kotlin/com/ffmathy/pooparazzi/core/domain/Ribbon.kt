@@ -41,7 +41,7 @@ data class Ribbon(
     val bounds: DayBounds,
     val sleeps: List<RibbonSpan>,
     val breastfeeds: List<RibbonMark>,
-    val formula: List<RibbonMark>,
+    val bottle: List<RibbonMark>,
     val food: List<RibbonMark>,
     val diapers: List<RibbonDiaperMark>,
     val nowFraction: Float?,
@@ -60,7 +60,7 @@ data class Ribbon(
             val visibleEnd = minOf(bounds.endMillis, now)
             val sleeps = mutableListOf<RibbonSpan>()
             val breastfeeds = mutableListOf<RibbonMark>()
-            val formula = mutableListOf<RibbonMark>()
+            val bottle = mutableListOf<RibbonMark>()
             val food = mutableListOf<RibbonMark>()
             val diapers = mutableListOf<RibbonDiaperMark>()
 
@@ -88,7 +88,7 @@ data class Ribbon(
                         !instantVisible -> Unit
                         entry.isBreastfeed -> breastfeeds += RibbonMark(entry, bounds.fractionOf(entry.startMillis))
                         entry.feedType == FeedType.FOOD -> food += RibbonMark(entry, bounds.fractionOf(entry.startMillis))
-                        else -> formula += RibbonMark(entry, bounds.fractionOf(entry.startMillis))
+                        else -> bottle += RibbonMark(entry, bounds.fractionOf(entry.startMillis))
                     }
                     EntryKind.DIAPER -> {
                         val kind = entry.diaperKind
@@ -100,7 +100,7 @@ data class Ribbon(
                 bounds = bounds,
                 sleeps = sleeps,
                 breastfeeds = breastfeeds,
-                formula = formula,
+                bottle = bottle,
                 food = food,
                 diapers = diapers,
                 nowFraction = if (now in bounds) bounds.fractionOf(now) else null,

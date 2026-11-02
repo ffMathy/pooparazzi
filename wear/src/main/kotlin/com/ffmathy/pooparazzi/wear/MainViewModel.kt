@@ -155,7 +155,7 @@ class MainViewModel(
 
     /**
      * Breast opens the Side screen for the optional side order (the feed is logged there, at this screen's time).
-     * Formula, Food and "Just the time" ([type] null) log an instant and show Logged ("Already logged" for a repeat
+     * Bottle, Food and "Just the time" ([type] null) log an instant and show Logged ("Already logged" for a repeat
      * within 5 s).
      */
     fun chooseFeedType(type: FeedType?): Job = action {

@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.core.data
 
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
@@ -82,14 +83,25 @@ interface EntryRepository {
     /**
      * Logs a feed instant of [type] (null: just the time) at [at]; returns the existing entry for a duplicate
      * (the same type within [EntryRules.DEDUPE_WINDOW_MILLIS]). [side] is the optional side order of a
-     * [FeedType.BREAST] feed and is ignored for other types; [amountMl] the optional amount of a [FeedType.FORMULA]
-     * feed, ignored for other types.
+     * [FeedType.BREAST] feed and is ignored for other types; [amountMl] the optional amount and [contents] the optional
+     * contents of a [FeedType.BOTTLE] feed, ignored for other types.
      */
-    suspend fun logFeed(type: FeedType?, at: Long, side: BreastSide? = null, amountMl: Int? = null): Entry =
-        logFeedChecked(type, at, side, amountMl).entry
+    suspend fun logFeed(
+        type: FeedType?,
+        at: Long,
+        side: BreastSide? = null,
+        amountMl: Int? = null,
+        contents: BottleContents? = null,
+    ): Entry = logFeedChecked(type, at, side, amountMl, contents).entry
 
     /** As [logFeed], but tells a new entry apart from a duplicate. */
-    suspend fun logFeedChecked(type: FeedType?, at: Long, side: BreastSide? = null, amountMl: Int? = null): LogResult
+    suspend fun logFeedChecked(
+        type: FeedType?,
+        at: Long,
+        side: BreastSide? = null,
+        amountMl: Int? = null,
+        contents: BottleContents? = null,
+    ): LogResult
 
     /** Starts a sleep at [at]. Fails with [AlreadyRunningException] while one of the current baby's runs. */
     suspend fun startSleep(at: Long): Result<Entry> = startSleep(at, babyId = null)

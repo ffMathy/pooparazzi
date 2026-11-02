@@ -26,8 +26,8 @@ object EditSamples {
         return edit(feed, EditDraft.of(feed))
     }
 
-    /** The 12:22 formula feed of 120 ml: type, one time block and the amount slider. */
-    fun formula(): EditUiState {
+    /** The 12:22 bottle of formula, 120 ml: type, one time block, the contents and the amount slider. */
+    fun bottle(): EditUiState {
         val feed = entry("sample-formula-1222")
         return edit(feed, EditDraft.of(feed))
     }
@@ -38,10 +38,10 @@ object EditSamples {
         return edit(diaper, EditDraft.of(diaper))
     }
 
-    /** "Add past entry" from History at 14:32: Feed preselected (as the last feed, Formula), at 14:17. */
+    /** "Add past entry" from History at 14:32: Feed preselected (as the last feed, Bottle), at 14:17. */
     fun addPastEntry(): EditUiState {
         val start = SampleData.NOW_1432 - 15 * MINUTE
-        val draft = EditRules.newDraft("sample-new", EntryKind.FEED, start, SampleData.NOW_1432, FeedType.FORMULA)
+        val draft = EditRules.newDraft("sample-new", EntryKind.FEED, start, SampleData.NOW_1432, FeedType.BOTTLE)
         return EditRules.state(1, EditMode.ADD, draft, null, false, SampleData.scenario(zone), SampleData.NOW_1432, zone)
     }
 

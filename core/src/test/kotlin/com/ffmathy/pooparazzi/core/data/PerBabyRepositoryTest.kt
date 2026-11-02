@@ -55,7 +55,7 @@ class PerBabyRepositoryTest {
 
     @Test
     fun theCurrentBabysEntriesAreShownAndFollowTheSelection() = runBlocking {
-        val noa = repo.logFeed(FeedType.FORMULA, now - 10 * minute)
+        val noa = repo.logFeed(FeedType.BOTTLE, now - 10 * minute)
         selected.value = twin
         val ida = repo.logDiaper(now - 5 * minute, pee = true, poop = false)
         assertEquals(Baby.FIRST_ID, noa.babyId)
@@ -124,7 +124,7 @@ class PerBabyRepositoryTest {
 
     @Test
     fun anEditNeverMovesAnEntryToAnotherBaby() = test {
-        val feed = repo.logFeed(FeedType.FORMULA, now - 10 * minute)
+        val feed = repo.logFeed(FeedType.BOTTLE, now - 10 * minute)
         val old = repo.startSleep(now - 60 * minute).getOrThrow()
         repo.endSleep(old.id, now - 40 * minute)
         val running = repo.startSleep(now - 30 * minute).getOrThrow()
@@ -149,7 +149,7 @@ class PerBabyRepositoryTest {
         // An older app on the other device drops the unknown babyId: its versions read as the first baby's.
         selected.value = twin
         val sleep = repo.startSleep(now - 30 * minute).getOrThrow()
-        val feed = repo.logFeed(FeedType.FORMULA, now - 20 * minute)
+        val feed = repo.logFeed(FeedType.BOTTLE, now - 20 * minute)
         assertEquals(twin, sleep.babyId)
 
         val ended = sleep.copy(endMillis = now - 5 * minute, updatedAtMillis = now + 1, babyId = Baby.FIRST_ID)
@@ -226,13 +226,13 @@ class PerBabyRepositoryTest {
         db.entryDao().write(EntryEntity.from(Entry.feed(FeedType.FOOD, now, id = "blank").copy(babyId = " "), pendingSync = false))
         assertEquals(Baby.FIRST_ID, repo.get("blank")!!.babyId)
         // A remote entry with a blank baby id is merged as the first baby's, so it shows up.
-        assertTrue(repo.applyRemote(Entry.feed(FeedType.FORMULA, now - minute, id = "remote-blank").copy(babyId = "")))
+        assertTrue(repo.applyRemote(Entry.feed(FeedType.BOTTLE, now - minute, id = "remote-blank").copy(babyId = "")))
         assertEquals(listOf("remote-blank"), repo.observeEntries().first().map { it.id })
     }
 
     @Test
     fun removingABabyDeletesItsEntriesOnly() = test {
-        val noa = repo.logFeed(FeedType.FORMULA, now - 10 * minute)
+        val noa = repo.logFeed(FeedType.BOTTLE, now - 10 * minute)
         selected.value = twin
         val sleep = repo.startSleep(now - 20 * minute).getOrThrow()
         val diaper = repo.logDiaper(now - 5 * minute, pee = true, poop = false)

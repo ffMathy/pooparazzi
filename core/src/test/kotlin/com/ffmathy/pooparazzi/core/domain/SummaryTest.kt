@@ -35,7 +35,7 @@ class SummaryAt1432Test {
     fun lastFed2h10mAgoAt1222Formula() {
         val feed = summary.lastFeed!!
         assertEquals(at(12, 22), feed.startMillis)
-        assertEquals(FeedType.FORMULA, feed.feedType)
+        assertEquals(FeedType.BOTTLE, feed.feedType)
         assertEquals(130 * MINUTE, summary.sinceLastFeedMillis)
     }
 
@@ -111,7 +111,7 @@ class SummaryAt1432Test {
         assertTrue(first.continuesBefore)
         assertEquals(95f / 1440f, first.end, 1e-6f)
         assertEquals(2, ribbon.breastfeeds.size)
-        assertEquals(listOf("sample-formula-0525", "sample-formula-1222"), ribbon.formula.map { it.entry.id })
+        assertEquals(listOf("sample-formula-0525", "sample-formula-1222"), ribbon.bottle.map { it.entry.id })
         assertEquals(listOf("sample-food-1030"), ribbon.food.map { it.entry.id })
         assertEquals(
             listOf(DiaperKind.PEE, DiaperKind.BOTH, DiaperKind.POOP, DiaperKind.PEE, DiaperKind.PEE),
@@ -253,8 +253,8 @@ class SummaryEdgeTest {
     @Test
     fun deletedAndFutureEntriesAreIgnored() {
         val entries = listOf(
-            Entry.feed(FeedType.FORMULA, at(12, 0), id = "a"),
-            Entry.feed(FeedType.FORMULA, at(13, 0), id = "b").copy(deleted = true),
+            Entry.feed(FeedType.BOTTLE, at(12, 0), id = "a"),
+            Entry.feed(FeedType.BOTTLE, at(13, 0), id = "b").copy(deleted = true),
             Entry.feed(FeedType.FOOD, at(15, 0), id = "c"),
         )
         val summary = summarize(entries, NOW_1432, ZONE)
@@ -291,7 +291,7 @@ class OffMinuteStampsTest {
     @Test
     fun timeSinceAgreesWithTheClockTimes() {
         val pee = Entry.diaper(at(13, 44) + 30 * second, pee = true, poop = false, id = "pee")
-        val formula = Entry.feed(FeedType.FORMULA, at(12, 22) + 50 * second, id = "formula")
+        val formula = Entry.feed(FeedType.BOTTLE, at(12, 22) + 50 * second, id = "formula")
         val sleep = Entry.sleep(at(12, 40) + 50 * second, at(13, 27) + 10 * second, id = "sleep")
         val now = at(14, 32) + 10 * second
         val summary = summarize(listOf(pee, formula, sleep), now, ZONE)

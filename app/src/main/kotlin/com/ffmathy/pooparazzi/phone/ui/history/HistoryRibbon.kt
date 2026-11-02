@@ -68,7 +68,7 @@ internal object RibbonDefaults {
 }
 
 /**
- * The day ribbon (glance-only, not tappable): night bands, then three lanes — sleep bars; feeds (formula ticks, food
+ * The day ribbon (glance-only, not tappable): night bands, then three lanes — sleep bars; feeds (bottle ticks, food
  * ticks with a square cap, breast ticks with a round foot); diapers (pee ring, poop dot, both = ring + solid right half) — and the
  * now-line in onSurface. Nothing is drawn after now. Axis labels "00 06 12 18 24". TalkBack reads [summary] instead.
  */
@@ -109,7 +109,7 @@ internal fun HistoryRibbon(ribbon: Ribbon, zone: ZoneId, summary: String, modifi
             // Core's ribbon already ends every span at now and leaves out later instants.
             ribbon.sleeps.forEach { bar(it, ::x, dp(RibbonDefaults.SLEEP_TOP), events.sleep.strong, d) }
             ribbon.breastfeeds.forEach { breastTick(x(it.at), events.feed.strong, d) }
-            ribbon.formula.forEach { tick(x(it.at), events.feed.strong, d) }
+            ribbon.bottle.forEach { tick(x(it.at), events.feed.strong, d) }
             ribbon.food.forEach { foodTick(x(it.at), events.feed.strong, d) }
             ribbon.diapers.forEach { mark ->
                 val centre = Offset(x(mark.at), dp(RibbonDefaults.DIAPER_CENTRE))
@@ -179,7 +179,7 @@ private fun DrawScope.bar(span: RibbonSpan, x: (Float) -> Float, top: Float, col
     )
 }
 
-/** Formula: a 4 × 14 tick, rx 2, centred on the time. */
+/** Bottle: a 4 × 14 tick, rx 2, centred on the time. */
 private fun DrawScope.tick(centre: Float, color: Color, d: Float) {
     val w = RibbonDefaults.TICK_WIDTH * d
     drawRoundRect(
@@ -190,7 +190,7 @@ private fun DrawScope.tick(centre: Float, color: Color, d: Float) {
     )
 }
 
-/** Food: the tick with an 8 × 6 square cap at its top, a "T" that tells it from formula without colour. */
+/** Food: the tick with an 8 × 6 square cap at its top, a "T" that tells it from a bottle without colour. */
 private fun DrawScope.foodTick(centre: Float, color: Color, d: Float) {
     tick(centre, color, d)
     val cap = RibbonDefaults.FOOD_CAP * d
@@ -202,7 +202,7 @@ private fun DrawScope.foodTick(centre: Float, color: Color, d: Float) {
     )
 }
 
-/** Breast: the tick with a round foot (a disc Ø 8 at its bottom), an upside-down lollipop unlike formula and food. */
+/** Breast: the tick with a round foot (a disc Ø 8 at its bottom), an upside-down lollipop unlike bottle and food. */
 private fun DrawScope.breastTick(centre: Float, color: Color, d: Float) {
     tick(centre, color, d)
     val r = RibbonDefaults.FOOD_CAP * d / 2

@@ -27,7 +27,7 @@
     <string name="spoken_pair" translatable="false">%1$s, %2$s</string>
     <!-- TalkBack, running Lamp: "Asleep, 1 hour 7 minutes, since 02:05" -->
     <string name="spoken_running" translatable="false">%1$s, %2$s, %3$s</string>
-    <!-- TalkBack, last entry: "Last feed, formula, 2 hours 10 minutes ago, at 12:22" -->
+    <!-- TalkBack, last entry: "Last feed, bottle, 2 hours 10 minutes ago, at 12:22" -->
     <string name="spoken_last_entry" translatable="false">%1$s, %2$s, %3$s, %4$s</string>
     <!-- TalkBack, status since: "Awake 1 hour 5 minutes, since 13:27" -->
     <string name="spoken_status_since" translatable="false">%1$s %2$s, %3$s</string>

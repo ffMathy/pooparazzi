@@ -181,11 +181,11 @@ class MainViewModelTest {
     fun formulaIsLoggedAtTheStampAndShowsLogged() = test {
         vm.beginFeed()
         clock.advanceBy(20_000) // The stamp is the Feed tap, not the type tap.
-        vm.chooseFeedType(FeedType.FORMULA).join()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
 
         val receipt = present(vm.receipt.value)
         assertEquals(ReceiptKind.FEED_LOGGED, receipt.kind)
-        assertEquals(FeedType.FORMULA, receipt.entry.feedType)
+        assertEquals(FeedType.BOTTLE, receipt.entry.feedType)
         assertEquals(SampleData.NOW_1432, receipt.entry.startMillis)
         assertEquals(Undo.Delete(receipt.entry.id), receipt.undo)
         assertFalse(receipt.duplicate)
@@ -213,10 +213,10 @@ class MainViewModelTest {
     @Test
     fun aRepeatFormulaWithinFiveSecondsShowsAlreadyLogged() = test {
         vm.beginFeed()
-        vm.chooseFeedType(FeedType.FORMULA).join()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
         val first = vm.receipt.value!!
         vm.beginFeed()
-        vm.chooseFeedType(FeedType.FORMULA).join()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
         val second = vm.receipt.value!!
         assertTrue(second.duplicate)
         assertEquals(first.entry.id, second.entry.id)
@@ -244,8 +244,8 @@ class MainViewModelTest {
     fun aDoubleTapOnFormulaLogsOnceWithoutAlreadyLogged() = test {
         vm.beginFeed()
         // The second tap lands on the leaving screen and waits for the first write.
-        val first = vm.chooseFeedType(FeedType.FORMULA)
-        val second = vm.chooseFeedType(FeedType.FORMULA)
+        val first = vm.chooseFeedType(FeedType.BOTTLE)
+        val second = vm.chooseFeedType(FeedType.BOTTLE)
         first.join()
         second.join()
         assertEquals(1, stored().size)
@@ -570,7 +570,7 @@ class MainViewModelTest {
 
     @Test
     fun theTileUndoPathOpensLoggedForAnExistingEntry() = test {
-        val entry = repo.logFeed(FeedType.FORMULA, clock.now())
+        val entry = repo.logFeed(FeedType.BOTTLE, clock.now())
         vm.openReceipt(entry.id, fromTile = true).join()
         val receipt = present(vm.receipt.value)
         assertTrue(receipt.fromTile)
@@ -643,7 +643,7 @@ class MainViewModelTest {
         vm.beginFeed()
         vm.beginDiaper()
         vm.beginFeed()
-        vm.chooseFeedType(FeedType.FORMULA).join()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
         assertNotNull(vm.receipt.value)
         vm.beginFeed()
         vm.chooseFeedType(FeedType.BREAST).join()

@@ -63,7 +63,7 @@ class AccessibilityTest {
     @Test
     fun idleMainReadsTheLastFeedAndTheSleepToggle() {
         show { MainScreen(WearSamples.mainIdle(), MainActions()) }
-        compose.onNode(hasContentDescription("Feed. Last feed, formula, 2 hours 10 minutes ago, at 12:22, next feed expected around 15:30")).assertExists()
+        compose.onNode(hasContentDescription("Feed. Last feed, bottle, 2 hours 10 minutes ago, at 12:22, next feed expected around 15:30")).assertExists()
         compose.onNodeWithContentDescription("Start sleep, expected to sleep again around 15:20")
             .assert(hasStateDescription("Awake since 13:27"))
             .assertIsEnabled()
@@ -207,7 +207,7 @@ class DanishAccessibilityTest {
     @Test
     fun idleMainReadsTheLastFeedInDanish() {
         compose.setContent { XWearTheme { AppScaffold { MainScreen(WearSamples.mainIdle(), MainActions()) } } }
-        compose.onNode(hasContentDescription("Måltid. Sidste måltid, modermælkserstatning, 2 timer 10 minutter siden, kl. 12:22, næste måltid forventes omkring kl. 15:30"))
+        compose.onNode(hasContentDescription("Måltid. Sidste måltid, flaske, 2 timer 10 minutter siden, kl. 12:22, næste måltid forventes omkring kl. 15:30"))
             .assertExists()
         compose.onNodeWithContentDescription("Start søvn, forventes at sove igen omkring kl. 15:20").assert(
             SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Vågen siden kl. 13:27"),

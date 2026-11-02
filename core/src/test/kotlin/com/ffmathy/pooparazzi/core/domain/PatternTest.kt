@@ -27,7 +27,7 @@ class PatternTest {
     private fun regularDays(days: Int): List<Entry> = (0 until days).flatMap { d ->
         (0 until 8).flatMap { k ->
             listOf(
-                Entry.feed(FeedType.FORMULA, at(d, 3 * k), id = "f$d-$k"),
+                Entry.feed(FeedType.BOTTLE, at(d, 3 * k), id = "f$d-$k"),
                 Entry.diaper(at(d, 3 * k, 30), pee = true, poop = false, id = "d$d-$k"),
             )
         } + Entry.sleep(at(d, 13), at(d, 14), id = "nap$d") + Entry.sleep(at(d, 20), at(d + 1, 2), id = "night$d")
@@ -85,7 +85,7 @@ class PatternTest {
 
     @Test
     fun aFeedPerSideIsOneFeed() {
-        val sides = regularDays(7) + (0 until 7).map { d -> Entry.feed(FeedType.FORMULA, at(d, 9, 5), id = "side$d") }
+        val sides = regularDays(7) + (0 until 7).map { d -> Entry.feed(FeedType.BOTTLE, at(d, 9, 5), id = "side$d") }
         val p = week(sides, 7, at(7, 12))!!
         assertEquals(3 * HOUR, p.day.betweenFeeds!!.medianMillis)
         assertEquals(3 * HOUR, p.day.betweenFeeds!!.lowMillis)

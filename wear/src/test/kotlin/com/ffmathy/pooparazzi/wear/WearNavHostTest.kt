@@ -114,9 +114,9 @@ class WearNavHostTest {
         waitForDescription("Feed.").performClick()
         waitFor("Feed · 14:32")
         settle(600) // Past the picker cooldown.
-        compose.onNodeWithText("Formula").performClick()
+        compose.onNodeWithText("Bottle").performClick()
 
-        waitFor("Formula at 14:32")
+        waitFor("Bottle at 14:32")
         assertEquals(1, entries().size)
         settle(LOGGED_INERT_MILLIS + 100L)
         compose.onNodeWithText("Undo").performClick()
@@ -212,7 +212,7 @@ class WearNavHostTest {
     @Test
     fun withOneBabyMainHasNoBabyButton() {
         runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
-        waitForDescription("Last feed, formula")
+        waitForDescription("Last feed, bottle")
         settle()
         assertTrue(compose.onAllNodes(hasContentDescription("Switch baby", substring = true)).fetchSemanticsNodes().isEmpty())
     }
@@ -221,7 +221,7 @@ class WearNavHostTest {
     fun theBabyPickerSwitchesTheBabyAndReturnsToMain() {
         settings.state.value = SampleData.twinSettings
         runBlocking { repo.applyRemoteAll(SampleData.scenario()) }
-        waitForDescription("Last feed, formula")
+        waitForDescription("Last feed, bottle")
         waitForDescription("Noa. Switch baby").performClick()
 
         waitFor("Switch baby")

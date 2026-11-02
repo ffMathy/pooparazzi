@@ -5,6 +5,7 @@ import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 
 /**
  * The app's local store. Each device keeps its own copy; sync merges them with last-writer-wins.
@@ -12,14 +13,16 @@ import androidx.room.RoomDatabase
  * Versions (schemas in `core/schemas`): 1, the first release; 2, several babies and the backup (an entry's
  * [EntryEntity.babyId] and [EntryEntity.cloudPending], migrated automatically: old rows are the first baby's and not
  * pending for the backend); 3, a formula feed's optional [EntryEntity.amountMl] (migrated automatically: old rows have
- * none).
+ * none); 4, a bottle feed's optional [EntryEntity.bottleContents] (migrated automatically: old rows have none; the
+ * bottle type keeps its stored name "FORMULA", [FeedTypeConverter]).
  */
 @Database(
     entities = [EntryEntity::class, PurgedEntryEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
 )
+@TypeConverters(FeedTypeConverter::class)
 abstract class PooparazziDatabase : RoomDatabase() {
     abstract fun entryDao(): EntryDao
 

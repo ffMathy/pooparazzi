@@ -6,6 +6,7 @@ import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import com.ffmathy.pooparazzi.core.R
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -52,12 +53,22 @@ object Labels {
         EntryKind.DIAPER -> R.string.kind_diaper
     }
 
-    /** The feed type's word; a feed with no type (null) is plain "Feed" ("Måltid"). */
+    /**
+     * The feed type's word; a feed with no type (null) is plain "Feed" ("Måltid"). [compact] asks for the soft-hyphen
+     * form where a type has one (none does today; kept for tight places).
+     */
+    @Suppress("UNUSED_PARAMETER")
     @StringRes fun feedType(type: FeedType?, compact: Boolean = false): Int = when (type) {
         null -> R.string.kind_feed
         FeedType.BREAST -> R.string.feed_type_breast
-        FeedType.FORMULA -> if (compact) R.string.feed_type_formula_compact else R.string.feed_type_formula
+        FeedType.BOTTLE -> R.string.feed_type_bottle
         FeedType.FOOD -> R.string.feed_type_food
+    }
+
+    /** "Milk" / "Modermælk", "Formula" / "Modermælkserstatning" ([compact]: with its soft hyphen, "Modermælks­erstatning"). */
+    @StringRes fun bottleContents(contents: BottleContents, compact: Boolean = false): Int = when (contents) {
+        BottleContents.MILK -> R.string.bottle_milk
+        BottleContents.FORMULA -> if (compact) R.string.bottle_formula_compact else R.string.bottle_formula
     }
 
     @StringRes fun side(side: BreastSide): Int = when (side) {
@@ -128,11 +139,12 @@ class LabelFormatter(private val strings: StringResolver) {
 
     fun kind(kind: EntryKind): String = strings.string(Labels.kind(kind))
 
-    /**
-     * "Formula" / "Modermælkserstatning"; [compact] adds a soft hyphen for tight places ("Modermælks­erstatning").
-     * An untyped feed (null) is "Feed" / "Måltid".
-     */
+    /** "Breast", "Bottle" / "Flaske", "Food". An untyped feed (null) is "Feed" / "Måltid". */
     fun feedType(type: FeedType?, compact: Boolean = false): String = strings.string(Labels.feedType(type, compact))
+
+    /** "Milk", "Formula" / "Modermælkserstatning"; [compact] adds a soft hyphen for tight places. */
+    fun bottleContents(contents: BottleContents, compact: Boolean = false): String =
+        strings.string(Labels.bottleContents(contents, compact))
 
     fun side(side: BreastSide): String = strings.string(Labels.side(side))
 
@@ -186,19 +198,20 @@ class LabelFormatter(private val strings: StringResolver) {
 
     /**
      * History row title: "Sleep · 47m" / "Sleep · running", "Breast" / "Breast · Left → Right",
-     * "Formula", "Food", "Feed" (no type), "Pee", "Poop", "Pee + poop", "Diaper" (a plain change).
+     * "Bottle" / "Bottle · Formula", "Food", "Feed" (no type), "Pee", "Poop", "Pee + poop", "Diaper" (a plain change).
      */
     fun historyTitle(entry: Entry, duration: DurationFormatter, now: Long): String = when (entry.kind) {
         EntryKind.SLEEP -> kind(EntryKind.SLEEP) + DOT_SEPARATOR +
             if (entry.isRunning) strings.string(R.string.status_running) else duration.format(entry.clockDurationMillis(now))
         EntryKind.FEED -> feedType(entry.feedType) +
-            (entry.breastSide?.takeIf { entry.isBreastfeed }?.let { DOT_SEPARATOR + side(it) } ?: "")
+            (entry.breastSide?.takeIf { entry.isBreastfeed }?.let { DOT_SEPARATOR + side(it) } ?: "") +
+            (entry.bottleContents?.takeIf { entry.feedType == FeedType.BOTTLE }?.let { DOT_SEPARATOR + bottleContents(it) } ?: "")
         EntryKind.DIAPER -> entry.diaperKind?.let(::diaperKind) ?: kind(EntryKind.DIAPER)
     }
 
     /**
      * History row supporting line: sleeps "12:40 – 13:27" (a day prefix when they start on another day), a running
-     * sleep "since 14:32", feeds (breastfeeds included) "12:22", a formula feed with an amount "12:22 · 120 ml" (when
+     * sleep "since 14:32", feeds (breastfeeds included) "12:22", a bottle feed with an amount "12:22 · 120 ml" (when
      * [volume] is given), diapers [diaperDetail].
      */
     fun historySupporting(

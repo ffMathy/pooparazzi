@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.core.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -8,11 +9,33 @@ import java.util.UUID
 enum class EntryKind { SLEEP, FEED, DIAPER }
 
 /**
- * The kind of feed. Every feed is an instant (one time); a [BREAST] feed may also record the side order.
- * The type is optional: a FEED with no type ([Entry.feedType] == null) records only its time.
+ * The kind of feed. Every feed is an instant (one time); a [BREAST] feed may also record the side order, a [BOTTLE]
+ * feed what was in the bottle ([BottleContents]) and the amount. The type is optional: a FEED with no type
+ * ([Entry.feedType] == null) records only its time.
  */
 @Serializable
-enum class FeedType { BREAST, FORMULA, FOOD }
+enum class FeedType {
+    BREAST,
+
+    /** A bottle feed. Stored as "FORMULA" (its name before the bottle could hold breast milk), so old data reads. */
+    @SerialName(STORED_BOTTLE)
+    BOTTLE,
+    FOOD;
+
+    /** The stored name: [name], except "FORMULA" for [BOTTLE]. Room and the JSON keep this. */
+    val storedName: String get() = if (this == BOTTLE) STORED_BOTTLE else name
+
+    companion object {
+        private const val STORED_BOTTLE = "FORMULA"
+
+        /** The type stored as [stored] ([storedName]); null for null or an unknown name. */
+        fun fromStored(stored: String?): FeedType? = entries.firstOrNull { it.storedName == stored }
+    }
+}
+
+/** What a [FeedType.BOTTLE] feed held (optional): expressed breast milk or formula. */
+@Serializable
+enum class BottleContents { MILK, FORMULA }
 
 /** One breast, as ticked in the side checkboxes of a breast feed. */
 enum class Breast { LEFT, RIGHT }
@@ -91,7 +114,7 @@ enum class DiaperKind {
  * - a FEED's [feedType] is optional (null = just the time);
  * - a DIAPER's [pee] and [poop] are optional (neither = a plain change); [poopColor] and [poopTexture] are null unless [poop];
  * - [breastSide] is optional and only on a BREAST feed;
- * - [amountMl] is optional and only on a FORMULA feed, and positive when set.
+ * - [bottleContents] and [amountMl] are optional and only on a BOTTLE feed; [amountMl] is positive when set.
  *
  * Every entry belongs to one baby, [babyId] (BABIES_AND_BACKUP §2.1); an edit never moves it to another.
  *
@@ -125,8 +148,10 @@ data class Entry(
     val deleted: Boolean = false,
     /** The [Baby.id] this entry belongs to. JSON from before several babies has none and reads as the first baby. */
     val babyId: String = Baby.FIRST_ID,
-    /** FEED + FORMULA only; optional, the amount given in millilitres (shown in fluid ounces where those are used). */
+    /** FEED + BOTTLE only; optional, the amount given in millilitres (shown in fluid ounces where those are used). */
     val amountMl: Int? = null,
+    /** FEED + BOTTLE only; optional, what the bottle held. */
+    val bottleContents: BottleContents? = null,
 ) {
     companion object {
         /** A new random UUID for an entry id. */
@@ -167,7 +192,7 @@ data class Entry(
 
         /**
          * A feed at [atMillis] of [type] (null = just the time). [side] is kept only for [FeedType.BREAST]
-         * (see [breastfeed]), [amountMl] only for [FeedType.FORMULA].
+         * (see [breastfeed]), [amountMl] and [contents] only for [FeedType.BOTTLE].
          */
         fun feed(
             type: FeedType?,
@@ -177,6 +202,7 @@ data class Entry(
             updatedAtMillis: Long = atMillis,
             babyId: String = Baby.FIRST_ID,
             amountMl: Int? = null,
+            contents: BottleContents? = null,
         ): Entry = Entry(
             id = id,
             kind = EntryKind.FEED,
@@ -185,7 +211,8 @@ data class Entry(
             breastSide = side.takeIf { type == FeedType.BREAST },
             updatedAtMillis = updatedAtMillis,
             babyId = babyId,
-            amountMl = amountMl.takeIf { type == FeedType.FORMULA },
+            amountMl = amountMl.takeIf { type == FeedType.BOTTLE },
+            bottleContents = contents.takeIf { type == FeedType.BOTTLE },
         )
 
         /** A diaper at [atMillis]. Colour and texture are dropped unless [poop]. */

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.room.withTransaction
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
@@ -91,16 +92,22 @@ class RoomEntryRepository(
 
     // ---- Feeds --------------------------------------------------------------------------------
 
-    override suspend fun logFeedChecked(type: FeedType?, at: Long, side: BreastSide?, amountMl: Int?): LogResult {
+    override suspend fun logFeedChecked(
+        type: FeedType?,
+        at: Long,
+        side: BreastSide?,
+        amountMl: Int?,
+        contents: BottleContents?,
+    ): LogResult {
         val babyId = currentBaby()
-        checkNotInFuture(at) { Entry.feed(type, at, side, updatedAtMillis = 0, babyId = babyId, amountMl = amountMl) }
+        checkNotInFuture(at) { Entry.feed(type, at, side, updatedAtMillis = 0, babyId = babyId, amountMl = amountMl, contents = contents) }
         val result = database.withTransaction {
             val window = EntryRules.DEDUPE_WINDOW_MILLIS - 1
             val duplicate = feedsBetween(babyId, type, at - window, at + window).firstOrNull()
             if (duplicate != null) {
                 LogResult.Duplicate(duplicate.toEntry())
             } else {
-                val entry = Entry.feed(type, at, side, updatedAtMillis = clock.now(), babyId = babyId, amountMl = amountMl).requireValid()
+                val entry = Entry.feed(type, at, side, updatedAtMillis = clock.now(), babyId = babyId, amountMl = amountMl, contents = contents).requireValid()
                 writeLocal(entry, stored = null)
                 LogResult.Logged(entry)
             }

@@ -87,7 +87,7 @@ internal object HomeStateBuilder {
         val subject = model.spec.subject
         val entry = subject?.let { (id, _) -> entries.firstOrNull { it.id == id && !it.deleted } }
         val variant = when (val spec = model.spec) {
-            is ReceiptSpec.FeedLogged -> ReceiptVariant.FeedLogged(spec.type, spec.side, spec.amountMl)
+            is ReceiptSpec.FeedLogged -> ReceiptVariant.FeedLogged(spec.type, spec.side, spec.amountMl, spec.contents)
             is ReceiptSpec.DiaperLogged -> ReceiptVariant.DiaperLogged(spec.kind)
             is ReceiptSpec.SleepStarted -> ReceiptVariant.SleepStarted
             is ReceiptSpec.WokeUp -> ReceiptVariant.WokeUp(entry?.clockDurationMillis(now) ?: 0L)
@@ -143,7 +143,7 @@ internal object HomeStateBuilder {
             OFFSET_CHIPS.map { OffsetChipUi(it, enabled = allowed(sheet.offsetMinutes + it)) }
         return when (sheet) {
             is SheetModel.Feed -> HomeSheetUi.Feed(
-                sheet.stamp, sheet.offsetMinutes, chips(), sheet.breast, sheet.ticks, sheet.formula, sheet.amountMl,
+                sheet.stamp, sheet.offsetMinutes, chips(), sheet.breast, sheet.ticks, sheet.bottle, sheet.amountMl, sheet.contents,
             )
             is SheetModel.Diaper -> HomeSheetUi.Diaper(
                 stamp = sheet.stamp,
