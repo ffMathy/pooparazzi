@@ -81,9 +81,14 @@ internal class DiaperSheetCallbacks(
 @Composable
 internal fun DiaperSheetContent(sheet: HomeSheetUi.Diaper, zone: ZoneId, formatters: Formatters, callbacks: DiaperSheetCallbacks) {
     val readiness = rememberPickerReadiness()
-    val title = titleWithTime(CoreR.string.kind_diaper, formatters.clock.format(sheet.time, zone))
-    SheetColumn(title) {
-        SheetHeader(title, callbacks.onCancel, was = sheet.was?.let { formatters.clock.format(it, zone) })
+    val time = formatters.clock.format(sheet.time, zone)
+    SheetColumn(titleWithTime(CoreR.string.kind_diaper, time)) {
+        SheetHeader(
+            stringResource(CoreR.string.kind_diaper),
+            callbacks.onCancel,
+            time = time,
+            was = sheet.was?.let { formatters.clock.format(it, zone) },
+        )
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
         Spacer(Modifier.height(12.dp))

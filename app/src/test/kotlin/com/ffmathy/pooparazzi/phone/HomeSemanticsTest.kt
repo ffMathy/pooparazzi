@@ -18,6 +18,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -264,7 +265,9 @@ class HomeSemanticsTest {
     @Test
     fun theBreastStepLogsAtTheSheetsTime() {
         show(HomeSamples.breastSheet(), night = false)
-        compose.onNodeWithText("Breast · 14:32").assertExists()
+        // The title and the sheet's time sit on separate lines, so a long title never hides the time.
+        compose.onNode(hasText("Breast") and isHeading()).assertExists()
+        compose.onNodeWithContentDescription("14:32").assertExists()
         compose.onNodeWithText("Tick the sides in the order you fed. Optional.").assertExists()
         compose.onNodeWithText("Log feed").performClick()
         assertTrue(calls.contains("log-breast"))

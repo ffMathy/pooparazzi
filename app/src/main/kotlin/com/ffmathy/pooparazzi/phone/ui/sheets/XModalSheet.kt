@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -31,8 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextOverflow
@@ -114,32 +118,44 @@ private fun DragHandle(top: Dp) {
 }
 
 /**
- * Header (48): the title at the 24 gutter and "Cancel" at the end; after a nudge, "was 14:32" ([was]) dataMedium
- * onSurfaceVariant between them, like the edit sheet's time field.
+ * Header (48): the title at the 24 gutter and "Cancel" at the end. Below the title, the effective time ([time]) in
+ * dataMedium onSurfaceVariant, and after a nudge "· was 14:32" ([was]) after it, like the receipt sheet. The time has a
+ * line of its own so a long title ("Modermælks­erstatning") never pushes it out.
  */
 @Composable
-internal fun SheetHeader(title: String, onCancel: () -> Unit, modifier: Modifier = Modifier, was: String? = null) {
+internal fun SheetHeader(
+    title: String,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+    time: String? = null,
+    was: String? = null,
+) {
     val colors = MaterialTheme.colorScheme
     Row(modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            title,
-            // Hyphens.Auto honours the soft hyphen of a long Danish title ("Modermælks­erstatning · 14:32").
-            style = MaterialTheme.typography.titleLarge.copy(hyphens = Hyphens.Auto),
-            color = colors.onSurface,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .weight(1f)
-                .semantics { heading() },
-        )
-        if (was != null) {
+        Column(Modifier.weight(1f)) {
             Text(
-                stringResource(R.string.edit_was, was),
-                style = PhoneType.dataMedium,
-                color = colors.onSurfaceVariant,
-                maxLines = 1,
-                modifier = Modifier.padding(start = 8.dp),
+                title,
+                // Hyphens.Auto honours the soft hyphen of a long Danish title ("Modermælks­erstatning").
+                style = MaterialTheme.typography.titleLarge.copy(hyphens = Hyphens.Auto),
+                color = colors.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() },
             )
+            val wasText = was?.let { stringResource(R.string.edit_was, it) }
+            val line = listOfNotNull(time, wasText).takeIf { it.isNotEmpty() }?.joinToString(" · ")
+            if (line != null) {
+                Text(
+                    line,
+                    style = PhoneType.dataMedium,
+                    color = colors.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.semantics {
+                        contentDescription = listOfNotNull(time, wasText).joinToString(", ")
+                        liveRegion = LiveRegionMode.Polite
+                    },
+                )
+            }
         }
         Box(
             Modifier

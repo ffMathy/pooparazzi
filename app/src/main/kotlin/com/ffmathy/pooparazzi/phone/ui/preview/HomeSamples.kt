@@ -181,7 +181,7 @@ object HomeSamples {
     )
 
     /**
-     * The Diaper sheet opened at 14:32 and nudged −5m twice: "Diaper · 14:22", "was 14:32" beside it, +5m enabled (it
+     * The Diaper sheet opened at 14:32 and nudged −5m twice: "Diaper" over "14:22 · was 14:32", +5m enabled (it
      * no longer reaches the future).
      */
     fun diaperSheetNudged(): HomeUiState = build(
