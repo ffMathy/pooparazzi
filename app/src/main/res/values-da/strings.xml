@@ -199,6 +199,10 @@
     <string name="settings_birth_date_remove">Fjern</string>
     <string name="settings_add_baby_title">Tilføj et barn</string>
     <string name="settings_add_baby_confirm">Tilføj</string>
+    <string name="baby_intro_title">Dit barn</string>
+    <string name="baby_intro_optional">Begge dele er valgfrie. Du kan springe dem over nu og tilføje dem senere under Indstillinger › Barn.</string>
+    <string name="baby_intro_continue">Fortsæt</string>
+    <string name="baby_intro_skip">Spring over for nu</string>
     <string name="settings_add_baby_birth_date_why">Fødselsdatoen er valgfri, men den gør forudsigelserne og estimaterne bedre: de følger så barnets alder.</string>
 
     <!-- Konto og backup -->

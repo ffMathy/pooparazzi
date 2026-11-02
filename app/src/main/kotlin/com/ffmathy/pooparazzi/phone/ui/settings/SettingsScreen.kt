@@ -423,7 +423,7 @@ private fun AddBabyDialog(placeholder: String, signedIn: Boolean, actions: Setti
 private fun BirthDatePill(baby: Baby, onClick: () -> Unit) = BirthDatePill(baby.born, onClick)
 
 @Composable
-private fun BirthDatePill(born: LocalDate?, onClick: () -> Unit) {
+internal fun BirthDatePill(born: LocalDate?, onClick: () -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val text = if (born == null) {
         stringResource(R.string.settings_birth_date_add)
@@ -440,7 +440,7 @@ private fun BirthDatePill(born: LocalDate?, onClick: () -> Unit) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BirthDateDialog(initial: LocalDate?, onPick: (LocalDate?) -> Unit, onDismiss: () -> Unit) {
+internal fun BirthDateDialog(initial: LocalDate?, onPick: (LocalDate?) -> Unit, onDismiss: () -> Unit) {
     val today = remember { LocalDate.now() }
     val picker = rememberDatePickerState(
         initialSelectedDateMillis = initial?.let { it.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() },
@@ -515,7 +515,7 @@ private fun RemoveBabyDialog(label: String, signedIn: Boolean, actions: Settings
  * With a [removeLabel] (two or more babies) a 48 dp remove button ends the field.
  */
 @Composable
-private fun NameField(
+internal fun NameField(
     name: String,
     placeholder: String,
     onChange: (String) -> Unit,

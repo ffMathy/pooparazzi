@@ -78,6 +78,7 @@ PHONE = {
     "49-settings-predictions.png": "settings-predictions",
     "50-notification-forecasts.png": "notification-forecasts",
     "51-settings-add-baby.png": "settings-add-baby",
+    "52-baby-intro.png": "baby-intro",
 }
 
 # Recorded file (wear/screenshots/<lang>/) -> README file (docs/screenshots/<lang>/watch-<name>.png).

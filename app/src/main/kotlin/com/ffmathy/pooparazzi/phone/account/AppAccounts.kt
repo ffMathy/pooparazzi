@@ -139,6 +139,14 @@ object AppAccounts {
 interface WelcomeStore {
     var seen: Boolean
 
+    /**
+     * Whether the first run's "Your baby" screen (the name and birth date, both optional) was answered on this phone.
+     * Stores that never show it say it was.
+     */
+    var babyAsked: Boolean
+        get() = true
+        set(_) = Unit
+
     /** For builds and tests that never show it. */
     object Seen : WelcomeStore {
         override var seen: Boolean
@@ -158,8 +166,13 @@ class WelcomePrefs(context: Context) : WelcomeStore {
         get() = prefs.getBoolean(KEY_SEEN, false)
         set(value) = prefs.edit { putBoolean(KEY_SEEN, value) }
 
+    override var babyAsked: Boolean
+        get() = prefs.getBoolean(KEY_BABY_ASKED, false)
+        set(value) = prefs.edit { putBoolean(KEY_BABY_ASKED, value) }
+
     internal companion object {
         const val FILE = "account_welcome"
         private const val KEY_SEEN = "welcome_seen"
+        private const val KEY_BABY_ASKED = "baby_asked"
     }
 }

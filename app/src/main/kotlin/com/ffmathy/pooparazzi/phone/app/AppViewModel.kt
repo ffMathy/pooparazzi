@@ -93,6 +93,31 @@ class AppViewModel(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, accounts.user.value.let { it != null && it.uid !in consent.agreed.value })
 
+    private val babyAsked = MutableStateFlow(welcomeSeen.babyAsked)
+
+    /**
+     * The first run's "Your baby" screen (BABIES_AND_BACKUP §2.4): the first baby's name and birth date, both optional.
+     * It comes after the Welcome and the consent, once per phone, and only on a fresh start: nothing logged yet and one
+     * baby with neither a name nor a birth date (a phone that already has a log, or babies restored from the family's
+     * backup, is not asked). Null until the log and settings have loaded, which keeps the splash on screen.
+     */
+    val babyIntro: StateFlow<Boolean?> = combine(
+        showWelcome,
+        consentNeeded,
+        babyAsked,
+        settings.settings,
+        repository.observeAllEntries().map { it.isEmpty() }.distinctUntilChanged(),
+    ) { welcome, consentNeeded, asked, settings, nothingLogged ->
+        val baby = settings.babies.singleOrNull()
+        !welcome && !consentNeeded && !asked && nothingLogged && baby != null && baby.name.isBlank() && baby.born == null
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** The "Your baby" screen was answered (its Continue or Skip): not asked again on this phone. */
+    fun finishBabyIntro() {
+        welcomeSeen.babyAsked = true
+        babyAsked.value = true
+    }
+
     /** An invite link waiting to be joined (BABIES_AND_BACKUP §3.5), until it is or is put aside. */
     val invite: StateFlow<String?> = links.invite
 

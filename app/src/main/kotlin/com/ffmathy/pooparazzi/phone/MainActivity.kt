@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
-        splash.setKeepOnScreenCondition { appViewModel.appearance.value == null }
+        splash.setKeepOnScreenCondition { appViewModel.appearance.value == null || appViewModel.babyIntro.value == null }
         enableEdgeToEdge()
         // A recreated activity (language change, process restore) gets its old intent again: handle it once only.
         if (savedInstanceState == null) handle(intent)
@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
             val emailLink by appViewModel.emailLink.collectAsStateWithLifecycle()
             val signedIn by appViewModel.signedIn.collectAsStateWithLifecycle()
             val consentNeeded by appViewModel.consentNeeded.collectAsStateWithLifecycle()
+            val babyIntro by appViewModel.babyIntro.collectAsStateWithLifecycle()
             inputs?.let {
                 PooparazziPhoneApp(
                     inputs = it,
@@ -60,6 +61,8 @@ class MainActivity : AppCompatActivity() {
                     welcome = welcome,
                     onWelcomeDone = appViewModel::finishWelcome,
                     consentNeeded = consentNeeded,
+                    babyIntro = babyIntro == true,
+                    onBabyIntroDone = appViewModel::finishBabyIntro,
                     onLaunchedSheetClosed = ::onLaunchedSheetClosed,
                     links = AccountLinks(
                         invite = invite,

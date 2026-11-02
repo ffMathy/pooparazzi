@@ -23,6 +23,7 @@ import com.ffmathy.pooparazzi.phone.ui.preview.SettingsSamples
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsActions
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsScreen
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
+import com.ffmathy.pooparazzi.phone.ui.settings.BabyIntroScreen
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
@@ -52,6 +53,11 @@ abstract class AccountScreenshots(private val language: String) {
 
     @Test fun welcome() = screen("27-welcome", night = false) {
         WelcomeScreen(AccountSamples.signedOut(), AccountActions.None, windowInsets = ReferenceInsets)
+    }
+
+    /** The first run's "Your baby": the name and birth date, both optional, after the Welcome. */
+    @Test fun babyIntro() = screen("52-baby-intro", night = false) {
+        BabyIntroScreen(signedIn = false, onContinue = { _, _ -> }, onSkip = {}, windowInsets = ReferenceInsets)
     }
 
     @Test fun accountSignedOut() = screen("28-account-signed-out", night = false) {

@@ -276,6 +276,11 @@
     <!-- The Add a baby dialog: the name and, optionally, the birth date. -->
     <string name="settings_add_baby_title">Add a baby</string>
     <string name="settings_add_baby_confirm">Add</string>
+    <!-- The first run's "Your baby" screen (after the Welcome): the name and birth date, both optional. -->
+    <string name="baby_intro_title">Your baby</string>
+    <string name="baby_intro_optional">Both are optional. You can skip them now and add them later in Settings › Baby.</string>
+    <string name="baby_intro_continue">Continue</string>
+    <string name="baby_intro_skip">Skip for now</string>
     <string name="settings_add_baby_birth_date_why">The birth date is optional, but it improves the predictions and estimates: they then follow the baby\'s age.</string>
 
     <!-- Account and backup (BABIES_AND_BACKUP §3) -->
