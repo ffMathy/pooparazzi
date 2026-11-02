@@ -270,7 +270,7 @@ private fun NoticeLine(notice: WidgetNotice, strings: WidgetStrings, colors: Wid
  * chosen: feed type and breast order, pee/poop, colour and texture. The sleep toggle starts or ends the sleep in place.
  *
  * Under each label, a small icon says what each time is, so the lines stay short: `history` + the time since the last
- * one ("2h 10m"; the sleep toggle `awake` or `sleep` + "1h 05m"), then `upcoming` + what the last week expects
+ * one ("2h 10m"; on the sleep toggle how long awake or asleep), then `upcoming` + what the last week expects
  * next ("55m", "soon", "24m ago"; under Diaper the next poop, V1_ADDITIONS §9). The three keep the same number of
  * lines, so their icons and labels stay aligned.
  */
@@ -306,8 +306,8 @@ private fun LogButtons(
     val sleepNext = snapshot.sleepForecast?.takeIf { regular }
     val sleepStatus = when {
         !regular -> null
-        sleepStart != null -> SubLine(XDrawables.sleep, strings.lasting(sleepStart, now))
-        snapshot.awakeSinceMillis != null -> SubLine(XDrawables.awake, strings.lasting(snapshot.awakeSinceMillis, now))
+        sleepStart != null -> SubLine(XDrawables.history, strings.lasting(sleepStart, now))
+        snapshot.awakeSinceMillis != null -> SubLine(XDrawables.history, strings.lasting(snapshot.awakeSinceMillis, now))
         else -> null
     }
     val sleepStatusSpoken = when {
