@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -29,16 +30,21 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Keeps the placed widgets current (DESIGN_SPEC §10.11): re-renders them on every log and sleep change (the app scope
  * observes the entries, see `SystemSurfaces`), after every widget command, every minute (the times are relative: "Fed
  * 2h 10m ago", "Next in 55m"), when a receipt or notice expires, and at the
- * night-window boundaries while the Appearance is Auto (Night ↔ Day). The timed refreshes are one-time WorkManager work,
- * so they also happen when the process has died.
+ * night-window boundaries while the Appearance is Auto (Night ↔ Day). The minute tick is an exact alarm (see
+ * [scheduleMinuteTick]) backed by the system's minute broadcast while the process runs; the other timed refreshes are
+ * one-time WorkManager work. Both also happen when the process has died.
  */
 object WidgetUpdater {
     private val ticks = MutableStateFlow(0L)
+
+    /** The minute (epoch minutes) the last [tick] redrew, so the alarm and the system's minute broadcast draw once. */
+    private val lastTickMinute = AtomicLong(Long.MIN_VALUE)
 
     /** Bumped on every refresh; running widget sessions recompute their snapshot (with a new "now") on each tick. */
     val refreshes: StateFlow<Long> = ticks.asStateFlow()
@@ -62,6 +68,16 @@ object WidgetUpdater {
         } catch (e: Exception) {
             Log.w(TAG, "Widget refresh failed", e)
         }
+    }
+
+    /**
+     * The minute tick: one [refresh] per clock minute, whether the alarm or the system's minute broadcast
+     * (`ACTION_TIME_TICK`, while the process runs and the screen is on) comes first. The refresh schedules the next alarm.
+     */
+    suspend fun tick(context: Context) {
+        val minute = Core.ensureInitialized(context).clock.now().floorDiv(MINUTE_MILLIS)
+        if (lastTickMinute.getAndSet(minute) == minute) return
+        refresh(context)
     }
 
     /** Each widget provider's receiver and the widget it draws. */
@@ -97,13 +113,27 @@ object WidgetUpdater {
     }
 
     /**
-     * Redraws at the next minute, so the relative times follow the clock ("Fed 2h 10m ago", "Next in 55m"). The alarm
-     * does not wake the phone: one that sleeps redraws as soon as it wakes up, before anyone looks at the widget.
+     * Redraws at the next minute, so the relative times follow the clock ("Fed 2h 10m ago", "Next in 55m"). The alarm is
+     * exact: an inexact one is batched with other apps' alarms and, since Android 12, may come up to 10 minutes late. It
+     * does not wake the phone: one that sleeps redraws as soon as it wakes up, before anyone looks at the widget. Without
+     * the "Alarms & reminders" permission (denied by default for new installs on Android 14+) it falls back to an
+     * inexact alarm; the system's minute broadcast still redraws on time while the process runs.
      */
-    private fun scheduleMinuteTick(context: Context, now: Long) {
+    internal fun scheduleMinuteTick(context: Context, now: Long) {
         val alarms = context.getSystemService(AlarmManager::class.java) ?: return
-        alarms.set(AlarmManager.RTC, now - now.mod(MINUTE_MILLIS) + MINUTE_MILLIS, WidgetTickReceiver.intent(context))
+        val at = nextMinute(now)
+        val tick = WidgetTickReceiver.intent(context)
+        val exact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarms.canScheduleExactAlarms()
+        try {
+            if (exact) alarms.setExact(AlarmManager.RTC, at, tick) else alarms.set(AlarmManager.RTC, at, tick)
+        } catch (e: SecurityException) {
+            // The permission was revoked between the check and the call.
+            alarms.set(AlarmManager.RTC, at, tick)
+        }
     }
+
+    /** The start of the minute after [now]. */
+    fun nextMinute(now: Long): Long = now - now.mod(MINUTE_MILLIS) + MINUTE_MILLIS
 
     /** Stops the timed refreshes once no widget of any kind is placed (a provider's last instance was removed). */
     fun cancelIfNoneLeft(context: Context) {
@@ -137,13 +167,16 @@ object WidgetUpdater {
     private const val SLACK_MILLIS = 250L
 }
 
-/** The minute tick of [WidgetUpdater]: one refresh, which schedules the next. */
+/**
+ * The minute tick of [WidgetUpdater]: one refresh, which schedules the next. Also redraws (and so reschedules) when the
+ * clock or time zone is changed and when the exact-alarm permission is granted.
+ */
 class WidgetTickReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val pending = goAsync()
         Core.ensureInitialized(context).scope.launch {
             try {
-                WidgetUpdater.refresh(context)
+                if (intent.action == null) WidgetUpdater.tick(context) else WidgetUpdater.refresh(context)
             } finally {
                 pending.finish()
             }

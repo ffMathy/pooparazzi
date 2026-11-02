@@ -1,8 +1,12 @@
 package com.ffmathy.pooparazzi.phone.system
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.ffmathy.pooparazzi.core.CoreGraph
 import com.ffmathy.pooparazzi.phone.BuildConfig
@@ -61,6 +65,22 @@ object SystemSurfaces {
                 }
         }
         graph.scope.launch { publishWidgetPreviews(app) }
+        followMinutes(app, graph)
+    }
+
+    /**
+     * Redraws the widgets on the system's minute broadcast while the process runs (it is only sent while the screen is
+     * on), on the minute even when the exact alarm is not allowed. [WidgetUpdater.tick] draws once per minute.
+     */
+    private fun followMinutes(app: Context, graph: CoreGraph) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                graph.scope.launch { guard("widgets") { WidgetUpdater.tick(app) } }
+            }
+        }
+        guard("minute broadcast") {
+            ContextCompat.registerReceiver(app, receiver, IntentFilter(Intent.ACTION_TIME_TICK), ContextCompat.RECEIVER_NOT_EXPORTED)
+        }
     }
 
     /** Re-renders the timer notifications (e.g. once the permission is granted). */
