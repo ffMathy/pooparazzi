@@ -178,10 +178,11 @@
     <string name="spoken_forecast_poop_at">næste bæ forventes omkring kl. %1$s</string>
     <string name="estimate_next_in">Næste om %1$s</string>
     <string name="estimate_next_soon">Næste snart</string>
-    <string name="estimate_next_ago">Ventet for %1$s siden</string>
+    <string name="estimate_next_now">Ventes nu</string>
     <string name="estimate_poop_in">Næste bæ om %1$s</string>
     <string name="estimate_poop_soon">Næste bæ snart</string>
-    <string name="estimate_poop_ago">Bæ ventet for %1$s siden</string>
+    <string name="estimate_poop_now">Bæ ventes nu</string>
     <!-- The 4×2 widget's forecast line after its `upcoming` icon, where the time alone is "in 55m". -->
     <string name="estimate_soon">snart</string>
+    <string name="estimate_now">nu</string>
 </resources>

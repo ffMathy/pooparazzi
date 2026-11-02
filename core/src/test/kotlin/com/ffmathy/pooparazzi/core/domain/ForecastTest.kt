@@ -5,6 +5,7 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sample.SampleData.ZONE
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,7 +31,7 @@ class ForecastTest {
         val f = forecastAt(feedsEvery3h(at(6, 12)), now).feed!!
         assertEquals(at(6, 15), f.atMillis)
         assertEquals(2 * HOUR, f.remainingMillis(now))
-        assertNull(f.agoMillis(now))
+        assertFalse(f.isDue(now))
     }
 
     @Test
@@ -38,16 +39,17 @@ class ForecastTest {
         val now = at(6, 14, 57)
         val f = forecastAt(feedsEvery3h(at(6, 12)), now).feed!!
         assertNull(f.remainingMillis(now))
-        assertNull(f.agoMillis(now))
+        assertFalse(f.isDue(now))
     }
 
     @Test
-    fun aPassedEstimateStaysPutAndSaysHowLongAgo() {
+    fun aPassedEstimateStaysPutAndIsDue() {
         val now = at(6, 15, 24)
         val f = forecastAt(feedsEvery3h(at(6, 12)), now).feed!!
         assertEquals(at(6, 15), f.atMillis)
         assertNull(f.remainingMillis(now))
-        assertEquals(24 * MINUTE, f.agoMillis(now))
+        assertTrue(f.isDue(now))
+        assertTrue(f.isDue(f.atMillis))
     }
 
     @Test
@@ -67,7 +69,7 @@ class ForecastTest {
         assertEquals(last + 3 * HOUR, forecastAt(poops, last + 30 * MINUTE).poop!!.atMillis)
         val later = forecastAt(poops, last + 210 * MINUTE).poop!!
         assertEquals(last + 3 * HOUR, later.atMillis)
-        assertEquals(30 * MINUTE, later.agoMillis(last + 210 * MINUTE))
+        assertTrue(later.isDue(last + 210 * MINUTE))
         assertEquals(last + 8 * HOUR, later.goneAtMillis)
     }
 

@@ -86,21 +86,20 @@ class SurfaceText(
 
     /**
      * An estimate relative to the platform clock, by the rules of `GlanceText.next`: [inTemplate] with the time until
-     * [atMillis] rounded up to five minutes ("Next in 55m"), [soon] under five minutes, then [agoTemplate] with how long
-     * ago it was once a minute past ("Due 24m ago"). [static] is the line at the time the surface was built.
+     * [atMillis] rounded up to five minutes ("Next in 55m"), [soon] under five minutes, then [due] once it has come
+     * ("Due now"; never a time in the past). [static] is the line at the time the surface was built.
      */
-    fun estimate(atMillis: Long, static: String, inTemplate: String, soon: String, agoTemplate: String): TimeText {
+    fun estimate(atMillis: Long, static: String, inTemplate: String, soon: String, due: String): TimeText {
         val until = DynamicInstant.platformTimeWithSecondsPrecision().durationUntil(DynamicInstant.withSecondsPrecision(Instant.ofEpochMilli(atMillis)))
         val seconds = until.toIntSeconds()
         val roundedUpMinutes = seconds.plus(STEP_SECONDS - 1).div(STEP_SECONDS).times(STEP_SECONDS / 60)
         val ahead = Template(inTemplate)
-        val past = Template(agoTemplate)
         val dynamic = DynamicString.onCondition(seconds.gte(STEP_SECONDS)).use(ahead.wrap(minutesBody(roundedUpMinutes)))
             .elseUse(
-                DynamicString.onCondition(seconds.gt(-60)).use(DynamicString.constant(soon))
-                    .elseUse(past.wrap(agoBody(atMillis))),
+                DynamicString.onCondition(seconds.gt(0)).use(DynamicString.constant(soon))
+                    .elseUse(DynamicString.constant(due)),
             )
-        return TimeText(static, dynamic, longestOf(static, ahead.fill(widestDuration), soon, past.fill(widestDuration)))
+        return TimeText(static, dynamic, longestOf(static, ahead.fill(widestDuration), soon, due))
     }
 
     /** Clock time "14:32" (absolute, never changes). */

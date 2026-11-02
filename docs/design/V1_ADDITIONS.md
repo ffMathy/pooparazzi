@@ -490,19 +490,19 @@ the line is the time alone:
 | Woke up (a sleep runs) | "2h 15m" / "2t 15m": the expected wake-up | "wakes up in about 2 hours 15 minutes, around 05:27" |
 
 Times are rounded up to 5 minutes (an estimate, not a promise); under 5 minutes the line reads "soon" / "snart".
-Once the estimate has passed it stays put and says how long ago it was due: "24m ago" / "24m siden"; TalkBack "next feed expected 24 minutes ago, around 15:30". A button the week
+Once the estimate is due it stays put and says "now" / "nu" (an estimate never shows a time in the past); TalkBack "next feed expected now". A button the week
 cannot predict has no second line.
 
 **The other surfaces** (one more line each where there is room):
 
 | Surface | Feed | Diaper | Sleep, awake | Sleep, asleep |
 |---|---|---|---|---|
-| 4×2 widget (and the cover screen), in each button under its label, after `upcoming` as on Home | "55m", "soon", "24m ago" | "3h 10m", "soon", "24m ago" | "50m" | "2h 15m" |
+| 4×2 widget (and the cover screen), in each button under its label, after `upcoming` as on Home | "55m", "soon", "now" | "3h 10m", "soon", "now" | "50m" | "2h 15m" |
 | Watch Main and Tile (one shared model, DESIGN_SPEC §3.5.1), after `upcoming` | third row line: "55m" | third row line: "3h 10m" | under "Start sleep": "50m" | under "Woke up": "2h 15m" |
 
 Every surface (Home, the widgets, the watch) states the estimates by the same rules, relative to now (core `EstimateText`; Home, the 4×2 widget and the watch show the time alone after `upcoming`): rounded up to 5 minutes,
-"soon" under 5 minutes, then how long ago it was due. The widget does not tick: it is redrawn when the words change
-(every 5 minutes, then each minute once overdue, until the forecast is dropped). The Tile builds the same rules into a
+"soon" under 5 minutes, then "now" once it is due. The widget does not tick: it is redrawn when the words change
+(every 5 minutes until it is due, and when the forecast is dropped). The Tile builds the same rules into a
 dynamic expression the renderer keeps current; the watch app re-words them each minute. Feed and Diaper keep the same
 face on the widget: when either has a line, both reserve it, so the icons stay aligned; the compact (two-line label)
 face has no room and shows none. TalkBack reads the clock time, which does not tick: "Log feed, next feed expected
@@ -521,7 +521,7 @@ own last 7 days, which is recent enough to follow a growing baby:
 3. Too few (under 5, or from fewer than 3 days), too spread out (interquartile range over 1.5 × the median), or
    the current stretch already twice the longest of them (logging has stopped): no forecast.
 4. Their median, added to the current stretch's start. The estimate is **fixed for the stretch**: a long nap or a late
-   feed does not move it on to a new guess, it shows how long ago it was due ("24m ago") until the stretch ends or
+   feed does not move it on to a new guess, it shows "now" until the stretch ends or
    step 3 drops it.
 
 5. **Poop after a feed** (fallback when steps 1–4 give no poop forecast). Newborns often poop shortly after feeding

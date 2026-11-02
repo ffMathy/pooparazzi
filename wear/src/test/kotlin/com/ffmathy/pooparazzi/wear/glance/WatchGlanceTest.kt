@@ -43,9 +43,10 @@ class WatchGlanceTest {
         val feed = assertNotNull(glance.nextFeed)
         assertEquals("1h 00m", words.nextShort(feed, glance.now))
         assertEquals("50m", words.nextShort(assertNotNull(glance.nextSleep), glance.now))
-        // Under five minutes it is "soon"; a minute past it, how long ago.
+        // Under five minutes it is "soon"; once it has come, "now", never a time in the past.
         assertEquals("soon", words.nextShort(feed, feed.atMillis - 4 * 60_000L))
-        assertEquals("24m ago", words.nextShort(feed, feed.atMillis + 24 * 60_000L))
+        assertEquals("now", words.nextShort(feed, feed.atMillis))
+        assertEquals("now", words.nextShort(feed, feed.atMillis + 24 * 60_000L))
         assertEquals("expected to sleep again around 15:20", words.nextSleepSpoken(glance.nextSleep!!, asleep = false))
         assertEquals(GlanceTitle.Name(SampleData.BABY_NAME), glance.title)
     }

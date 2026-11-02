@@ -153,13 +153,14 @@ class HomeSemanticsTest {
     }
 
     @Test
-    fun aPassedEstimateSaysHowLongAgoItWasDue() {
-        // V1_ADDITIONS §9: the estimate stays put; at 15:55 the feed expected ~15:30 is "24m ago", not a new guess.
+    fun aPassedEstimateSaysNowNotATimeInThePast() {
+        // V1_ADDITIONS §9: the estimate stays put; at 15:55 the feed expected ~15:30 is "now", not a new guess or "24m ago".
         show(HomeSamples.forecastPassed())
-        compose.onNodeWithText("24m ago", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("36m ago", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("next feed expected 24 minutes ago, around 15:30", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("expected to sleep again 36 minutes ago, around 15:19", useUnmergedTree = true).assertExists()
+        compose.onAllNodesWithText("now", useUnmergedTree = true).assertCountEquals(2)
+        compose.onNodeWithText("24m ago", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText("36m ago", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("next feed expected now", useUnmergedTree = true).assertExists()
+        compose.onNodeWithContentDescription("expected to sleep again now", useUnmergedTree = true).assertExists()
     }
 
     @Test

@@ -51,7 +51,7 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun homeDay() = home("02-home-day", night = false, HomeSamples.idle())
 
-    /** Nothing logged since the estimates passed: "24m ago" under Feed, "36m ago" under Start sleep (V1_ADDITIONS §9). */
+    /** Nothing logged since the estimates passed: "now" under Feed and Start sleep (V1_ADDITIONS §9). */
     @Test fun homeForecastPassed() = home("02b-home-forecast-passed", night = false, HomeSamples.forecastPassed())
 
     @Test fun homeAsleepNight() = home("03-home-asleep-night", night = true, HomeSamples.asleep())

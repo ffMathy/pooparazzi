@@ -101,13 +101,13 @@
     <!-- The Ongoing Activity: the earliest of the week's estimates, relative and short, so it fits on a watch face ("Wakes 55m"). -->
     <string name="ongoing_feed_in">Feed %1$s</string>
     <string name="ongoing_feed_soon">Feed soon</string>
-    <string name="ongoing_feed_ago">Feed %1$s late</string>
+    <string name="ongoing_feed_now">Feed now</string>
     <string name="ongoing_poop_in">Poop %1$s</string>
     <string name="ongoing_poop_soon">Poop soon</string>
-    <string name="ongoing_poop_ago">Poop %1$s late</string>
+    <string name="ongoing_poop_now">Poop now</string>
     <string name="ongoing_wake_in">Wakes %1$s</string>
     <string name="ongoing_wake_soon">Wakes soon</string>
-    <string name="ongoing_wake_ago">Wake-up %1$s late</string>
+    <string name="ongoing_wake_now">Wakes now</string>
     <!-- The Ongoing Activity when the week predicts nothing: how long the sleep has run ("Asleep 55m"). -->
     <string name="ongoing_asleep_for">Asleep %1$s</string>
     <!-- TalkBack, the place of a ticked side checkbox: "Left, first, checkbox, checked" -->

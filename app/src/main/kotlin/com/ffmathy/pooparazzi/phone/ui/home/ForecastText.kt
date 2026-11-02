@@ -11,7 +11,8 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
  * A Home button's second line (V1_ADDITIONS §9), after the `upcoming` icon that says it is what comes next, so it is
- * the time alone, as on the 4×2 widget: "1h 05m", "soon", and once the estimate has passed "24m ago". TalkBack says it
+ * the time alone, as on the 4×2 widget: "1h 05m", "soon", and once the estimate is due "now" (never a time in the
+ * past). TalkBack says it
  * in full: "next feed in about 1 hour 5 minutes, around 15:35".
  */
 internal class ForecastText(val shown: String, val spoken: String)
@@ -20,31 +21,26 @@ internal class ForecastText(val shown: String, val spoken: String)
 internal enum class ForecastKind(
     @param:StringRes val spokenFormat: Int,
     @param:StringRes val spokenSoon: Int,
-    @param:StringRes val spokenAgoFormat: Int,
+    @param:StringRes val spokenNow: Int,
 ) {
-    FEED(R.string.forecast_spoken_feed, R.string.forecast_spoken_feed_soon, R.string.forecast_spoken_feed_ago),
+    FEED(R.string.forecast_spoken_feed, R.string.forecast_spoken_feed_soon, R.string.forecast_spoken_feed_now),
 
     /** Under Diaper: only poop is worth predicting, so TalkBack names it ("next poop in about 3 hours 10 minutes"). */
-    POOP(R.string.forecast_spoken_poop, R.string.forecast_spoken_poop_soon, R.string.forecast_spoken_poop_ago),
+    POOP(R.string.forecast_spoken_poop, R.string.forecast_spoken_poop_soon, R.string.forecast_spoken_poop_now),
 
     /** Under Start sleep. */
-    SLEEP(R.string.forecast_spoken_sleep, R.string.forecast_spoken_sleep_soon, R.string.forecast_spoken_sleep_ago),
+    SLEEP(R.string.forecast_spoken_sleep, R.string.forecast_spoken_sleep_soon, R.string.forecast_spoken_sleep_now),
 
     /** Under Woke up, while a sleep runs. */
-    WAKE(R.string.forecast_spoken_wake, R.string.forecast_spoken_wake_soon, R.string.forecast_spoken_wake_ago),
+    WAKE(R.string.forecast_spoken_wake, R.string.forecast_spoken_wake_soon, R.string.forecast_spoken_wake_now),
 }
 
 /** The forecast line for [expected], or null when the week predicts nothing for it. */
 @Composable
 internal fun forecastText(expected: Expected?, kind: ForecastKind, now: Long, zone: ZoneId, formatters: Formatters): ForecastText? {
     expected ?: return null
+    if (expected.isDue(now)) return ForecastText(stringResource(CoreR.string.estimate_now), stringResource(kind.spokenNow))
     val clock = formatters.clock.format(expected.atMillis, zone)
-    expected.agoMillis(now)?.let { ago ->
-        return ForecastText(
-            shown = stringResource(CoreR.string.rel_ago_format, formatters.duration.format(ago)),
-            spoken = stringResource(kind.spokenAgoFormat, formatters.duration.spoken(ago), clock),
-        )
-    }
     val remaining = expected.remainingMillis(now) ?: return ForecastText(stringResource(CoreR.string.estimate_soon), stringResource(kind.spokenSoon))
     return ForecastText(
         shown = stringResource(CoreR.string.estimate_time, formatters.duration.format(remaining)),

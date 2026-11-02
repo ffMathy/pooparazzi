@@ -213,12 +213,13 @@
          "Next poop in 3h 10m" / "Next poop soon" / "Poop due 24m ago". -->
     <string name="estimate_next_in">Next in %1$s</string>
     <string name="estimate_next_soon">Next soon</string>
-    <string name="estimate_next_ago">Due %1$s ago</string>
+    <string name="estimate_next_now">Due now</string>
     <string name="estimate_poop_in">Next poop in %1$s</string>
     <string name="estimate_poop_soon">Next poop soon</string>
-    <string name="estimate_poop_ago">Poop due %1$s ago</string>
+    <string name="estimate_poop_now">Poop due now</string>
     <!-- The 4×2 widget's forecast line after its `upcoming` icon, where the time alone is "in 55m". -->
     <string name="estimate_soon">soon</string>
+    <string name="estimate_now">now</string>
     <!-- The same line's time alone, "55m" (the icon says it is next). -->
     <string name="estimate_time" translatable="false">%1$s</string>
 </resources>

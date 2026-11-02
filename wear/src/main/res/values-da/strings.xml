@@ -56,13 +56,13 @@
     <string name="ongoing_asleep_since">Sover siden kl. #start#</string>
     <string name="ongoing_feed_in">Måltid %1$s</string>
     <string name="ongoing_feed_soon">Måltid snart</string>
-    <string name="ongoing_feed_ago">Måltid %1$s forsinket</string>
+    <string name="ongoing_feed_now">Måltid nu</string>
     <string name="ongoing_poop_in">Bæ %1$s</string>
     <string name="ongoing_poop_soon">Bæ snart</string>
-    <string name="ongoing_poop_ago">Bæ %1$s forsinket</string>
+    <string name="ongoing_poop_now">Bæ nu</string>
     <string name="ongoing_wake_in">Vågner %1$s</string>
     <string name="ongoing_wake_soon">Vågner snart</string>
-    <string name="ongoing_wake_ago">Vågner %1$s forsinket</string>
+    <string name="ongoing_wake_now">Vågner nu</string>
     <string name="ongoing_asleep_for">Sover %1$s</string>
     <string name="spoken_side_first">først</string>
     <string name="spoken_side_second">bagefter</string>

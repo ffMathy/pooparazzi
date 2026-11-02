@@ -8,14 +8,14 @@ import kotlin.math.abs
 
 /**
  * One expected moment ("wakes in about 40m"): [atMillis] is the estimate, fixed for the whole stretch, so once it has
- * passed it is "24m ago" rather than a new, later guess. [goneAtMillis] is when the current stretch has run so far past
+ * passed it is "now" rather than a new, later guess (an estimate never reads as a time in the past). [goneAtMillis] is when the current stretch has run so far past
  * every comparable one that logging has probably stopped, and the forecast is dropped. [samples] is how many past
  * stretches the estimate rests on.
  */
 data class Expected(val atMillis: Long, val goneAtMillis: Long, val samples: Int) {
     /**
      * Time until it, rounded up to [STEP_MILLIS] ("in 55m": a week's typical gap, not a minute-exact promise); null
-     * when it is due ("soon", under one step away) or past ([agoMillis]).
+     * when it is near ("soon", under one step away) or due ([isDue]).
      */
     fun remainingMillis(now: Long): Long? {
         val left = atMillis - now
@@ -23,15 +23,14 @@ data class Expected(val atMillis: Long, val goneAtMillis: Long, val samples: Int
         return (left + STEP_MILLIS - 1) / STEP_MILLIS * STEP_MILLIS
     }
 
-    /** How long ago it should have happened ("24m ago"); null until a full minute after it (until then it is "soon"). */
-    fun agoMillis(now: Long): Long? = (now - atMillis).takeIf { it >= MINUTE_MILLIS }
+    /** Whether it has come ("now"): surfaces never say how long ago an estimate passed. */
+    fun isDue(now: Long): Boolean = now >= atMillis
 
     /** [atMillis] to the nearest [STEP_MILLIS], for surfaces that show a clock time ("~15:25"). */
     val roundedAtMillis: Long get() = (atMillis + STEP_MILLIS / 2) / STEP_MILLIS * STEP_MILLIS
 
     companion object {
         const val STEP_MILLIS = 5 * 60_000L
-        private const val MINUTE_MILLIS = 60_000L
     }
 }
 
@@ -59,7 +58,7 @@ data class Forecast(val sleep: Expected?, val feed: Expected?, val poop: Expecte
  *  3. gives up when the stretches are too few (under 5, or from fewer than 3 days) or spread too widely (interquartile range over 1.5 × the median), or
  *     when the current stretch is already twice the longest of them (logging has probably stopped);
  *  4. adds their median to the current stretch's start. The estimate stays put as the stretch goes on, so a late one
- *     reads "24m ago" instead of moving on to a new guess.
+ *     reads "now" instead of moving on to a new guess.
  *
  * Poop that follows no gap falls back to [poopAfterFeed]: newborns often poop shortly after each feed.
  */
