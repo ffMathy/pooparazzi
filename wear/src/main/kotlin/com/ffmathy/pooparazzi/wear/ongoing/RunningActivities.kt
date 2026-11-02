@@ -10,7 +10,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -31,8 +30,8 @@ import com.ffmathy.pooparazzi.wear.ui.inSentence
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** One running interval shown as an Ongoing Activity: only a sleep runs (feeds are instants). */
-enum class RunningKind(val notificationId: Int, @DrawableRes val icon: Int, @StringRes val status: Int) {
-    SLEEP(NOTIFICATION_SLEEP, XDrawables.sleepRunning, CoreR.string.status_asleep),
+enum class RunningKind(val notificationId: Int, @DrawableRes val icon: Int) {
+    SLEEP(NOTIFICATION_SLEEP, XDrawables.sleepRunning),
 }
 
 private const val NOTIFICATION_SLEEP = 1001
@@ -42,14 +41,15 @@ internal const val LEGACY_NOTIFICATION_FEED = 1002
 
 /**
  * The watch Ongoing Activity (DESIGN_SPEC §3.8, §10.6) for a running sleep: a static white icon, the status, and a tap
- * that opens Main. The status says how the baby is and what comes next, relative to now: "Asleep · feed in 2h 05m"
- * (the earliest of the week's estimates: the next feed, the next poop or the expected wake-up, worded by core's
- * [EstimateText] rules), or how long the sleep has run when the week predicts nothing ("Asleep · 1h 07m"). It is
+ * that opens Main. The status is short enough for a watch face: what comes next, relative to now: "Wakes 55m" (the
+ * earliest of the week's estimates: the next feed, the next poop or the expected wake-up, worded by core's
+ * [EstimateText] rules; the icon already says the baby sleeps), or how long the sleep has run when the week predicts
+ * nothing ("Asleep 1h 07m"). It is
  * redrawn every minute by a non-waking alarm ([OngoingTickReceiver]), so it is current whenever the watch is awake.
  *
  * It is removed as soon as the sleep ends, wherever it ended (the app, the tile, or the phone through sync), because
  * [sync] runs on every change of the entries. It shows the watch's current baby's sleep; with two or more babies it
- * names that baby ("Noa · Asleep · feed in 2h 05m") and follows a switch to another baby (BABIES_AND_BACKUP §2.5).
+ * names that baby ("Noa · Wakes 55m") and follows a switch to another baby (BABIES_AND_BACKUP §2.5).
  *
  * Posting needs `POST_NOTIFICATIONS` on API 33+; without it nothing is shown and logging works as usual.
  */
@@ -70,7 +70,7 @@ class RunningActivities(
     }
 
     /**
-     * "feed in 2h 05m": the earliest of the week's estimates for [summary] (an overdue one first: "feed due 5m ago"),
+     * "Feed 2h 05m": the earliest of the week's estimates for [summary] (an overdue one first: "Feed 5m late"),
      * with its spoken form ("next feed expected around 15:30"); null when the week predicts nothing.
      */
     private fun next(summary: Summary): Pair<String, String>? {
@@ -99,12 +99,13 @@ class RunningActivities(
         scheduleTick(true)
         val clock = ClockFormatter.from(context)
         val start = clock.format(running.startMillis, summary.zone)
-        val status = context.getString(kind.status)
-        // What comes next ("feed in 2h 05m"), or how long the sleep has run ("1h 07m").
+        // What comes next ("Wakes 55m"), or how long the sleep has run ("Asleep 1h 07m"): one short phrase, so it is
+        // not cut off or wrapped on the watch face.
         val next = next(summary)
-        val detail = next?.first ?: DurationFormatter.from(context).format(clockDurationMillis(running.startMillis, summary.now))
-        // "Noa · Asleep · feed in 2h 05m": the baby leads, as in the app's time text. A "#" would read as a template part.
-        val text = listOfNotNull(baby?.replace("#", ""), status, detail).joinToString(DOT_SEPARATOR)
+        val detail = next?.first
+            ?: context.getString(R.string.ongoing_asleep_for, DurationFormatter.from(context).format(clockDurationMillis(running.startMillis, summary.now)))
+        // "Noa · Wakes 55m": the baby leads, as in the app's time text. A "#" would read as a template part.
+        val text = listOfNotNull(baby?.replace("#", ""), detail).joinToString(DOT_SEPARATOR)
         val key = Shown(running.id, text, running.babyId, baby)
         if (shown[kind] == key) return
         if (!canPost()) return

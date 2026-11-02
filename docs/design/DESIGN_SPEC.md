@@ -633,7 +633,7 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 
 ### 3.8 W11 Ongoing Activity / Live Update (watch)
 
-Static white `sleepRunning` icon. Status: how the baby is and what comes next, relative to now: "Asleep · feed in 2h 05m" (the earliest of the week's estimates: the next feed, the next poop or the expected wake-up; "feed soon", "feed due 5m ago"), or "Asleep · 1h 07m" when the week predicts nothing. Redrawn every minute by a non-waking alarm, so it is current whenever the watch is awake. TalkBack reads clock times ("Asleep since 02:05, expected to wake around 05:25"). Tap → the sleep screen. Dismissed on both devices when the sleep ends on either one. API details: §10.6.
+Static white `sleepRunning` icon. Status: one short phrase that fits the watch face without wrapping or being cut off: what comes next, relative to now, without the current state (the icon already says the baby sleeps): "Wakes 55m" (the earliest of the week's estimates: "Feed 2h 05m", "Poop 3h 10m" or "Wakes 55m"; "Feed soon", "Feed 5m late"), or how long the sleep has run, "Asleep 1h 07m", when the week predicts nothing. With two or more babies the baby leads ("Noa · Wakes 55m"). Redrawn every minute by a non-waking alarm, so it is current whenever the watch is awake. TalkBack reads clock times ("Asleep since 02:05, expected to wake around 05:25"). Tap → the sleep screen. Dismissed on both devices when the sleep ends on either one. API details: §10.6.
 
 ---
 
@@ -1103,7 +1103,7 @@ One grammar everywhere the app renders text, including the tile and complication
 
 **No ticking durations.** No seconds, no chronometer anywhere:
 - Phone Live Update chip: "Asleep" (no chronometer). Its text shows whole minutes ("1h 07m · since 02:05"), re-rendered once a minute, and its Android 17 metrics use the system's TimeDifference.
-- Wear Ongoing Activity / Live Update: "Asleep · feed in 2h 05m" (spoken "Asleep since 02:05, next feed expected around 15:30").
+- Wear Ongoing Activity / Live Update: "Feed 2h 05m" (spoken "Asleep since 02:05, next feed expected around 15:30").
 - Tile and complications format their own dynamic text in this grammar.
 - **The only exemption**: the pre-Wear OS 4 complication fallback `TimeDifferenceComplicationText` with `SHORT_DUAL_UNIT` (system format "1h 5m").
 
@@ -1303,7 +1303,7 @@ ScreenScaffold's `edgeButton` slot keeps the button collapsed until the last lis
 
 - **Ongoing Activity** (Wear OS ≤ 6) / **Live Update** (Wear OS 7+):
   - static white `sleepRunning` vector icon, `CATEGORY_STOPWATCH`;
-  - status text "Asleep · feed in 2h 05m" (core `EstimateText` rules), redrawn each minute by a non-waking `AlarmManager.RTC` alarm (`OngoingTickReceiver`) while a sleep runs. The Wear OS 7 Live Update uses the same text;
+  - status text "Feed 2h 05m" (core `EstimateText` rules), redrawn each minute by a non-waking `AlarmManager.RTC` alarm (`OngoingTickReceiver`) while a sleep runs. The Wear OS 7 Live Update uses the same text;
   - touch intent to the sleep screen.
 - Deduplicate the phone-bridged Live Update against the watch one by sleep-session UUID. When the sleep ends on either device, dismiss both.
 - Double-pinch (`Modifier.oneHandedGesture`, Wear OS 7, Pixel Watch 3+) is bound only to the Woke up / Start sleep EdgeButton.

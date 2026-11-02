@@ -16,7 +16,7 @@ import kotlinx.coroutines.withContext
 import java.time.ZoneId
 
 /**
- * The Ongoing Activity's minute tick: its status is relative ("Asleep · feed in 2h 05m"), so while a sleep runs it is
+ * The Ongoing Activity's minute tick: its status is relative ("Feed 2h 05m"), so while a sleep runs it is
  * redrawn every minute ([RunningActivities] schedules the next tick, or cancels it once the sleep ends). Only the
  * Ongoing Activity is redrawn; the tile and complications keep their own schedules.
  */

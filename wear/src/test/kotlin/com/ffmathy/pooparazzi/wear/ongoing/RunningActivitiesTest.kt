@@ -48,13 +48,13 @@ class RunningActivitiesTest {
             .sync(summarize(SampleData.historyAt0312(), SampleData.NOW_0312, SampleData.ZONE))
         val notification = shadowOf(notifications).getNotification(1001)
         assertNotNull(notification)
-        assertEquals("Asleep · wakes in 2h 15m", notification.extras.getString(NotificationCompat.EXTRA_TITLE))
+        assertEquals("Wakes 2h 15m", notification.extras.getString(NotificationCompat.EXTRA_TITLE))
         assertEquals(NotificationCompat.CATEGORY_STOPWATCH, notification.category)
         assertTrue(notification.flags and android.app.Notification.FLAG_ONGOING_EVENT != 0)
         val activity = OngoingActivity.recoverOngoingActivity(app, 1001)
         assertNotNull(activity)
         assertEquals(XDrawables.sleepRunning, activity?.staticIcon?.resId)
-        assertEquals("Asleep · wakes in 2h 15m", activity?.status?.getText(app, 0L).toString())
+        assertEquals("Wakes 2h 15m", activity?.status?.getText(app, 0L).toString())
         // TalkBack: a clock time, which does not go stale.
         assertEquals("Asleep since 02:05, expected to wake around 05:25", activity?.contentDescription)
         val touch = shadowOf(activity?.touchIntent).savedIntent
@@ -69,12 +69,24 @@ class RunningActivitiesTest {
         val activities = RunningActivities(app, wallClock = { SampleData.NOW_0312 })
         activities.sync(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, SampleData.ZONE))
         fun title() = shadowOf(notifications).getNotification(1001)?.extras?.getString(NotificationCompat.EXTRA_TITLE)
-        assertEquals("Asleep · 1h 07m", title())
+        assertEquals("Asleep 1h 07m", title())
         activities.sync(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312 + 60_000L, SampleData.ZONE))
-        assertEquals("Asleep · 1h 08m", title())
+        assertEquals("Asleep 1h 08m", title())
         // The minute tick is scheduled while a sleep runs.
         val alarms = shadowOf(app.getSystemService(android.app.AlarmManager::class.java))
         assertNotNull(alarms.nextScheduledAlarm)
+    }
+
+    /** Danish: one short phrase, without the state the icon already shows ("Vågner 2t 15m", not "Sover · vågner om …"). */
+    @Test
+    @Config(qualifiers = "da")
+    fun inDanishTheStatusIsShort() {
+        val activities = RunningActivities(app, wallClock = { SampleData.NOW_0312 })
+        fun title() = shadowOf(notifications).getNotification(1001)?.extras?.getString(NotificationCompat.EXTRA_TITLE)
+        activities.sync(summarize(SampleData.historyAt0312(), SampleData.NOW_0312, SampleData.ZONE))
+        assertEquals("Vågner 2t 15m", title())
+        activities.sync(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, SampleData.ZONE))
+        assertEquals("Sover 1t 07m", title())
     }
 
     @Test
@@ -101,19 +113,19 @@ class RunningActivitiesTest {
         val activities = RunningActivities(app, wallClock = { SampleData.NOW_0312 })
         activities.sync(summarize(SampleData.scenarioAt0312(), SampleData.NOW_0312, SampleData.ZONE), baby = "Noa")
         fun title() = shadowOf(notifications).getNotification(1001)?.extras?.getString(NotificationCompat.EXTRA_TITLE)
-        assertEquals("Noa · Asleep · 1h 07m", title())
-        assertEquals("Noa · Asleep · 1h 07m", OngoingActivity.recoverOngoingActivity(app, 1001)?.status?.getText(app, 0L).toString())
+        assertEquals("Noa · Asleep 1h 07m", title())
+        assertEquals("Noa · Asleep 1h 07m", OngoingActivity.recoverOngoingActivity(app, 1001)?.status?.getText(app, 0L).toString())
         assertEquals("Noa, asleep since 02:05", OngoingActivity.recoverOngoingActivity(app, 1001)?.contentDescription)
 
         // Switched to Ida, asleep too: the activity is hers.
         val ida = Entry.sleep(SampleData.at(2, 30), null, id = "ida-sleep", babyId = SampleData.TWIN_ID)
         activities.sync(summarize(listOf(ida), SampleData.NOW_0312, SampleData.ZONE), baby = "Ida")
-        assertEquals("Ida · Asleep · 42m", title())
+        assertEquals("Ida · Asleep 42m", title())
         assertEquals("Ida, asleep since 02:30", OngoingActivity.recoverOngoingActivity(app, 1001)?.contentDescription)
 
         // Renamed on the phone: posted again with the new name.
         activities.sync(summarize(listOf(ida), SampleData.NOW_0312, SampleData.ZONE), baby = "Ida Marie")
-        assertEquals("Ida Marie · Asleep · 42m", title())
+        assertEquals("Ida Marie · Asleep 42m", title())
 
         // Switched to an awake baby: no activity.
         activities.sync(summarize(emptyList(), SampleData.NOW_0312, SampleData.ZONE), baby = "Noa")
