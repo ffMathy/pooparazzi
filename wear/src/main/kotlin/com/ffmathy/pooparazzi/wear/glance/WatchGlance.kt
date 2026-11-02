@@ -95,7 +95,7 @@ class GlanceText(private val res: Resources, private val formatters: Formatters)
 
     private fun time(expected: Expected): String = formatters.clock.format(expected.roundedAtMillis, formatters.zone)
 
-    /** After the `upcoming` icon, which says "next": "55m", "soon" or "24m ago" (Main's rows and sleep toggle). */
+    /** After the `upcoming` icon, which says "next": "55m", "soon" or "now" (Main's rows and sleep toggle). */
     fun nextShort(expected: Expected, now: Long): String = estimates.formatShort(expected, now)
 
     /** [nextShort]'s words, for a surface that builds the line itself (the Tile's dynamic expression). */

@@ -399,10 +399,10 @@
     <string name="forecast_spoken_feed_soon">next feed soon</string>
     <string name="forecast_spoken_poop_soon">next poop soon</string>
     <!-- Once the estimate has passed: "24m ago"; TalkBack "next feed expected 24 minutes ago, around 15:35". -->
-    <string name="forecast_spoken_wake_ago">expected to wake up %1$s ago, around %2$s</string>
-    <string name="forecast_spoken_sleep_ago">expected to sleep again %1$s ago, around %2$s</string>
-    <string name="forecast_spoken_feed_ago">next feed expected %1$s ago, around %2$s</string>
-    <string name="forecast_spoken_poop_ago">next poop expected %1$s ago, around %2$s</string>
+    <string name="forecast_spoken_wake_now">expected to wake up now</string>
+    <string name="forecast_spoken_sleep_now">expected to sleep again now</string>
+    <string name="forecast_spoken_feed_now">next feed expected now</string>
+    <string name="forecast_spoken_poop_now">next poop expected now</string>
 
     <!-- Settings' footer, at the very bottom -->
     <string name="settings_made_by">Made with ❤️ by a father in Aarhus, Denmark</string>

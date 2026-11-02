@@ -70,7 +70,7 @@ class RunningActivities(
     }
 
     /**
-     * "Feed 2h 05m": the earliest of the week's estimates for [summary] (an overdue one first: "Feed 5m late"),
+     * "Feed 2h 05m": the earliest of the week's estimates for [summary] (a due one first: "Feed now"),
      * with its spoken form ("next feed expected around 15:30"); null when the week predicts nothing.
      */
     private fun next(summary: Summary): Pair<String, String>? {
@@ -79,10 +79,10 @@ class RunningActivities(
         val clock = ClockFormatter.from(context)
         fun time(e: Expected) = clock.format(e.roundedAtMillis, summary.zone)
         val candidates = listOfNotNull(
-            week.feed?.let { e -> e to { estimates.format(R.string.ongoing_feed_in, R.string.ongoing_feed_soon, R.string.ongoing_feed_ago, e, summary.now) to context.getString(CoreR.string.spoken_forecast_feed_at, time(e)) } },
-            week.poop?.let { e -> e to { estimates.format(R.string.ongoing_poop_in, R.string.ongoing_poop_soon, R.string.ongoing_poop_ago, e, summary.now) to context.getString(CoreR.string.spoken_forecast_poop_at, time(e)) } },
+            week.feed?.let { e -> e to { estimates.format(R.string.ongoing_feed_in, R.string.ongoing_feed_soon, R.string.ongoing_feed_now, e, summary.now) to context.getString(CoreR.string.spoken_forecast_feed_at, time(e)) } },
+            week.poop?.let { e -> e to { estimates.format(R.string.ongoing_poop_in, R.string.ongoing_poop_soon, R.string.ongoing_poop_now, e, summary.now) to context.getString(CoreR.string.spoken_forecast_poop_at, time(e)) } },
             week.sleep?.takeIf { summary.runningSleep != null }?.let { e ->
-                e to { estimates.format(R.string.ongoing_wake_in, R.string.ongoing_wake_soon, R.string.ongoing_wake_ago, e, summary.now) to context.getString(CoreR.string.spoken_forecast_wake_at, time(e)) }
+                e to { estimates.format(R.string.ongoing_wake_in, R.string.ongoing_wake_soon, R.string.ongoing_wake_now, e, summary.now) to context.getString(CoreR.string.spoken_forecast_wake_at, time(e)) }
             },
         )
         return candidates.minByOrNull { it.first.atMillis }?.second?.invoke()

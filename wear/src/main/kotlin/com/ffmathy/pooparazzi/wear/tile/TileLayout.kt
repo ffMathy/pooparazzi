@@ -373,8 +373,8 @@ private class TileContent(
      * Main.
      */
     private fun estimate(expected: Expected, alignment: Int): LayoutString {
-        val (ahead, soon, past) = glanceText.shortTemplate()
-        return text.estimate(expected.atMillis, glanceText.nextShort(expected, now), ahead, soon, past).layout(alignment)
+        val (ahead, soon, due) = glanceText.shortTemplate()
+        return text.estimate(expected.atMillis, glanceText.nextShort(expected, now), ahead, soon, due).layout(alignment)
     }
 
     /** [this] read on with the estimate after it ("…, next feed expected around 15:30"). */
