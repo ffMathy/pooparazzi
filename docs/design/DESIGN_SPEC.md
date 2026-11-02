@@ -179,9 +179,10 @@ Live Update ──"Woke up" action──▶ ends the sleep
 **Watch**
 
 ```
-Main (idle | asleep) ──Diaper──▶ Diaper picker ──Earlier──▶ Earlier ──choice──▶ Diaper picker
+Main (idle | asleep) ──Diaper──▶ Diaper picker ──Earlier──▶ Time ──Done──▶ Diaper picker
  │                                   └─Pee/Poop/Both──▶ Logged ──Undo──▶ Undone ──▶ Main
- ├─Feed──▶ Logged                         └─timeout / tap outside Undo──▶ Main
+ ├─Feed──▶ Logged                         ├─time (tap or crown)──▶ Time ──Done──▶ Logged
+ │                                        └─timeout / tap outside Undo and the time──▶ Main
  ├─Start sleep / Woke up (EdgeButton) ──▶ Main (asleep) / Logged
  └─baby button (two or more babies) ──▶ Baby picker ──▶ Main
 Tile buttons ──▶ log in place · Tile background during the 10 s feedback ──▶ Logged (Undo active at once)
@@ -189,7 +190,7 @@ Complication tap ──▶ the matching app screen (never logs)
 Ongoing Activity tap ──▶ the sleep screen (Main, asleep)
 ```
 
-Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Earlier.
+Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Time (the time stays as it was).
 
 ### 3.2 Inventory
 
@@ -206,7 +207,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Earlier.
 | W1 | Watch | Main, idle | As the Tile: name, Feed and Diaper rows with time since and next estimate, "Start sleep" with the next sleep |
 | W2 | Watch | Main, asleep | As the Tile: "Asleep 1h 07m", Feed and Diaper rows, "Woke up" with the expected wake-up |
 | W3 | Watch | Diaper picker | Pee / Poop / Both; Earlier |
-| W4 | Watch | Earlier | Backdate a diaper (−5m / −10m / −15m) |
+| W4 | Watch | Time | Set the time of a feed or diaper before it is logged, or of the entry Logged shows: crown a minute per step, −5m / +5m, Done |
 | W6 | Watch | Logged | Confirmation plus a 5 s Undo |
 | W7 | Watch | Undone | Undo confirmation (1.5 s) |
 | W9 | Watch | Tile | One-tap logging and status from the tile carousel |
@@ -524,13 +525,24 @@ No Lamp and no glow.
 
 Tile → log at stamp + offset → Logged. Haptic `Confirm`.
 
-#### 3.5.4 W4 Earlier
+#### 3.5.4 W4 Time
 
-Three tonal buttons 150 × 52 (Wear button minimum height), r 26, `#1E1914`, labelMedium `#E8D8C3`, centred at y 32–84, 88–140, 144–196: "−5m · 14:27", "−10m · 14:22", "−15m · 14:17" (times = stamp − offset). A choice sets the offset and returns to the picker. 500 ms cooldown. Spoken: "5 minutes earlier, 14:27".
+Opened by Earlier on Feed type and Diaper (the draft's time, which can move back up to 12 h but never past the tap's stamp) and by the time on Logged (tap it, or turn the crown there: the logged time, which can move up to now, back up to 12 h, and a wake time no earlier than a minute after the sleep began; not for "Sleep cancelled").
+
+| Element | Spec |
+|---|---|
+| Heading | y ≈ 12 % from the top: "Feed" / "Diaper" / "Woke up", then " · −7m" (the offset from the time it opened with; from an hour "−1h 05m") once it differs. titleMedium onSurface, one line |
+| Time | "14:25", displaySmall, in the event colour (feed strong / diaper text / sleep text). Heading and time are one node, read "Feed, 14:25, 7 minutes earlier" and announced politely |
+| Buttons | two tonal CompactButtons 64 wide, r 16, 8 apart, under the time: "−5m" / "+5m" (spoken "5 minutes earlier" / "5 minutes later"); disabled at their limit |
+| Crown | turning moves the time a minute per step (about 18 dp of rotation, one detent of a rotating bezel); clockwise later. `SegmentTick` per change, nothing at a limit |
+| Done | EdgeButton **Small** (56), `primaryContainer`, `check` 20 + 6 + "Done". Applies the time and goes back (Logged: the entry is updated, Undo still removes it or resumes the sleep, and the 5 s window starts again). `Confirm` |
+| Cooldown | buttons and Done ignore taps for 500 ms when the screen appears |
+
+Nothing changes before Done; swiping back leaves the time as it was.
 
 #### 3.5.5 W5 Adjust (removed)
 
-The watch no longer adjusts times: history and edits are on the phone.
+The watch does not edit history: that is on the phone. Only the time just logged can move (W4 from Logged).
 
 #### 3.5.6 W6 Logged
 
@@ -542,8 +554,9 @@ The watch no longer adjusts times: history and edits are on the phone.
 | Title | y 106–130, titleLarge, centred |
 | Line 2 / sync icon | y 132–152: the `phoneSynced` icon 20 in `#B8A48E`, centred, spoken "Synced with phone · 14:32" (offline: `phoneOffline`, "Saved on watch · will sync"). When a second line is needed it takes y 132–146 in bodyMedium `#B8A48E`, and the icon moves to y 148–168 |
 | Undo | EdgeButton **Small** (56), fill `#1E1914`, `undo` 20 + 6 + "Undo" labelMedium `#E8D8C3` |
-| Taps | the whole screen except Undo dismisses (→ Main). The confirmation content sits in a non-interactive status layer above the dismiss target and is announced |
-| Inert period | Undo and dismiss ignore taps for the first 1000 ms (Undo fades 0.4 → 1 and is exposed as disabled). Exception: opened from the Tile's undo path, both are active at once |
+| Time | the title sits on a tonal pill (r 16, `surfaceContainer`, padding 12 × 2; ambient: a 1 dp outline) after a `clock` 16 in the event colour. A tap opens Time (W4), click label "Change time"; so does any turn of the crown. Not for "Sleep cancelled" (plain title, no crown) |
+| Taps | the whole screen except Undo and the time dismisses (→ Main). The rest of the confirmation sits in a non-interactive status layer above the dismiss target and is announced |
+| Inert period | Undo, the time and dismiss ignore taps for the first 1000 ms (Undo and the time fade 0.4 → 1 and are exposed as disabled). Exception: opened from the Tile's undo path, all are active at once. They are inert again for a second on returning from Time |
 
 | Kind | Circle / glyph | Title | Line 2 |
 |---|---|---|---|
@@ -588,7 +601,8 @@ Layouts use percentage padding.
 | Start sleep | running; Main (asleep); 2 s guard | `ToggleOn` |
 | Woke up | < 1 min: Logged "Sleep cancelled"; else Logged wake | `ToggleOff` |
 | Toggle within the guard | two-line "Already / asleep" for 2 s | `Reject` |
-| Earlier choice | shift the time | `SegmentTick` |
+| Time: crown step or −5m / +5m | shift the time | `SegmentTick` |
+| Time: Done | apply the time → back | `Confirm` |
 | Undo | revert → Undone | `Reject` |
 | Double-pinch (Wear OS 7, Pixel Watch 3+) | bound only to the Start sleep / Woke up EdgeButton; never on the picker or Logged | as the button |
 
@@ -1239,7 +1253,8 @@ Every app-rendered duration carries a spoken form (`Modifier.semantics { content
 | "48m ago" | "48 minutes ago" |
 | "<1m" | "less than a minute" |
 | "−5m" / "+5m" chips | "5 minutes earlier" / "5 minutes later" |
-| watch "−5m · 14:27" | "5 minutes earlier, 14:27" |
+| watch Earlier "−5m" | "5 minutes earlier, 14:27" |
+| watch Time "Feed · −7m", "14:25" | "Feed, 14:25, 7 minutes earlier" |
 | complication | `ShortTextComplicationData.Builder(text, PlainComplicationText("Last feed 2 hours 10 minutes ago"))` |
 | tile button | `setContentDescription("Log feed. Last feed 2 hours 10 minutes ago")` |
 
@@ -1411,7 +1426,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 | Lights-down keeps fills and positions | Muscle memory at 3 am; only the chrome and the glow dim |
 | The phone Lamp text opens the edit sheet of the entry it shows (the last feed, or the running sleep), like a since-row; the watch has no edit path (the phone has) | The top fact is the first thing a parent wants to correct. The edit sheet writes nothing until Save, so a stray tap edits nothing |
 | Watch "Woke up" = Medium EdgeButton | Large and always visible: Main fits one screen, as the Tile |
-| No "Earlier" on watch Logged | It would sit where Feed / Diaper just were (double-tap hazard). Backdating a feed or wake time is done on the phone |
+| No "Earlier" button on watch Logged | It would sit where Feed / Diaper just were (double-tap hazard). The time itself opens Time instead: it is inert for the first second like Undo, and the crown, which a double tap cannot hit, opens it too |
 | Input cooldowns and the 2 s guard | A double tap must never land on a different target or toggle a sleep twice |
 | Sleeps < 60 s are discarded | They are mis-taps; this removes junk entries without an extra control |
 | No ticking system durations | One grammar everywhere; no h:mm:ss beside the system clock |

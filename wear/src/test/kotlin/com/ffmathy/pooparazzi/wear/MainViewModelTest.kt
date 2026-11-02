@@ -27,6 +27,8 @@ import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.state.MainMode
 import com.ffmathy.pooparazzi.wear.state.MainUiState
 import com.ffmathy.pooparazzi.wear.state.ReceiptKind
+import com.ffmathy.pooparazzi.wear.state.TimeTarget
+import com.ffmathy.pooparazzi.wear.state.TimeTitle
 import com.ffmathy.pooparazzi.wear.state.Undo
 import com.ffmathy.pooparazzi.wear.state.WearEvent
 import com.ffmathy.pooparazzi.wear.state.XHaptic
@@ -195,19 +197,113 @@ class MainViewModelTest {
     }
 
     @Test
-    fun earlierCyclesTheOffsetAndBackdatesTheFeed() = test {
+    fun earlierOpensTimeWhereTheCrownAndButtonsBackdateTheFeed() = test {
         vm.beginFeed()
-        vm.cycleFeedOffset()
-        vm.cycleFeedOffset()
-        assertEquals(-10, vm.feedDraft.value?.offsetMinutes)
-        vm.chooseFeedType(FeedType.FOOD).join()
-        assertEquals(SampleData.NOW_1432 - 10 * minute, vm.receipt.value?.entry?.startMillis)
-        assertEquals(FeedType.FOOD, vm.receipt.value?.entry?.feedType)
+        vm.beginFeedTime()
+        val opened = present(vm.timeDraft.value)
+        assertEquals(TimeTarget.FEED, opened.target)
+        assertEquals(TimeTitle.FEED, opened.title)
+        assertEquals(SampleData.NOW_1432, opened.at)
 
+        vm.shiftTime(-5) // −5m button
+        repeat(3) { vm.shiftTime(-1) } // three crown steps
+        vm.shiftTime(1)
+        assertEquals(-7, vm.timeDraft.value?.offsetMinutes)
+        assertEquals("nothing changes before Done", 0, vm.feedDraft.value?.offsetMinutes)
+        vm.saveTime().join()
+        awaitEvent(WearEvent.CloseTime)
+        assertNull("Done uses the draft up", vm.timeDraft.value)
+        assertEquals(-7, vm.feedDraft.value?.offsetMinutes)
+
+        vm.chooseFeedType(FeedType.FOOD).join()
+        assertEquals(SampleData.NOW_1432 - 7 * minute, vm.receipt.value?.entry?.startMillis)
+        assertEquals(FeedType.FOOD, vm.receipt.value?.entry?.feedType)
+        assertTrue(haptics().count { it == XHaptic.SEGMENT_TICK } >= 5)
+    }
+
+    @Test
+    fun timeNeverGoesPastTheTapNorMoreThanTwelveHoursBack() = test {
         vm.beginFeed()
-        repeat(4) { vm.cycleFeedOffset() }
-        assertEquals("−5 → −10 → −15 → back to 0", 0, vm.feedDraft.value?.offsetMinutes)
-        assertTrue(haptics().count { it == XHaptic.SEGMENT_TICK } >= 6)
+        vm.beginFeedTime()
+        vm.shiftTime(5)
+        assertEquals("not later than the Feed tap", 0, vm.timeDraft.value?.offsetMinutes)
+        assertTrue("no tick without a change", haptics().none { it == XHaptic.SEGMENT_TICK })
+        vm.shiftTime(-13 * 60)
+        assertEquals(-12 * 60, vm.timeDraft.value?.offsetMinutes)
+    }
+
+    @Test
+    fun swipingBackFromTimeKeepsTheOldTime() = test {
+        vm.beginFeed()
+        vm.beginFeedTime()
+        vm.shiftTime(-10)
+        // Swiping back never calls Done; Earlier opens it afresh from the draft.
+        vm.beginFeedTime()
+        assertEquals(0, vm.timeDraft.value?.offsetMinutes)
+        assertEquals(0, vm.feedDraft.value?.offsetMinutes)
+    }
+
+    @Test
+    fun theTimeOnLoggedMovesTheLoggedFeed() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
+        val logged = present(vm.receipt.value)
+        clock.advanceBy(30_000)
+
+        assertTrue(vm.beginReceiptTime())
+        val draft = present(vm.timeDraft.value)
+        assertEquals(TimeTarget.RECEIPT, draft.target)
+        assertEquals(SampleData.NOW_1432, draft.at)
+        assertEquals("not into the future", 0, draft.maxOffset)
+        vm.shiftTime(-12)
+        vm.saveTime().join()
+        awaitEvent(WearEvent.CloseTime)
+
+        val receipt = present(vm.receipt.value)
+        assertEquals(SampleData.NOW_1432 - 12 * minute, receipt.entry.startMillis)
+        assertEquals(listOf(receipt.entry.startMillis), stored().map { it.startMillis })
+        assertEquals(logged.entry.id, receipt.entry.id)
+        assertTrue("Logged's window restarts", receipt.serial > logged.serial)
+
+        // Undo still removes the feed.
+        vm.undo().join()
+        assertTrue(stored().isEmpty())
+    }
+
+    @Test
+    fun theTimeOnLoggedMovesAWakeTimeButNotBeforeTheSleepBegan() = test {
+        vm.toggleSleep(shownSleepId = null).join()
+        val sleep = present(awaitMain { it.runningSleep != null }.runningSleep)
+        clock.advanceBy(20 * minute)
+        vm.toggleSleep(sleep.id).join()
+        assertEquals(ReceiptKind.WOKE_UP, vm.receipt.value?.kind)
+
+        assertTrue(vm.beginReceiptTime())
+        assertEquals(TimeTitle.WOKE_UP, vm.timeDraft.value?.title)
+        vm.shiftTime(-60)
+        assertEquals("a minute after the sleep began at the earliest", -19, vm.timeDraft.value?.offsetMinutes)
+        vm.shiftTime(4)
+        vm.saveTime().join()
+
+        val ended = stored().single()
+        assertEquals(sleep.startMillis, ended.startMillis)
+        assertEquals(SampleData.NOW_1432 + 5 * minute, ended.endMillis)
+        assertEquals(ended.endMillis, vm.receipt.value?.entry?.endMillis)
+
+        // Undo resumes the sleep, as before.
+        vm.undo().join()
+        assertTrue(awaitMain { it.runningSleep != null }.runningSleep?.endMillis == null)
+    }
+
+    @Test
+    fun aCancelledSleepHasNoTimeToChange() = test {
+        vm.toggleSleep(shownSleepId = null).join()
+        val sleep = present(awaitMain { it.runningSleep != null }.runningSleep)
+        clock.advanceBy(2_500)
+        vm.toggleSleep(sleep.id).join()
+        assertEquals(ReceiptKind.SLEEP_CANCELLED, vm.receipt.value?.kind)
+        assertFalse(vm.beginReceiptTime())
+        assertNull(vm.timeDraft.value)
     }
 
     @Test
@@ -228,7 +324,9 @@ class MainViewModelTest {
     @Test
     fun breastOpensSideWithTheFeedTypeScreensTimeAndLogsNothingYet() = test {
         vm.beginFeed()
-        vm.cycleFeedOffset() // −5m
+        vm.beginFeedTime()
+        vm.shiftTime(-5)
+        vm.saveTime().join()
         vm.chooseFeedType(FeedType.BREAST).join()
         awaitEvent(WearEvent.ShowSide)
         val draft = present(vm.sideDraft.value)
@@ -397,7 +495,9 @@ class MainViewModelTest {
         vm.setPoop(true)
         vm.setPoopColor(PoopColor.YELLOW)
         vm.setPoopTexture(PoopTexture.SEEDY)
-        vm.cycleDiaperOffset()
+        vm.beginDiaperTime()
+        vm.shiftTime(-5)
+        vm.saveTime().join()
         vm.saveDiaper().join()
 
         val receipt = present(vm.receipt.value)

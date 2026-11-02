@@ -15,6 +15,9 @@ import com.ffmathy.pooparazzi.wear.state.MainUiState
 import com.ffmathy.pooparazzi.wear.state.Receipt
 import com.ffmathy.pooparazzi.wear.state.ReceiptKind
 import com.ffmathy.pooparazzi.wear.state.SideDraft
+import com.ffmathy.pooparazzi.wear.state.TimeDraft
+import com.ffmathy.pooparazzi.wear.state.TimeTarget
+import com.ffmathy.pooparazzi.wear.state.TimeTitle
 import com.ffmathy.pooparazzi.wear.state.Undo
 import com.ffmathy.pooparazzi.wear.tile.TILE_FEEDBACK_MILLIS
 import com.ffmathy.pooparazzi.wear.tile.TILE_GUARD_MILLIS
@@ -56,6 +59,9 @@ object WearSamples {
             .copy(babies = SampleData.twinSettings.babies, babyId = SampleData.TWIN_ID)
 
     fun feedDraft(): FeedDraft = FeedDraft(stamp = SampleData.NOW_1432, zone = zone)
+
+    /** Earlier on the Feed type screen opened at 14:32, the crown turned back 7 minutes: "Feed · −7m", 14:25. */
+    fun timeDraft(): TimeDraft = TimeDraft(TimeTarget.FEED, TimeTitle.FEED, base = SampleData.NOW_1432, zone = zone, offsetMinutes = -7)
 
     /** Breast chosen on the Feed type screen opened at 14:32: Side, nothing ticked yet. */
     fun sideDraft(): SideDraft = SideDraft(at = SampleData.NOW_1432, zone = zone)

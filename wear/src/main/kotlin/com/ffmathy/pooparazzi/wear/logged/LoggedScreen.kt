@@ -6,6 +6,8 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
@@ -31,6 +34,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -89,6 +93,7 @@ import com.ffmathy.pooparazzi.wear.ui.events
 import com.ffmathy.pooparazzi.wear.ui.feedTypeLabel
 import com.ffmathy.pooparazzi.wear.ui.keepSidesTogether
 import com.ffmathy.pooparazzi.wear.ui.rememberCooldown
+import com.ffmathy.pooparazzi.wear.ui.rotarySteps
 import com.ffmathy.pooparazzi.wear.ui.spokenText
 import kotlinx.coroutines.delay
 import com.ffmathy.pooparazzi.core.R as CoreR
@@ -102,8 +107,10 @@ const val LOGGED_INERT_MILLIS = 1_000
 /**
  * Logged (DESIGN_SPEC §3.5.6; V1_ADDITIONS §2.2, §3.2): the check circle in the event container, the title with
  * the time in the event colour, an optional second line, the sync icon and a Small Undo EdgeButton, under a 270°
- * neutral bezel arc that drains over the window. Any tap outside Undo dismisses; both are inert for the first
- * second. When the window ends, [onTimeout] runs. No TimeText.
+ * neutral bezel arc that drains over the window. Any tap outside Undo and the title dismisses; all three are inert
+ * for the first second. The title sits on a tonal pill with a `clock`: tapping it, or turning the crown, runs
+ * [onChangeTime] (the Time screen moves the logged time; not for "Sleep cancelled"). When the window ends,
+ * [onTimeout] runs. No TimeText.
  */
 @Composable
 fun LoggedScreen(
@@ -113,6 +120,7 @@ fun LoggedScreen(
     onDismiss: () -> Unit,
     onTimeout: () -> Unit,
     modifier: Modifier = Modifier,
+    onChangeTime: () -> Unit = {},
 ) {
     val f = rememberFormatters(receipt.zone)
     val ambient = isAmbient()
@@ -147,8 +155,11 @@ fun LoggedScreen(
         line2 != null -> 0.12f
         else -> 0.149f
     }
+    val changeable = receipt.kind != ReceiptKind.SLEEP_CANCELLED
+    // The crown is no tap, so it needs no cooldown: any turn opens the Time screen (once: it then has the crown).
+    val rotary = if (changeable) Modifier.rotarySteps { onChangeTime() } else Modifier
     ScreenScaffold(timeText = {}, modifier = modifier) { _ ->
-        BoxWithConstraints(Modifier.fillMaxSize()) {
+        BoxWithConstraints(Modifier.fillMaxSize().then(rotary)) {
             val height = maxHeight
             // Dismiss target: the whole screen except Undo.
             Box(
@@ -174,7 +185,14 @@ fun LoggedScreen(
             ) {
                 ReceiptCircle(receipt, ambient, size = if (compact) 48.dp else 64.dp)
                 Spacer(Modifier.height(if (compact || line2 != null) 4.dp else 8.dp))
-                ReceiptTitle(receipt, f, ambient)
+                ReceiptTitle(
+                    receipt,
+                    f,
+                    ambient,
+                    onClick = onChangeTime.takeIf { changeable },
+                    enabled = cooldown.ready,
+                    modifier = Modifier.alpha(if (changeable) cooldown.alpha else 1f),
+                )
                 line2?.let { line ->
                     Spacer(Modifier.height(2.dp))
                     Text(
@@ -256,9 +274,20 @@ private fun ReceiptCircle(receipt: Receipt, ambient: Boolean, size: Dp) {
     }
 }
 
-/** "Bottle at 14:32" with the time in the event colour; "Sleep cancelled" is time-free. */
+/**
+ * "Bottle at 14:32" with the time in the event colour; "Sleep cancelled" is time-free. With [onClick] (a time that
+ * can change) it sits on a tonal pill (r 16, `surfaceContainer`; outlined in ambient) after a `clock` 16 in the event
+ * colour, and a tap opens the Time screen ("Change time").
+ */
 @Composable
-private fun ReceiptTitle(receipt: Receipt, f: Formatters, ambient: Boolean) {
+private fun ReceiptTitle(
+    receipt: Receipt,
+    f: Formatters,
+    ambient: Boolean,
+    onClick: (() -> Unit)?,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
     val events = events()
     val entry = receipt.entry
     val onSurface = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurface
@@ -281,18 +310,44 @@ private fun ReceiptTitle(receipt: Receipt, f: Formatters, ambient: Boolean) {
     } else {
         title.text
     }
-    BasicText(
-        text = title,
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics {
+    val text: @Composable (Modifier) -> Unit = { textModifier ->
+        BasicText(
+            text = title,
+            modifier = textModifier.semantics {
                 liveRegion = LiveRegionMode.Polite
                 contentDescription = spoken
             },
-        style = MaterialTheme.typography.titleLarge.copy(color = onSurface, textAlign = TextAlign.Center, hyphens = Hyphens.Auto),
-        maxLines = 2,
-        autoSize = TextAutoSize.StepBased(minFontSize = 15.sp, maxFontSize = 20.sp),
-    )
+            style = MaterialTheme.typography.titleLarge.copy(color = onSurface, textAlign = TextAlign.Center, hyphens = Hyphens.Auto),
+            maxLines = 2,
+            autoSize = TextAutoSize.StepBased(minFontSize = 15.sp, maxFontSize = 20.sp),
+        )
+    }
+    if (onClick == null) {
+        text(modifier.fillMaxWidth())
+        return
+    }
+    val scheme = MaterialTheme.colorScheme
+    val accent = when {
+        ambient -> WatchAmbient.content
+        receipt.kind == ReceiptKind.FEED_LOGGED -> events.feed.strong
+        receipt.kind == ReceiptKind.DIAPER_LOGGED -> events.diaper.text
+        else -> events.sleep.text
+    }
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        modifier
+            .padding(horizontal = 8.dp)
+            .clip(shape)
+            .then(if (ambient) Modifier.border(1.dp, scheme.outline, shape) else Modifier.background(scheme.surfaceContainer))
+            .clickable(enabled = enabled, onClickLabel = stringResource(R.string.logged_change_time), role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        XIcon(XIcons.clock, null, tint = accent, size = 16.dp)
+        Spacer(Modifier.width(6.dp))
+        text(Modifier.weight(1f, fill = false))
+    }
 }
 
 /** "%1$s at %2$s" with the time span coloured (§3.5.6). */

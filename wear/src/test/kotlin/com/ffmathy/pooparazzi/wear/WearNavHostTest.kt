@@ -128,6 +128,31 @@ class WearNavHostTest {
     }
 
     @Test
+    fun theTimeOnLoggedMovesTheFeedAndReturnsToLogged() {
+        waitForDescription("Feed.").performClick()
+        waitFor("Feed · 14:32")
+        settle(600)
+        compose.onNodeWithText("Bottle").performClick()
+
+        waitFor("Bottle at 14:32")
+        settle(LOGGED_INERT_MILLIS + 100L)
+        compose.onNodeWithContentDescription("Bottle at 14:32").performClick()
+
+        // Time: "Feed" over 14:32; −5m twice, then Done.
+        waitForDescription("Feed, 14:32")
+        settle(600)
+        compose.onNodeWithContentDescription("5 minutes earlier").performClick()
+        settle()
+        compose.onNodeWithContentDescription("5 minutes earlier").performClick()
+        settle()
+        waitForDescription("Feed, 14:22, 10 minutes earlier")
+        compose.onNodeWithText("Done").performClick()
+
+        waitFor("Bottle at 14:22")
+        assertEquals(at(14, 22), entries().single().startMillis)
+    }
+
+    @Test
     fun diaperWithPeeIsSaved() {
         waitForDescription("Diaper.").performClick()
         waitFor("Diaper · 14:32")

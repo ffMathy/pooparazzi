@@ -28,6 +28,7 @@ import com.ffmathy.pooparazzi.wear.ui.Option
 import com.ffmathy.pooparazzi.wear.ui.OptionScreen
 import com.ffmathy.pooparazzi.wear.ui.XTimeText
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.ffmathy.pooparazzi.wear.time.TimeScreen
 import com.ffmathy.pooparazzi.core.R as CoreR
 import org.junit.Before
 import org.junit.Rule
@@ -91,6 +92,12 @@ abstract class SmallWatchScreenshots(private val lang: String) {
         SampleData.NOW_1432,
         after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3) },
     ) { SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.LEFT)), SideActions()) }
+
+    /** Time on a 192 dp watch: the ±5m buttons stay clear of Done. */
+    @Test
+    fun s21c_timeSmall() = captureScreen("21c-time-small", SampleData.NOW_1432) {
+        TimeScreen(WearSamples.timeDraft(), onShift = {}, onDone = {})
+    }
 
     /** Twins on a 192 dp watch with a long name: the time text cuts the name, never the time. */
     @Test

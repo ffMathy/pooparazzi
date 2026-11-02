@@ -22,6 +22,8 @@
     <string name="logged_already_logged">Already logged</string>
     <!-- TalkBack name of the full-screen dismiss target behind the Logged confirmation -->
     <string name="logged_dismiss">Dismiss</string>
+    <!-- TalkBack click label of the time on Logged: it opens the Time screen -->
+    <string name="logged_change_time">Change time</string>
 
     <!-- Adjust: group headers for the start and end of a completed interval. %1$s is a clock time. -->
 

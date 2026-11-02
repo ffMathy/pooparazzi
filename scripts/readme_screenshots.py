@@ -86,6 +86,7 @@ WATCH = {
     "07-diaper.png": "diaper",
     "08-diaper-colour-list.png": "diaper-colour",
     "09-logged.png": "logged",
+    "09b-time.png": "time",
     "15-undone.png": "undone",
     "12-tile.png": "tile",
     "12b-tile-asleep.png": "tile-asleep",

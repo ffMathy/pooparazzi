@@ -69,8 +69,8 @@ data class DiaperActions(
 
 /**
  * Diaper (V1_ADDITIONS §3.2): "Diaper · 14:32" (stamped on the Diaper tap), CheckboxButtons Pee and Poop (both off
- * at first); with Poop on, Colour and Texture show their value or "Optional" and open option lists; Earlier cycles
- * the time; the pinned Medium EdgeButton "Save" is always enabled (nothing ticked logs a plain diaper change).
+ * at first); with Poop on, Colour and Texture show their value or "Optional" and open option lists; Earlier opens
+ * the Time screen; the pinned Medium EdgeButton "Save" is always enabled (nothing ticked logs a plain diaper change).
  * 500 ms tap cooldown.
  */
 @Composable
