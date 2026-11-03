@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -17,7 +18,6 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.platform.app.InstrumentationRegistry
 import com.ffmathy.pooparazzi.phone.ui.edit.EditActions
 import com.ffmathy.pooparazzi.phone.ui.edit.EditSheet
 import com.ffmathy.pooparazzi.phone.ui.edit.EditTags
@@ -124,19 +124,19 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
         captureScreenRoboImage(path("48-settings-birth-date", tour = true))
     }
 
-    /** "Add a baby" asks for the name and, optionally, the birth date, saying why; dialogs live in their own window. */
-    @OptIn(ExperimentalRoborazziApi::class)
+    /**
+     * "Add a baby" asks for the name and, optionally, the birth date, saying why. The dialog alone is captured, through
+     * Compose: a whole-screen capture waits for the main looper to go idle, which the dialog's text field never lets
+     * it do under Robolectric.
+     */
     @Test fun settingsAddBaby() {
-        // In touch mode, as on a phone: in keyboard mode the dialog's name field takes the focus, and its blinking
-        // cursor never lets the app go idle for the capture.
-        InstrumentationRegistry.getInstrumentation().setInTouchMode(true)
         compose.setContent {
             NightLightTheme(night = false) {
                 SettingsScreen(SettingsSamples.addBaby(), SettingsActions.None, windowInsets = ReferenceInsets)
             }
         }
         compose.waitForIdle()
-        captureScreenRoboImage(path("51-settings-add-baby", tour = true))
+        compose.onNode(isDialog()).captureRoboImage(path("51-settings-add-baby", tour = true))
     }
 
     /**
