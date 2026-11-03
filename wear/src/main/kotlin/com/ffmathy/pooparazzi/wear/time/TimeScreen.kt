@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -160,7 +161,14 @@ private const val MINUTE_MILLIS = 60_000L
 
 /** "−5m" / "+5m": a tonal CompactButton, read as "5 minutes earlier" / "5 minutes later". Also the Amount screen's −/+. */
 @Composable
-internal fun StepButton(label: String, spoken: String, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun StepButton(
+    label: String,
+    spoken: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    style: TextStyle = WatchType.labelSmall.copy(fontWeight = FontWeight(600)),
+) {
     val ambient = isAmbient()
     val content = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurface
     CompactButton(
@@ -173,7 +181,7 @@ internal fun StepButton(label: String, spoken: String, enabled: Boolean, onClick
     ) {
         Text(
             label,
-            style = WatchType.labelSmall.copy(fontWeight = FontWeight(600)),
+            style = style,
             color = content,
             maxLines = 1,
             textAlign = TextAlign.Center,

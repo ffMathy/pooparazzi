@@ -152,7 +152,11 @@ fun LoggedScreen(
     // ("Left → Right · 18m") moves the block up a little for the same reason (§3.5.6: sync icon at y 148–168).
     val compact = LocalConfiguration.current.fontScale > 1.15f
     val line2 = receiptLine2(receipt, f)
+    // Both (a large font and a second line, "Formula · 120 ml"): the tightest, with a smaller circle; the second line
+    // may wrap and the sync icon (also on Main) gives way, so nothing slides under Undo.
+    val tight = compact && line2 != null
     val top = when {
+        tight -> 0.05f
         compact -> 0.08f
         line2 != null -> 0.12f
         else -> 0.149f
@@ -185,7 +189,7 @@ fun LoggedScreen(
                     .padding(top = height * top, start = 8.dp, end = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                ReceiptCircle(receipt, ambient, size = if (compact) 48.dp else 64.dp)
+                ReceiptCircle(receipt, ambient, size = if (tight) 40.dp else if (compact) 48.dp else 64.dp)
                 Spacer(Modifier.height(if (compact || line2 != null) 4.dp else 8.dp))
                 ReceiptTitle(
                     receipt,
@@ -197,17 +201,19 @@ fun LoggedScreen(
                 )
                 line2?.let { line ->
                     Spacer(Modifier.height(2.dp))
-                    Text(
+                    // Steps down rather than running into the round edge ("Modermælkserstatning · 120 ml").
+                    AutoSizeLine(
                         line.shown,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.semantics { contentDescription = line.spoken },
+                        // Wraps at the soft hyphen ("Modermælks-erstatning"), never mid-syllable.
+                        MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto),
+                        if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant,
+                        minSize = 11,
+                        maxLines = if (tight) 2 else 1,
+                        modifier = Modifier.padding(horizontal = 12.dp).semantics { contentDescription = line.spoken },
                     )
                 }
                 val syncText = if (sync == SyncStatus.Pending) null else f.labels.syncLine(sync, SyncPeer.PHONE, f.clock, f.zone)
-                if (syncText != null) {
+                if (syncText != null && !tight) {
                     Spacer(Modifier.height(2.dp))
                     SyncIcon(sync, syncText)
                 }

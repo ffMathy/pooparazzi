@@ -24,6 +24,7 @@ import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
 import com.ffmathy.pooparazzi.core.data.PooparazziDatabase
 import com.ffmathy.pooparazzi.core.domain.epochMillis
+import com.ffmathy.pooparazzi.core.format.VolumeFormatter
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.isRunning
@@ -173,36 +174,40 @@ class WearNavHostTest {
         waitFor("Bottle · 14:32")
         settle(1_000)
 
+        // The steps follow the region (10 ml, or ½ fl oz in the US), so the expected amount comes from the formatter.
+        val volume = VolumeFormatter.from(ApplicationProvider.getApplicationContext())
+        val amount = volume.amountAt(3)!!
+        val shown = volume.format(amount)
         compose.onNodeWithText("Amount").performClick()
         waitForDescription("Amount, No amount")
         settle(600)
         repeat(3) {
-            compose.onNodeWithContentDescription("10 ml more").performClick()
+            compose.onNodeWithContentDescription(" more", substring = true).performClick()
             settle()
         }
-        waitForDescription("Amount, 30 ml")
+        waitForDescription("Amount, $shown")
         compose.onNodeWithText("Done").performClick()
-        waitFor("30 ml")
+        waitFor(shown)
         settle(1_000)
 
         compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
         settle()
-        compose.onNodeWithText("Earlier").performClick()
+        compose.onNodeWithContentDescription("Earlier").performClick()
         waitForDescription("Feed, 14:32")
         settle(600)
         compose.onNodeWithContentDescription("5 minutes earlier").performClick()
         settle()
         compose.onNodeWithText("Done").performClick()
-        waitFor("Bottle · 14:27")
+        waitForDescription("5 minutes earlier, 14:27")
         settle(1_000)
         compose.onNodeWithText("Save").performClick()
 
         waitFor("Bottle at 14:27")
-        waitFor("Formula · 30 ml")
+        waitFor("Formula · $shown")
         val feed = entries().single()
         assertEquals(at(14, 27), feed.startMillis)
         assertEquals(com.ffmathy.pooparazzi.core.model.BottleContents.FORMULA, feed.bottleContents)
-        assertEquals(30, feed.amountMl)
+        assertEquals(amount, feed.amountMl)
     }
 
     @Test

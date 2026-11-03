@@ -111,7 +111,7 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Bottle | Bottle contents | Bottle amount | Logged bottle |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/watch-bottle.png" width="170" alt="Watch Bottle screen after Bottle: Bottle · 14:32, Contents Formula, Amount 120 ml, Earlier and Save"> | <img src="docs/screenshots/en/watch-bottle-contents.png" width="170" alt="Watch bottle contents list: Milk, Formula selected, None"> | <img src="docs/screenshots/en/watch-bottle-amount.png" width="170" alt="Watch Amount screen: 120 ml, − and + buttons and Done; the crown moves it 10 ml at a time"> | <img src="docs/screenshots/en/watch-logged-bottle.png" width="170" alt="Watch logged bottle feed: Bottle at 14:32, Formula · 120 ml, and Undo"> |
+| <img src="docs/screenshots/en/watch-bottle.png" width="170" alt="Watch Bottle screen after Bottle: Bottle · 14:32, Contents Formula, Amount 4 fl oz (120 ml where millilitres are used), Earlier and Save"> | <img src="docs/screenshots/en/watch-bottle-contents.png" width="170" alt="Watch bottle contents list: Milk, Formula selected, None"> | <img src="docs/screenshots/en/watch-bottle-amount.png" width="170" alt="Watch Amount screen: 4 fl oz, − and + buttons and Done; the crown moves it ½ fl oz (or 10 ml) at a time"> | <img src="docs/screenshots/en/watch-logged-bottle.png" width="170" alt="Watch logged bottle feed: Bottle at 14:32, Formula · 4 fl oz, and Undo"> |
 
 | Undone | Tile | Tile, asleep | Complications |
 |:---:|:---:|:---:|:---:|

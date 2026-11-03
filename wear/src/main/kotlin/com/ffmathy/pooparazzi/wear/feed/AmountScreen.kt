@@ -95,6 +95,7 @@ fun AmountScreen(draft: BottleDraft, onAmount: (Int?) -> Unit, onDone: () -> Uni
                         enabled = cooldown.ready && step > 0,
                         onClick = { moveBy(-1) },
                         modifier = Modifier.alpha(cooldown.alpha),
+                        style = MaterialTheme.typography.titleLarge,
                     )
                     StepButton(
                         label = PLUS,
@@ -102,6 +103,7 @@ fun AmountScreen(draft: BottleDraft, onAmount: (Int?) -> Unit, onDone: () -> Uni
                         enabled = cooldown.ready && step < volume.steps,
                         onClick = { moveBy(1) },
                         modifier = Modifier.alpha(cooldown.alpha),
+                        style = MaterialTheme.typography.titleLarge,
                     )
                 }
             }
