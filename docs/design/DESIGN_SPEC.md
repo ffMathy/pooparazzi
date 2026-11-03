@@ -431,7 +431,7 @@ Settings referenced by the design (screen layout not drawn; Appendix B):
 
 #### 3.3.6 P5 Home-screen widgets (Glance)
 
-Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (§8.5) and the device font (no tnum). They show **relative times**, as the watch does, each after an icon that says what it is (`history` "2h 10m" or "1h 07m" asleep, `upcoming` "55m"), and are redrawn every minute by a non-waking alarm (a phone that sleeps redraws as it wakes); receipts keep their clock time ("Sleep started at 14:32"). The sleep toggle logs in place without launching the app; Feed and Diaper open the app on the same Feed and Diaper sheets as Home's buttons, so the optional details (feed type and breast order, pee/poop, colour, texture) are asked for exactly as in the app.
+Both widgets use the fixed NIGHT/DAY tokens chosen by the **app's** Appearance (§8.5) and the device font (no tnum). They show **relative times**, as the watch does, each after an icon that says what it is (`history` "2h 10m" or "1h 07m" asleep, `upcoming` "55m"), and are redrawn at the start of every minute by an exact, non-waking alarm (a phone that sleeps redraws as it wakes; §10.11); receipts keep their clock time ("Sleep started at 14:32"). The sleep toggle logs in place without launching the app; Feed and Diaper open the app on the same Feed and Diaper sheets as Home's buttons, so the optional details (feed type and breast order, pee/poop, colour, texture) are asked for exactly as in the app.
 
 **4×2** (reference 358 × 208, system corner radius (reference r 24), surfaceContainer, padding 12)
 
@@ -1372,7 +1372,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 - 4×2 and 3×1 with `SizeMode.Responsive`. A 2×2 falls back to the 4×2 content without the status row.
 - `actionRunCallback` for the sleep toggle and Undo (no app launch), idempotent writes; Feed and Diaper start the app on their sheet (`pooparazzi://home/feed`, `pooparazzi://home/diaper`). 48 dp targets. System corner radius. Generated previews (Glance 1.2 `providePreview`).
-- Relative times, as the watch: RemoteViews cannot tick them, so a non-waking alarm redraws the widgets every minute (a phone that sleeps redraws as it wakes).
+- Relative times, as the watch: RemoteViews cannot tick them, so a non-waking **exact** alarm (`SCHEDULE_EXACT_ALARM`) redraws the widgets at the start of every minute (a phone that sleeps redraws as it wakes). An inexact alarm is batched and, since Android 12, may come up to 10 minutes late, so it is only the fallback while "Alarms & reminders" is not allowed (the default for new installs on Android 14+). While the process runs, the system's minute broadcast (`ACTION_TIME_TICK`, screen on) also redraws them; either one draws once per minute. Changing the clock or time zone, or allowing exact alarms, redraws and reschedules.
 - Update the widget on every log and every sleep change.
 - **Palette**: build every colour as a single-value `ColorProvider` chosen at update time from the NIGHT / DAY token sets. No day/night pairs and no `GlanceTheme` dynamic colours. Call `updateAll()` at sunset, at sunrise, on an Appearance change and on every sleep start/stop.
 - **Type**: device font (`FontFamily.SansSerif`, sizes in sp as drawn). No ROND, opsz or tnum.

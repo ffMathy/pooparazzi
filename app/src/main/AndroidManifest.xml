@@ -4,6 +4,8 @@
 
     <!-- The ongoing notification of a running sleep (DESIGN_SPEC §10.5); asked for on the first sleep. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The widgets' minute tick (WidgetUpdater): an exact, non-waking alarm, so "2h 10m" follows the clock. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- Lets that notification be promoted to a Live Update (Android 16+). -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 
@@ -99,9 +101,16 @@
         <receiver
             android:name=".notify.TimerActionReceiver"
             android:exported="false" />
+        <!-- The widgets' minute tick; also reschedules it when the clock changes or exact alarms are allowed. -->
         <receiver
             android:name=".widget.WidgetTickReceiver"
-            android:exported="false" />
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
 
         <!--
             Firebase starts in PooparazziApp, and only in builds with a Firebase configuration (AppAccounts): without one
