@@ -125,17 +125,18 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
     }
 
     /**
-     * "Add a baby" asks for the name and, optionally, the birth date, saying why. The dialog alone is captured, through
-     * Compose: a whole-screen capture waits for the main looper to go idle, which the dialog's text field never lets
-     * it do under Robolectric.
+     * "Add a baby" asks for the name and, optionally, the birth date, saying why. Under Robolectric the dialog's name
+     * field takes the focus, and its blinking cursor never lets the app go idle; so the clock is driven by hand (it
+     * stays paused, and the cursor with it) and the dialog alone is captured.
      */
     @Test fun settingsAddBaby() {
+        compose.mainClock.autoAdvance = false
         compose.setContent {
             NightLightTheme(night = false) {
                 SettingsScreen(SettingsSamples.addBaby(), SettingsActions.None, windowInsets = ReferenceInsets)
             }
         }
-        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(2_000)
         compose.onNode(isDialog()).captureRoboImage(path("51-settings-add-baby", tour = true))
     }
 
