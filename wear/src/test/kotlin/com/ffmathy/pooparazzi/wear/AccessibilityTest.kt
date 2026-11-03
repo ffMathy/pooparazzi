@@ -12,17 +12,24 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ApplicationProvider
 import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.material3.SurfaceTransformation
+import com.ffmathy.pooparazzi.core.format.VolumeFormatter
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
+import com.ffmathy.pooparazzi.wear.feed.BottleActions
+import com.ffmathy.pooparazzi.wear.feed.BottleScreen
 import com.ffmathy.pooparazzi.wear.feed.SideActions
 import com.ffmathy.pooparazzi.wear.feed.SideScreen
 import com.ffmathy.pooparazzi.wear.logged.LOGGED_INERT_MILLIS
@@ -62,6 +69,27 @@ class AccessibilityTest {
     private fun hasStateDescription(value: String) = SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, value)
 
     private fun hasRole(role: Role) = SemanticsMatcher.expectValue(SemanticsProperties.Role, role)
+
+    private fun isSelected(selected: Boolean) = SemanticsMatcher.expectValue(SemanticsProperties.Selected, selected)
+
+    private fun hasClickLabel(label: String?) = SemanticsMatcher("click label $label") {
+        SemanticsActions.OnClick in it.config && it.config[SemanticsActions.OnClick].label == label
+    }
+
+    private fun hasCustomActions(vararg labels: String) = SemanticsMatcher("custom actions ${labels.toList()}") {
+        it.config.getOrElse(SemanticsActions.CustomActions) { emptyList() }.map { action -> action.label } == labels.toList()
+    }
+
+    private val isLiveRegion = SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)
+
+    /** Scrolls the screen's list until a node matching [matcher] is composed and in view. */
+    private fun scrollTo(matcher: SemanticsMatcher) {
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(matcher)
+        compose.waitForIdle()
+    }
+
+    /** The volume formatter of the test's region (fl oz in Robolectric's US default, ml elsewhere). */
+    private val volume: VolumeFormatter get() = VolumeFormatter.from(ApplicationProvider.getApplicationContext())
 
     @Test
     fun idleMainReadsTheLastFeedAndTheSleepToggle() {
@@ -120,8 +148,134 @@ class AccessibilityTest {
         compose.onNodeWithText("Pee")
             .assert(hasRole(Role.Checkbox))
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.Off))
+        compose.onNodeWithText("Poop")
+            .assert(hasRole(Role.Checkbox))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.Off))
+        compose.onNodeWithText("Diaper · 14:32").assert(isHeading())
         // Both are optional: Save with nothing ticked logs a plain change.
         compose.onNodeWithText("Save").assertIsEnabled()
+    }
+
+    /** Where "Poop" no longer fits a tile, the screen shows full-width checkbox rows instead: checkboxes too. */
+    @Test
+    fun theFallbackRowsAreCheckboxesToo() {
+        show {
+            val events = com.ffmathy.pooparazzi.wear.ui.events()
+            val spec = androidx.wear.compose.material3.lazy.rememberTransformationSpec()
+            androidx.wear.compose.foundation.lazy.TransformingLazyColumn {
+                item {
+                    com.ffmathy.pooparazzi.wear.diaper.DiaperCheckbox(
+                        label = "Poop",
+                        icon = com.ffmathy.pooparazzi.core.ui.icons.XIcons.poop,
+                        checked = true,
+                        onCheckedChange = {},
+                        colors = events.poop,
+                        lit = events.diaper.containerLit,
+                        outline = events.diaper.strong,
+                        enabled = true,
+                        transformation = SurfaceTransformation(spec),
+                        modifier = androidx.compose.ui.Modifier,
+                    )
+                }
+            }
+        }
+        compose.onNodeWithText("Poop")
+            .assert(hasRole(Role.Checkbox))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.On))
+    }
+
+    @Test
+    fun theColourAndTextureChipsAreRadioButtonsUnderHeadings() {
+        show { DiaperScreen(WearSamples.diaperDraft(), DiaperActions()) }
+        compose.mainClock.advanceTimeBy(600)
+        scrollTo(hasText("Colour"))
+        compose.onNodeWithText("Colour").assert(isHeading())
+        scrollTo(hasText("Yellow"))
+        compose.onNodeWithText("Yellow").assert(hasRole(Role.RadioButton)).assert(isSelected(true)).assert(hasClickLabel("Clear"))
+        compose.onNodeWithText("Green").assert(hasRole(Role.RadioButton)).assert(isSelected(false)).assert(hasClickLabel(null))
+        scrollTo(hasText("Texture"))
+        compose.onNodeWithText("Texture").assert(isHeading())
+        scrollTo(hasText("Seedy"))
+        compose.onNodeWithText("Seedy").assert(hasRole(Role.RadioButton)).assert(isSelected(true)).assert(hasClickLabel("Clear"))
+        compose.onNodeWithText("Hard").assert(isSelected(false))
+    }
+
+    @Test
+    fun theBottlesContentsAndAmountChipsAreRadioButtons() {
+        var cleared = false
+        show { BottleScreen(WearSamples.bottleDraft(), BottleActions(onContents = { if (it == null) cleared = true })) }
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithText("Bottle · 14:32").assert(isHeading())
+        compose.onNodeWithText("Formula").assert(hasRole(Role.RadioButton)).assert(isSelected(true)).assert(hasClickLabel("Clear"))
+        compose.onNodeWithText("Milk").assert(hasRole(Role.RadioButton)).assert(isSelected(false))
+        compose.onNodeWithText("Formula").performClick()
+        assertEquals("tapping the chosen one clears it", true, cleared)
+
+        // The last bottle was 120 ml, so its chip says so; it is the one chosen.
+        val chosen = volume.format(120)
+        scrollTo(hasContentDescription("$chosen, as last time"))
+        compose.onNodeWithContentDescription("$chosen, as last time")
+            .assert(hasRole(Role.RadioButton))
+            .assert(isSelected(true))
+            .assert(hasClickLabel("Clear"))
+        val other = volume.quickAmounts(120).first()
+        compose.onNodeWithContentDescription(volume.format(other)).assert(isSelected(false))
+    }
+
+    @Test
+    fun theAmountIsReadAsOneValueAndItsStepsInWords() {
+        val step = volume.format(checkNotNull(volume.amountAt(1)))
+        show { BottleScreen(WearSamples.emptyBottleDraft(), BottleActions()) }
+        compose.mainClock.advanceTimeBy(600)
+        scrollTo(hasContentDescription("Amount, No amount"))
+        compose.onNodeWithContentDescription("Amount, No amount").assert(isLiveRegion)
+        // At the bottom of the scale there is nothing less.
+        compose.onNodeWithContentDescription("$step less").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("$step more").assertIsEnabled()
+        compose.onNodeWithText("Save").assertIsEnabled()
+    }
+
+    @Test
+    fun theTopOfTheAmountScaleHasNothingMore() {
+        val step = volume.format(checkNotNull(volume.amountAt(1)))
+        val most = checkNotNull(volume.amountAt(volume.steps))
+        show { BottleScreen(WearSamples.emptyBottleDraft().copy(amountMl = most), BottleActions()) }
+        compose.mainClock.advanceTimeBy(600)
+        scrollTo(hasContentDescription("Amount, ${volume.format(most)}"))
+        compose.onNodeWithContentDescription("$step more").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("$step less").assertIsEnabled()
+    }
+
+    @Test
+    fun theInlineTimeReadsTheTimeAndOffersMinuteSteps() {
+        val shifts = mutableListOf<Int>()
+        show { DiaperScreen(WearSamples.emptyDiaperDraft(), DiaperActions(onShiftTime = { shifts += it })) }
+        compose.mainClock.advanceTimeBy(600)
+        scrollTo(hasContentDescription("Time, 14:32"))
+        // Never later than the Diaper tap: no "later" yet.
+        compose.onNodeWithContentDescription("Time, 14:32").assert(isLiveRegion).assert(hasCustomActions("1 minute earlier"))
+        scrollTo(hasContentDescription("5 minutes later"))
+        compose.onNodeWithContentDescription("5 minutes later").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("5 minutes earlier").assertIsEnabled()
+        compose.onNodeWithContentDescription("15 minutes earlier").assertIsEnabled().performClick()
+        assertEquals(listOf(-15), shifts)
+    }
+
+    @Test
+    fun aMovedTimeIsReadWithItsOffsetAndBothMinuteSteps() {
+        val shifts = mutableListOf<Int>()
+        show { DiaperScreen(WearSamples.emptyDiaperDraft().copy(offsetMinutes = -10), DiaperActions(onShiftTime = { shifts += it })) }
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithText("Diaper · 14:22").assertExists()
+        scrollTo(hasContentDescription("10 minutes earlier, 14:22"))
+        val readout = compose.onNodeWithContentDescription("10 minutes earlier, 14:22")
+            .assert(isLiveRegion)
+            .assert(hasCustomActions("1 minute earlier", "1 minute later"))
+        val actions = readout.fetchSemanticsNode().config[SemanticsActions.CustomActions]
+        compose.runOnIdle { actions.forEach { it.action() } }
+        assertEquals(listOf(-1, 1), shifts)
+        scrollTo(hasContentDescription("5 minutes later"))
+        compose.onNodeWithContentDescription("5 minutes later").assertIsEnabled()
     }
 
     @Test
@@ -276,5 +430,21 @@ class DanishAccessibilityTest {
             }
         }
         compose.onNodeWithContentDescription("Synkroniseret med telefon · 14:31").assertExists()
+    }
+
+    @Test
+    fun theDiaperScreenSpeaksDanish() {
+        compose.setContent { XWearTheme { AppScaffold { DiaperScreen(WearSamples.diaperDraft(), DiaperActions()) } } }
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithText("Tis").assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Gul"))
+        compose.onNodeWithText("Gul").assert(
+            SemanticsMatcher("click label Ryd") {
+                SemanticsActions.OnClick in it.config && it.config[SemanticsActions.OnClick].label == "Ryd"
+            },
+        )
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasContentDescription("Tidspunkt, 14:32"))
+        compose.onNodeWithContentDescription("Tidspunkt, 14:32").assertExists()
+        compose.onNodeWithContentDescription("15 minutter tidligere").assertIsEnabled()
     }
 }

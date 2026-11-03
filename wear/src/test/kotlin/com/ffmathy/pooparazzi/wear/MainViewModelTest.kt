@@ -24,11 +24,11 @@ import com.ffmathy.pooparazzi.core.model.PoopTexture
 import com.ffmathy.pooparazzi.core.model.isRunning
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.NoopEntrySync
+import com.ffmathy.pooparazzi.wear.state.CLEAR_GUARD_MILLIS
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.state.MainMode
 import com.ffmathy.pooparazzi.wear.state.MainUiState
 import com.ffmathy.pooparazzi.wear.state.ReceiptKind
-import com.ffmathy.pooparazzi.wear.state.TimeTarget
 import com.ffmathy.pooparazzi.wear.state.TimeTitle
 import com.ffmathy.pooparazzi.wear.state.Undo
 import com.ffmathy.pooparazzi.wear.state.WearEvent
@@ -198,50 +198,38 @@ class MainViewModelTest {
     }
 
     @Test
-    fun earlierOpensTimeWhereTheCrownAndButtonsBackdateTheFeed() = test {
+    fun theNudgesOnFeedTypeBackdateTheFeedAndAddUp() = test {
         vm.beginFeed()
-        vm.beginFeedTime()
-        val opened = present(vm.timeDraft.value)
-        assertEquals(TimeTarget.FEED, opened.target)
-        assertEquals(TimeTitle.FEED, opened.title)
-        assertEquals(SampleData.NOW_1432, opened.at)
-
-        vm.shiftTime(-5) // −5m button
-        repeat(3) { vm.shiftTime(-1) } // three crown steps
-        vm.shiftTime(1)
-        assertEquals(-7, vm.timeDraft.value?.offsetMinutes)
-        assertEquals("nothing changes before Done", 0, vm.feedDraft.value?.offsetMinutes)
-        vm.saveTime().join()
-        awaitEvent(WearEvent.CloseTime)
-        assertNull("Done uses the draft up", vm.timeDraft.value)
-        assertEquals(-7, vm.feedDraft.value?.offsetMinutes)
+        vm.shiftFeedTime(-15)
+        vm.shiftFeedTime(-5)
+        vm.shiftFeedTime(5)
+        assertEquals(-15, vm.feedDraft.value?.offsetMinutes)
+        assertEquals(SampleData.NOW_1432 - 15 * minute, vm.feedDraft.value?.at)
+        assertEquals("a tick per change", 3, haptics().count { it == XHaptic.SEGMENT_TICK })
+        assertTrue("nothing is logged before a type is chosen", stored().isEmpty())
 
         vm.chooseFeedType(FeedType.FOOD).join()
-        assertEquals(SampleData.NOW_1432 - 7 * minute, vm.receipt.value?.entry?.startMillis)
+        assertEquals(SampleData.NOW_1432 - 15 * minute, vm.receipt.value?.entry?.startMillis)
         assertEquals(FeedType.FOOD, vm.receipt.value?.entry?.feedType)
-        assertTrue(haptics().count { it == XHaptic.SEGMENT_TICK } >= 5)
     }
 
     @Test
-    fun timeNeverGoesPastTheTapNorMoreThanTwelveHoursBack() = test {
+    fun theNudgesNeverGoPastTheTapNorMoreThanTwelveHoursBack() = test {
         vm.beginFeed()
-        vm.beginFeedTime()
-        vm.shiftTime(5)
-        assertEquals("not later than the Feed tap", 0, vm.timeDraft.value?.offsetMinutes)
+        vm.shiftFeedTime(5)
+        assertEquals("not later than the Feed tap", 0, vm.feedDraft.value?.offsetMinutes)
         assertTrue("no tick without a change", haptics().none { it == XHaptic.SEGMENT_TICK })
-        vm.shiftTime(-13 * 60)
-        assertEquals(-12 * 60, vm.timeDraft.value?.offsetMinutes)
-    }
+        vm.shiftFeedTime(-13 * 60)
+        assertEquals(-12 * 60, vm.feedDraft.value?.offsetMinutes)
+        vm.shiftFeedTime(-15)
+        assertEquals(-12 * 60, vm.feedDraft.value?.offsetMinutes)
+        assertEquals("nothing at the limit", 1, haptics().count { it == XHaptic.SEGMENT_TICK })
 
-    @Test
-    fun swipingBackFromTimeKeepsTheOldTime() = test {
-        vm.beginFeed()
-        vm.beginFeedTime()
-        vm.shiftTime(-10)
-        // Swiping back never calls Done; Earlier opens it afresh from the draft.
-        vm.beginFeedTime()
-        assertEquals(0, vm.timeDraft.value?.offsetMinutes)
-        assertEquals(0, vm.feedDraft.value?.offsetMinutes)
+        vm.beginDiaper()
+        vm.shiftDiaperTime(5)
+        assertEquals(0, vm.diaperDraft.value?.offsetMinutes)
+        vm.shiftDiaperTime(-12 * 60 - 5)
+        assertEquals(-12 * 60, vm.diaperDraft.value?.offsetMinutes)
     }
 
     @Test
@@ -253,7 +241,7 @@ class MainViewModelTest {
 
         assertTrue(vm.beginReceiptTime())
         val draft = present(vm.timeDraft.value)
-        assertEquals(TimeTarget.RECEIPT, draft.target)
+        assertEquals(TimeTitle.FEED, draft.title)
         assertEquals(SampleData.NOW_1432, draft.at)
         assertEquals("not into the future", 0, draft.maxOffset)
         vm.shiftTime(-12)
@@ -325,9 +313,7 @@ class MainViewModelTest {
     @Test
     fun breastOpensSideWithTheFeedTypeScreensTimeAndLogsNothingYet() = test {
         vm.beginFeed()
-        vm.beginFeedTime()
-        vm.shiftTime(-5)
-        vm.saveTime().join()
+        vm.shiftFeedTime(-5)
         vm.chooseFeedType(FeedType.BREAST).join()
         awaitEvent(WearEvent.ShowSide)
         val draft = present(vm.sideDraft.value)
@@ -354,22 +340,19 @@ class MainViewModelTest {
     }
 
     @Test
-    fun earlierOnSideMovesTheBreastFeedAndTheFeedTypeScreensTime() = test {
+    fun theNudgesOnSideMoveTheBreastFeedAndTheFeedTypeScreensTime() = test {
         vm.beginFeed()
         vm.chooseFeedType(FeedType.BREAST).join()
-        vm.beginSideTime()
-        val opened = present(vm.timeDraft.value)
-        assertEquals(TimeTarget.SIDE, opened.target)
-        assertEquals(TimeTitle.FEED, opened.title)
-        vm.shiftTime(-10)
-        vm.saveTime().join()
-        awaitEvent(WearEvent.CloseTime)
+        vm.shiftSideTime(-5)
+        vm.shiftSideTime(-5)
         assertEquals(SampleData.NOW_1432 - 10 * minute, present(vm.sideDraft.value).at)
         assertEquals("swiping back to Feed type shows the same time", -10, vm.feedDraft.value?.offsetMinutes)
+        vm.shiftSideTime(5)
+        assertEquals(-5, vm.feedDraft.value?.offsetMinutes)
 
         vm.tickSide(Breast.LEFT)
         vm.saveBreastfeed().join()
-        assertEquals(SampleData.NOW_1432 - 10 * minute, stored().single().startMillis)
+        assertEquals(SampleData.NOW_1432 - 5 * minute, stored().single().startMillis)
     }
 
     // ---- Bottle ------------------------------------------------------------------------------------
@@ -377,15 +360,14 @@ class MainViewModelTest {
     @Test
     fun bottleOpensBottleWithTheFeedTypeScreensTimeAndLogsNothingYet() = test {
         vm.beginFeed()
-        vm.beginFeedTime()
-        vm.shiftTime(-5)
-        vm.saveTime().join()
+        vm.shiftFeedTime(-5)
         vm.chooseFeedType(FeedType.BOTTLE).join()
         awaitEvent(WearEvent.ShowBottle)
         val draft = present(vm.bottleDraft.value)
         assertEquals(SampleData.NOW_1432 - 5 * minute, draft.at)
         assertNull(draft.contents)
         assertNull(draft.amountMl)
+        assertNull("no bottle in the past week", draft.lastAmountMl)
         assertTrue("nothing is logged before Save", stored().isEmpty())
         assertNotNull("swiping back keeps the Feed type screen's time", vm.feedDraft.value)
     }
@@ -394,12 +376,12 @@ class MainViewModelTest {
     fun saveOnBottleLogsTheContentsAmountAndTime() = test {
         vm.beginFeed()
         vm.chooseFeedType(FeedType.BOTTLE).join()
-        vm.setBottleContents(BottleContents.MILK)
-        vm.setBottleAmount(120)
-        vm.beginBottleTime()
-        assertEquals(TimeTarget.BOTTLE, vm.timeDraft.value?.target)
-        vm.shiftTime(-15)
-        vm.saveTime().join()
+        vm.chooseBottleContents(BottleContents.MILK)
+        vm.chooseBottleAmount(90)
+        vm.setBottleAmount(120) // A step on from the chip.
+        vm.shiftBottleTime(-15)
+        assertEquals("swiping back to Feed type shows the same time", -15, vm.feedDraft.value?.offsetMinutes)
+        assertNull("no screen of its own", vm.timeDraft.value)
         vm.saveBottle().join()
 
         val receipt = present(vm.receipt.value)
@@ -419,8 +401,13 @@ class MainViewModelTest {
     fun theBottlesDetailsAreOptional() = test {
         vm.beginFeed()
         vm.chooseFeedType(FeedType.BOTTLE).join()
-        vm.setBottleContents(BottleContents.FORMULA)
-        vm.setBottleContents(null)
+        vm.chooseBottleContents(BottleContents.FORMULA)
+        vm.chooseBottleAmount(90)
+        clock.advanceBy(CLEAR_GUARD_MILLIS + 100)
+        vm.chooseBottleContents(null)
+        vm.chooseBottleAmount(null)
+        assertNull(vm.bottleDraft.value?.contents)
+        assertNull(vm.bottleDraft.value?.amountMl)
         vm.setBottleAmount(90)
         vm.setBottleAmount(null)
         vm.saveBottle().join()
@@ -438,6 +425,85 @@ class MainViewModelTest {
         assertTrue(haptics().none { it == XHaptic.SEGMENT_TICK })
         vm.setBottleAmount(10)
         assertEquals(1, haptics().count { it == XHaptic.SEGMENT_TICK })
+    }
+
+    @Test
+    fun aClearWithinHalfASecondOfChoosingIsIgnored() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
+        vm.chooseBottleContents(BottleContents.FORMULA)
+        vm.chooseBottleAmount(120)
+        assertEquals(2, haptics().count { it == XHaptic.SEGMENT_TICK })
+        // The second tap of a double tap on an option that was not chosen.
+        clock.advanceBy(CLEAR_GUARD_MILLIS - 100)
+        vm.chooseBottleContents(null)
+        vm.chooseBottleAmount(null)
+        assertEquals(BottleContents.FORMULA, vm.bottleDraft.value?.contents)
+        assertEquals(120, vm.bottleDraft.value?.amountMl)
+        assertEquals("no haptic for an ignored tap", 2, haptics().count { it == XHaptic.SEGMENT_TICK })
+        // A deliberate clear a moment later goes through.
+        clock.advanceBy(200)
+        vm.chooseBottleContents(null)
+        assertNull(vm.bottleDraft.value?.contents)
+        assertEquals(3, haptics().count { it == XHaptic.SEGMENT_TICK })
+
+        vm.beginDiaper()
+        vm.setPoop(true)
+        vm.choosePoopColor(PoopColor.YELLOW)
+        vm.choosePoopTexture(PoopTexture.SEEDY)
+        vm.choosePoopColor(null)
+        vm.choosePoopTexture(null)
+        assertEquals(PoopColor.YELLOW, vm.diaperDraft.value?.color)
+        assertEquals(PoopTexture.SEEDY, vm.diaperDraft.value?.texture)
+        clock.advanceBy(CLEAR_GUARD_MILLIS + 100)
+        vm.choosePoopColor(null)
+        vm.choosePoopTexture(null)
+        assertNull(vm.diaperDraft.value?.color)
+        assertNull(vm.diaperDraft.value?.texture)
+    }
+
+    @Test
+    fun anotherOptionIsChosenAtOnceAndTheSameOneTicksNothing() = test {
+        vm.beginDiaper()
+        vm.setPoop(true)
+        vm.choosePoopColor(PoopColor.YELLOW)
+        vm.choosePoopColor(PoopColor.GREEN)
+        assertEquals(PoopColor.GREEN, vm.diaperDraft.value?.color)
+        vm.choosePoopColor(PoopColor.GREEN)
+        assertEquals(2, haptics().count { it == XHaptic.SEGMENT_TICK })
+    }
+
+    @Test
+    fun theAmountChipsCentreOnThisBabysLastBottleOfTheWeek() = test {
+        settings.state.value = SampleData.twinSettings
+        val ida = SampleData.TWIN_ID
+        repo.applyRemoteAll(
+            listOf(
+                Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432 - 8 * 24 * 60 * minute, id = "old", amountMl = 200),
+                Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432 - 3 * 60 * minute, id = "noa", amountMl = 150),
+                Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432 - 2 * 60 * minute, id = "no-amount"),
+                Entry.feed(FeedType.FOOD, SampleData.NOW_1432 - 60 * minute, id = "food"),
+                Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432 - 30 * minute, id = "ida", amountMl = 60, babyId = ida),
+            ),
+        )
+        // Noa (the current baby) sees her own entries only.
+        awaitMain { it.loaded && it.lastFeed?.id == "food" }
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
+        assertEquals("Noa's, not Ida's newer one; amount-less and other feeds skipped", 150, vm.bottleDraft.value?.lastAmountMl)
+
+        // Taken once: a bottle logged meanwhile does not move the chips under a finger.
+        repo.applyRemoteAll(listOf(Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432 - minute, id = "new", amountMl = 90)))
+        vm.chooseBottleAmount(90)
+        assertEquals(150, vm.bottleDraft.value?.lastAmountMl)
+    }
+
+    @Test
+    fun aBottleOverAWeekOldDoesNotCount() = test {
+        seed(listOf(Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432 - 7 * 24 * 60 * minute - 1, id = "old", amountMl = 200)))
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
+        assertNull(vm.bottleDraft.value?.lastAmountMl)
     }
 
     @Test
@@ -592,11 +658,9 @@ class MainViewModelTest {
         assertFalse("both checkboxes start off", vm.diaperDraft.value!!.pee || vm.diaperDraft.value!!.poop)
         vm.setPee(true)
         vm.setPoop(true)
-        vm.setPoopColor(PoopColor.YELLOW)
-        vm.setPoopTexture(PoopTexture.SEEDY)
-        vm.beginDiaperTime()
-        vm.shiftTime(-5)
-        vm.saveTime().join()
+        vm.choosePoopColor(PoopColor.YELLOW)
+        vm.choosePoopTexture(PoopTexture.SEEDY)
+        vm.shiftDiaperTime(-5)
         vm.saveDiaper().join()
 
         val receipt = present(vm.receipt.value)
@@ -612,20 +676,25 @@ class MainViewModelTest {
     }
 
     @Test
-    fun turningPoopOffDropsItsDetails() = test {
+    fun turningPoopOffKeepsItsDetailsButSaveDropsThem() = test {
         vm.beginDiaper()
         vm.setPoop(true)
-        vm.setPoopColor(PoopColor.GREEN)
-        vm.setPoopTexture(PoopTexture.WATERY)
+        vm.choosePoopColor(PoopColor.GREEN)
+        vm.choosePoopTexture(PoopTexture.WATERY)
+        vm.setPoop(false)
+        // An accidental untick is undone by ticking again: the choices are still there.
+        assertEquals(PoopColor.GREEN, vm.diaperDraft.value?.color)
+        assertEquals(PoopTexture.WATERY, vm.diaperDraft.value?.texture)
+        vm.setPoop(true)
+        assertEquals(PoopColor.GREEN, vm.diaperDraft.value?.color)
         vm.setPoop(false)
         vm.setPee(true)
-        assertNull(vm.diaperDraft.value?.color)
-        assertNull(vm.diaperDraft.value?.texture)
         vm.saveDiaper().join()
         val entry = stored().single()
         assertTrue(entry.pee)
         assertFalse(entry.poop)
         assertNull(entry.poopColor)
+        assertNull(entry.poopTexture)
     }
 
     @Test

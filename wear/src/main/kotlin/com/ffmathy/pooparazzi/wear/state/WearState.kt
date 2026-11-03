@@ -95,23 +95,17 @@ data class MainUiState(
     }
 }
 
-/**
- * What the Time screen (W4) sets: a picker's draft before it is logged (Feed type, Side, Bottle, Diaper), or the entry
- * on Logged after it is.
- */
-enum class TimeTarget { FEED, SIDE, BOTTLE, DIAPER, RECEIPT }
-
 /** The Time screen's title, which also gives the time its event colour. */
 enum class TimeTitle { FEED, DIAPER, WOKE_UP }
 
 /**
- * The Time screen (W4): the time being set, as whole minutes from [base] (the Feed or Diaper tap's stamp, or the
- * time Logged shows), between [minOffset] and [maxOffset] (never in the future, never past the sleep's start).
- * The crown moves it by a minute per step, the buttons by 5; nothing is applied until Done.
+ * The Time screen (W4), opened from Logged only (tap its time, or turn the crown there): the logged entry's time, as
+ * whole minutes from [base] (the time Logged shows), between [minOffset] and [maxOffset] (never in the future, never
+ * past the sleep's start). The crown moves it by a minute per step, the buttons by 5; nothing is applied until Done.
+ * The pickers set their time inline instead ([MAX_SHIFT_MINUTES], `TimeNudges`).
  */
 @Immutable
 data class TimeDraft(
-    val target: TimeTarget,
     val title: TimeTitle,
     val base: Long,
     val zone: ZoneId,
@@ -125,15 +119,27 @@ data class TimeDraft(
     fun shiftedBy(minutes: Int): TimeDraft = copy(offsetMinutes = (offsetMinutes + minutes).coerceIn(minOffset, maxOffset))
 }
 
-/** How far the Time screen moves a time: 12 hours either way. */
+/** How far a time moves: up to 12 hours back on the pickers' nudges, 12 hours either way on the Time screen. */
 const val MAX_SHIFT_MINUTES = 12 * 60
 
 /** The Time screen buttons' step; the crown moves a minute per step. */
 const val TIME_BUTTON_STEP_MINUTES = 5
 
+/**
+ * A tap that would clear a contents, amount, colour or texture choice made less than this long ago is ignored, so a
+ * double tap on an option leaves it selected (DESIGN_SPEC §5.9).
+ */
+const val CLEAR_GUARD_MILLIS = 500L
+
+/** How far back the last bottle's amount is looked for, to centre the Bottle screen's amount chips on. */
+const val QUICK_DAYS = 7
+
 private const val MINUTE_MILLIS = 60_000L
 
-/** The Feed type screen: the time stamped on the Feed tap, plus the offset set on the Time screen (Earlier). */
+/**
+ * The Feed type screen: the time stamped on the Feed tap, plus the offset set with the inline nudges ("−15m", "−5m",
+ * "+5m"), on this screen or on Side and Bottle (which write it back here, so swiping back shows the same time).
+ */
 @Immutable
 data class FeedDraft(val stamp: Long, val offsetMinutes: Int = 0, val zone: ZoneId) {
     /** The time the feed is logged at. */
@@ -141,8 +147,8 @@ data class FeedDraft(val stamp: Long, val offsetMinutes: Int = 0, val zone: Zone
 }
 
 /**
- * The Side screen after Breast on the Feed type screen: the Feed tap's stamp and the Earlier offset (carried over from
- * the Feed type screen, and changed with Earlier on Side), so [at] is the time the breast feed is logged at; and the
+ * The Side screen after Breast on the Feed type screen: the Feed tap's stamp and the offset (carried over from the
+ * Feed type screen, and changed with the nudges on Side), so [at] is the time the breast feed is logged at; and the
  * Left / Right checkboxes ticked so far, in tick order ([side] is what that order records; null = no side).
  */
 @Immutable
@@ -152,9 +158,10 @@ data class SideDraft(val stamp: Long, val zone: ZoneId, val offsetMinutes: Int =
 }
 
 /**
- * The Bottle screen after Bottle on the Feed type screen: the Feed tap's stamp and the Earlier offset (as [SideDraft]),
- * and what the bottle held and how much was given, both optional (null: not picked; Save with neither records just
- * the time).
+ * The Bottle screen after Bottle on the Feed type screen: the Feed tap's stamp and the offset (as [SideDraft]), and
+ * what the bottle held and how much was given, both optional and both picked on the screen itself (null: not picked;
+ * Save with neither records just the time). [lastAmountMl] is the last bottle's amount within [QUICK_DAYS], taken
+ * once when Bottle is chosen: the amount chips centre on it, so they never change under a finger.
  */
 @Immutable
 data class BottleDraft(
@@ -163,11 +170,16 @@ data class BottleDraft(
     val offsetMinutes: Int = 0,
     val contents: BottleContents? = null,
     val amountMl: Int? = null,
+    val lastAmountMl: Int? = null,
 ) {
     val at: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
 }
 
-/** The Diaper screen (V1_ADDITIONS §3.2). Both checkboxes start off and are optional: nothing ticked is a plain change. */
+/**
+ * The Diaper screen (V1_ADDITIONS §3.2). Pee and Poop start off and are optional: nothing ticked is a plain change.
+ * Colour and texture are picked on the screen while Poop is on; they are kept when Poop is turned off (so an
+ * accidental untick is undone by ticking it again), but only saved with Poop on.
+ */
 @Immutable
 data class DiaperDraft(
     val stamp: Long,
@@ -228,12 +240,12 @@ sealed interface WearEvent {
     /** Breast was chosen on the Feed type screen: pick the side order, then Save. */
     data object ShowSide : WearEvent
 
-    /** Bottle was chosen on the Feed type screen: pick the contents and the amount (both optional), then Save. */
+    /** Bottle was chosen on the Feed type screen: pick the contents and the amount (both optional, inline), then Save. */
     data object ShowBottle : WearEvent
 
     /** Return to Main (closing pickers). */
     data object BackToMain : WearEvent
 
-    /** Done on the Time screen: back to the screen that opened it. */
+    /** Done on the Time screen: back to Logged, which opened it. */
     data object CloseTime : WearEvent
 }

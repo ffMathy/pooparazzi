@@ -26,8 +26,8 @@ data class Option<T>(val value: T?, val label: String, val swatch: Color?, val s
 
 /**
  * A single-select option list under a [title]: radio buttons, the current value selected. One tap chooses; the caller
- * returns to the screen that opened it. 500 ms tap cooldown. The poop colour and texture lists use it, and so does
- * the baby picker (no swatches there).
+ * returns to the screen that opened it. 500 ms tap cooldown. The baby picker uses it (BABIES_AND_BACKUP §2.5); the
+ * logging flows pick their details inline instead.
  */
 @Composable
 fun <T> OptionScreen(title: String, options: List<Option<T>>, onSelect: (T?) -> Unit, modifier: Modifier = Modifier) {

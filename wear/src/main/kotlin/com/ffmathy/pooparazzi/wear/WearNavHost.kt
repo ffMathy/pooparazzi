@@ -19,16 +19,12 @@ import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
-import com.ffmathy.pooparazzi.wear.diaper.colourOptions
-import com.ffmathy.pooparazzi.wear.diaper.textureOptions
-import com.ffmathy.pooparazzi.wear.feed.AmountScreen
 import com.ffmathy.pooparazzi.wear.feed.BottleActions
 import com.ffmathy.pooparazzi.wear.feed.BottleScreen
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeActions
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeScreen
 import com.ffmathy.pooparazzi.wear.feed.SideActions
 import com.ffmathy.pooparazzi.wear.feed.SideScreen
-import com.ffmathy.pooparazzi.wear.feed.contentsOptions
 import com.ffmathy.pooparazzi.wear.logged.LoggedScreen
 import com.ffmathy.pooparazzi.wear.logged.UndoneScreen
 import com.ffmathy.pooparazzi.wear.main.MainActions
@@ -47,16 +43,17 @@ object WearRoutes {
     const val FEED_TYPE = "feed"
     const val SIDE = "side"
 
-    /** Bottle: the optional contents and amount, Earlier and Save, after Bottle on Feed type. */
+    /** Bottle: the optional contents and amount, the inline time and Save, after Bottle on Feed type. */
     const val BOTTLE = "bottle"
-    const val BOTTLE_CONTENTS = "bottle/contents"
-    const val BOTTLE_AMOUNT = "bottle/amount"
+
+    /** Diaper: Pee | Poop, Poop's colour and texture, the inline time and Save. */
     const val DIAPER = "diaper"
-    const val DIAPER_COLOUR = "diaper/colour"
-    const val DIAPER_TEXTURE = "diaper/texture"
     const val LOGGED = "logged"
 
-    /** Time (W4): opened by Earlier on Feed type, Side, Bottle and Diaper, and by the time (or the crown) on Logged. */
+    /**
+     * Time (W4): opened only by the time (or the crown) on Logged, to correct a saved entry. The logging flows set
+     * their time inline and open no screen of their own: only Feed type → Side or Bottle, and Save → Logged, navigate.
+     */
     const val TIME = "time"
     const val UNDONE = "undone"
 
@@ -114,7 +111,7 @@ fun WearNavHost(
                 WearEvent.ShowSide -> go(WearRoutes.SIDE)
                 WearEvent.ShowBottle -> go(WearRoutes.BOTTLE)
                 WearEvent.BackToMain -> backToMain()
-                // By route: a second Done never pops the screen under Time as well.
+                // By route: a second Done never pops Logged (under Time) as well.
                 WearEvent.CloseTime -> navController.popBackStack(WearRoutes.TIME, inclusive = true)
             }
         }
@@ -192,10 +189,7 @@ fun WearNavHost(
                     it,
                     FeedTypeActions(
                         onType = gate.tapWith { type -> viewModel.chooseFeedType(type) },
-                        onEarlier = gate.tap {
-                            viewModel.beginFeedTime()
-                            go(WearRoutes.TIME)
-                        },
+                        onShiftTime = gate.tapWith { minutes -> viewModel.shiftFeedTime(minutes) },
                     ),
                 )
             }
@@ -208,10 +202,7 @@ fun WearNavHost(
                     it,
                     SideActions(
                         onTick = gate.tapWith { breast -> viewModel.tickSide(breast) },
-                        onEarlier = gate.tap {
-                            viewModel.beginSideTime()
-                            go(WearRoutes.TIME)
-                        },
+                        onShiftTime = gate.tapWith { minutes -> viewModel.shiftSideTime(minutes) },
                         onSave = gate.tap { viewModel.saveBreastfeed() },
                     ),
                 )
@@ -224,38 +215,12 @@ fun WearNavHost(
                 BottleScreen(
                     it,
                     BottleActions(
-                        onContents = gate.tap { go(WearRoutes.BOTTLE_CONTENTS) },
-                        onAmount = gate.tap { go(WearRoutes.BOTTLE_AMOUNT) },
-                        onEarlier = gate.tap {
-                            viewModel.beginBottleTime()
-                            go(WearRoutes.TIME)
-                        },
+                        onContents = gate.tapWith { contents -> viewModel.chooseBottleContents(contents) },
+                        onAmountChip = gate.tapWith { amount -> viewModel.chooseBottleAmount(amount) },
+                        onAmountStep = gate.tapWith { amount -> viewModel.setBottleAmount(amount) },
+                        onShiftTime = gate.tapWith { minutes -> viewModel.shiftBottleTime(minutes) },
                         onSave = gate.tap { viewModel.saveBottle() },
                     ),
-                )
-            }
-        }
-        composable(WearRoutes.BOTTLE_CONTENTS) { backStackEntry ->
-            val gate = rememberTopGate(navController, backStackEntry)
-            val draft by viewModel.bottleDraft.collectAsStateWithLifecycle()
-            OptionScreen(
-                title = stringResource(CoreR.string.bottle_contents),
-                options = contentsOptions(draft?.contents),
-                onSelect = gate.tapWith { contents ->
-                    viewModel.setBottleContents(contents)
-                    // By route: a second tap never pops the Bottle screen (and its unsaved draft) as well.
-                    navController.popBackStack(WearRoutes.BOTTLE_CONTENTS, inclusive = true)
-                },
-            )
-        }
-        composable(WearRoutes.BOTTLE_AMOUNT) { backStackEntry ->
-            val gate = rememberTopGate(navController, backStackEntry)
-            val draft by viewModel.bottleDraft.collectAsStateWithLifecycle()
-            rememberLast(draft)?.let {
-                AmountScreen(
-                    it,
-                    onAmount = gate.tapWith { amount -> viewModel.setBottleAmount(amount) },
-                    onDone = gate.tap { navController.popBackStack(WearRoutes.BOTTLE_AMOUNT, inclusive = true) },
                 )
             }
         }
@@ -268,41 +233,13 @@ fun WearNavHost(
                     DiaperActions(
                         onPee = gate.tapWith { on -> viewModel.setPee(on) },
                         onPoop = gate.tapWith { on -> viewModel.setPoop(on) },
-                        onColour = gate.tap { go(WearRoutes.DIAPER_COLOUR) },
-                        onTexture = gate.tap { go(WearRoutes.DIAPER_TEXTURE) },
-                        onEarlier = gate.tap {
-                            viewModel.beginDiaperTime()
-                            go(WearRoutes.TIME)
-                        },
+                        onColour = gate.tapWith { color -> viewModel.choosePoopColor(color) },
+                        onTexture = gate.tapWith { texture -> viewModel.choosePoopTexture(texture) },
+                        onShiftTime = gate.tapWith { minutes -> viewModel.shiftDiaperTime(minutes) },
                         onSave = gate.tap { viewModel.saveDiaper() },
                     ),
                 )
             }
-        }
-        composable(WearRoutes.DIAPER_COLOUR) { backStackEntry ->
-            val gate = rememberTopGate(navController, backStackEntry)
-            val draft by viewModel.diaperDraft.collectAsStateWithLifecycle()
-            OptionScreen(
-                title = stringResource(CoreR.string.poop_colour),
-                options = colourOptions(draft?.color),
-                onSelect = gate.tapWith { color ->
-                    viewModel.setPoopColor(color)
-                    // By route: a second tap never pops the Diaper screen (and its unsaved draft) as well.
-                    navController.popBackStack(WearRoutes.DIAPER_COLOUR, inclusive = true)
-                },
-            )
-        }
-        composable(WearRoutes.DIAPER_TEXTURE) { backStackEntry ->
-            val gate = rememberTopGate(navController, backStackEntry)
-            val draft by viewModel.diaperDraft.collectAsStateWithLifecycle()
-            OptionScreen(
-                title = stringResource(CoreR.string.poop_texture),
-                options = textureOptions(draft?.texture),
-                onSelect = gate.tapWith { texture ->
-                    viewModel.setPoopTexture(texture)
-                    navController.popBackStack(WearRoutes.DIAPER_TEXTURE, inclusive = true)
-                },
-            )
         }
         composable(WearRoutes.LOGGED) { backStackEntry ->
             val gate = rememberTopGate(navController, backStackEntry)

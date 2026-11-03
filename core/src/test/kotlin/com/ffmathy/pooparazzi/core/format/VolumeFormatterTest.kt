@@ -58,4 +58,35 @@ class VolumeFormatterTest {
         assertEquals(8, ounces.stepOf(120))
         assertEquals("4 fl oz", ounces.format(ounces.amountAt(8)!!))
     }
+
+    @Test
+    fun theAmountChipsDefaultToThreeCommonAmounts() {
+        assertEquals(listOf(60, 90, 120), millilitres.quickAmounts(null))
+        assertEquals(listOf("2 fl oz", "3 fl oz", "4 fl oz"), ounces.quickAmounts(null).map(ounces::format))
+    }
+
+    @Test
+    fun theAmountChipsCentreOnTheLastBottle() {
+        assertEquals(listOf(90, 120, 150), millilitres.quickAmounts(120))
+        assertEquals("to the nearest step", listOf(90, 120, 150), millilitres.quickAmounts(123))
+        assertEquals(listOf("3.5 fl oz", "4.5 fl oz", "5.5 fl oz"), ounces.quickAmounts(133).map(ounces::format))
+    }
+
+    @Test
+    fun theAmountChipsStayOnTheScale() {
+        assertEquals(listOf(10, 40, 70), millilitres.quickAmounts(10))
+        assertEquals(listOf(240, 270, 300), millilitres.quickAmounts(300))
+        assertEquals(listOf(240, 270, 300), millilitres.quickAmounts(5_000))
+        assertEquals(listOf("0.5 fl oz", "1.5 fl oz", "2.5 fl oz"), ounces.quickAmounts(5).map(ounces::format))
+        assertEquals(listOf("8 fl oz", "9 fl oz", "10 fl oz"), ounces.quickAmounts(400).map(ounces::format))
+    }
+
+    @Test
+    fun theNumberAndTheUnitApart() {
+        assertEquals("120", millilitres.numberOf(120))
+        assertEquals("4.5", ounces.numberOf(133))
+        assertEquals("4,5", VolumeFormatter(VolumeUnit.FLUID_OUNCES, danish).numberOf(133))
+        assertEquals("ml", millilitres.unitSymbol)
+        assertEquals("fl oz", ounces.unitSymbol)
+    }
 }

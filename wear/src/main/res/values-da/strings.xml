@@ -72,4 +72,10 @@
     <string name="ongoing_asleep_for">Sover %1$s</string>
     <string name="spoken_side_first">først</string>
     <string name="spoken_side_second">bagefter</string>
+    <!-- Bottle and Diaper: TalkBack click label of a selected contents option or chip (tapping it again clears it) -->
+    <string name="action_clear">Ryd</string>
+    <!-- The inline time readout at no offset, read as "Time, 14:32" (with spoken_pair) -->
+    <string name="spoken_time">Tidspunkt</string>
+    <!-- The Bottle amount chip equal to the last bottle's amount: "120 ml, as last time". %1$s is the amount. -->
+    <string name="spoken_as_last_time">%1$s, som sidst</string>
 </resources>

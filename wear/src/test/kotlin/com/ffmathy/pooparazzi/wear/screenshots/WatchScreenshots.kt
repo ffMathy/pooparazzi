@@ -9,24 +9,21 @@ import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.wear.ambient.AmbientLifecycleObserver
+import androidx.wear.compose.foundation.LocalAmbientModeManager
 import androidx.test.core.app.ApplicationProvider
 import androidx.wear.compose.material3.AppScaffold
-import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.format.ClockFormatter
-import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
-import com.ffmathy.pooparazzi.wear.diaper.colourOptions
-import com.ffmathy.pooparazzi.wear.feed.AmountScreen
 import com.ffmathy.pooparazzi.wear.feed.BottleActions
 import com.ffmathy.pooparazzi.wear.feed.BottleScreen
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeActions
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeScreen
 import com.ffmathy.pooparazzi.wear.feed.SideActions
 import com.ffmathy.pooparazzi.wear.feed.SideScreen
-import com.ffmathy.pooparazzi.wear.feed.contentsOptions
 import com.ffmathy.pooparazzi.wear.logged.LoggedScreen
 import com.ffmathy.pooparazzi.wear.logged.UndoneScreen
 import com.ffmathy.pooparazzi.wear.main.MainActions
@@ -36,8 +33,8 @@ import com.ffmathy.pooparazzi.wear.state.Guard
 import com.ffmathy.pooparazzi.wear.state.GuardKind
 import com.ffmathy.pooparazzi.wear.state.GuardTarget
 import com.ffmathy.pooparazzi.wear.state.TimeDraft
-import com.ffmathy.pooparazzi.wear.state.TimeTarget
 import com.ffmathy.pooparazzi.wear.state.TimeTitle
+import com.ffmathy.pooparazzi.wear.theme.WearableAmbientModeManager
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
 import com.ffmathy.pooparazzi.wear.time.TimeScreen
 import com.ffmathy.pooparazzi.wear.ui.LocalBabyTimeText
@@ -80,15 +77,24 @@ abstract class WatchScreenshots(private val lang: String) {
         now: Long,
         timeText: Boolean = true,
         babyLabel: String? = null,
+        ambient: Boolean = false,
         after: () -> Unit = {},
         content: @Composable () -> Unit,
     ) {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val time = ClockFormatter.from(context).format(now, WearSamples.zone)
+        // Always-on, as the watch's own ambient callback would set it.
+        val ambientManager = if (ambient) {
+            WearableAmbientModeManager().apply {
+                onEnterAmbient(AmbientLifecycleObserver.AmbientDetails(burnInProtectionRequired = false, deviceHasLowBitAmbient = false))
+            }
+        } else {
+            null
+        }
         // Drive the clock by hand, so timed UI (the Logged drain arc) is captured mid-way, not run to its end.
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            CompositionLocalProvider(LocalFixedTimeText provides time) {
+            CompositionLocalProvider(LocalFixedTimeText provides time, LocalAmbientModeManager provides ambientManager) {
                 XWearTheme {
                     CompositionLocalProvider(LocalBabyTimeText provides rememberBabyTimeText(babyLabel)) {
                         AppScaffold(timeText = { if (timeText) XTimeText() }) { content() }
@@ -101,6 +107,11 @@ abstract class WatchScreenshots(private val lang: String) {
         // Past the 500 ms picker cooldowns and the 1 s Logged inert period.
         compose.mainClock.advanceTimeBy(1_200)
         compose.onRoot().captureRoboImage(filePath = "screenshots/$lang/$name.png", roborazziOptions = RoundWatch)
+    }
+
+    /** Scrolls the list so its item [index] is centred (the list's own scroll-to-index). */
+    private fun scrollToIndex(index: Int) {
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(index)
     }
 
     @Test
@@ -117,6 +128,12 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s05_feedType() = capture("05-feed-type", SampleData.NOW_1432) { FeedTypeScreen(WearSamples.feedDraft(), FeedTypeActions()) }
 
+    /** Scrolled to the end: the inline time, moved back 10 minutes with −5m twice ("14:22 · −10m"). */
+    @Test
+    fun s05b_feedTypeTime() = capture("05b-feed-type-time", SampleData.NOW_1432, after = { scrollToIndex(FEED_TYPE_LAST) }) {
+        FeedTypeScreen(WearSamples.feedDraft().copy(offsetMinutes = -10), FeedTypeActions())
+    }
+
     /** After Breast on Feed type: "Which side?", "Breast · 14:32", Left / Right and Save. */
     @Test
     fun s06_side() = capture("06-side", SampleData.NOW_1432) { SideScreen(WearSamples.sideDraft(), SideActions()) }
@@ -127,28 +144,38 @@ abstract class WatchScreenshots(private val lang: String) {
         SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.RIGHT, Breast.LEFT)), SideActions())
     }
 
-    /** Scrolled to the end: the order line and Earlier (the time can still move after Breast), above Save. */
+    /** Scrolled to the end: the order line and the inline time (it can still move after Breast), above Save. */
     @Test
-    fun s06b_sideEarlier() = capture(
-        "06b-side-earlier",
-        SampleData.NOW_1432,
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4) },
-    ) { SideScreen(WearSamples.sideDraft().copy(offsetMinutes = -10, ticks = listOf(Breast.LEFT)), SideActions()) }
-
-    /** After Bottle on Feed type: "Bottle · 14:32", Contents (Formula), Amount (120 ml), Earlier and Save. */
-    @Test
-    fun s06c_bottle() = capture("06c-bottle", SampleData.NOW_1432) { BottleScreen(WearSamples.bottleDraft(), BottleActions()) }
-
-    /** Contents on Bottle: Milk, Formula, None. */
-    @Test
-    fun s06d_bottleContents() = capture("06d-bottle-contents", SampleData.NOW_1432) {
-        OptionScreen(stringResource(CoreR.string.bottle_contents), contentsOptions(BottleContents.FORMULA), onSelect = {})
+    fun s06b_sideTime() = capture("06b-side-time", SampleData.NOW_1432, after = { scrollToIndex(SIDE_LAST) }) {
+        SideScreen(WearSamples.sideDraft().copy(offsetMinutes = -10, ticks = listOf(Breast.LEFT)), SideActions())
     }
 
-    /** Amount on Bottle: 120 ml, the crown or −/+ by 10 ml, and Done. */
+    /** After Bottle on Feed type, as it opens: "Bottle · 14:32", Milk and Formula, Save. */
     @Test
-    fun s06e_bottleAmount() = capture("06e-bottle-amount", SampleData.NOW_1432) {
-        AmountScreen(WearSamples.bottleDraft(), onAmount = {}, onDone = {})
+    fun s06c_bottle() = capture("06c-bottle", SampleData.NOW_1432) { BottleScreen(WearSamples.emptyBottleDraft(), BottleActions()) }
+
+    /**
+     * Formula and the 120 ml chip chosen (the last bottle was 120 ml, so the chips are 90 · 120 · 150 ml, or 3 · 4 · 5
+     * fl oz), scrolled to the stepper and the chips.
+     */
+    @Test
+    fun s06d_bottleAmount() = capture("06d-bottle-amount", SampleData.NOW_1432, after = { scrollToIndex(BOTTLE_CHIPS) }) {
+        BottleScreen(WearSamples.bottleDraft(), BottleActions())
+    }
+
+    /**
+     * Nothing picked yet but a 120 ml last bottle, scrolled to the stepper and the chips: "No amount" between − and +,
+     * and the history glyph on the unselected 120 ml (4 fl oz) chip.
+     */
+    @Test
+    fun s06f_bottleNoAmount() = capture("06f-bottle-no-amount", SampleData.NOW_1432, after = { scrollToIndex(BOTTLE_CHIPS) }) {
+        BottleScreen(WearSamples.emptyBottleDraft().copy(lastAmountMl = 120), BottleActions())
+    }
+
+    /** Scrolled to the end: the inline time, 10 minutes back. */
+    @Test
+    fun s06e_bottleTime() = capture("06e-bottle-time", SampleData.NOW_1432, after = { scrollToIndex(BOTTLE_LAST) }) {
+        BottleScreen(WearSamples.bottleDraft().copy(offsetMinutes = -10), BottleActions())
     }
 
     /** The bottle feed saved: "Bottle at 14:32" with "Formula · 120 ml" under it. */
@@ -157,21 +184,32 @@ abstract class WatchScreenshots(private val lang: String) {
         LoggedScreen(WearSamples.receiptFormula(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
     }
 
-    /** As it opens: the title and the Pee and Poop checkboxes (V1_ADDITIONS §3.2), Poop on. */
+    /** As it opens: the title, the Pee | Poop tiles (V1_ADDITIONS §3.2) and the inline time's "Earlier?". */
     @Test
-    fun s07_diaper() = capture("07-diaper", SampleData.NOW_1432) { DiaperScreen(WearSamples.diaperDraft(), DiaperActions()) }
+    fun s07_diaper() = capture("07-diaper", SampleData.NOW_1432) { DiaperScreen(WearSamples.emptyDiaperDraft(), DiaperActions()) }
 
-    /** Scrolled to Poop's options: Colour and Texture with their values (the list centres the item it scrolls to). */
+    /** Pee and Poop ticked, Yellow chosen, scrolled to the colours (the list centres the item it scrolls to). */
     @Test
-    fun s07b_diaperOptions() = capture(
-        "07b-diaper-options",
-        SampleData.NOW_1432,
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3) },
-    ) { DiaperScreen(WearSamples.diaperDraft(), DiaperActions()) }
+    fun s07b_diaperOptions() = capture("07b-diaper-options", SampleData.NOW_1432, after = { scrollToIndex(DIAPER_COLOURS) }) {
+        DiaperScreen(WearSamples.diaperDraft().copy(texture = null), DiaperActions())
+    }
 
+    /** Pee only, 5 minutes back: the inline time right under the tiles. */
     @Test
-    fun s08_diaperColourList() = capture("08-diaper-colour-list", SampleData.NOW_1432) {
-        OptionScreen(stringResource(CoreR.string.poop_colour), colourOptions(PoopColor.YELLOW), onSelect = {})
+    fun s07c_diaperTime() = capture("07c-diaper-time", SampleData.NOW_1432, after = { scrollToIndex(DIAPER_LAST_WITHOUT_POOP) }) {
+        DiaperScreen(WearSamples.emptyDiaperDraft().copy(pee = true, offsetMinutes = -5), DiaperActions())
+    }
+
+    /** Always-on: outlines only, the swatches as rings, nothing filled (DESIGN_SPEC §10.6). */
+    @Test
+    fun s07d_diaperAmbient() = capture("07d-diaper-ambient", SampleData.NOW_1432, ambient = true) {
+        DiaperScreen(WearSamples.diaperDraft(), DiaperActions())
+    }
+
+    /** Pale and Seedy chosen, scrolled to the textures: a light swatch keeps a dark check. */
+    @Test
+    fun s08_diaperTexture() = capture("08-diaper-texture", SampleData.NOW_1432, after = { scrollToIndex(DIAPER_TEXTURES) }) {
+        DiaperScreen(WearSamples.diaperDraftPale(), DiaperActions())
     }
 
     @Test
@@ -179,7 +217,7 @@ abstract class WatchScreenshots(private val lang: String) {
         LoggedScreen(WearSamples.receiptBreast(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
     }
 
-    /** Earlier on Feed type, the crown turned back 7 minutes: "Feed · −7m", 14:25, −5m / +5m and Done. */
+    /** The time on Logged tapped, the crown turned back 7 minutes: "Feed · −7m", 14:25, −5m / +5m and Done. */
     @Test
     fun s09b_time() = capture("09b-time", SampleData.NOW_1432) {
         TimeScreen(WearSamples.timeDraft(), onShift = {}, onDone = {})
@@ -189,7 +227,7 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s09c_timeWokeUp() = capture("09c-time-woke-up", SampleData.NOW_1432) {
         TimeScreen(
-            TimeDraft(TimeTarget.RECEIPT, TimeTitle.WOKE_UP, base = SampleData.NOW_1432, zone = WearSamples.zone, offsetMinutes = -65, maxOffset = 0),
+            TimeDraft(TimeTitle.WOKE_UP, base = SampleData.NOW_1432, zone = WearSamples.zone, offsetMinutes = -65, maxOffset = 0),
             onShift = {},
             onDone = {},
         )
@@ -265,6 +303,25 @@ abstract class WatchScreenshots(private val lang: String) {
     fun s17_feedTypeLargeFont() =
         capture("17-feed-type-large-font", SampleData.NOW_1432) { FeedTypeScreen(WearSamples.feedDraft(), FeedTypeActions()) }
 
+    /** Pee | Poop at 130 %: taller tiles; the colours drop to two columns. */
+    @Test
+    @Config(fontScale = 1.3f)
+    fun s17b_diaperLargeFont() = capture("17b-diaper-large-font", SampleData.NOW_1432) { DiaperScreen(WearSamples.diaperDraft(), DiaperActions()) }
+
+    /** The amount at 130 %: the value over its steps once "[−] 300 ml [+]" no longer fits one row. */
+    @Test
+    @Config(fontScale = 1.3f)
+    fun s17c_bottleLargeFont() = capture("17c-bottle-large-font", SampleData.NOW_1432, after = { scrollToIndex(BOTTLE_CHIPS) }) {
+        BottleScreen(WearSamples.bottleDraft(), BottleActions())
+    }
+
+    /** At 200 %: one colour per row, swatch beside its name; nothing clips, the list just grows. */
+    @Test
+    @Config(fontScale = 2.0f)
+    fun s16d_diaperHugeFont() = capture("16d-diaper-font-200", SampleData.NOW_1432, after = { scrollToIndex(DIAPER_COLOURS) }) {
+        DiaperScreen(WearSamples.diaperDraft(), DiaperActions())
+    }
+
     @Test
     @Config(fontScale = 1.3f)
     fun s18b_timeLargeFont() = capture("18b-time-large-font", SampleData.NOW_1432) {
@@ -279,6 +336,21 @@ abstract class WatchScreenshots(private val lang: String) {
 }
 
 private const val FRAME = 16L
+
+/** List indices: Feed type's last item (the nudges); Side's. */
+private const val FEED_TYPE_LAST = 6
+private const val SIDE_LAST = 5
+
+/** Bottle: title, Milk, Formula, the stepper (3), the chips, the readout, the nudges. */
+private const val BOTTLE_CHIPS = 4
+private const val BOTTLE_LAST = 6
+
+/** Diaper with Poop: title, tiles, "Colour", two colour rows, "Texture", two texture rows, readout, nudges. */
+private const val DIAPER_COLOURS = 3
+private const val DIAPER_TEXTURES = 6
+
+/** Diaper without Poop: title, tiles, readout, nudges. */
+private const val DIAPER_LAST_WITHOUT_POOP = 3
 
 /** A name as long as the phone lets the parent type (40 characters). */
 internal const val LONG_NAME = "Christian Frederik Valdemar Oldenborg"

@@ -15,6 +15,10 @@ import com.ffmathy.pooparazzi.core.format.ClockFormatter
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.sample.SampleData
+import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
+import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
+import com.ffmathy.pooparazzi.wear.feed.BottleActions
+import com.ffmathy.pooparazzi.wear.feed.BottleScreen
 import com.ffmathy.pooparazzi.wear.feed.SideActions
 import com.ffmathy.pooparazzi.wear.feed.SideScreen
 import com.ffmathy.pooparazzi.wear.main.MainActions
@@ -38,7 +42,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Main on a 192 dp round watch (DESIGN_SPEC §3.5.10): Small "Start sleep", 30 sp numeral, 83 × 56 buttons. */
+/**
+ * A 192 dp round watch (DESIGN_SPEC §3.5.10): Main with its Small "Start sleep", 30 sp numeral and 83 × 56 buttons; the
+ * pickers with their Small Save.
+ */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [36])
@@ -82,21 +89,65 @@ abstract class SmallWatchScreenshots(private val lang: String) {
     @Test
     fun s20_mainAsleepSmall() = capture("20-main-asleep-small", SampleData.NOW_0312, WearSamples.mainAsleep())
 
-    /** Side on a 192 dp watch: Right sits partly behind "Save" at rest, and scrolls clear of it. */
+    /** Side on a 192 dp watch: Right sits partly behind the Small "Save" at rest, and scrolls clear of it. */
     @Test
     fun s21_sideSmall() = captureScreen("21-side-small", SampleData.NOW_1432) { SideScreen(WearSamples.sideDraft(), SideActions()) }
 
+    /** Scrolled to the end: the order line and the inline time clear of Save. */
     @Test
     fun s21b_sideSmallScrolled() = captureScreen(
         "21b-side-small-scrolled",
         SampleData.NOW_1432,
-        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3) },
+        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(5) },
     ) { SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.LEFT)), SideActions()) }
 
-    /** Time on a 192 dp watch: the ±5m buttons stay clear of Done. */
+    /** Time (from Logged) on a 192 dp watch: the ±5m buttons stay clear of Done. */
     @Test
     fun s21c_timeSmall() = captureScreen("21c-time-small", SampleData.NOW_1432) {
         TimeScreen(WearSamples.timeDraft(), onShift = {}, onDone = {})
+    }
+
+    /** Bottle as it opens on a 192 dp watch: Milk, and Formula partly behind the Small Save. */
+    @Test
+    fun s21d_bottleSmall() = captureScreen("21d-bottle-small", SampleData.NOW_1432) {
+        BottleScreen(WearSamples.emptyBottleDraft(), BottleActions())
+    }
+
+    /** Scrolled to the amount: the stepper (or the value over its steps, where it does not fit) and the chips. */
+    @Test
+    fun s21e_bottleSmallAmount() = captureScreen(
+        "21e-bottle-small-amount",
+        SampleData.NOW_1432,
+        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4) },
+    ) { BottleScreen(WearSamples.bottleDraft(), BottleActions()) }
+
+    /** As 21e with nothing picked and a 120 ml last bottle: "No amount" (its tightest fit) and the history glyph. */
+    @Test
+    fun s21i_bottleSmallNoAmount() = captureScreen(
+        "21i-bottle-small-no-amount",
+        SampleData.NOW_1432,
+        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4) },
+    ) { BottleScreen(WearSamples.emptyBottleDraft().copy(lastAmountMl = 120), BottleActions()) }
+
+    /** Diaper with Poop on a 192 dp watch: the tiles, then "Colour" above Save, showing what Poop revealed. */
+    @Test
+    fun s21f_diaperSmall() = captureScreen("21f-diaper-small", SampleData.NOW_1432) {
+        DiaperScreen(WearSamples.diaperDraft(), DiaperActions())
+    }
+
+    /** Scrolled to the colours: three across, as on the larger watch. */
+    @Test
+    fun s21g_diaperSmallColours() = captureScreen(
+        "21g-diaper-small-colours",
+        SampleData.NOW_1432,
+        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3) },
+    ) { DiaperScreen(WearSamples.diaperDraft(), DiaperActions()) }
+
+    /** The worst case: Diaper with Poop at 200 % on a 192 dp watch. Nothing clips; the list grows, Save stays pinned. */
+    @Test
+    @Config(fontScale = 2.0f)
+    fun s21h_diaperSmallHugeFont() = captureScreen("21h-diaper-small-font-200", SampleData.NOW_1432) {
+        DiaperScreen(WearSamples.diaperDraft(), DiaperActions())
     }
 
     /** Twins on a 192 dp watch with a long name: the time text cuts the name, never the time. */

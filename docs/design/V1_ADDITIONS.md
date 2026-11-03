@@ -110,25 +110,33 @@ data class Entry(
 
 ### 2.2 Watch
 
+Every detail of an entry is picked **on the screen that owns it**: no logging flow opens a screen of its own. The only navigation is Main → Feed type → Side or Bottle, Main → Diaper, and Save → Logged. The Time screen (DESIGN_SPEC §3.5.4) is kept for correcting a saved entry from Logged. The crown always scrolls the list on these screens.
+
 - **Main:** Feed opens the **Feed type** screen.
   - Three stacked buttons (full width, 52 dp tall, `feed-container`): Breast, Bottle, Food.
   - A fourth, outlined button: **"Just the time"** (icon `clock`), which logs a feed with no type.
-  - A CompactButton "Earlier" opens the **Time** screen (DESIGN_SPEC §3.5.4), as on the diaper picker: the crown moves the time a minute per step, −5m / +5m by five, Done applies it. The button then shows the offset ("−7m").
-  - Food and Just the time lead to **Logged** ("Food at 14:32" / "Feed at 14:32" + Undo).
+  - Then the **inline time** (below), last on the list: one flick of the crown down.
+  - Food and Just the time lead to **Logged** ("Food at 14:32" / "Feed at 14:32" + Undo), at the time the nudges set.
   - Breast leads to the **Side screen**, Bottle to the **Bottle screen**; nothing is logged yet, and swiping back returns to Feed type with its time.
+- **Inline time** (the last two items of Feed type, Side, Bottle and Diaper):
+  - A readout: `clock` 16 in the event colour, then "Earlier?" (labelMedium `on-surface-variant`) at no offset, or "14:22" (titleMedium, FEED strong; DIAPER text on Diaper) + " · −10m" once moved (from an hour "−1h 05m"). It is as tall as its widest text from the start, so it never grows. TalkBack: "Time, 14:32" or "10 minutes earlier, 14:22", a polite live region, with the custom actions "1 minute earlier" / "1 minute later" for minute-exact changes.
+  - Three tonal CompactButtons **−15m · −5m · +5m** (32 dp visual, 48 dp target, r 16), in three columns, or 2 + 1 where the labels do not fit (measured). Taps add up, as on the phone; never later than the Feed or Diaper tap (+5m is disabled at no offset), at most 12 hours back. `SegmentTick` per change, nothing at a limit. TalkBack: "15 minutes earlier", "5 minutes earlier", "5 minutes later".
+  - Every title on the flow ("Feed · 14:22", Side's "Breast · 14:22", "Bottle · 14:22", "Diaper · 14:22") follows the offset at once. An offset set on Feed type carries into Side and Bottle, and one set there is written back to Feed type, so swiping back shows the same time. Nothing is logged until Save (or Food / Just the time).
 - **Side screen** (after Breast):
-  - Title "Which side?", with "Breast · 14:32" (the Feed type screen's time, with its Earlier offset) under it.
+  - Title "Which side?", with "Breast · 14:32" (the Feed type screen's time, with its offset) under it.
   - Two full-width **`CheckboxButton`s**, Left and Right, in FEED colours (`feed-container`, lit `feed-container-lit` with the box in `feed-strong`). A ticked button's icon slot shows its **order badge** ("1" / "2" in a `feed-strong` circle) instead of the side glyph. TalkBack: "Left, first, checkbox, checked".
   - Under them, the order in words: "Left → Right", or "No side".
-  - Then the CompactButton **"Earlier"** (as on Feed type): the time can still be moved after Breast. Done on Time updates the "Breast · 14:32" line, and the Feed type screen under it.
-  - **Pinned Medium EdgeButton "Save"** (as on the Diaper screen), **enabled with nothing ticked**.
+  - Then the **inline time**: the time can still be moved after Breast.
+  - **Pinned EdgeButton "Save"** (Medium; Small below 225 dp), **enabled with nothing ticked**.
   - It logs the breast feed instant and leads to **Logged** ("Breast at 14:32", second line "Left → Right", or none with no side) + Undo, which deletes it.
-- **Bottle screen** (after Bottle), laid out as the Diaper screen:
-  - Title "Bottle · 14:32" ("Flaske · 14:32"): the Feed type screen's time, with its Earlier offset.
-  - **Contents** (FEED colours, `feed` icon), its value under it ("Milk", "Formula", or "Optional"); it opens an option list Milk / Formula / None, as the poop colour list.
-  - **Amount**, its value under it ("120 ml", "4 fl oz", or "Optional"); it opens the **Amount screen**: "Amount" over the amount in `feed-strong` ("No amount" at the start), the crown a step per detent (clockwise more) and "−" / "+" CompactButtons, in the phone slider's steps (10 ml up to 300 ml, or ½ fl oz up to 10 fl oz where the region uses ounces), and Done. Each change applies at once; TalkBack reads "Amount, 120 ml" and the buttons "10 ml less" / "10 ml more".
-  - The CompactButton **"Earlier"** (the Time screen).
-  - **Pinned Medium EdgeButton "Save"**, always enabled: it logs the bottle feed with what was picked (neither: just the time) and leads to **Logged** ("Bottle at 14:32", second line "Formula · 120 ml", only what was picked) + Undo.
+- **Bottle screen** (after Bottle), one list in FEED colours:
+  - Title "Bottle · 14:32" ("Flaske · 14:32"): the Feed type screen's time, with its offset.
+  - **Milk** and **Formula** ("Modermælk", "Modermælks­erstatning", which hyphenates onto two lines): full-width radio buttons, r 26, `feed-container` (lit `feed-container-lit` with the dot in `feed-strong` when chosen). Optional; tapping the chosen one clears it (TalkBack click label "Clear").
+  - **Amount stepper:** "[−] 120 ml [+]": the amount in titleMedium `feed-strong` ("No amount" in labelSmall at first) between two 48 dp CompactButtons, in the phone slider's steps (10 ml up to 300 ml, or ½ fl oz up to 10 fl oz where the region uses ounces). Where "[−] 300 ml [+]" does not fit (fluid ounces on a small watch, large fonts; measured) the value gets its own line and the two steps go under it, half the width each. TalkBack: "Amount, 120 ml", and "10 ml less" / "10 ml more".
+  - **Three amount chips** in ascending order, so a position always means a size: 3 steps (30 ml) or 2 steps (1 fl oz) apart, centred on this baby's **last bottle with an amount within 7 days** (taken once when Bottle opens, so the chips never change under a finger), else on 90 ml / 3 fl oz: 60 · 90 · 120 ml, or 2 · 3 · 4 fl oz. Each shows the number over the unit, a check when chosen and `history` on the chip equal to the last bottle ("120 ml, as last time"). Tapping the chosen chip clears it; the stepper shows the value either way.
+  - Then the **inline time**.
+  - **Pinned EdgeButton "Save"** (Medium; Small below 225 dp), always enabled: it logs the bottle feed with what was picked (nothing: just the time) and leads to **Logged** ("Bottle at 14:32", second line "Formula · 120 ml", only what was picked) + Undo.
+- **Choices and double taps:** a tap that would clear a contents, amount, colour or texture choice made less than 500 ms ago is ignored, with no haptic, so a double tap on an option leaves it chosen. Every screen ignores taps for 500 ms when it appears.
 - **Main** never has a breastfeeding state: the Lamp only runs for a sleep, the pinned EdgeButton is always the sleep toggle, and no Ongoing Activity or complication text exists for feeds.
 - **Tile:**
   - **Row A:** "Feed", with the time since the last feed, which opens the app on the Feed type screen.
@@ -170,12 +178,18 @@ The sheet scrolls. It opens with `skipPartiallyExpanded`.
 
 ### 3.2 Watch: the Diaper screen
 
-- Title "Diaper · 14:32", plus the Earlier CompactButton.
-- **Two `CheckboxButton`s:** Pee and Poop.
-- **When Poop is on**, two more buttons appear:
-  - "Colour" shows the current value or "Optional", and opens a list of 6 options (each with its swatch dot) plus "None".
-  - "Texture" works the same way, with 5 options plus "None".
-- **Pinned Medium EdgeButton "Save"**, always enabled, which leads to **Logged** ("Pee at 14:32" / "Poop at 14:32" / "Pee + poop at 14:32", or "Diaper at 14:32" for a plain change).
+One list, in DIAPER colours; nothing opens another screen.
+
+- Title "Diaper · 14:32", following the inline time's offset.
+- **Pee | Poop** as two tiles side by side (a ButtonGroup, 6 dp apart, each ≈ 100 × 60 dp on 227 dp, 83 × 60 on 192 dp, r 26, taller at large fonts): the checkbox glyph and the kind's icon over the label. Off: the kind's container; on: `diaper-container-lit` with a 2 dp DIAPER strong border and a checked box (as §3.1). Both start off. TalkBack: "Pee, checkbox, not checked". Where a label does not fit its tile (English at 200 % on a small watch; measured) they are two full-width `CheckboxButton` rows instead.
+- **When Poop is on**, under it:
+  - "Colour" (a heading) over six chips with their swatches (Yellow, Green, Brown, Black, Red, Pale), 3 × 2, or 2 or 1 per row where the names do not fit (measured). A chosen chip is lit with a 2 dp DIAPER strong border and a check on its swatch.
+  - "Texture" over five chips (Watery, Seedy, Mushy, Formed, Hard), an empty ring that becomes a check when chosen.
+  - Both are optional; tapping the chosen chip clears it (TalkBack: radio buttons, click label "Clear"). Turning Poop off keeps them (hidden, so ticking Poop again brings them back), but only a diaper with Poop saves them.
+  - What Poop reveals and moves (everything under the tiles) ignores taps for 500 ms after Poop changes; nothing scrolls by itself. With the inline time last, ticking Poop shows the "Colour" header above Save at rest.
+- Then the **inline time** (§2.2), in DIAPER text.
+- **Pinned EdgeButton "Save"** (Medium; Small below 225 dp), always enabled, which leads to **Logged** ("Pee at 14:32" / "Poop at 14:32" / "Pee + poop at 14:32", or "Diaper at 14:32" for a plain change).
+- The watch shows no health hint: that is the phone's (§3.1).
 - The tile's one-tap Pee | Poop | Pee + poop buttons are unchanged.
 
 ### 3.3 Display strings

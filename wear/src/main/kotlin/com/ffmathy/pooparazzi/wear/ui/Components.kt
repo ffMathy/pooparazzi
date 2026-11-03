@@ -2,13 +2,18 @@ package com.ffmathy.pooparazzi.wear.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
@@ -28,7 +33,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -48,6 +55,8 @@ import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonColors
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CompactButton
+import androidx.wear.compose.material3.EdgeButton
+import androidx.wear.compose.material3.EdgeButtonSize
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
@@ -67,10 +76,12 @@ import com.ffmathy.pooparazzi.core.ui.tokens.LocalXPalette
 import com.ffmathy.pooparazzi.core.ui.type.WatchType
 import com.ffmathy.pooparazzi.wear.theme.WatchAmbient
 import com.ffmathy.pooparazzi.wear.theme.isAmbient
+import com.ffmathy.pooparazzi.core.R as CoreR
 
-/** Watch shapes (DESIGN_SPEC §5.8): list buttons and status cards r 26, CompactButton r 16. */
+/** Watch shapes (DESIGN_SPEC §5.8): list buttons, status cards and tiles r 26, inline choice chips r 20, CompactButton r 16. */
 object WatchShapes {
     val Button = RoundedCornerShape(26.dp)
+    val Chip = RoundedCornerShape(20.dp)
     val Compact = RoundedCornerShape(16.dp)
 }
 
@@ -363,17 +374,26 @@ fun phoneGlyph(status: SyncStatus): ImageVector = when (status) {
     SyncStatus.Offline, SyncStatus.Error, SyncStatus.Unavailable -> XIcons.phoneOffline
 }
 
-/** A small round swatch with the 1 dp outline ring (V1_ADDITIONS §3.1), for poop colour options. */
+/**
+ * A small round swatch with the 1 dp outline ring (V1_ADDITIONS §3.1), for poop colour options. In ambient it is the
+ * ring alone (1.5 dp, no fill, §10.6).
+ */
 @Composable
 fun Swatch(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
     val outline = MaterialTheme.colorScheme.outline
+    val ambient = isAmbient()
     Canvas(modifier.size(size)) {
-        drawCircle(color)
-        drawCircle(outline, style = Stroke(1.dp.toPx()))
+        if (ambient) {
+            val stroke = 1.5.dp.toPx()
+            drawCircle(WatchAmbient.content, radius = (this.size.minDimension - stroke) / 2, style = Stroke(stroke))
+        } else {
+            drawCircle(color)
+            drawCircle(outline, style = Stroke(1.dp.toPx()))
+        }
     }
 }
 
-/** A header line for list screens (ListHeader style: titleMedium, centred). */
+/** A header line for list screens (ListHeader style: titleMedium, centred), a TalkBack heading. */
 @Composable
 fun ScreenTitle(text: String, modifier: Modifier = Modifier) {
     // Clear of a time text that names the baby (its line reaches lower at its ends).
@@ -385,6 +405,7 @@ fun ScreenTitle(text: String, modifier: Modifier = Modifier) {
             color = if (isAmbient()) WatchAmbient.content else MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
             maxLines = 2,
+            modifier = Modifier.semantics { heading() },
         )
     }
 }
@@ -393,3 +414,85 @@ fun ScreenTitle(text: String, modifier: Modifier = Modifier) {
 @Composable
 @ReadOnlyComposable
 fun events() = LocalXPalette.current.events
+
+/** The pinned Save's size (§3.5.10, as Main's sleep toggle): Medium (70 dp), Small (56 dp) below 225 dp. */
+@Composable
+@ReadOnlyComposable
+fun saveButtonSize(): EdgeButtonSize = if (isSmallWatch()) EdgeButtonSize.Small else EdgeButtonSize.Medium
+
+/**
+ * The top padding of a picker list (Side, Bottle, Diaper) under the scaffold's [scaffoldTop]: 8 dp tighter on watches of
+ * 225 dp and up at normal font sizes, so more shows above the pinned Save at rest; the full padding on small watches;
+ * and more with large fonts, where the time text grows but the scaffold's padding does not.
+ */
+@Composable
+@ReadOnlyComposable
+fun pickerListTopPadding(scaffoldTop: Dp): Dp {
+    val fontScale = LocalConfiguration.current.fontScale
+    val tighter = if (isSmallWatch() || isLargeFont()) 0.dp else 8.dp
+    val extra = TIME_TEXT_LINE * (fontScale - 1f).coerceAtLeast(0f)
+    return (scaffoldTop - tighter + extra).coerceAtLeast(0.dp)
+}
+
+/** The time text's line height at font scale 1, by which a larger font pushes it down. */
+private val TIME_TEXT_LINE = 18.dp
+
+/** The list's bottom padding above a pinned Save of [size], so the last item scrolls clear of it. */
+fun saveListBottomPadding(size: EdgeButtonSize): Dp = if (size == EdgeButtonSize.Small) 70.dp else 84.dp
+
+/**
+ * Save (V1_ADDITIONS §2.2, §3.2): the pinned EdgeButton in `primaryContainer`. Medium: `check` 24 over "Save";
+ * Small (below 225 dp): `check` 20, 6 dp and "Save" on one line that steps down rather than cutting (as Done); above a
+ * 1.15 font scale the label alone, with the check's room.
+ */
+@Composable
+fun SaveEdgeButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    ambient: Boolean,
+    modifier: Modifier = Modifier,
+    size: EdgeButtonSize = EdgeButtonSize.Medium,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val content = when {
+        ambient -> WatchAmbient.content
+        enabled -> scheme.onPrimaryContainer
+        else -> scheme.onPrimaryContainer.copy(alpha = 0.38f)
+    }
+    EdgeButton(
+        onClick = onClick,
+        modifier = modifier,
+        buttonSize = size,
+        enabled = enabled,
+        colors = if (ambient) {
+            // Black, the screen's own colour, not a fill: the list behind it must not show through the outline.
+            ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = WatchAmbient.content, disabledContainerColor = Color.Black)
+        } else {
+            ButtonDefaults.buttonColors(
+                containerColor = scheme.primaryContainer,
+                contentColor = scheme.onPrimaryContainer,
+                disabledContainerColor = scheme.primaryContainer.copy(alpha = 0.38f),
+                disabledContentColor = scheme.onPrimaryContainer.copy(alpha = 0.38f),
+            )
+        },
+        border = if (ambient) BorderStroke(2.dp, scheme.outline) else null,
+    ) {
+        val label = stringResource(CoreR.string.action_save)
+        if (size == EdgeButtonSize.Small) {
+            // At large fonts the label takes the check's room too, so "Save" is never cut.
+            val withIcon = !isLargeFont()
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                if (withIcon) {
+                    XIcon(XIcons.check, null, tint = content, size = 20.dp, modifier = Modifier.clearAndSetSemantics { })
+                    Spacer(Modifier.width(6.dp))
+                }
+                AutoSizeLine(label, MaterialTheme.typography.labelMedium, content, minSize = 11, modifier = Modifier.widthIn(max = if (withIcon) 64.dp else 92.dp))
+            }
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                XIcon(XIcons.check, null, tint = content, size = 24.dp, modifier = Modifier.clearAndSetSemantics { })
+                Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+            }
+        }
+    }
+}
