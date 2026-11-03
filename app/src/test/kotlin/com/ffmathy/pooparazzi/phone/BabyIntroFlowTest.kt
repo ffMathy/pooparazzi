@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.Core
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.phone.account.AppAccounts
 import com.ffmathy.pooparazzi.phone.account.WelcomePrefs
 import kotlinx.coroutines.runBlocking
@@ -20,6 +21,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.ExternalResource
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -33,7 +35,21 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w390dp-h844dp-xxhdpi")
 class BabyIntroFlowTest {
-    @get:Rule
+    /**
+     * Before the activity starts: a fresh install's baby, with neither a name nor a birth date. The settings outlive a
+     * test in the same process, so a name saved by an earlier test is cleared here.
+     */
+    @get:Rule(order = 0)
+    val freshBaby = object : ExternalResource() {
+        override fun before() = runBlocking {
+            val settings = Core.ensureInitialized(ApplicationProvider.getApplicationContext<Application>()).settings
+            settings.renameBaby(Baby.FIRST_ID, "")
+            settings.setBabyBirthDate(Baby.FIRST_ID, null)
+            Unit
+        }
+    }
+
+    @get:Rule(order = 1)
     val compose = createAndroidComposeRule<MainActivity>()
 
     private val app: Application get() = ApplicationProvider.getApplicationContext()

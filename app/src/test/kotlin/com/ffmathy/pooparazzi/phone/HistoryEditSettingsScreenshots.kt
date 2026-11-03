@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import com.ffmathy.pooparazzi.phone.ui.edit.EditActions
 import com.ffmathy.pooparazzi.phone.ui.edit.EditSheet
 import com.ffmathy.pooparazzi.phone.ui.edit.EditTags
@@ -126,14 +127,15 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
     /** "Add a baby" asks for the name and, optionally, the birth date, saying why; dialogs live in their own window. */
     @OptIn(ExperimentalRoborazziApi::class)
     @Test fun settingsAddBaby() {
+        // In touch mode, as on a phone: in keyboard mode the dialog's name field takes the focus, and its blinking
+        // cursor never lets the app go idle for the capture.
+        InstrumentationRegistry.getInstrumentation().setInTouchMode(true)
         compose.setContent {
             NightLightTheme(night = false) {
                 SettingsScreen(SettingsSamples.addBaby(), SettingsActions.None, windowInsets = ReferenceInsets)
             }
         }
         compose.waitForIdle()
-        // The dialog's name field keeps a blinking cursor animation running; hold the clock so the capture sees an idle app.
-        compose.mainClock.autoAdvance = false
         captureScreenRoboImage(path("51-settings-add-baby", tour = true))
     }
 
