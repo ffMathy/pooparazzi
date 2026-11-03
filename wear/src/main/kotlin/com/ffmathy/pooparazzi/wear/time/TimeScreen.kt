@@ -22,12 +22,9 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.CompactButton
 import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.EdgeButtonSize
 import androidx.wear.compose.material3.MaterialTheme
@@ -35,12 +32,9 @@ import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
-import com.ffmathy.pooparazzi.core.format.DurationFormatter
-import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
-import com.ffmathy.pooparazzi.core.ui.type.WatchType
 import com.ffmathy.pooparazzi.wear.sample.WearSamples
 import com.ffmathy.pooparazzi.wear.state.TIME_BUTTON_STEP_MINUTES
 import com.ffmathy.pooparazzi.wear.state.TimeDraft
@@ -49,20 +43,19 @@ import com.ffmathy.pooparazzi.wear.theme.WatchAmbient
 import com.ffmathy.pooparazzi.wear.theme.XWearTheme
 import com.ffmathy.pooparazzi.wear.theme.isAmbient
 import com.ffmathy.pooparazzi.wear.ui.AutoSizeLine
-import com.ffmathy.pooparazzi.wear.ui.WatchShapes
-import com.ffmathy.pooparazzi.wear.ui.ambientBorder
 import com.ffmathy.pooparazzi.wear.ui.events
 import com.ffmathy.pooparazzi.wear.ui.rememberCooldown
 import com.ffmathy.pooparazzi.wear.ui.rotarySteps
+import com.ffmathy.pooparazzi.wear.ui.StepButton
+import com.ffmathy.pooparazzi.wear.ui.offsetLabel
 import com.ffmathy.pooparazzi.wear.ui.spokenText
-import com.ffmathy.pooparazzi.wear.ui.tonalButtonColors
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
- * Time (W4): sets the time of a feed or diaper before it is logged (Earlier on Feed type and Diaper), or of the entry
- * Logged shows (tap its time, or turn the crown there). "Feed · −5m" over the time in the event colour; the crown
- * moves it a minute per step (clockwise later), "−5m" / "+5m" by 5 minutes, never into the future. Done applies it and
- * goes back; swiping back leaves the time as it was. 500 ms tap cooldown.
+ * Time (W4): corrects the time of the entry Logged shows (tap its time, or turn the crown there); the pickers set their
+ * time inline before saving (`TimeNudges`). "Feed · −5m" over the time in the event colour; the crown moves it a
+ * minute per step (clockwise later), "−5m" / "+5m" by 5 minutes, never into the future. Done applies it and goes back
+ * to Logged; swiping back leaves the time as it was. 500 ms tap cooldown.
  */
 @Composable
 fun TimeScreen(draft: TimeDraft, onShift: (Int) -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
@@ -147,45 +140,9 @@ fun TimeScreen(draft: TimeDraft, onShift: (Int) -> Unit, onDone: () -> Unit, mod
     }
 }
 
-/** "−5m", "+45m"; from an hour on "−1h 15m" (the spoken form is [com.ffmathy.pooparazzi.core.format.RelativeFormatter.offsetSpoken]). */
-internal fun offsetLabel(f: Formatters, minutes: Int): String {
-    val size = kotlin.math.abs(minutes)
-    if (size < MINUTES_PER_HOUR) return f.duration.offset(minutes)
-    val sign = if (minutes < 0) DurationFormatter.MINUS else "+"
-    return sign + f.duration.format(size * MINUTE_MILLIS)
-}
-
-private const val MINUTES_PER_HOUR = 60
-private const val MINUTE_MILLIS = 60_000L
-
-/** "−5m" / "+5m": a tonal CompactButton, read as "5 minutes earlier" / "5 minutes later". */
-@Composable
-private fun StepButton(label: String, spoken: String, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val ambient = isAmbient()
-    val content = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurface
-    CompactButton(
-        onClick = onClick,
-        modifier = modifier.width(64.dp).semantics { contentDescription = spoken },
-        enabled = enabled,
-        shape = WatchShapes.Compact,
-        colors = tonalButtonColors(),
-        border = ambientBorder(MaterialTheme.colorScheme.outline),
-    ) {
-        Text(
-            label,
-            style = WatchType.labelSmall.copy(fontWeight = FontWeight(600)),
-            color = content,
-            maxLines = 1,
-            textAlign = TextAlign.Center,
-            // Read as "5 minutes earlier" (the button's description), never "−5m".
-            modifier = Modifier.fillMaxWidth().clearAndSetSemantics { },
-        )
-    }
-}
-
 /** Done: Small EdgeButton (56) in `primaryContainer`, `check` 20 + "Done". */
 @Composable
-private fun DoneEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Boolean, modifier: Modifier) {
+internal fun DoneEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Boolean, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
     val content = if (ambient) WatchAmbient.content else scheme.onPrimaryContainer
     EdgeButton(

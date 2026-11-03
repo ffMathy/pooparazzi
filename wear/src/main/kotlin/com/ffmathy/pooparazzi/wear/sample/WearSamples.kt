@@ -2,12 +2,14 @@ package com.ffmathy.pooparazzi.wear.sample
 
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
+import com.ffmathy.pooparazzi.wear.state.BottleDraft
 import com.ffmathy.pooparazzi.wear.state.DiaperDraft
 import com.ffmathy.pooparazzi.wear.state.FeedDraft
 import com.ffmathy.pooparazzi.wear.state.GuardKind
@@ -16,7 +18,6 @@ import com.ffmathy.pooparazzi.wear.state.Receipt
 import com.ffmathy.pooparazzi.wear.state.ReceiptKind
 import com.ffmathy.pooparazzi.wear.state.SideDraft
 import com.ffmathy.pooparazzi.wear.state.TimeDraft
-import com.ffmathy.pooparazzi.wear.state.TimeTarget
 import com.ffmathy.pooparazzi.wear.state.TimeTitle
 import com.ffmathy.pooparazzi.wear.state.Undo
 import com.ffmathy.pooparazzi.wear.tile.TILE_FEEDBACK_MILLIS
@@ -60,11 +61,21 @@ object WearSamples {
 
     fun feedDraft(): FeedDraft = FeedDraft(stamp = SampleData.NOW_1432, zone = zone)
 
-    /** Earlier on the Feed type screen opened at 14:32, the crown turned back 7 minutes: "Feed · −7m", 14:25. */
-    fun timeDraft(): TimeDraft = TimeDraft(TimeTarget.FEED, TimeTitle.FEED, base = SampleData.NOW_1432, zone = zone, offsetMinutes = -7)
+    /** The time tapped on Logged for the 14:32 feed, the crown turned back 7 minutes: "Feed · −7m", 14:25. */
+    fun timeDraft(): TimeDraft = TimeDraft(TimeTitle.FEED, base = SampleData.NOW_1432, zone = zone, offsetMinutes = -7)
 
     /** Breast chosen on the Feed type screen opened at 14:32: Side, nothing ticked yet. */
-    fun sideDraft(): SideDraft = SideDraft(at = SampleData.NOW_1432, zone = zone)
+    fun sideDraft(): SideDraft = SideDraft(stamp = SampleData.NOW_1432, zone = zone)
+
+    /** Bottle chosen on the Feed type screen opened at 14:32 (the last bottle was 120 ml): Formula, 120 ml. */
+    fun bottleDraft(): BottleDraft =
+        BottleDraft(stamp = SampleData.NOW_1432, zone = zone, contents = BottleContents.FORMULA, amountMl = 120, lastAmountMl = 120)
+
+    /** Bottle as it opens at 14:32: nothing picked yet, no bottle in the past week (the chips show 60 · 90 · 120 ml). */
+    fun emptyBottleDraft(): BottleDraft = BottleDraft(stamp = SampleData.NOW_1432, zone = zone)
+
+    /** Diaper as it opens at 14:32: nothing ticked. */
+    fun emptyDiaperDraft(): DiaperDraft = DiaperDraft(stamp = SampleData.NOW_1432, zone = zone)
 
     /** Pee + Poop on, Colour Yellow, Texture Seedy, stamped 14:32. */
     fun diaperDraft(): DiaperDraft = DiaperDraft(
@@ -76,15 +87,18 @@ object WearSamples {
         texture = PoopTexture.SEEDY,
     )
 
+    /** Pee + Poop on, Colour Pale, Texture Seedy, stamped 14:32. */
+    fun diaperDraftPale(): DiaperDraft = diaperDraft().copy(color = PoopColor.PALE)
+
     /** "Breast at 14:32" / "Left → Right": the breast feed saved on the Side screen. */
     fun receiptBreast(): Receipt {
         val entry = SampleData.recentBreastfeed()
         return Receipt(ReceiptKind.FEED_LOGGED, entry, Undo.Delete(entry.id), zone)
     }
 
-    /** "Bottle at 14:32". */
+    /** "Bottle at 14:32" / "Formula · 120 ml": the bottle feed saved on the Bottle screen. */
     fun receiptFormula(): Receipt {
-        val entry = Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432, id = "sample-formula-1432")
+        val entry = Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432, id = "sample-formula-1432", amountMl = 120, contents = BottleContents.FORMULA)
         return Receipt(ReceiptKind.FEED_LOGGED, entry, Undo.Delete(entry.id), zone)
     }
 

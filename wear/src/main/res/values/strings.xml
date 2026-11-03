@@ -37,6 +37,9 @@
     <string name="spoken_side_right_then_left">Right then left</string>
     <!-- Both diaper flags, read without the plus sign ("Pee + poop") -->
     <string name="spoken_pee_and_poop">Pee and poop</string>
+    <!-- The Bottle amount stepper's − and + buttons, read as "10 ml less" / "10 ml more". %1$s is one step ("10 ml", "0.5 fl oz"). -->
+    <string name="spoken_amount_less">%1$s less</string>
+    <string name="spoken_amount_more">%1$s more</string>
     <!-- A time range, read without the dash: "14:32 to 14:50". %1$s and %2$s are clock times. -->
     <string name="spoken_range">%1$s to %2$s</string>
     <!-- A range on another day: "Sun 22:40 to 01:35". %1$s weekday, %2$s spoken_range. -->
@@ -118,4 +121,10 @@
     <!-- TalkBack, the place of a ticked side checkbox: "Left, first, checkbox, checked" -->
     <string name="spoken_side_first">first</string>
     <string name="spoken_side_second">second</string>
+    <!-- Bottle and Diaper: TalkBack click label of a selected contents option or chip (tapping it again clears it) -->
+    <string name="action_clear">Clear</string>
+    <!-- The inline time readout at no offset, read as "Time, 14:32" (with spoken_pair) -->
+    <string name="spoken_time">Time</string>
+    <!-- The Bottle amount chip equal to the last bottle's amount: "120 ml, as last time". %1$s is the amount. -->
+    <string name="spoken_as_last_time">%1$s, as last time</string>
 </resources>

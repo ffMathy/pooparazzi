@@ -5,16 +5,17 @@ import android.provider.Settings
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasScrollToKeyAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToKey
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavHostController
+import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -24,6 +25,8 @@ import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
 import com.ffmathy.pooparazzi.core.data.PooparazziDatabase
 import com.ffmathy.pooparazzi.core.domain.epochMillis
+import com.ffmathy.pooparazzi.core.format.VolumeFormatter
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.isRunning
@@ -58,6 +61,7 @@ class WearNavHostTest {
     private lateinit var clock: FixedClock
     private lateinit var repo: RoomEntryRepository
     private lateinit var vm: MainViewModel
+    private lateinit var nav: NavHostController
     private val store = ViewModelStore()
     private val settings = FakeSettingsRepository()
 
@@ -73,7 +77,15 @@ class WearNavHostTest {
         }
         vm = ViewModelProvider.create(store, factory)[MainViewModel::class]
         compose.mainClock.autoAdvance = false
-        compose.setContent { XWearTheme { AppScaffold { WearNavHost(vm) } } }
+        compose.setContent {
+            XWearTheme {
+                AppScaffold {
+                    val controller = rememberSwipeDismissableNavController()
+                    nav = controller
+                    WearNavHost(vm, navController = controller)
+                }
+            }
+        }
         settle()
     }
 
@@ -107,14 +119,32 @@ class WearNavHostTest {
 
     private fun entries(): List<Entry> = runBlocking { repo.observeEntries().first() }
 
+    /**
+     * Centres the list item with [key] (the pinned Save covers the end of a list at rest, so an item merely scrolled
+     * into view could still sit under it).
+     */
+    private fun scrollTo(key: String) {
+        compose.onNode(hasScrollToKeyAction()).performScrollToKey(key)
+        settle()
+    }
+
+    /** The routes of the top two screens: the one showing and the one a swipe right returns to. */
+    private fun topRoutes(): List<String?> = listOf(nav.previousBackStackEntry?.destination?.route, nav.currentBackStackEntry?.destination?.route)
+
     private fun at(hour: Int, minute: Int) = epochMillis(SampleData.TODAY, hour, minute, SampleData.ZONE)
 
     @Test
-    fun formulaThenUndo() {
+    fun bottleThenSaveThenUndo() {
         waitForDescription("Feed.").performClick()
         waitFor("Feed · 14:32")
         settle(600) // Past the picker cooldown.
         compose.onNodeWithText("Bottle").performClick()
+
+        // Bottle: the details are optional, so Save at once records just the time.
+        waitFor("Bottle · 14:32")
+        assertTrue("nothing is logged before Save", entries().isEmpty())
+        settle(1_000)
+        compose.onNodeWithText("Save").performClick()
 
         waitFor("Bottle at 14:32")
         assertEquals(1, entries().size)
@@ -132,11 +162,11 @@ class WearNavHostTest {
         waitForDescription("Feed.").performClick()
         waitFor("Feed · 14:32")
         settle(600)
-        compose.onNodeWithText("Bottle").performClick()
+        compose.onNodeWithText("Food").performClick()
 
-        waitFor("Bottle at 14:32")
+        waitFor("Food at 14:32")
         settle(LOGGED_INERT_MILLIS + 100L)
-        compose.onNodeWithContentDescription("Bottle at 14:32").performClick()
+        compose.onNodeWithContentDescription("Food at 14:32").performClick()
 
         // Time: "Feed" over 14:32; −5m twice, then Done.
         waitForDescription("Feed, 14:32")
@@ -148,8 +178,106 @@ class WearNavHostTest {
         waitForDescription("Feed, 14:22, 10 minutes earlier")
         compose.onNodeWithText("Done").performClick()
 
-        waitFor("Bottle at 14:22")
+        waitFor("Food at 14:22")
         assertEquals(at(14, 22), entries().single().startMillis)
+    }
+
+    @Test
+    fun bottleWithContentsAmountAndAnEarlierTime() {
+        waitForDescription("Feed.").performClick()
+        settle(600)
+        compose.onNodeWithText("Bottle").performClick()
+        waitFor("Bottle · 14:32")
+        settle(1_000)
+
+        // Everything on the one screen: contents, an amount chip and a step, then the time.
+        compose.onNodeWithText("Formula").performClick()
+        settle()
+        // The chips and steps follow the region (ml, or fl oz in the US), so the amounts come from the formatter.
+        val volume = VolumeFormatter.from(ApplicationProvider.getApplicationContext())
+        val chip = volume.quickAmounts(null).last()
+        scrollTo("amountChips0")
+        compose.onNodeWithContentDescription(volume.format(chip)).performClick()
+        settle()
+        assertEquals(chip, vm.bottleDraft.value?.amountMl)
+        // The stepper above the chips shows it, and steps on from it.
+        scrollTo("amount")
+        val amount = checkNotNull(volume.amountAt(volume.stepOf(chip) + 1))
+        compose.onNodeWithContentDescription(" more", substring = true).performClick()
+        settle()
+        val shown = volume.format(amount)
+        waitForDescription("Amount, $shown")
+
+        scrollTo("timeNudges0")
+        compose.onNodeWithContentDescription("5 minutes earlier").performClick()
+        settle()
+        compose.onNodeWithContentDescription("5 minutes earlier").performClick()
+        settle()
+        waitForDescription("10 minutes earlier, 14:22")
+        assertEquals(at(14, 22), vm.bottleDraft.value?.at)
+        assertEquals("no logging flow opens a screen of its own", listOf(WearRoutes.FEED_TYPE, WearRoutes.BOTTLE), topRoutes())
+        compose.onNodeWithText("Save").performClick()
+
+        waitFor("Bottle at 14:22")
+        waitFor("Formula · $shown")
+        val feed = entries().single()
+        assertEquals(at(14, 22), feed.startMillis)
+        assertEquals(BottleContents.FORMULA, feed.bottleContents)
+        assertEquals(amount, feed.amountMl)
+    }
+
+    @Test
+    fun noLoggingFlowOpensASubScreen() {
+        waitForDescription("Diaper.").performClick()
+        waitFor("Diaper · 14:32")
+        settle(600)
+        compose.onNodeWithText("Pee").performClick()
+        compose.onNodeWithText("Poop").performClick()
+        settle(600) // Past the cooldown of what Poop revealed.
+        scrollTo("colour0")
+        compose.onNodeWithText("Yellow").performClick()
+        settle()
+        scrollTo("texture0")
+        compose.onNodeWithText("Seedy").performClick()
+        settle()
+        scrollTo("timeNudges0")
+        compose.onNodeWithContentDescription("15 minutes earlier").performClick()
+        settle(1_000)
+        assertEquals(listOf(WearRoutes.MAIN, WearRoutes.DIAPER), topRoutes())
+        waitForDescription("15 minutes earlier, 14:17")
+
+        compose.onNodeWithText("Save").performClick()
+        waitFor("Pee + poop at 14:17")
+        val diaper = entries().single()
+        assertTrue(diaper.pee && diaper.poop)
+        assertEquals(PoopColor.YELLOW, diaper.poopColor)
+        assertEquals(com.ffmathy.pooparazzi.core.model.PoopTexture.SEEDY, diaper.poopTexture)
+        assertEquals(at(14, 17), diaper.startMillis)
+    }
+
+    @Test
+    fun aDiaperWithNothingSetStillLogs() {
+        waitForDescription("Diaper.").performClick()
+        waitFor("Diaper · 14:32")
+        settle(600)
+        compose.onNodeWithText("Save").performClick()
+        waitFor("Diaper at 14:32")
+        val diaper = entries().single()
+        assertTrue(!diaper.pee && !diaper.poop)
+    }
+
+    @Test
+    fun aBottleWithNothingSetStillLogs() {
+        waitForDescription("Feed.").performClick()
+        settle(600)
+        compose.onNodeWithText("Bottle").performClick()
+        waitFor("Bottle · 14:32")
+        settle(1_000)
+        compose.onNodeWithText("Save").performClick()
+        waitFor("Bottle at 14:32")
+        val bottle = entries().single { it.kind == com.ffmathy.pooparazzi.core.model.EntryKind.FEED }
+        assertEquals(null, bottle.amountMl)
+        assertEquals(null, bottle.bottleContents)
     }
 
     @Test
@@ -209,27 +337,24 @@ class WearNavHostTest {
     }
 
     @Test
-    fun aDoubleTapOnAColourReturnsToTheDiaperScreenOnce() {
+    fun aDoubleTapOnAColourChipLeavesItSelected() {
         waitForDescription("Diaper.").performClick()
         waitFor("Diaper · 14:32")
         settle(600)
         compose.onNodeWithText("Poop").performClick()
-        settle()
-        // Colour sits below the fold, under the pinned Save button: bring it into view first.
-        compose.onNode(hasScrollToIndexAction() and hasAnyDescendant(hasText("Diaper · 14:32"))).performScrollToIndex(3)
         settle(600)
-        waitFor("Colour").performClick()
-        waitFor("Yellow")
-        settle(600)
+        // The colours sit below the fold, under the pinned Save button: bring them into view first.
+        scrollTo("colour0")
         val yellow = compose.onNodeWithText("Yellow")
         yellow.performClick()
         yellow.performClick()
         settle(600)
 
-        // Still on Diaper with its unsaved choices (its Texture row is in view), not popped back to Main.
-        waitFor("Texture")
+        // Chosen once, not chosen and cleared; still on Diaper with its unsaved choices.
         assertEquals(PoopColor.YELLOW, vm.diaperDraft.value?.color)
         assertTrue(vm.diaperDraft.value?.poop == true)
+        compose.onNode(hasText("Yellow") and isSelected(true)).assertExists()
+        assertEquals(listOf(WearRoutes.MAIN, WearRoutes.DIAPER), topRoutes())
     }
 
     // ---- Babies (BABIES_AND_BACKUP §2.5) --------------------------------------------------------

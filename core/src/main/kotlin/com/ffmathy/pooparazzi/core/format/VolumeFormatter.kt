@@ -27,7 +27,8 @@ enum class VolumeUnit {
 /**
  * Bottle amounts (stored in millilitres, [com.ffmathy.pooparazzi.core.model.Entry.amountMl]) in [unit]: "120 ml",
  * or "4 fl oz" / "4.5 fl oz" ("4,5 fl oz" in Danish) to the nearest half ounce. Also the amount slider's steps
- * ([steps], [stepOf], [amountAt]): step 0 is "no amount", then 10 ml (up to 300 ml) or ½ fl oz (up to 10 fl oz) each.
+ * ([steps], [stepOf], [amountAt]): step 0 is "no amount", then 10 ml (up to 300 ml) or ½ fl oz (up to 10 fl oz) each,
+ * and the watch's amount chips ([quickAmounts]).
  */
 @Immutable
 class VolumeFormatter(
@@ -54,13 +55,33 @@ class VolumeFormatter(
     }
 
     /** "120 ml" or "4.5 fl oz". */
-    fun format(amountMl: Int): String = when (unit) {
-        VolumeUnit.MILLILITRES -> String.format(locale, millilitresPattern, number(BigDecimal.valueOf(amountMl.toLong())))
+    fun format(amountMl: Int): String = String.format(locale, pattern, numberOf(amountMl))
+
+    /** The number of [format] without its unit: "120", "4.5" ("4,5" in Danish). */
+    fun numberOf(amountMl: Int): String = when (unit) {
+        VolumeUnit.MILLILITRES -> number(BigDecimal.valueOf(amountMl.toLong()))
         VolumeUnit.FLUID_OUNCES -> {
             val halves = (amountMl / ML_PER_OUNCE * 2).roundToInt().coerceAtLeast(1)
-            String.format(locale, ouncesPattern, number(BigDecimal.valueOf(halves * 5L, 1)))
+            number(BigDecimal.valueOf(halves * 5L, 1))
         }
     }
+
+    /** The unit of [format] on its own: "ml" or "fl oz". */
+    val unitSymbol: String get() = pattern.replace(NUMBER_PLACEHOLDER, "").trim()
+
+    /**
+     * The watch's three amount chips, smallest first: [QUICK_DELTA_ML_STEPS] steps (30 ml) or [QUICK_DELTA_OUNCE_STEPS]
+     * steps (1 fl oz) apart, centred on the step of [lastMl] (the last bottle's amount), or on 90 ml / 3 fl oz without
+     * one, and kept inside the scale so all three exist: 60 · 90 · 120 ml and 2 · 3 · 4 fl oz by default.
+     */
+    fun quickAmounts(lastMl: Int?): List<Int> {
+        val delta = if (unit == VolumeUnit.MILLILITRES) QUICK_DELTA_ML_STEPS else QUICK_DELTA_OUNCE_STEPS
+        val default = stepOf(if (unit == VolumeUnit.MILLILITRES) QUICK_DEFAULT_ML else (QUICK_DEFAULT_OUNCES * ML_PER_OUNCE).roundToInt())
+        val centre = (stepOf(lastMl).takeIf { it > 0 } ?: default).coerceIn(1 + delta, steps - delta)
+        return listOf(centre - delta, centre, centre + delta).map { checkNotNull(amountAt(it)) }
+    }
+
+    private val pattern: String get() = if (unit == VolumeUnit.MILLILITRES) millilitresPattern else ouncesPattern
 
     private fun number(value: BigDecimal): String = NumberFormat.getNumberInstance(locale).apply {
         minimumFractionDigits = 0
@@ -70,6 +91,11 @@ class VolumeFormatter(
 
     companion object {
         const val ML_PER_OUNCE = 29.5735
+        private const val NUMBER_PLACEHOLDER = "%1\$s"
+        private const val QUICK_DELTA_ML_STEPS = 3
+        private const val QUICK_DELTA_OUNCE_STEPS = 2
+        private const val QUICK_DEFAULT_ML = 90
+        private const val QUICK_DEFAULT_OUNCES = 3
         private const val ML_STEP = 10
         private const val MAX_ML = 300
         private const val MAX_HALF_OUNCES = 20
