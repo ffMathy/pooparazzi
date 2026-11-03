@@ -73,6 +73,8 @@ import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.format.SyncPeer
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.model.DiaperKind
+import com.ffmathy.pooparazzi.core.model.Entry
+import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.diaperKind
 import com.ffmathy.pooparazzi.core.model.isBreastfeed
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
@@ -370,7 +372,10 @@ private fun withTime(label: String, millis: Long, f: Formatters, timeColor: Colo
 /** A line as shown ("Left → Right") and as read ("Left then right"). */
 private class Line(val shown: String, val spoken: String)
 
-/** Line 2: "Slept 1h 07m", "Left → Right" (a breast feed's side order), "Already logged". */
+/**
+ * Line 2: "Slept 1h 07m", "Left → Right" (a breast feed's side order), "Formula · 120 ml" (a bottle's contents
+ * and amount), "Already logged".
+ */
 @Composable
 private fun receiptLine2(receipt: Receipt, f: Formatters): Line? {
     val entry = receipt.entry
@@ -385,9 +390,21 @@ private fun receiptLine2(receipt: Receipt, f: Formatters): Line? {
         }
         ReceiptKind.FEED_LOGGED -> entry.breastSide?.takeIf { entry.isBreastfeed }?.let { side ->
             Line(stringResource(Labels.side(side)).keepSidesTogether(), stringResource(SpokenLabels.side(side)))
-        }
+        } ?: bottleLine(entry, f)
         ReceiptKind.DIAPER_LOGGED -> null
     }
+}
+
+/** A bottle feed's contents and amount, as picked: "Formula · 120 ml", "Milk", "90 ml"; null with neither. */
+@Composable
+private fun bottleLine(entry: Entry, f: Formatters): Line? {
+    if (entry.feedType != FeedType.BOTTLE) return null
+    val parts = listOfNotNull(
+        entry.bottleContents?.let { stringResource(Labels.bottleContents(it, compact = true)) },
+        entry.amountMl?.let(f.volume::format),
+    )
+    if (parts.isEmpty()) return null
+    return Line(parts.joinToString(DOT_SEPARATOR), spokenText().let { words -> parts.reduce { a, b -> words.pair(a, b) } })
 }
 
 /** Undo: Small EdgeButton (56), `surfaceContainer`, `undo` 20 + 6 + "Undo" (§3.5.6). Exposed as disabled while inert. */

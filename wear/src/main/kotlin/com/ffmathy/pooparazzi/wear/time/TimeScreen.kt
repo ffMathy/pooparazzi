@@ -158,9 +158,9 @@ internal fun offsetLabel(f: Formatters, minutes: Int): String {
 private const val MINUTES_PER_HOUR = 60
 private const val MINUTE_MILLIS = 60_000L
 
-/** "−5m" / "+5m": a tonal CompactButton, read as "5 minutes earlier" / "5 minutes later". */
+/** "−5m" / "+5m": a tonal CompactButton, read as "5 minutes earlier" / "5 minutes later". Also the Amount screen's −/+. */
 @Composable
-private fun StepButton(label: String, spoken: String, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun StepButton(label: String, spoken: String, enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val ambient = isAmbient()
     val content = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurface
     CompactButton(
@@ -185,7 +185,7 @@ private fun StepButton(label: String, spoken: String, enabled: Boolean, onClick:
 
 /** Done: Small EdgeButton (56) in `primaryContainer`, `check` 20 + "Done". */
 @Composable
-private fun DoneEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Boolean, modifier: Modifier) {
+internal fun DoneEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Boolean, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
     val content = if (ambient) WatchAmbient.content else scheme.onPrimaryContainer
     EdgeButton(

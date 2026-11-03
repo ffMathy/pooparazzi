@@ -2,12 +2,14 @@ package com.ffmathy.pooparazzi.wear.sample
 
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
+import com.ffmathy.pooparazzi.wear.state.BottleDraft
 import com.ffmathy.pooparazzi.wear.state.DiaperDraft
 import com.ffmathy.pooparazzi.wear.state.FeedDraft
 import com.ffmathy.pooparazzi.wear.state.GuardKind
@@ -64,7 +66,11 @@ object WearSamples {
     fun timeDraft(): TimeDraft = TimeDraft(TimeTarget.FEED, TimeTitle.FEED, base = SampleData.NOW_1432, zone = zone, offsetMinutes = -7)
 
     /** Breast chosen on the Feed type screen opened at 14:32: Side, nothing ticked yet. */
-    fun sideDraft(): SideDraft = SideDraft(at = SampleData.NOW_1432, zone = zone)
+    fun sideDraft(): SideDraft = SideDraft(stamp = SampleData.NOW_1432, zone = zone)
+
+    /** Bottle chosen on the Feed type screen opened at 14:32: Formula, 120 ml. */
+    fun bottleDraft(): BottleDraft =
+        BottleDraft(stamp = SampleData.NOW_1432, zone = zone, contents = BottleContents.FORMULA, amountMl = 120)
 
     /** Pee + Poop on, Colour Yellow, Texture Seedy, stamped 14:32. */
     fun diaperDraft(): DiaperDraft = DiaperDraft(
@@ -82,9 +88,9 @@ object WearSamples {
         return Receipt(ReceiptKind.FEED_LOGGED, entry, Undo.Delete(entry.id), zone)
     }
 
-    /** "Bottle at 14:32". */
+    /** "Bottle at 14:32" / "Formula · 120 ml": the bottle feed saved on the Bottle screen. */
     fun receiptFormula(): Receipt {
-        val entry = Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432, id = "sample-formula-1432")
+        val entry = Entry.feed(FeedType.BOTTLE, SampleData.NOW_1432, id = "sample-formula-1432", amountMl = 120, contents = BottleContents.FORMULA)
         return Receipt(ReceiptKind.FEED_LOGGED, entry, Undo.Delete(entry.id), zone)
     }
 

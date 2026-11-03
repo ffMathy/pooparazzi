@@ -97,7 +97,7 @@ data class Entry(
   - Section heading "Amount · Optional" ("Mængde · Valgfri"), then the amount in titleLarge FEED text ("120 ml"), or "No amount" ("Ingen mængde") in `on-surface-variant`.
   - A full-width **slider** (min 48 dp tall) in FEED colours: thumb and active track `feed-strong`, inactive track `feed-container`. Its start is **No amount**; each step adds **10 ml** up to **300 ml**, or **½ fl oz** up to **10 fl oz** where the region measures in fluid ounces (the US, Liberia, Myanmar: the app's region, else the device's, since the in-app languages carry none). Ounces are shown to the nearest half ("4 fl oz", "4.5 fl oz", Danish "4,5 fl oz") and stored as millilitres. TalkBack reads "Amount, 120 ml, slider".
   - **"Log feed"** ("Registrér") bottom-right, always enabled (the amount is optional). It logs a bottle feed at `stamp + offset` with the contents and amount (neither: just the time) and closes the sheet; no receipt follows.
-  - The contents show in History's title ("Bottle · Formula"), the amount in its supporting line ("12:22 · 120 ml"; TalkBack "Bottle, Formula, 12:22, 120 ml"), and the amount on the watch's Today list. The watch logs a bottle without contents or an amount.
+  - The contents show in History's title ("Bottle · Formula"), the amount in its supporting line ("12:22 · 120 ml"; TalkBack "Bottle, Formula, 12:22, 120 ml"), and the amount on the watch's Today list. The watch offers the same contents and amount on its Bottle screen (§2.2).
 - **Running sleep and a feed:** logging any feed (a breast feed included) while a sleep runs leaves the sleep running; it keeps the Lamp.
 - **Since-row 1** at 14:32 idle still reads "Awake …". The feed type appears in the Lamp label icon (`breast` / `feed` / `food`) and in the Lamp sub-line, after the `history` icon: "12:22 · Bottle". The type word is omitted when the line would exceed the Lamp chord; the icon always carries it, and TalkBack reads "Last feed, bottle, formula, 2 hours 10 minutes ago, at 12:22". A feed with no type shows the generic `feed` icon and no type word ("12:22"; TalkBack "Last feed, 2 hours 10 minutes ago, at 12:22").
 - **Breast order on every last-feed line.** A breastfeed with a recorded side shows the order instead of the word "Breast", because it is what the next feed starts from:
@@ -114,14 +114,21 @@ data class Entry(
   - Three stacked buttons (full width, 52 dp tall, `feed-container`): Breast, Bottle, Food.
   - A fourth, outlined button: **"Just the time"** (icon `clock`), which logs a feed with no type.
   - A CompactButton "Earlier" opens the **Time** screen (DESIGN_SPEC §3.5.4), as on the diaper picker: the crown moves the time a minute per step, −5m / +5m by five, Done applies it. The button then shows the offset ("−7m").
-  - Bottle, Food and Just the time lead to **Logged** ("Bottle at 14:32" / "Feed at 14:32" + Undo).
-  - Breast leads to the **Side screen**; nothing is logged yet, and swiping back returns to Feed type with its time.
+  - Food and Just the time lead to **Logged** ("Food at 14:32" / "Feed at 14:32" + Undo).
+  - Breast leads to the **Side screen**, Bottle to the **Bottle screen**; nothing is logged yet, and swiping back returns to Feed type with its time.
 - **Side screen** (after Breast):
   - Title "Which side?", with "Breast · 14:32" (the Feed type screen's time, with its Earlier offset) under it.
   - Two full-width **`CheckboxButton`s**, Left and Right, in FEED colours (`feed-container`, lit `feed-container-lit` with the box in `feed-strong`). A ticked button's icon slot shows its **order badge** ("1" / "2" in a `feed-strong` circle) instead of the side glyph. TalkBack: "Left, first, checkbox, checked".
   - Under them, the order in words: "Left → Right", or "No side".
+  - Then the CompactButton **"Earlier"** (as on Feed type): the time can still be moved after Breast. Done on Time updates the "Breast · 14:32" line, and the Feed type screen under it.
   - **Pinned Medium EdgeButton "Save"** (as on the Diaper screen), **enabled with nothing ticked**.
   - It logs the breast feed instant and leads to **Logged** ("Breast at 14:32", second line "Left → Right", or none with no side) + Undo, which deletes it.
+- **Bottle screen** (after Bottle), laid out as the Diaper screen:
+  - Title "Bottle · 14:32" ("Flaske · 14:32"): the Feed type screen's time, with its Earlier offset.
+  - **Contents** (FEED colours, `feed` icon), its value under it ("Milk", "Formula", or "Optional"); it opens an option list Milk / Formula / None, as the poop colour list.
+  - **Amount**, its value under it ("120 ml", "4 fl oz", or "Optional"); it opens the **Amount screen**: "Amount" over the amount in `feed-strong` ("No amount" at the start), the crown a step per detent (clockwise more) and "−" / "+" CompactButtons, in the phone slider's steps (10 ml up to 300 ml, or ½ fl oz up to 10 fl oz where the region uses ounces), and Done. Each change applies at once; TalkBack reads "Amount, 120 ml" and the buttons "10 ml less" / "10 ml more".
+  - The CompactButton **"Earlier"** (the Time screen).
+  - **Pinned Medium EdgeButton "Save"**, always enabled: it logs the bottle feed with what was picked (neither: just the time) and leads to **Logged** ("Bottle at 14:32", second line "Formula · 120 ml", only what was picked) + Undo.
 - **Main** never has a breastfeeding state: the Lamp only runs for a sleep, the pinned EdgeButton is always the sleep toggle, and no Ongoing Activity or complication text exists for feeds.
 - **Tile:**
   - **Row A:** "Feed", with the time since the last feed, which opens the app on the Feed type screen.

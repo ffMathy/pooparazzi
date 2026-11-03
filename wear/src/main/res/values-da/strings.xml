@@ -18,6 +18,8 @@
     <string name="spoken_side_left_then_right">Venstre, så højre</string>
     <string name="spoken_side_right_then_left">Højre, så venstre</string>
     <string name="spoken_pee_and_poop">Tis og bæ</string>
+    <string name="spoken_amount_less">%1$s mindre</string>
+    <string name="spoken_amount_more">%1$s mere</string>
     <string name="spoken_range">%1$s til %2$s</string>
     <string name="spoken_pair">%1$s, %2$s</string>
     <string name="spoken_status_since">%1$s %2$s, %3$s</string>

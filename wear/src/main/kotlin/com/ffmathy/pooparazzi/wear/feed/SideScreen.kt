@@ -73,14 +73,16 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 @Immutable
 data class SideActions(
     val onTick: (Breast) -> Unit = {},
+    /** Earlier: opens the Time screen for the breast feed's time. */
+    val onEarlier: () -> Unit = {},
     val onSave: () -> Unit = {},
 )
 
 /**
  * Side (V1_ADDITIONS §2.2), after Breast on the Feed type screen: "Which side?" (with "Breast · 14:32", the time the
  * feed is logged at, under it), two CheckboxButtons Left and Right whose tick order is the order recorded (a "1" / "2"
- * badge on each ticked box and a "Left → Right" line under them), and the pinned Medium EdgeButton "Save". The side
- * is optional: Save with nothing ticked records only the time. Swipe right goes back to the Feed type screen without
+ * badge on each ticked box and a "Left → Right" line under them), an Earlier CompactButton (the Time screen, as on
+ * Feed type: the time can still be moved after Breast), and the pinned Medium EdgeButton "Save". The side is optional: Save with nothing ticked records only the time. Swipe right goes back to the Feed type screen without
  * logging. 500 ms tap cooldown.
  */
 @Composable
@@ -91,7 +93,7 @@ fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modi
     val ambient = isAmbient()
     val small = isSmallWatch()
     val f = rememberFormatters(draft.zone)
-    // "Breast · 14:32": what Save logs, so the parent can confirm the time (set with Earlier on the screen before).
+    // "Breast · 14:32": what Save logs, so the parent can confirm the time (set with Earlier here or on Feed type).
     val breast = stringResource(CoreR.string.feed_type_breast)
     val time = f.clock.format(draft.at, f.zone)
     val summary = breast + DOT_SEPARATOR + time
@@ -160,6 +162,11 @@ fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modi
                                 liveRegion = LiveRegionMode.Polite
                             },
                     )
+                }
+                item(key = "earlier") {
+                    Box(Modifier.fillMaxWidth().transformedHeight(this, spec).padding(top = 2.dp), contentAlignment = Alignment.Center) {
+                        EarlierButton(draft.offsetMinutes, draft.at, f, actions.onEarlier, cooldown.ready, Modifier.alpha(cooldown.alpha))
+                    }
                 }
             }
             SaveEdgeButton(

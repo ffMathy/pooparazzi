@@ -21,10 +21,14 @@ import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
 import com.ffmathy.pooparazzi.wear.diaper.colourOptions
 import com.ffmathy.pooparazzi.wear.diaper.textureOptions
+import com.ffmathy.pooparazzi.wear.feed.AmountScreen
+import com.ffmathy.pooparazzi.wear.feed.BottleActions
+import com.ffmathy.pooparazzi.wear.feed.BottleScreen
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeActions
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeScreen
 import com.ffmathy.pooparazzi.wear.feed.SideActions
 import com.ffmathy.pooparazzi.wear.feed.SideScreen
+import com.ffmathy.pooparazzi.wear.feed.contentsOptions
 import com.ffmathy.pooparazzi.wear.logged.LoggedScreen
 import com.ffmathy.pooparazzi.wear.logged.UndoneScreen
 import com.ffmathy.pooparazzi.wear.main.MainActions
@@ -42,12 +46,17 @@ object WearRoutes {
     const val MAIN = "main"
     const val FEED_TYPE = "feed"
     const val SIDE = "side"
+
+    /** Bottle: the optional contents and amount, Earlier and Save, after Bottle on Feed type. */
+    const val BOTTLE = "bottle"
+    const val BOTTLE_CONTENTS = "bottle/contents"
+    const val BOTTLE_AMOUNT = "bottle/amount"
     const val DIAPER = "diaper"
     const val DIAPER_COLOUR = "diaper/colour"
     const val DIAPER_TEXTURE = "diaper/texture"
     const val LOGGED = "logged"
 
-    /** Time (W4): opened by Earlier on Feed type and Diaper, and by the time (or the crown) on Logged. */
+    /** Time (W4): opened by Earlier on Feed type, Side, Bottle and Diaper, and by the time (or the crown) on Logged. */
     const val TIME = "time"
     const val UNDONE = "undone"
 
@@ -103,6 +112,7 @@ fun WearNavHost(
                 }
                 WearEvent.ShowUndone -> navController.navigate(WearRoutes.UNDONE) { popUpTo(WearRoutes.MAIN) }
                 WearEvent.ShowSide -> go(WearRoutes.SIDE)
+                WearEvent.ShowBottle -> go(WearRoutes.BOTTLE)
                 WearEvent.BackToMain -> backToMain()
                 // By route: a second Done never pops the screen under Time as well.
                 WearEvent.CloseTime -> navController.popBackStack(WearRoutes.TIME, inclusive = true)
@@ -198,8 +208,54 @@ fun WearNavHost(
                     it,
                     SideActions(
                         onTick = gate.tapWith { breast -> viewModel.tickSide(breast) },
+                        onEarlier = gate.tap {
+                            viewModel.beginSideTime()
+                            go(WearRoutes.TIME)
+                        },
                         onSave = gate.tap { viewModel.saveBreastfeed() },
                     ),
+                )
+            }
+        }
+        composable(WearRoutes.BOTTLE) { backStackEntry ->
+            val gate = rememberTopGate(navController, backStackEntry)
+            val draft by viewModel.bottleDraft.collectAsStateWithLifecycle()
+            rememberLast(draft)?.let {
+                BottleScreen(
+                    it,
+                    BottleActions(
+                        onContents = gate.tap { go(WearRoutes.BOTTLE_CONTENTS) },
+                        onAmount = gate.tap { go(WearRoutes.BOTTLE_AMOUNT) },
+                        onEarlier = gate.tap {
+                            viewModel.beginBottleTime()
+                            go(WearRoutes.TIME)
+                        },
+                        onSave = gate.tap { viewModel.saveBottle() },
+                    ),
+                )
+            }
+        }
+        composable(WearRoutes.BOTTLE_CONTENTS) { backStackEntry ->
+            val gate = rememberTopGate(navController, backStackEntry)
+            val draft by viewModel.bottleDraft.collectAsStateWithLifecycle()
+            OptionScreen(
+                title = stringResource(CoreR.string.bottle_contents),
+                options = contentsOptions(draft?.contents),
+                onSelect = gate.tapWith { contents ->
+                    viewModel.setBottleContents(contents)
+                    // By route: a second tap never pops the Bottle screen (and its unsaved draft) as well.
+                    navController.popBackStack(WearRoutes.BOTTLE_CONTENTS, inclusive = true)
+                },
+            )
+        }
+        composable(WearRoutes.BOTTLE_AMOUNT) { backStackEntry ->
+            val gate = rememberTopGate(navController, backStackEntry)
+            val draft by viewModel.bottleDraft.collectAsStateWithLifecycle()
+            rememberLast(draft)?.let {
+                AmountScreen(
+                    it,
+                    onAmount = gate.tapWith { amount -> viewModel.setBottleAmount(amount) },
+                    onDone = gate.tap { navController.popBackStack(WearRoutes.BOTTLE_AMOUNT, inclusive = true) },
                 )
             }
         }

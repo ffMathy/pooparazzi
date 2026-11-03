@@ -110,11 +110,17 @@ class WearNavHostTest {
     private fun at(hour: Int, minute: Int) = epochMillis(SampleData.TODAY, hour, minute, SampleData.ZONE)
 
     @Test
-    fun formulaThenUndo() {
+    fun bottleThenSaveThenUndo() {
         waitForDescription("Feed.").performClick()
         waitFor("Feed · 14:32")
         settle(600) // Past the picker cooldown.
         compose.onNodeWithText("Bottle").performClick()
+
+        // Bottle: the details are optional, so Save at once records just the time.
+        waitFor("Bottle · 14:32")
+        assertTrue("nothing is logged before Save", entries().isEmpty())
+        settle(1_000)
+        compose.onNodeWithText("Save").performClick()
 
         waitFor("Bottle at 14:32")
         assertEquals(1, entries().size)
@@ -132,11 +138,11 @@ class WearNavHostTest {
         waitForDescription("Feed.").performClick()
         waitFor("Feed · 14:32")
         settle(600)
-        compose.onNodeWithText("Bottle").performClick()
+        compose.onNodeWithText("Food").performClick()
 
-        waitFor("Bottle at 14:32")
+        waitFor("Food at 14:32")
         settle(LOGGED_INERT_MILLIS + 100L)
-        compose.onNodeWithContentDescription("Bottle at 14:32").performClick()
+        compose.onNodeWithContentDescription("Food at 14:32").performClick()
 
         // Time: "Feed" over 14:32; −5m twice, then Done.
         waitForDescription("Feed, 14:32")
@@ -148,8 +154,55 @@ class WearNavHostTest {
         waitForDescription("Feed, 14:22, 10 minutes earlier")
         compose.onNodeWithText("Done").performClick()
 
-        waitFor("Bottle at 14:22")
+        waitFor("Food at 14:22")
         assertEquals(at(14, 22), entries().single().startMillis)
+    }
+
+    @Test
+    fun bottleWithContentsAmountAndAnEarlierTime() {
+        waitForDescription("Feed.").performClick()
+        settle(600)
+        compose.onNodeWithText("Bottle").performClick()
+        waitFor("Bottle · 14:32")
+        settle(1_000)
+
+        compose.onNodeWithText("Contents").performClick()
+        waitFor("Formula")
+        settle(600)
+        compose.onNodeWithText("Formula").performClick()
+        waitFor("Bottle · 14:32")
+        settle(1_000)
+
+        compose.onNodeWithText("Amount").performClick()
+        waitForDescription("Amount, No amount")
+        settle(600)
+        repeat(3) {
+            compose.onNodeWithContentDescription("10 ml more").performClick()
+            settle()
+        }
+        waitForDescription("Amount, 30 ml")
+        compose.onNodeWithText("Done").performClick()
+        waitFor("30 ml")
+        settle(1_000)
+
+        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
+        settle()
+        compose.onNodeWithText("Earlier").performClick()
+        waitForDescription("Feed, 14:32")
+        settle(600)
+        compose.onNodeWithContentDescription("5 minutes earlier").performClick()
+        settle()
+        compose.onNodeWithText("Done").performClick()
+        waitFor("Bottle · 14:27")
+        settle(1_000)
+        compose.onNodeWithText("Save").performClick()
+
+        waitFor("Bottle at 14:27")
+        waitFor("Formula · 30 ml")
+        val feed = entries().single()
+        assertEquals(at(14, 27), feed.startMillis)
+        assertEquals(com.ffmathy.pooparazzi.core.model.BottleContents.FORMULA, feed.bottleContents)
+        assertEquals(30, feed.amountMl)
     }
 
     @Test

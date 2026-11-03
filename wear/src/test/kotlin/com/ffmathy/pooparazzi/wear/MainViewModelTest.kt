@@ -14,6 +14,7 @@ import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
 import com.ffmathy.pooparazzi.core.domain.epochMillis
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -180,14 +181,14 @@ class MainViewModelTest {
     // ---- Feed type ----------------------------------------------------------------------------
 
     @Test
-    fun formulaIsLoggedAtTheStampAndShowsLogged() = test {
+    fun foodIsLoggedAtTheStampAndShowsLogged() = test {
         vm.beginFeed()
         clock.advanceBy(20_000) // The stamp is the Feed tap, not the type tap.
-        vm.chooseFeedType(FeedType.BOTTLE).join()
+        vm.chooseFeedType(FeedType.FOOD).join()
 
         val receipt = present(vm.receipt.value)
         assertEquals(ReceiptKind.FEED_LOGGED, receipt.kind)
-        assertEquals(FeedType.BOTTLE, receipt.entry.feedType)
+        assertEquals(FeedType.FOOD, receipt.entry.feedType)
         assertEquals(SampleData.NOW_1432, receipt.entry.startMillis)
         assertEquals(Undo.Delete(receipt.entry.id), receipt.undo)
         assertFalse(receipt.duplicate)
@@ -246,7 +247,7 @@ class MainViewModelTest {
     @Test
     fun theTimeOnLoggedMovesTheLoggedFeed() = test {
         vm.beginFeed()
-        vm.chooseFeedType(FeedType.BOTTLE).join()
+        vm.chooseFeedType(FeedType.FOOD).join()
         val logged = present(vm.receipt.value)
         clock.advanceBy(30_000)
 
@@ -307,12 +308,12 @@ class MainViewModelTest {
     }
 
     @Test
-    fun aRepeatFormulaWithinFiveSecondsShowsAlreadyLogged() = test {
+    fun aRepeatFoodWithinFiveSecondsShowsAlreadyLogged() = test {
         vm.beginFeed()
-        vm.chooseFeedType(FeedType.BOTTLE).join()
+        vm.chooseFeedType(FeedType.FOOD).join()
         val first = vm.receipt.value!!
         vm.beginFeed()
-        vm.chooseFeedType(FeedType.BOTTLE).join()
+        vm.chooseFeedType(FeedType.FOOD).join()
         val second = vm.receipt.value!!
         assertTrue(second.duplicate)
         assertEquals(first.entry.id, second.entry.id)
@@ -339,17 +340,115 @@ class MainViewModelTest {
     }
 
     @Test
-    fun aDoubleTapOnFormulaLogsOnceWithoutAlreadyLogged() = test {
+    fun aDoubleTapOnFoodLogsOnceWithoutAlreadyLogged() = test {
         vm.beginFeed()
         // The second tap lands on the leaving screen and waits for the first write.
-        val first = vm.chooseFeedType(FeedType.BOTTLE)
-        val second = vm.chooseFeedType(FeedType.BOTTLE)
+        val first = vm.chooseFeedType(FeedType.FOOD)
+        val second = vm.chooseFeedType(FeedType.FOOD)
         first.join()
         second.join()
         assertEquals(1, stored().size)
         assertFalse(present(vm.receipt.value).duplicate)
         assertEquals(listOf(XHaptic.CONFIRM), haptics())
         assertEquals(1, events.count { it == WearEvent.ShowLogged })
+    }
+
+    @Test
+    fun earlierOnSideMovesTheBreastFeedAndTheFeedTypeScreensTime() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BREAST).join()
+        vm.beginSideTime()
+        val opened = present(vm.timeDraft.value)
+        assertEquals(TimeTarget.SIDE, opened.target)
+        assertEquals(TimeTitle.FEED, opened.title)
+        vm.shiftTime(-10)
+        vm.saveTime().join()
+        awaitEvent(WearEvent.CloseTime)
+        assertEquals(SampleData.NOW_1432 - 10 * minute, present(vm.sideDraft.value).at)
+        assertEquals("swiping back to Feed type shows the same time", -10, vm.feedDraft.value?.offsetMinutes)
+
+        vm.tickSide(Breast.LEFT)
+        vm.saveBreastfeed().join()
+        assertEquals(SampleData.NOW_1432 - 10 * minute, stored().single().startMillis)
+    }
+
+    // ---- Bottle ------------------------------------------------------------------------------------
+
+    @Test
+    fun bottleOpensBottleWithTheFeedTypeScreensTimeAndLogsNothingYet() = test {
+        vm.beginFeed()
+        vm.beginFeedTime()
+        vm.shiftTime(-5)
+        vm.saveTime().join()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
+        awaitEvent(WearEvent.ShowBottle)
+        val draft = present(vm.bottleDraft.value)
+        assertEquals(SampleData.NOW_1432 - 5 * minute, draft.at)
+        assertNull(draft.contents)
+        assertNull(draft.amountMl)
+        assertTrue("nothing is logged before Save", stored().isEmpty())
+        assertNotNull("swiping back keeps the Feed type screen's time", vm.feedDraft.value)
+    }
+
+    @Test
+    fun saveOnBottleLogsTheContentsAmountAndTime() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
+        vm.setBottleContents(BottleContents.MILK)
+        vm.setBottleAmount(120)
+        vm.beginBottleTime()
+        assertEquals(TimeTarget.BOTTLE, vm.timeDraft.value?.target)
+        vm.shiftTime(-15)
+        vm.saveTime().join()
+        vm.saveBottle().join()
+
+        val receipt = present(vm.receipt.value)
+        assertEquals(ReceiptKind.FEED_LOGGED, receipt.kind)
+        val feed = stored().single()
+        assertEquals(FeedType.BOTTLE, feed.feedType)
+        assertEquals(BottleContents.MILK, feed.bottleContents)
+        assertEquals(120, feed.amountMl)
+        assertEquals(SampleData.NOW_1432 - 15 * minute, feed.startMillis)
+        assertEquals(Undo.Delete(feed.id), receipt.undo)
+        awaitEvent(WearEvent.ShowLogged)
+        assertNull(vm.bottleDraft.value)
+        assertNull(vm.feedDraft.value)
+    }
+
+    @Test
+    fun theBottlesDetailsAreOptional() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
+        vm.setBottleContents(BottleContents.FORMULA)
+        vm.setBottleContents(null)
+        vm.setBottleAmount(90)
+        vm.setBottleAmount(null)
+        vm.saveBottle().join()
+        val feed = stored().single()
+        assertEquals(FeedType.BOTTLE, feed.feedType)
+        assertNull(feed.bottleContents)
+        assertNull(feed.amountMl)
+    }
+
+    @Test
+    fun anUnchangedAmountTicksNothing() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
+        vm.setBottleAmount(null)
+        assertTrue(haptics().none { it == XHaptic.SEGMENT_TICK })
+        vm.setBottleAmount(10)
+        assertEquals(1, haptics().count { it == XHaptic.SEGMENT_TICK })
+    }
+
+    @Test
+    fun aDoubleTapOnBottleSaveLogsOnce() = test {
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
+        val first = vm.saveBottle()
+        val second = vm.saveBottle()
+        first.join()
+        second.join()
+        assertEquals(1, stored().size)
     }
 
     // ---- Breast side -----------------------------------------------------------------------------
@@ -743,15 +842,18 @@ class MainViewModelTest {
         vm.beginFeed()
         vm.beginDiaper()
         vm.beginFeed()
-        vm.chooseFeedType(FeedType.BOTTLE).join()
+        vm.chooseFeedType(FeedType.FOOD).join()
         assertNotNull(vm.receipt.value)
         vm.beginFeed()
+        vm.chooseFeedType(FeedType.BOTTLE).join()
+        assertNotNull(vm.bottleDraft.value)
         vm.chooseFeedType(FeedType.BREAST).join()
         assertNotNull(vm.sideDraft.value)
 
         vm.selectBaby(SampleData.TWIN_ID).join()
         assertNull(vm.feedDraft.value)
         assertNull(vm.sideDraft.value)
+        assertNull(vm.bottleDraft.value)
         assertNull(vm.diaperDraft.value)
         assertNull("Undo belonged to Noa's formula", vm.receipt.value)
         // Undo now has nothing to revert.

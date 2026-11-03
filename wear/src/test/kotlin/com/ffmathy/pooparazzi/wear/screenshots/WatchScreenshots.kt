@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.core.app.ApplicationProvider
 import androidx.wear.compose.material3.AppScaffold
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.format.ClockFormatter
 import com.ffmathy.pooparazzi.core.model.PoopColor
@@ -18,10 +19,14 @@ import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.wear.diaper.DiaperActions
 import com.ffmathy.pooparazzi.wear.diaper.DiaperScreen
 import com.ffmathy.pooparazzi.wear.diaper.colourOptions
+import com.ffmathy.pooparazzi.wear.feed.AmountScreen
+import com.ffmathy.pooparazzi.wear.feed.BottleActions
+import com.ffmathy.pooparazzi.wear.feed.BottleScreen
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeActions
 import com.ffmathy.pooparazzi.wear.feed.FeedTypeScreen
 import com.ffmathy.pooparazzi.wear.feed.SideActions
 import com.ffmathy.pooparazzi.wear.feed.SideScreen
+import com.ffmathy.pooparazzi.wear.feed.contentsOptions
 import com.ffmathy.pooparazzi.wear.logged.LoggedScreen
 import com.ffmathy.pooparazzi.wear.logged.UndoneScreen
 import com.ffmathy.pooparazzi.wear.main.MainActions
@@ -120,6 +125,36 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s06_sideTicked() = capture("06-side-ticked", SampleData.NOW_1432) {
         SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.RIGHT, Breast.LEFT)), SideActions())
+    }
+
+    /** Scrolled to the end: the order line and Earlier (the time can still move after Breast), above Save. */
+    @Test
+    fun s06b_sideEarlier() = capture(
+        "06b-side-earlier",
+        SampleData.NOW_1432,
+        after = { compose.onNode(hasScrollToIndexAction()).performScrollToIndex(4) },
+    ) { SideScreen(WearSamples.sideDraft().copy(offsetMinutes = -10, ticks = listOf(Breast.LEFT)), SideActions()) }
+
+    /** After Bottle on Feed type: "Bottle · 14:32", Contents (Formula), Amount (120 ml), Earlier and Save. */
+    @Test
+    fun s06c_bottle() = capture("06c-bottle", SampleData.NOW_1432) { BottleScreen(WearSamples.bottleDraft(), BottleActions()) }
+
+    /** Contents on Bottle: Milk, Formula, None. */
+    @Test
+    fun s06d_bottleContents() = capture("06d-bottle-contents", SampleData.NOW_1432) {
+        OptionScreen(stringResource(CoreR.string.bottle_contents), contentsOptions(BottleContents.FORMULA), onSelect = {})
+    }
+
+    /** Amount on Bottle: 120 ml, the crown or −/+ by 10 ml, and Done. */
+    @Test
+    fun s06e_bottleAmount() = capture("06e-bottle-amount", SampleData.NOW_1432) {
+        AmountScreen(WearSamples.bottleDraft(), onAmount = {}, onDone = {})
+    }
+
+    /** The bottle feed saved: "Bottle at 14:32" with "Formula · 120 ml" under it. */
+    @Test
+    fun s09d_loggedBottle() = capture("09d-logged-bottle", SampleData.NOW_1432, timeText = false) {
+        LoggedScreen(WearSamples.receiptFormula(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
     }
 
     /** As it opens: the title and the Pee and Poop checkboxes (V1_ADDITIONS §3.2), Poop on. */

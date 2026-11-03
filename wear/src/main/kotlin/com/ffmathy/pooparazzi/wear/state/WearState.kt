@@ -5,6 +5,7 @@ import com.ffmathy.pooparazzi.core.domain.Forecast
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.forecast
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -94,8 +95,11 @@ data class MainUiState(
     }
 }
 
-/** What the Time screen (W4) sets: a picker's draft before it is logged, or the entry on Logged after it is. */
-enum class TimeTarget { FEED, DIAPER, RECEIPT }
+/**
+ * What the Time screen (W4) sets: a picker's draft before it is logged (Feed type, Side, Bottle, Diaper), or the entry
+ * on Logged after it is.
+ */
+enum class TimeTarget { FEED, SIDE, BOTTLE, DIAPER, RECEIPT }
 
 /** The Time screen's title, which also gives the time its event colour. */
 enum class TimeTitle { FEED, DIAPER, WOKE_UP }
@@ -137,13 +141,30 @@ data class FeedDraft(val stamp: Long, val offsetMinutes: Int = 0, val zone: Zone
 }
 
 /**
- * The Side screen after Breast on the Feed type screen: the time the breast feed is logged at ([at], the Feed tap's
- * stamp plus its Earlier offset) and the Left / Right checkboxes ticked so far, in tick order ([side] is what that
- * order records; null = no side).
+ * The Side screen after Breast on the Feed type screen: the Feed tap's stamp and the Earlier offset (carried over from
+ * the Feed type screen, and changed with Earlier on Side), so [at] is the time the breast feed is logged at; and the
+ * Left / Right checkboxes ticked so far, in tick order ([side] is what that order records; null = no side).
  */
 @Immutable
-data class SideDraft(val at: Long, val zone: ZoneId, val ticks: List<Breast> = emptyList()) {
+data class SideDraft(val stamp: Long, val zone: ZoneId, val offsetMinutes: Int = 0, val ticks: List<Breast> = emptyList()) {
+    val at: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
     val side: BreastSide? get() = BreastSide.fromOrder(ticks)
+}
+
+/**
+ * The Bottle screen after Bottle on the Feed type screen: the Feed tap's stamp and the Earlier offset (as [SideDraft]),
+ * and what the bottle held and how much was given, both optional (null: not picked; Save with neither records just
+ * the time).
+ */
+@Immutable
+data class BottleDraft(
+    val stamp: Long,
+    val zone: ZoneId,
+    val offsetMinutes: Int = 0,
+    val contents: BottleContents? = null,
+    val amountMl: Int? = null,
+) {
+    val at: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
 }
 
 /** The Diaper screen (V1_ADDITIONS §3.2). Both checkboxes start off and are optional: nothing ticked is a plain change. */
@@ -206,6 +227,9 @@ sealed interface WearEvent {
 
     /** Breast was chosen on the Feed type screen: pick the side order, then Save. */
     data object ShowSide : WearEvent
+
+    /** Bottle was chosen on the Feed type screen: pick the contents and the amount (both optional), then Save. */
+    data object ShowBottle : WearEvent
 
     /** Return to Main (closing pickers). */
     data object BackToMain : WearEvent

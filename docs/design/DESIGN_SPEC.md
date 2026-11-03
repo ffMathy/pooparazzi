@@ -181,7 +181,11 @@ Live Update ──"Woke up" action──▶ ends the sleep
 ```
 Main (idle | asleep) ──Diaper──▶ Diaper picker ──Earlier──▶ Time ──Done──▶ Diaper picker
  │                                   └─Pee/Poop/Both──▶ Logged ──Undo──▶ Undone ──▶ Main
- ├─Feed──▶ Logged                         ├─time (tap or crown)──▶ Time ──Done──▶ Logged
+ ├─Feed──▶ Feed type ─Food / Just the time─▶ Logged
+ │          ├─Breast──▶ Side ──Save──▶ Logged
+ │          ├─Bottle──▶ Bottle (Contents, Amount) ──Save──▶ Logged
+ │          └─Earlier (here, on Side and on Bottle)──▶ Time ──Done──▶ back
+ │                                        ├─time (tap or crown)──▶ Time ──Done──▶ Logged
  │                                        └─timeout / tap outside Undo and the time──▶ Main
  ├─Start sleep / Woke up (EdgeButton) ──▶ Main (asleep) / Logged
  └─baby button (two or more babies) ──▶ Baby picker ──▶ Main
@@ -190,7 +194,7 @@ Complication tap ──▶ the matching app screen (never logs)
 Ongoing Activity tap ──▶ the sleep screen (Main, asleep)
 ```
 
-Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Time (the time stays as it was).
+Swipe right (system swipe-to-dismiss) cancels the Diaper picker, Side, Bottle and Time (the time stays as it was).
 
 ### 3.2 Inventory
 
@@ -207,7 +211,7 @@ Swipe right (system swipe-to-dismiss) cancels the Diaper picker and Time (the ti
 | W1 | Watch | Main, idle | As the Tile: name, Feed and Diaper rows with time since and next estimate, "Start sleep" with the next sleep |
 | W2 | Watch | Main, asleep | As the Tile: "Asleep 1h 07m", Feed and Diaper rows, "Woke up" with the expected wake-up |
 | W3 | Watch | Diaper picker | Pee / Poop / Both; Earlier |
-| W4 | Watch | Time | Set the time of a feed or diaper before it is logged, or of the entry Logged shows: crown a minute per step, −5m / +5m, Done |
+| W4 | Watch | Time | Set the time of a feed (on Feed type, Side or Bottle) or diaper before it is logged, or of the entry Logged shows: crown a minute per step, −5m / +5m, Done |
 | W6 | Watch | Logged | Confirmation plus a 5 s Undo |
 | W7 | Watch | Undone | Undo confirmation (1.5 s) |
 | W9 | Watch | Tile | One-tap logging and status from the tile carousel |
@@ -528,7 +532,7 @@ Tile → log at stamp + offset → Logged. Haptic `Confirm`.
 
 #### 3.5.4 W4 Time
 
-Opened by Earlier on Feed type and Diaper (the draft's time, which can move back up to 12 h but never past the tap's stamp) and by the time on Logged (tap it, or turn the crown there: the logged time, which can move up to now, back up to 12 h, and a wake time no earlier than a minute after the sleep began; not for "Sleep cancelled").
+Opened by Earlier on Feed type, Side, Bottle and Diaper (the draft's time, which can move back up to 12 h but never past the tap's stamp) and by the time on Logged (tap it, or turn the crown there: the logged time, which can move up to now, back up to 12 h, and a wake time no earlier than a minute after the sleep began; not for "Sleep cancelled").
 
 | Element | Spec |
 |---|---|

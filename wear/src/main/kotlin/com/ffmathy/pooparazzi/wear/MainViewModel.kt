@@ -15,6 +15,7 @@ import com.ffmathy.pooparazzi.core.data.LogResult
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
@@ -27,6 +28,7 @@ import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.EntrySync
+import com.ffmathy.pooparazzi.wear.state.BottleDraft
 import com.ffmathy.pooparazzi.wear.state.DiaperDraft
 import com.ffmathy.pooparazzi.wear.state.FeedDraft
 import com.ffmathy.pooparazzi.wear.state.Guard
@@ -75,7 +77,7 @@ import java.time.ZoneId
  * The watch app's state holder, shared by every destination (it lives as long as the activity).
  *
  * It derives Main and Today from the repository, the sync status and a minute ticker; keeps the drafts of the
- * pickers (Feed type, Side, Diaper, Time) and the current Logged receipt; and performs every write.
+ * pickers (Feed type, Side, Bottle, Diaper, Time) and the current Logged receipt; and performs every write.
  * Haptics and navigation that depend on a write's outcome are sent as one-shot [events]
  * (DESIGN_SPEC §3.5, §5.11, §5.12; V1_ADDITIONS §2.2, §3.2).
  *
@@ -127,6 +129,9 @@ class MainViewModel(
     private val _sideDraft = MutableStateFlow<SideDraft?>(null)
     val sideDraft: StateFlow<SideDraft?> = _sideDraft.asStateFlow()
 
+    private val _bottleDraft = MutableStateFlow<BottleDraft?>(null)
+    val bottleDraft: StateFlow<BottleDraft?> = _bottleDraft.asStateFlow()
+
     private val _diaperDraft = MutableStateFlow<DiaperDraft?>(null)
     val diaperDraft: StateFlow<DiaperDraft?> = _diaperDraft.asStateFlow()
 
@@ -160,16 +165,22 @@ class MainViewModel(
     }
 
     /**
-     * Breast opens the Side screen for the optional side order (the feed is logged there, at this screen's time).
-     * Bottle, Food and "Just the time" ([type] null) log an instant and show Logged ("Already logged" for a repeat
-     * within 5 s).
+     * Breast opens the Side screen for the optional side order, Bottle the Bottle screen for the optional contents and
+     * amount; both log there, at this screen's time (which Earlier there can still change). Food and "Just the time"
+     * ([type] null) log an instant and show Logged ("Already logged" for a repeat within 5 s).
      */
     fun chooseFeedType(type: FeedType?): Job = action {
+        // The Feed type draft stays, so swiping back from Side or Bottle keeps its time; Save there uses it up.
         if (type == FeedType.BREAST) {
-            // The Feed type draft stays, so swiping back from Side keeps its time; Save on Side uses it up.
             val draft = _feedDraft.value ?: return@action
-            _sideDraft.value = SideDraft(at = draft.at, zone = draft.zone)
+            _sideDraft.value = SideDraft(stamp = draft.stamp, zone = draft.zone, offsetMinutes = draft.offsetMinutes)
             send(WearEvent.ShowSide)
+            return@action
+        }
+        if (type == FeedType.BOTTLE) {
+            val draft = _feedDraft.value ?: return@action
+            _bottleDraft.value = BottleDraft(stamp = draft.stamp, zone = draft.zone, offsetMinutes = draft.offsetMinutes)
+            send(WearEvent.ShowBottle)
             return@action
         }
         // A second tap that reached the leaving screen finds the draft used and does nothing.
@@ -187,15 +198,61 @@ class MainViewModel(
         _sideDraft.update { it?.copy(ticks = BreastSide.toggle(it.ticks, breast)) }
     }
 
+    /** Earlier on the Side screen: opens the Time screen at the breast feed's time (up to the Feed tap's stamp). */
+    fun beginSideTime() {
+        val draft = _sideDraft.value ?: return
+        _timeDraft.value = TimeDraft(TimeTarget.SIDE, TimeTitle.FEED, draft.stamp, draft.zone, offsetMinutes = draft.offsetMinutes)
+    }
+
     /**
-     * Save on the Side screen: logs the breast feed at the Feed type screen's time with the ticked order (no side when
-     * nothing is ticked) and shows Logged ("Already logged" for a repeat within 5 s).
+     * Save on the Side screen: logs the breast feed at its time (the Feed type screen's, or as Earlier on Side set
+     * it) with the ticked order (no side when nothing is ticked) and shows Logged ("Already logged" for a repeat
+     * within 5 s).
      */
     fun saveBreastfeed(): Job = action {
         // Consumed: a second tap on the leaving Side screen must not log the feed again.
         val draft = _sideDraft.consume() ?: return@action
         restoreOnFailure(_sideDraft, draft) {
             val result = repository.logFeedChecked(FeedType.BREAST, draft.at, draft.side)
+            _feedDraft.value = null
+            showReceipt(ReceiptKind.FEED_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
+        }
+    }
+
+    // ---- Bottle ------------------------------------------------------------------------------
+
+    /** Earlier on the Bottle screen: opens the Time screen at the bottle feed's time (up to the Feed tap's stamp). */
+    fun beginBottleTime() {
+        val draft = _bottleDraft.value ?: return
+        _timeDraft.value = TimeDraft(TimeTarget.BOTTLE, TimeTitle.FEED, draft.stamp, draft.zone, offsetMinutes = draft.offsetMinutes)
+    }
+
+    /** The Contents list's choice: Milk, Formula, or null ("None"). */
+    fun setBottleContents(contents: BottleContents?) {
+        _bottleDraft.update { it?.copy(contents = contents) }
+        haptic(XHaptic.SEGMENT_TICK)
+    }
+
+    /**
+     * The Amount screen's crown or −/+ buttons: the amount in millilitres, or null for none. A tick per change,
+     * nothing when it stays the same (at either end of the scale).
+     */
+    fun setBottleAmount(amountMl: Int?) {
+        val before = _bottleDraft.value ?: return
+        if (before.amountMl == amountMl) return
+        _bottleDraft.value = before.copy(amountMl = amountMl?.takeIf { it > 0 })
+        haptic(XHaptic.SEGMENT_TICK)
+    }
+
+    /**
+     * Save on the Bottle screen: logs the bottle feed at its time with the contents and amount picked (each optional)
+     * and shows Logged ("Already logged" for a repeat within 5 s).
+     */
+    fun saveBottle(): Job = action {
+        // Consumed: a second tap on the leaving Bottle screen must not log the feed again.
+        val draft = _bottleDraft.consume() ?: return@action
+        restoreOnFailure(_bottleDraft, draft) {
+            val result = repository.logFeedChecked(FeedType.BOTTLE, draft.at, amountMl = draft.amountMl, contents = draft.contents)
             _feedDraft.value = null
             showReceipt(ReceiptKind.FEED_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
         }
@@ -343,6 +400,15 @@ class MainViewModel(
         val draft = _timeDraft.consume() ?: return@action
         when (draft.target) {
             TimeTarget.FEED -> _feedDraft.update { it?.copy(offsetMinutes = draft.offsetMinutes) }
+            // The Feed type screen under Side and Bottle follows, so swiping back to it shows the same time.
+            TimeTarget.SIDE -> {
+                _sideDraft.update { it?.copy(offsetMinutes = draft.offsetMinutes) }
+                _feedDraft.update { it?.copy(offsetMinutes = draft.offsetMinutes) }
+            }
+            TimeTarget.BOTTLE -> {
+                _bottleDraft.update { it?.copy(offsetMinutes = draft.offsetMinutes) }
+                _feedDraft.update { it?.copy(offsetMinutes = draft.offsetMinutes) }
+            }
             TimeTarget.DIAPER -> _diaperDraft.update { it?.copy(offsetMinutes = draft.offsetMinutes) }
             TimeTarget.RECEIPT -> restoreOnFailure(_timeDraft, draft) {
                 val receipt = _receipt.value ?: return@restoreOnFailure
@@ -428,6 +494,7 @@ class MainViewModel(
         if (after != before) {
             _feedDraft.value = null
             _sideDraft.value = null
+            _bottleDraft.value = null
             _diaperDraft.value = null
             _timeDraft.value = null
             _receipt.value = null
