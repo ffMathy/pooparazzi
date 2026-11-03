@@ -32,6 +32,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.window.Dialog
+import androidx.compose.material3.Surface
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -370,42 +374,68 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
  */
 @Composable
 private fun AddBabyDialog(placeholder: String, signedIn: Boolean, actions: SettingsActions) {
+    Dialog(onDismissRequest = actions::onDismissAddBaby) {
+        AddBabyCard(placeholder, signedIn, onAdd = actions::onAddBaby, onCancel = actions::onDismissAddBaby)
+    }
+}
+
+/**
+ * The Add a baby dialog's card, in Material's dialog style (r 28, surfaceContainerHigh, 24 dp padding): the title, the
+ * name field, the birth date pill (it opens the date picker), why the birth date helps, where names and birth dates
+ * go, and Cancel and Add. Apart from the dialog's window, so a screenshot test can draw it on its own.
+ */
+@Composable
+internal fun AddBabyCard(
+    placeholder: String,
+    signedIn: Boolean,
+    onAdd: (name: String, birthDate: LocalDate?) -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = MaterialTheme.colorScheme
     var name by rememberSaveable { mutableStateOf("") }
     var born by rememberSaveable { mutableStateOf<String?>(null) }
     var picking by rememberSaveable { mutableStateOf(false) }
     val date = born?.let { LocalDate.parse(it) }
-    AlertDialog(
-        onDismissRequest = actions::onDismissAddBaby,
-        title = { Text(stringResource(R.string.settings_add_baby_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                NameField(
-                    name = name,
-                    placeholder = placeholder,
-                    onChange = { name = it.take(Settings.MAX_BABY_NAME_LENGTH) },
-                    onDone = {},
-                )
-                BirthDatePill(date, onClick = { picking = true })
-                Text(
-                    stringResource(R.string.settings_add_baby_birth_date_why),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurface,
-                )
-                Text(
-                    stringResource(if (signedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.onSurfaceVariant,
-                )
+    Surface(
+        modifier = modifier.widthIn(min = 280.dp, max = 560.dp),
+        shape = AlertDialogDefaults.shape,
+        color = AlertDialogDefaults.containerColor,
+        tonalElevation = AlertDialogDefaults.TonalElevation,
+    ) {
+        Column(
+            Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.settings_add_baby_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = colors.onSurface,
+                modifier = Modifier.padding(bottom = 8.dp).semantics { heading() },
+            )
+            NameField(
+                name = name,
+                placeholder = placeholder,
+                onChange = { name = it.take(Settings.MAX_BABY_NAME_LENGTH) },
+                onDone = {},
+            )
+            BirthDatePill(date, onClick = { picking = true })
+            Text(
+                stringResource(R.string.settings_add_baby_birth_date_why),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurface,
+            )
+            Text(
+                stringResource(if (signedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onCancel) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = { onAdd(name, date) }) { Text(stringResource(R.string.settings_add_baby_confirm)) }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { actions.onAddBaby(name, date) }) { Text(stringResource(R.string.settings_add_baby_confirm)) }
-        },
-        dismissButton = {
-            TextButton(onClick = actions::onDismissAddBaby) { Text(stringResource(android.R.string.cancel)) }
-        },
-    )
+        }
+    }
     if (picking) {
         BirthDateDialog(
             initial = date,

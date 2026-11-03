@@ -3,13 +3,19 @@ package com.ffmathy.pooparazzi.phone
 import android.app.Application
 import android.provider.Settings
 import androidx.compose.foundation.layout.Box
+import com.ffmathy.pooparazzi.phone.ui.settings.AddBabyCard
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -125,19 +131,24 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
     }
 
     /**
-     * "Add a baby" asks for the name and, optionally, the birth date, saying why. Under Robolectric the dialog's name
-     * field takes the focus, and its blinking cursor never lets the app go idle; so the clock is driven by hand (it
-     * stays paused, and the cursor with it) and the dialog alone is captured.
+     * "Add a baby" asks for the name and, optionally, the birth date, saying why. Its card is drawn on its own over a
+     * dimmed Settings: in a dialog window under Robolectric the name field takes the focus and its cursor never lets the
+     * app go idle for a capture.
      */
-    @Test fun settingsAddBaby() {
-        compose.mainClock.autoAdvance = false
-        compose.setContent {
-            NightLightTheme(night = false) {
-                SettingsScreen(SettingsSamples.addBaby(), SettingsActions.None, windowInsets = ReferenceInsets)
+    /** "Baby 2" in the test's language: the new baby's label. */
+    private fun secondBabyLabel(): String = String.format(
+        java.util.Locale.ROOT,
+        ApplicationProvider.getApplicationContext<Application>().getString(com.ffmathy.pooparazzi.core.R.string.baby_name_numbered),
+        2,
+    )
+
+    @Test fun settingsAddBaby() = screen("51-settings-add-baby", night = false) {
+        Box(Modifier.fillMaxSize()) {
+            SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)).padding(24.dp), contentAlignment = Alignment.Center) {
+                AddBabyCard(placeholder = secondBabyLabel(), signedIn = true, onAdd = { _, _ -> }, onCancel = {})
             }
         }
-        compose.mainClock.advanceTimeBy(2_000)
-        compose.onNode(isDialog()).captureRoboImage(path("51-settings-add-baby", tour = true))
     }
 
     /**
