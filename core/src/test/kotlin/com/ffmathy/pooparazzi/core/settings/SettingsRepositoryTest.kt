@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.ffmathy.pooparazzi.core.data.FixedClock
+import com.ffmathy.pooparazzi.core.domain.ForecastKind
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.BabyJson
 import com.ffmathy.pooparazzi.core.sync.FakeEntrySync
@@ -24,6 +25,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.time.LocalDate
 
 class SettingsRepositoryTest {
     @get:Rule val folder = TemporaryFolder()
@@ -530,5 +532,53 @@ class SettingsRepositoryTest {
         assertNull(BabyJson.decodeOrNull("""{"id":" "}"""))
         assertNull(BabyJson.decodeOrNull("""{"name":"x"}"""))
         assertNull(BabyJson.decodeOrNull("nope"))
+    }
+
+    @Test
+    fun aBirthDateIsStampedSyncedAndCanBeRemoved() = runBlocking {
+        val born = LocalDate.of(2026, 8, 14)
+        val set = repo.setBabyBirthDate(Baby.FIRST_ID, born)
+        assertEquals(born, set.selectedBaby.born)
+        assertEquals("2026-08-14", set.selectedBaby.birthDate)
+        assertEquals("the change stamps the baby", set.updatedAtMillis, set.selectedBaby.updatedAtMillis)
+        assertEquals(set, sync.pushedSettings.last())
+        assertEquals(born, repo.current().selectedBaby.born)
+        // In the backup's JSON only when set.
+        assertTrue(BabyJson.encode(set.selectedBaby).contains("\"birthDate\":\"2026-08-14\""))
+        val removed = repo.setBabyBirthDate(Baby.FIRST_ID, null)
+        assertNull(removed.selectedBaby.born)
+        assertFalse(BabyJson.encode(removed.selectedBaby).contains("birthDate"))
+    }
+
+    @Test
+    fun aRemovedBabysTombstoneCarriesNoBirthDate() = runBlocking {
+        val second = repo.addBaby()
+        repo.setBabyBirthDate(second.id, LocalDate.of(2026, 8, 14))
+        val after = repo.removeBaby(second.id)
+        assertNull(after.removedBabies.single().birthDate)
+    }
+
+    @Test
+    fun theWatchFaceEstimatesAreStoredAndSynced() = runBlocking {
+        assertEquals(ForecastKind.entries.toSet(), repo.current().watchForecasts)
+        val noPoop = repo.setWatchForecast(ForecastKind.POOP, shown = false)
+        assertEquals(setOf(ForecastKind.FEED, ForecastKind.SLEEP), noPoop.watchForecasts)
+        assertEquals(noPoop, sync.pushedSettings.last())
+        assertEquals(noPoop.watchForecasts, repo.current().watchForecasts)
+        val none = repo.setWatchForecast(ForecastKind.FEED, shown = false).let { repo.setWatchForecast(ForecastKind.SLEEP, shown = false) }
+        assertEquals(emptySet<ForecastKind>(), none.watchForecasts)
+        assertEquals("none chosen is not all", emptySet<ForecastKind>(), repo.current().watchForecasts)
+    }
+
+    @Test
+    fun theWatchFaceEstimatesTravelInTheSettingsJson() {
+        val settings = Settings(watchForecasts = setOf(ForecastKind.SLEEP), updatedAtMillis = 5L)
+        val json = SettingsJson.encode(settings)
+        assertTrue(json, json.contains("\"watchForecasts\":[\"SLEEP\"]"))
+        assertEquals(setOf(ForecastKind.SLEEP), SettingsJson.decodeOrNull(json)?.watchForecasts)
+        // From an older device: all of them. From a newer one with a kind this version does not know: that one skipped.
+        assertEquals(ForecastKind.entries.toSet(), SettingsJson.decodeOrNull("{\"babies\":[{\"id\":\"default\"}]}")?.watchForecasts)
+        val newer = "{\"babies\":[{\"id\":\"default\"}],\"watchForecasts\":[\"FEED\",\"BATH\"]}"
+        assertEquals(setOf(ForecastKind.FEED), SettingsJson.decodeOrNull(newer)?.watchForecasts)
     }
 }

@@ -90,7 +90,7 @@ class WidgetBabiesTest {
         val log = render(DpSize(358.dp, 208.dp)) { LogWidgetContent(WidgetSamples.twins(night = true)) }.descriptions()
         // Each button goes on with the time since the last one and what the week expects next (V1_ADDITIONS §9).
         assertTrue(log.toString(), "Log diaper for Noa, Last diaper 48 minutes ago" in log)
-        assertTrue(log.toString(), "Log feed for Noa, Last feed 2 hours 10 minutes ago, next feed expected around 15:30" in log)
+        assertTrue(log.toString(), "Log feed for Noa, Last feed 2 hours 10 minutes ago, next feed expected around 15:25" in log)
         assertTrue(log.toString(), log.any { it.startsWith("Start sleep for Noa") })
 
         val quick = render(DpSize(171.dp, 100.dp)) { QuickWidgetContent(WidgetSamples.twins(night = true)) }.descriptions()

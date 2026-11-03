@@ -520,8 +520,11 @@ own last 7 days, which is recent enough to follow a growing baby:
    3 different days. Poop follows no clock, so all poop gaps count.
 3. Too few (under 5, or from fewer than 3 days), too spread out (interquartile range over 1.5 × the median), or
    the current stretch already twice the longest of them (logging has stopped): no forecast.
-4. Their median, added to the current stretch's start. The estimate is **fixed for the stretch**: a long nap or a late
-   feed does not move it on to a new guess, it shows "now" until the stretch ends or
+4. Their median, added to the current stretch's start. The recent days count more: each stretch is weighted by its
+   age, halving every 3 days (a stretch 3 days old counts half, 6 days old a quarter), and the median and the
+   quartiles of step 3 are the weighted ones (with equal weights, the plain ones). A growth spurt changes the rhythm for
+   a few days, and the estimate follows it within those days instead of a week later. The estimate is **fixed for the
+   stretch**: a long nap or a late feed does not move it on to a new guess, it shows "now" until the stretch ends or
    step 3 drops it.
 
 5. **Poop after a feed** (fallback when steps 1–4 give no poop forecast). Newborns often poop shortly after feeding
@@ -532,5 +535,14 @@ own last 7 days, which is recent enough to follow a growing baby:
    feed's start plus the median delay. It reads like any poop forecast ("poop in 15m", "poop 5m ago") and is dropped
    once a poop is logged after the feed, or 90 minutes after it (or twice the longest delay, if sooner). This fades on
    its own as the baby grows and poops less often.
+
+6. **The baby's age**, when the parent gave a birth date (optional, Settings › Babies; synced to the watch and backed
+   up with the name). Without one these rules are left out:
+   - no sleep forecast (neither the next sleep nor the wake-up) before 6 weeks: a newborn's sleep has no day–night
+     rhythm yet (melatonin and cortisol rhythms appear around 6–12 weeks), so the time of day says little;
+   - from 6 weeks, a breastfed baby (every feed of the week that says what was given is a breast feed or a bottle of
+     breast milk; a bottle without its contents may have been formula) gets no poop forecast from the gaps between
+     poops (steps 1–4): days without a poop are normal then, and an overdue estimate would only worry. The poop after
+     a feed (step 5) still shows while it holds.
 
 In the sample week (§6 history) poop comes about once a day at random hours, and seldom right after a feed, so Diaper shows no forecast.

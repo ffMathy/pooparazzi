@@ -134,7 +134,7 @@ class FamilySectionSemanticsTest {
             }
         }
         compose.onNodeWithText("Family").assertDoesNotExist()
-        compose.onNodeWithText("Names stay on this phone and your watch.").performScrollTo().assertExists()
+        compose.onNodeWithText("Names and birth dates stay on this phone and your watch.").performScrollTo().assertExists()
     }
 
     @Test

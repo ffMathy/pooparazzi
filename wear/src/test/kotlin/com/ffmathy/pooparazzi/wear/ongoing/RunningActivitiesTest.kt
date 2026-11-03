@@ -7,6 +7,7 @@ import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.wear.ongoing.OngoingActivity
+import com.ffmathy.pooparazzi.core.domain.ForecastKind
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
@@ -24,7 +25,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** The Ongoing Activity for a running sleep (DESIGN_SPEC §3.8, §10.6); breast feeds are instants and have none. */
+/**
+ * The Ongoing Activity (DESIGN_SPEC §3.8, §10.6): a running sleep, or what comes next while the baby is awake, of the
+ * kinds chosen in Settings › Watch; breast feeds are instants and have none.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class RunningActivitiesTest {
@@ -130,5 +134,45 @@ class RunningActivitiesTest {
         // Switched to an awake baby: no activity.
         activities.sync(summarize(emptyList(), SampleData.NOW_0312, SampleData.ZONE), baby = "Noa")
         assertNull(shadowOf(notifications).getNotification(1001))
+    }
+
+    private fun title() = shadowOf(notifications).getNotification(1001)?.extras?.getString(NotificationCompat.EXTRA_TITLE)
+
+    /** Awake with a week to predict from: the earliest estimate, under the "upcoming" icon. */
+    @Test
+    fun awakeItShowsTheEarliestChosenEstimate() {
+        val summary = summarize(SampleData.history(), SampleData.NOW_1432, SampleData.ZONE)
+        val activities = RunningActivities(app, wallClock = { SampleData.NOW_1432 })
+        activities.sync(summary)
+        assertTrue(title().orEmpty(), title().orEmpty().startsWith("Sleep "))
+        val activity = OngoingActivity.recoverOngoingActivity(app, 1001)
+        assertEquals(XDrawables.upcoming, activity?.staticIcon?.resId)
+        assertTrue(activity?.contentDescription.toString(), activity?.contentDescription.toString().startsWith("Expected to sleep again around "))
+
+        // Only feeds chosen: the next feed, though the next sleep comes first.
+        activities.sync(summary, kinds = setOf(ForecastKind.FEED))
+        assertTrue(title().orEmpty(), title().orEmpty().startsWith("Feed "))
+
+        // Nothing chosen: no activity while awake.
+        activities.sync(summary, kinds = emptySet())
+        assertNull(shadowOf(notifications).getNotification(1001))
+    }
+
+    /** Asleep with nothing chosen: the sleep still shows, with how long it has run. */
+    @Test
+    fun asleepWithNothingChosenItShowsHowLongTheSleepHasRun() {
+        RunningActivities(app, wallClock = { SampleData.NOW_0312 })
+            .sync(summarize(SampleData.historyAt0312(), SampleData.NOW_0312, SampleData.ZONE), kinds = emptySet())
+        assertEquals("Asleep 1h 07m", title())
+        assertEquals(XDrawables.sleepRunning, OngoingActivity.recoverOngoingActivity(app, 1001)?.staticIcon?.resId)
+    }
+
+    /** A newborn (under six weeks) has no sleep estimate, so the wake-up is not shown. */
+    @Test
+    fun aNewbornGetsNoWakeUpEstimate() {
+        val born = SampleData.TODAY.minusWeeks(3)
+        RunningActivities(app, wallClock = { SampleData.NOW_0312 })
+            .sync(summarize(SampleData.historyAt0312(), SampleData.NOW_0312, SampleData.ZONE), kinds = setOf(ForecastKind.SLEEP), birthDate = born)
+        assertEquals("Asleep 1h 07m", title())
     }
 }

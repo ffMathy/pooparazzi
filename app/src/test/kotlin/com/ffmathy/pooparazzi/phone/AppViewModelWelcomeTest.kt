@@ -1,6 +1,8 @@
 package com.ffmathy.pooparazzi.phone
 
 import android.app.Application
+import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.app.AppViewModel
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
@@ -8,6 +10,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -70,5 +73,53 @@ class AppViewModelWelcomeTest : CoreTestBase() {
         runCurrent()
         assertEquals(SampleData.TWIN_ID, core.settings.current().selectedBaby.id)
         assertEquals(HomeLaunch.Feed, vm.launch.value)
+    }
+
+    /** The first run's "Your baby" screen: after the Welcome, once, on a fresh start only. */
+    @Test
+    fun theBabyIsAskedForAfterTheWelcomeOnce() = coreTest(seed = emptyList()) { core ->
+        // A fresh install: one baby, not named yet.
+        core.settings.renameBaby(Baby.FIRST_ID, "")
+        val store = MemoryWelcomeStore()
+        val vm = AppViewModel(core.repository, core.settings, FakeAccounts(), store)
+        runCurrent()
+        assertEquals("not over the Welcome", false, vm.babyIntro.value)
+        vm.finishWelcome()
+        runCurrent()
+        assertEquals(true, vm.babyIntro.value)
+        vm.finishBabyIntro()
+        runCurrent()
+        assertEquals(false, vm.babyIntro.value)
+        assertTrue(store.babyAsked)
+        val again = AppViewModel(core.repository, core.settings, FakeAccounts(), store)
+        runCurrent()
+        assertEquals("not again", false, again.babyIntro.value)
+    }
+
+    /** A phone that already has a log (an update), or a named baby, is not asked. */
+    @Test
+    fun aPhoneWithALogOrANamedBabyIsNotAsked() = coreTest(seed = emptyList()) { core ->
+        core.settings.renameBaby(Baby.FIRST_ID, "")
+        core.repository.add(Entry.diaper(SampleData.NOW_1432, pee = true, poop = false))
+        val logged = AppViewModel(core.repository, core.settings, FakeAccounts(), MemoryWelcomeStore(seen = true))
+        runCurrent()
+        assertEquals(false, logged.babyIntro.value)
+    }
+
+    @Test
+    fun aNamedBabyIsNotAsked() = coreTest(seed = emptyList()) { core ->
+        core.settings.setBabyName("Noa")
+        val named = AppViewModel(core.repository, core.settings, FakeAccounts(), MemoryWelcomeStore(seen = true))
+        runCurrent()
+        assertEquals(false, named.babyIntro.value)
+    }
+
+    @Test
+    fun unknownUntilTheLogHasLoaded() = coreTest(seed = emptyList()) { core ->
+        core.settings.renameBaby(Baby.FIRST_ID, "")
+        val vm = AppViewModel(core.repository, core.settings, FakeAccounts(), MemoryWelcomeStore(seen = true))
+        assertNull("the splash waits for it", vm.babyIntro.value)
+        runCurrent()
+        assertEquals(true, vm.babyIntro.value)
     }
 }

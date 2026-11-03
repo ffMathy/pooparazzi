@@ -83,7 +83,7 @@ data class MainUiState(
             sync = sync,
             babies = babies,
             babyId = babyId,
-            forecast = forecast(summary),
+            forecast = forecast(summary, (babies.firstOrNull { it.id == babyId } ?: babies.firstOrNull())?.born),
         )
 
         /** Before the first database read. */

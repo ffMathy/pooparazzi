@@ -57,6 +57,7 @@ abstract class AppLinkFlowTestBase {
             prepare()
             AppAccounts.install(accounts, families, consent)
             WelcomePrefs(ApplicationProvider.getApplicationContext<Application>()).seen = welcomeSeen
+            BabyAlreadyAsked.apply()
             link?.let(AppLinkInbox.shared::post)
         }
     }

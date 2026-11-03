@@ -140,7 +140,7 @@ service cloud.firestore {
         allow create, update: if isMember(fid) && isSyncedDoc();
       }
 
-      // The shared babies (id, name, updatedAtMillis), one document per baby.
+      // The shared babies (id, name, updatedAtMillis, an optional birthDate), one document per baby.
       match /babies/{babyId} {
         allow read, delete: if isMember(fid);
         allow create, update: if isMember(fid) && isSyncedDoc();

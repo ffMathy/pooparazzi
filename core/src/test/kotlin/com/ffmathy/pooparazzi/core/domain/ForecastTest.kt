@@ -1,10 +1,13 @@
 package com.ffmathy.pooparazzi.core.domain
 
+import com.ffmathy.pooparazzi.core.model.BottleContents
+import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.sample.SampleData.ZONE
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -141,8 +144,8 @@ class ForecastTest {
     @Test
     fun theSampleWeekPredictsSleepAndFeedButNotPoop() {
         val f = forecast(summarize(SampleData.history(), SampleData.NOW_1432, ZONE))
-        assertTrue(f.sleep!!.atMillis in SampleData.NOW_1432 + 45 * MINUTE..SampleData.NOW_1432 + 55 * MINUTE)
-        assertTrue(f.feed!!.atMillis in SampleData.NOW_1432 + 55 * MINUTE..SampleData.NOW_1432 + 60 * MINUTE)
+        assertTrue(f.sleep!!.atMillis in SampleData.NOW_1432 + 40 * MINUTE..SampleData.NOW_1432 + 50 * MINUTE)
+        assertTrue(f.feed!!.atMillis in SampleData.NOW_1432 + 50 * MINUTE..SampleData.NOW_1432 + 55 * MINUTE)
         assertNull(f.poop)
     }
 
@@ -201,5 +204,100 @@ class ForecastTest {
         // own, so after the 09:20 poop the next is due at 12:20, not 20 minutes after a feed.
         val entries = feedsEvery3h(at(6, 9)).flatMap { listOf(it, Entry.diaper(it.startMillis + 20 * MINUTE, pee = true, poop = true, id = "p${it.id}")) }
         assertEquals(at(6, 12, 20), forecastAt(entries, at(6, 9, 30)).poop!!.atMillis)
+    }
+
+    // ---- Recent days count more (growth spurts) ----
+
+    @Test
+    fun equalWeightsGiveThePlainQuantile() {
+        val values = listOf(10L, 20L, 30L, 70L)
+        for (q in listOf(0.0, 0.25, 0.5, 0.75, 1.0)) {
+            assertEquals(quantile(values, q), weightedQuantile(values.map { it to 1.0 }, q), 1e-9)
+        }
+    }
+
+    @Test
+    fun aHeavierValuePullsTheMedianTowardsItself() {
+        val values = listOf(10L to 1.0, 20L to 1.0, 30L to 4.0)
+        assertTrue(weightedQuantile(values, 0.5) > 20.0)
+    }
+
+    @Test
+    fun afterAGrowthSpurtTheEstimateFollowsTheRecentDays() {
+        // Feeds every 3 hours for four days, then every 2 hours for the last three: the recent rhythm wins.
+        val feeds = mutableListOf<Entry>()
+        var t = at(0, 0)
+        while (t <= at(6, 12)) {
+            feeds += Entry.feed(FeedType.BOTTLE, t, id = "f${feeds.size}")
+            t += if (t < at(4, 0)) 3 * HOUR else 2 * HOUR
+        }
+        val last = feeds.last().startMillis
+        val f = forecastAt(feeds, last + 30 * MINUTE).feed!!
+        assertEquals(last + 2 * HOUR, f.atMillis)
+    }
+
+    // ---- The baby's age ----
+
+    private val sleeps = (0..5).flatMap { d ->
+        listOf(Entry.sleep(at(d, 10), at(d, 11), id = "n$d-10"), Entry.sleep(at(d, 14), at(d, 15), id = "n$d-14"))
+    }
+
+    @Test
+    fun noSleepEstimateBeforeSixWeeks() {
+        val asleep = sleeps + Entry.sleep(at(6, 14), null, id = "now")
+        val now = at(6, 14, 20)
+        val today = DAY.plusDays(6)
+        assertNull(forecast(summarize(asleep, now, ZONE), birthDate = today.minusDays(41)).sleep)
+        assertNotNull(forecast(summarize(asleep, now, ZONE), birthDate = today.minusDays(42)).sleep)
+        // Without a birth date, as before.
+        assertNotNull(forecast(summarize(asleep, now, ZONE)).sleep)
+    }
+
+    /** Poops alternating 2, 3 and 4 hours apart, regular enough to predict. */
+    private fun regularPoops(): List<Entry> {
+        val lengths = listOf(2, 3, 4)
+        val poops = mutableListOf<Entry>()
+        var t = at(0, 0)
+        while (t <= at(6, 12)) {
+            poops += Entry.diaper(t, pee = false, poop = true, id = "p${poops.size}")
+            t += lengths[poops.size % 3] * HOUR
+        }
+        return poops
+    }
+
+    @Test
+    fun fromSixWeeksABreastfedBabysPoopGapsAreNotEstimated() {
+        val poops = regularPoops()
+        val now = poops.last().startMillis + 30 * MINUTE
+        val feeds = (0..5).map { Entry.breastfeed(at(it, 9, 7), BreastSide.LEFT_THEN_RIGHT, id = "b$it") }
+        val bornLongAgo = DAY.minusDays(60)
+        assertNull(forecast(summarize(poops + feeds, now, ZONE), birthDate = bornLongAgo).poop)
+        // Younger than six weeks: estimated as before.
+        assertNotNull(forecast(summarize(poops + feeds, now, ZONE), birthDate = DAY.minusDays(20)).poop)
+        // Formula in the week: not breastfed, estimated as before.
+        val formula = Entry.feed(FeedType.BOTTLE, at(6, 9, 30), id = "formula", contents = BottleContents.FORMULA)
+        assertNotNull(forecast(summarize(poops + feeds + formula, now, ZONE), birthDate = bornLongAgo).poop)
+    }
+
+    @Test
+    fun breastfedMeansEveryTypedFeedIsBreastMilk() {
+        val breast = Entry.breastfeed(at(0, 1), id = "b")
+        val milk = Entry.feed(FeedType.BOTTLE, at(0, 2), id = "m", contents = BottleContents.MILK)
+        val bottle = Entry.feed(FeedType.BOTTLE, at(0, 3), id = "x")
+        val untyped = Entry.feed(null, at(0, 4), id = "u")
+        assertTrue(isBreastfed(listOf(breast, milk, untyped)))
+        assertFalse("a bottle without its contents may be formula", isBreastfed(listOf(breast, bottle)))
+        assertFalse("nothing says what was given", isBreastfed(listOf(untyped)))
+        assertFalse(isBreastfed(listOf(breast, Entry.feed(FeedType.FOOD, at(0, 5), id = "f"))))
+    }
+
+    @Test
+    fun onlyKeepsTheChosenKinds() {
+        val f = forecast(summarize(SampleData.history(), SampleData.NOW_1432, ZONE))
+        val feedOnly = f.only(setOf(ForecastKind.FEED))
+        assertEquals(f.feed, feedOnly.feed)
+        assertNull(feedOnly.sleep)
+        assertNull(feedOnly.poop)
+        assertEquals(f.sleep, f[ForecastKind.SLEEP])
     }
 }

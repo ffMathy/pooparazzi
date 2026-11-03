@@ -22,6 +22,7 @@ import com.ffmathy.pooparazzi.phone.PooparazziApp
 import com.ffmathy.pooparazzi.phone.notify.TimerNotifications
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import com.ffmathy.pooparazzi.phone.BabyAlreadyAsked
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -55,6 +56,7 @@ class PhonePlatformSmokeTest {
     @Before
     fun setUp() {
         assertTrue("The manifest application is PooparazziApp", app is PooparazziApp)
+        BabyAlreadyAsked.apply()
     }
 
     @After

@@ -19,6 +19,7 @@ import com.ffmathy.pooparazzi.phone.ui.account.WelcomeRoute
 import com.ffmathy.pooparazzi.phone.ui.family.JoinRoute
 import com.ffmathy.pooparazzi.phone.ui.history.HistoryRoute
 import com.ffmathy.pooparazzi.phone.ui.home.HomeRoute
+import com.ffmathy.pooparazzi.phone.ui.settings.BabyIntroRoute
 import com.ffmathy.pooparazzi.phone.ui.settings.LicencesRoute
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsRoute
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsRoute
@@ -78,6 +79,8 @@ data class AccountLinks(
  *   has been answered. A deep link waits behind it.
  * @param consentNeeded the signed-in account has not agreed to the backup yet (BABIES_AND_BACKUP §3.6): the consent
  *   screen comes next, before everything else; links wait behind it.
+ * @param babyIntro the first run's "Your baby" screen (the name and birth date, both optional) comes next, after the
+ *   Welcome and the consent; [onBabyIntroDone] when it has been answered or skipped. Links wait behind it.
  * @param onLaunchedSheetClosed a sheet such a link opened has closed (see `HomeViewModel.launchedSheetClosed`).
  */
 @Composable
@@ -90,6 +93,8 @@ fun PooparazziPhoneApp(
     welcome: Boolean = false,
     onWelcomeDone: () -> Unit = {},
     consentNeeded: Boolean = false,
+    babyIntro: Boolean = false,
+    onBabyIntroDone: () -> Unit = {},
     onLaunchedSheetClosed: () -> Unit = {},
     links: AccountLinks = AccountLinks(),
 ) {
@@ -100,6 +105,8 @@ fun PooparazziPhoneApp(
             WelcomeRoute(onDone = onWelcomeDone)
         } else if (consentNeeded) {
             ConsentRoute()
+        } else if (babyIntro) {
+            BabyIntroRoute(onDone = onBabyIntroDone)
         } else {
             PooparazziNavHost(
                 launch = launch,

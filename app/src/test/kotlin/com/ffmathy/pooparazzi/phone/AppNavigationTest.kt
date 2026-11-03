@@ -25,7 +25,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w390dp-h844dp-xxhdpi")
 class AppNavigationTest {
-    @get:Rule
+    @get:Rule(order = 0)
+    val babyAsked = BabyAlreadyAsked()
+
+    @get:Rule(order = 1)
     val compose = createAndroidComposeRule<MainActivity>()
 
     @After

@@ -4,6 +4,8 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
 import java.util.UUID
 
 /**
@@ -18,6 +20,10 @@ import java.util.UUID
  * [removed] marks a tombstone (BABIES_AND_BACKUP §2.1): the parent removed the baby, and the tombstone, without its
  * name, keeps it from coming back from the family's backup, the watch or its entries. It is written only when true, so
  * a baby's JSON is as before.
+ *
+ * [birthDate] is the baby's birth date as an ISO date ("2026-09-14"), when the parent gave it (optional, and only used
+ * to tune what comes next to the baby's age: see `forecast`). Like the name it is synced to the watch and backed up to
+ * the family; it is written only when set, and a tombstone carries none.
  */
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
@@ -26,7 +32,17 @@ data class Baby(
     val name: String = "",
     val updatedAtMillis: Long = 0L,
     @EncodeDefault(EncodeDefault.Mode.NEVER) val removed: Boolean = false,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val birthDate: String? = null,
 ) {
+    /** [birthDate] as a date; null when not given or not a valid date. */
+    val born: LocalDate?
+        get() = birthDate?.let {
+            try {
+                LocalDate.parse(it)
+            } catch (e: DateTimeParseException) {
+                null
+            }
+        }
 
     /**
      * True when this version of the baby beats [other] (the same baby): the later stamp wins; on equal stamps the

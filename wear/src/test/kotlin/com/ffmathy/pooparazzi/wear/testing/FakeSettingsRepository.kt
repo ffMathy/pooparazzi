@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.wear.testing
 
+import com.ffmathy.pooparazzi.core.domain.ForecastKind
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
@@ -8,6 +9,7 @@ import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.updateAndGet
+import java.time.LocalDate
 
 /** Settings held in memory; [state] stands in for what the phone syncs through `/settings`. */
 class FakeSettingsRepository(initial: Settings = Settings()) : SettingsRepository {
@@ -17,6 +19,10 @@ class FakeSettingsRepository(initial: Settings = Settings()) : SettingsRepositor
     override suspend fun setBabyName(name: String) = state.updateAndGet { it.withBabyName(it.selectedBaby.id, name) }
 
     override suspend fun renameBaby(id: String, name: String) = state.updateAndGet { it.withBabyName(id, name) }
+
+    override suspend fun setBabyBirthDate(id: String, date: LocalDate?) = state.updateAndGet { it.withBabyBirthDate(id, date) }
+
+    override suspend fun setWatchForecast(kind: ForecastKind, shown: Boolean) = state.updateAndGet { it.withWatchForecast(kind, shown) }
 
     override suspend fun addBaby(): Baby {
         val baby = Baby(Baby.newId())

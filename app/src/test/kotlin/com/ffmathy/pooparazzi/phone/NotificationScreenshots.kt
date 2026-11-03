@@ -22,9 +22,12 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.test.core.app.ApplicationProvider
+import com.ffmathy.pooparazzi.core.domain.Expected
+import com.ffmathy.pooparazzi.core.domain.ForecastKind
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
+import com.ffmathy.pooparazzi.phone.notify.ForecastNotifications
 import com.ffmathy.pooparazzi.phone.notify.RunningTimer
 import com.ffmathy.pooparazzi.phone.notify.SleepingBaby
 import com.ffmathy.pooparazzi.phone.notify.TimerNotifications
@@ -46,6 +49,10 @@ import org.robolectric.annotation.GraphicsMode
  *
  * Then the per-baby sleep notifications (BABIES_AND_BACKUP §2.3): twins both asleep, so "Noa is asleep" and "Ida is
  * asleep" each with their "Woke up", in `31-notification-twins.png`.
+ *
+ * Then the prediction notifications ([ForecastNotifications]), one per kind, each on its own channel: awake at 14:32,
+ * the next feed and the next sleep; Noa asleep, the expected wake-up; and the next poop, due soon. In
+ * `50-notification-forecasts.png`.
  */
 abstract class NotificationScreenshots(private val language: AppLanguage) {
     @get:Rule
@@ -102,6 +109,30 @@ abstract class NotificationScreenshots(private val language: AppLanguage) {
             }
         }
         compose.onNodeWithTag(TAG).captureRoboImage("screenshots/${language.tag}/31-notification-twins.png")
+    }
+
+    @Test
+    fun forecastNotifications() {
+        val noa = Baby(Baby.FIRST_ID, SampleData.BABY_NAME)
+        val awake = TimerState(sleeping = emptyList(), babies = listOf(noa), language = language, zone = SampleData.ZONE, now = SampleData.NOW_1432)
+        val asleep = awake.copy(sleeping = listOf(SleepingBaby(noa, RunningTimer("sleep-noa", SampleData.at(13, 5)))))
+        fun expected(minutes: Int): Expected {
+            val at = SampleData.NOW_1432 + minutes * 60_000L
+            return Expected(at, goneAtMillis = at + 4 * 60 * 60_000L, samples = 7)
+        }
+        val forecasts = ForecastNotifications(context)
+        val views = listOf(
+            forecasts.build(awake, noa.id, ForecastKind.FEED, expected(65)),
+            forecasts.build(awake, noa.id, ForecastKind.SLEEP, expected(50)),
+            forecasts.build(asleep, noa.id, ForecastKind.SLEEP, expected(40)),
+            forecasts.build(awake, noa.id, ForecastKind.POOP, expected(3)),
+        ).map { Notification.Builder.recoverBuilder(context, it).createContentView() }
+        compose.setContent {
+            Column(Modifier.testTag(TAG).background(Backdrop).padding(16.dp)) {
+                views.forEach { Card(it) }
+            }
+        }
+        compose.onNodeWithTag(TAG).captureRoboImage("screenshots/${language.tag}/50-notification-forecasts.png")
     }
 
     private fun expanded(notification: Notification): RemoteViews =

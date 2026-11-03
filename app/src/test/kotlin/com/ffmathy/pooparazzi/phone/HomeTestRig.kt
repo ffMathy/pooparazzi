@@ -8,6 +8,7 @@ import com.ffmathy.pooparazzi.core.CoreGraph
 import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.RoomEntryRepository
 import com.ffmathy.pooparazzi.core.data.PooparazziDatabase
+import com.ffmathy.pooparazzi.core.domain.ForecastKind
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
+import java.time.LocalDate
 
 /** Settings held in memory. */
 class InMemorySettings(initial: Settings = SampleData.settings) : SettingsRepository {
@@ -40,6 +42,8 @@ class InMemorySettings(initial: Settings = SampleData.settings) : SettingsReposi
     override val settings: Flow<Settings> = state
     override suspend fun setBabyName(name: String): Settings = update { it.withBabyName(it.selectedBaby.id, name) }
     override suspend fun renameBaby(id: String, name: String): Settings = update { it.withBabyName(id, name) }
+    override suspend fun setBabyBirthDate(id: String, date: LocalDate?): Settings = update { it.withBabyBirthDate(id, date) }
+    override suspend fun setWatchForecast(kind: ForecastKind, shown: Boolean): Settings = update { it.withWatchForecast(kind, shown) }
     override suspend fun addBaby(): Baby {
         val baby = Baby(Baby.newId())
         val next = update { if (it.babies.size >= Settings.MAX_BABIES) it else it.withBabies(listOf(baby.id)) }

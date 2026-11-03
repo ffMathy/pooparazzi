@@ -3,6 +3,13 @@ package com.ffmathy.pooparazzi.phone
 import android.app.Application
 import android.provider.Settings
 import androidx.compose.foundation.layout.Box
+import com.ffmathy.pooparazzi.phone.ui.settings.AddBabyCard
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -109,6 +116,59 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
         }
         compose.waitForIdle()
         captureScreenRoboImage(path("44-settings-remove-baby", tour = true))
+    }
+
+    /** Settings › Babies with a birth date given, and the date picker open on it; dialogs live in their own window. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test fun settingsBirthDate() {
+        compose.setContent {
+            NightLightTheme(night = false) {
+                SettingsScreen(SettingsSamples.birthDate(), SettingsActions.None, windowInsets = ReferenceInsets)
+            }
+        }
+        compose.waitForIdle()
+        captureScreenRoboImage(path("48-settings-birth-date", tour = true))
+    }
+
+    /**
+     * "Add a baby" asks for the name and, optionally, the birth date, saying why. Its card is drawn on its own over a
+     * dimmed Settings: in a dialog window under Robolectric the name field takes the focus and its cursor never lets the
+     * app go idle for a capture.
+     */
+    /** "Baby 2" in the test's language: the new baby's label. */
+    private fun secondBabyLabel(): String = String.format(
+        java.util.Locale.ROOT,
+        ApplicationProvider.getApplicationContext<Application>().getString(com.ffmathy.pooparazzi.core.R.string.baby_name_numbered),
+        2,
+    )
+
+    @Test fun settingsAddBaby() = screen("51-settings-add-baby", night = false) {
+        Box(Modifier.fillMaxSize()) {
+            SettingsScreen(SettingsSamples.state(), SettingsActions.None, windowInsets = ReferenceInsets)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)).padding(24.dp), contentAlignment = Alignment.Center) {
+                AddBabyCard(placeholder = secondBabyLabel(), signedIn = true, onAdd = { _, _ -> }, onCancel = {})
+            }
+        }
+    }
+
+    /**
+     * What comes next, chosen in Settings: the watch face shows the next feed and sleep (not poop), and the prediction
+     * notifications, one row per channel, the next poop's turned off. Scrolled to the notifications' hint.
+     */
+    @Test fun settingsPredictions() {
+        compose.setContent {
+            NightLightTheme(night = false) {
+                SettingsScreen(
+                    SettingsSamples.predictions(),
+                    SettingsActions.None,
+                    channels = SettingsSamples.predictionChannels,
+                    windowInsets = ReferenceInsets,
+                )
+            }
+        }
+        val hint = ApplicationProvider.getApplicationContext<Application>().getString(R.string.settings_forecast_notifications_hint)
+        compose.onNodeWithText(hint).performScrollTo()
+        compose.onRoot().captureRoboImage(path("49-settings-predictions", tour = true))
     }
 
     @Test fun settingsBabiesWatchUpdate() = screen("32-settings-babies-watch-update", night = false) {

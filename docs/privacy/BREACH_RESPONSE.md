@@ -11,7 +11,7 @@ What to do if the backup's data may have been read, changed, lost or deleted by 
 
 ## 2. Assess (within 24 hours)
 
-- What data (log entries, babies' names, members' email addresses, invites), how many families and accounts, and over what period.
+- What data (log entries, babies' names and birth dates, members' email addresses, invites), how many families and accounts, and over what period.
 - The risk to the parents and children: the log is health data about named children, so assume a high risk unless the data was unreadable or the exposure was shown not to have happened.
 
 ## 3. Notify

@@ -1,11 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-title-da="Privatlivspolitik · Pooparazzi">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
   <meta name="description" content="How Pooparazzi handles your data: what is stored, where, who sees it, and your rights under the GDPR.">
   <title>Privacy policy · Pooparazzi</title>
+  <script>(function(){var d=document.documentElement,l=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||"en"];for(var i=0;i<l.length;i++){var c=String(l[i]).toLowerCase().split("-")[0];if(c==="en")return;if(c==="da"){d.lang="da";d.className="da";var t=d.getAttribute("data-title-da");if(t)document.title=t;return}}})();</script>
   <style>
     :root { color-scheme: light dark; --bg: #fbf7f1; --fg: #2b2520; --muted: #6b6058; --accent: #9a4f1d; --line: #e3d9cc; }
     @media (prefers-color-scheme: dark) { :root { --bg: #1b1714; --fg: #f1e8dc; --muted: #b9ab9b; --accent: #f0a868; --line: #3a322b; } }
@@ -18,17 +19,19 @@
     a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     .button { display: inline-block; min-height: 48px; padding: .75rem 1.25rem; border-radius: 999px; background: var(--accent); color: var(--bg); font-weight: 600; text-decoration: none; }
     .muted, footer { color: var(--muted); font-size: .95rem; }
-    section + section { border-top: 1px solid var(--line); margin-top: 2rem; padding-top: 1rem; }
     footer { border-top: 1px solid var(--line); margin-top: 2.5rem; padding-top: 1rem; }
     code { font-size: .9em; }
     .table { overflow-x: auto; } table { border-collapse: collapse; width: 100%; font-size: .95rem; } th, td { text-align: left; vertical-align: top; padding: .5rem; border-bottom: 1px solid var(--line); } li + li { margin-top: .35rem; }
+    [data-lang="da"] { display: none; }
+    .da [data-lang="en"] { display: none; }
+    .da [data-lang="da"] { display: revert; }
   </style>
 </head>
 <body>
 <main>
-<article lang="en">
+<article lang="en" data-lang="en">
 <h1>Pooparazzi privacy policy</h1>
-<p class="muted">Effective 30 October 2026</p>
+<p class="muted">Effective 2 November 2026</p>
 <p>Pooparazzi is an app for parents: it logs a baby's feeds, diapers and sleep on an Android phone and a Wear OS watch. This policy explains what happens to that information. In short: <strong>without an account nothing is sent to us; with an account, your log and your babies are stored in Google Firebase so that you and the members of your family can see them, and nobody else. There are no ads, no analytics and no tracking, and nothing is ever sold.</strong></p>
 <h2>1. Who is responsible</h2>
 <p>The data controller is <strong>Mathias Lorenzen</strong>, Denmark, the developer of Pooparazzi. Contact: <strong><a href="mailto:mathias.lorenzen@live.com">mathias.lorenzen@live.com</a></strong>. Write to this address with any question about your data or to use any of your rights (section 8).</p>
@@ -38,14 +41,14 @@
 <div class="table"><table><thead><tr><th scope="col">What</th><th scope="col">Details</th><th scope="col">Why</th></tr></thead><tbody>
 <tr><th scope="row">Your account</th><td>Your email address, a user id, when the account was created and last signed in. If you sign in with Google, Firebase Authentication also keeps the name and profile picture link of your Google account (the app does not use them). There is no password: you sign in with Google or with a link sent to your email.</td><td>To sign you in and keep your data yours</td></tr>
 <tr><th scope="row">Your log</th><td>Every entry: its times, its kind (feed, diaper, sleep), the feed type and breast side, the diaper's pee and poop with optional colour and texture, which baby it belongs to, and when it was last changed. A deleted entry stays only as a marker that tells your family's other phones it is gone (its id, kind, baby and when it was deleted), without its times or details</td><td>To back it up, restore it on a new phone and share it with your family</td></tr>
-<tr><th scope="row">Your babies</th><td>Each baby's name (whatever you type; a nickname is fine) and an id</td><td>To show the same babies, with their names, on every family member's phone</td></tr>
+<tr><th scope="row">Your babies</th><td>Each baby's name (whatever you type; a nickname is fine), its birth date if you give one (optional), and an id</td><td>To show the same babies, with their names, on every family member's phone, and to tune what comes next to the baby's age</td></tr>
 <tr><th scope="row">Your family</th><td>The email address of every member, when they joined and which invite they used; who runs the family (the user id of its creator); invites (the family, who made it, the inviter's email, when it expires)</td><td>To let the members see who is in the family, to let its creator remove members, and to let an invited person join</td></tr>
 </tbody></table></div>
 <p>The app does not collect your location, contacts, photos, device identifiers or advertising id, and contains no analytics, advertising or crash-reporting code. Google's servers, like any web server, see the IP address of each request; Google uses it to run and protect the service (for example to limit how many accounts can be created from one address).</p>
-<p>The website (the invite page, the sign-in page and this policy) sets no cookies and loads no scripts.</p>
+<p>The website (the invite page, the sign-in page and this policy) sets no cookies, stores nothing in your browser and loads nothing from elsewhere. One small script in each page reads your browser's preferred languages to show the page in English or Danish; it sends nothing anywhere.</p>
 <h2>3. Why, and on what legal basis (GDPR)</h2>
 <ul>
-<li><strong>Your account, the backup, the restore on a new phone and the family sharing</strong>: your <strong>consent</strong>, GDPR Article 6(1)(a). Signing in is your choice and creates the account (your email address). Before the app uploads anything else, it asks on a <strong>separate consent screen</strong>, the first time you are signed in on a phone (and so also before you can join a family): it says what is uploaded (your log, your babies' names and your email address), who sees it (you and the members of your family), where it is kept (Google Firebase, with the database in the EU) and how to withdraw, with an explicit <strong>"I agree"</strong> button. Nothing is uploaded until you tap it; "Not now, sign out" signs you out instead. The app remembers your answer on that phone, for that account.</li>
+<li><strong>Your account, the backup, the restore on a new phone and the family sharing</strong>: your <strong>consent</strong>, GDPR Article 6(1)(a). Signing in is your choice and creates the account (your email address). Before the app uploads anything else, it asks on a <strong>separate consent screen</strong>, the first time you are signed in on a phone (and so also before you can join a family): it says what is uploaded (your log, your babies' names and any birth dates you give, and your email address), who sees it (you and the members of your family), where it is kept (Google Firebase, with the database in the EU) and how to withdraw, with an explicit <strong>"I agree"</strong> button. Nothing is uploaded until you tap it; "Not now, sign out" signs you out instead. The app remembers your answer on that phone, for that account, and asks again when what is uploaded changes (as it did when birth dates were added).</li>
 <li><strong>Information about your baby</strong> (feeding, diapers and sleep can say something about a child's health): your <strong>explicit consent</strong> as the baby's parent or guardian, GDPR Articles 6(1)(a) and 9(2)(a), given on the same consent screen, which says so.</li>
 <li><strong>Withdrawing your consent</strong>, at any time: <strong>sign out</strong> (nothing more is uploaded from that phone, and the app asks again when you sign in), <strong>leave the family</strong> (Settings › Family), or <strong>delete your account</strong> (Settings › Account), which deletes what is stored as section 6 describes. Withdrawing does not affect what was done before.</li>
 <li><strong>Security and abuse protection</strong> (for example Google's limits on sign-up attempts): GDPR Article 6(1)(f), the legitimate interest in keeping the service safe.</li>
@@ -77,15 +80,15 @@
 </ul>
 <p>Deleted data is removed from Google's systems as described in Google's data processing terms (backups can take a little longer to expire).</p>
 <h2>7. Children</h2>
-<p>Pooparazzi is made for parents and caregivers. Accounts are for adults; the app is not meant to be used by children. The information about a baby (its name and its log) is entered by its parent or guardian, who decides whether to back it up and with whom to share it, and who can exercise the baby's rights on the baby's behalf.</p>
+<p>Pooparazzi is made for parents and caregivers. Accounts are for adults; the app is not meant to be used by children. The information about a baby (its name, its birth date if given, and its log) is entered by its parent or guardian, who decides whether to back it up and with whom to share it, and who can exercise the baby's rights on the baby's behalf.</p>
 <h2>8. Your rights</h2>
 <p>Under the GDPR you have the right to:</p>
 <ul>
 <li><strong>access</strong> your data and get a copy of it;</li>
-<li><strong>rectify</strong> it (you can rename babies and edit or delete entries in the app at any time);</li>
+<li><strong>rectify</strong> it (you can rename babies, change or remove their birth dates, and edit or delete entries in the app at any time);</li>
 <li><strong>erase</strong> it (section 6);</li>
 <li><strong>restrict</strong> or <strong>object</strong> to its processing;</li>
-<li><strong>data portability</strong>: receive it in a structured, machine-readable format (JSON). Settings › About › <strong>Download my data</strong> saves the log and the babies (with their names) that are on your phone as a ZIP file of JSON files (and <strong>Import data</strong> reads it back in); write to us for what only the backup holds, such as your account and your family's member list;</li>
+<li><strong>data portability</strong>: receive it in a structured, machine-readable format (JSON). Settings › About › <strong>Download my data</strong> saves the log and the babies (with their names and birth dates) that are on your phone as a ZIP file of JSON files (and <strong>Import data</strong> reads it back in); write to us for what only the backup holds, such as your account and your family's member list;</li>
 <li><strong>withdraw your consent</strong> at any time, without affecting what was done before.</li>
 </ul>
 <p>Write to <a href="mailto:mathias.lorenzen@live.com">mathias.lorenzen@live.com</a>; you will get an answer within one month. You can also complain to the Danish Data Protection Agency, <strong>Datatilsynet</strong> (Carl Jacobsens Vej 35, 2500 Valby, Denmark, <a href="https://www.datatilsynet.dk">www.datatilsynet.dk</a>), or to the data protection authority where you live.</p>
@@ -94,6 +97,76 @@
 <h2>10. Changes</h2>
 <p>If this policy changes, the new version is published on its web page (linked from the app's Settings › About), with a new date. Significant changes are also shown in the app before they take effect.</p>
 <h2>11. Contact</h2>
+<p>Mathias Lorenzen · <a href="mailto:mathias.lorenzen@live.com">mathias.lorenzen@live.com</a></p>
+</article>
+<article lang="da" data-lang="da">
+<h1>Privatlivspolitik for Pooparazzi</h1>
+<p class="muted">Gældende fra 2. november 2026</p>
+<p>Pooparazzi er en app til forældre: den logger et barns måltider, bleer og søvn på en Android-telefon og et Wear OS-ur. Denne politik forklarer, hvad der sker med de oplysninger. Kort sagt: <strong>uden en konto sendes intet til os; med en konto gemmes din log og dine børn i Google Firebase, så du og medlemmerne af din familie kan se dem, og ingen andre. Der er ingen reklamer, ingen analyse og ingen sporing, og intet bliver nogensinde solgt.</strong></p>
+<h2>1. Hvem er ansvarlig</h2>
+<p>Dataansvarlig er <strong>Mathias Lorenzen</strong>, Danmark, udvikleren af Pooparazzi. Kontakt: <strong><a href="mailto:mathias.lorenzen@live.com">mathias.lorenzen@live.com</a></strong>. Skriv til den adresse med spørgsmål om dine oplysninger, eller for at bruge dine rettigheder (afsnit 8).</p>
+<h2>2. Hvad der indsamles</h2>
+<p><strong>Uden en konto</strong> (standard) sender appen intet til udvikleren. Alt, hvad du logger, gemmes på din telefon og dit parrede ur. Telefonen og uret udveksler det gennem Wear OS (Google Play-tjenesters Wearable Data Layer), som er den måde, alle Wear OS-apps taler med deres telefonapp på. Er Android-backup slået til for din Google-konto, kan Android tage appens log med i den backup, på Googles egne vilkår; udvikleren kan ikke se den.</p>
+<p><strong>Med en konto</strong> (valgfrit, i Indstillinger › Konto) gemmes følgende i Google Firebase. Når du logger ind, oprettes din konto (første række); alt andet uploades først, når du har sagt ja til det på appens samtykkeskærm (afsnit 3):</p>
+<div class="table"><table><thead><tr><th scope="col">Hvad</th><th scope="col">Detaljer</th><th scope="col">Hvorfor</th></tr></thead><tbody>
+<tr><th scope="row">Din konto</th><td>Din e-mailadresse, et bruger-id, hvornår kontoen blev oprettet, og hvornår du sidst loggede ind. Logger du ind med Google, gemmer Firebase Authentication også navnet og linket til profilbilledet på din Google-konto (appen bruger dem ikke). Der er ingen adgangskode: du logger ind med Google eller med et link sendt til din e-mail.</td><td>For at logge dig ind og holde dine oplysninger dine</td></tr>
+<tr><th scope="row">Din log</th><td>Hver registrering: dens tider, dens art (måltid, ble, søvn), måltidets type og brystside, blens tis og bæ med valgfri farve og konsistens, hvilket barn den hører til, og hvornår den sidst blev ændret. En slettet registrering bliver kun tilbage som en markering, der fortæller familiens andre telefoner, at den er væk (dens id, art, barn og hvornår den blev slettet), uden tider eller detaljer</td><td>For at tage backup af den, gendanne den på en ny telefon og dele den med din familie</td></tr>
+<tr><th scope="row">Dine børn</th><td>Hvert barns navn (hvad du end skriver; et kælenavn er fint), dets fødselsdato, hvis du angiver en (valgfrit), og et id</td><td>For at vise de samme børn, med deres navne, på hvert familiemedlems telefon, og for at tilpasse det næste til barnets alder</td></tr>
+<tr><th scope="row">Din familie</th><td>Hvert medlems e-mailadresse, hvornår de kom med, og hvilken invitation de brugte; hvem der står for familien (bruger-id'et på den, der oprettede den); invitationer (familien, hvem der lavede dem, inviterendes e-mail, hvornår de udløber)</td><td>For at medlemmerne kan se, hvem der er i familien, for at den, der oprettede den, kan fjerne medlemmer, og for at en inviteret kan komme med</td></tr>
+</tbody></table></div>
+<p>Appen indsamler ikke din placering, dine kontakter, billeder, enheds-id'er eller annonce-id og indeholder ingen kode til analyse, reklamer eller fejlrapportering. Googles servere ser, som enhver webserver, IP-adressen på hver forespørgsel; Google bruger den til at drive og beskytte tjenesten (for eksempel til at begrænse, hvor mange konti der kan oprettes fra én adresse).</p>
+<p>Hjemmesiden (invitationssiden, log ind-siden og denne politik) sætter ingen cookies, gemmer intet i din browser og henter intet andre steder fra. Et lille script på hver side læser din browsers foretrukne sprog for at vise siden på engelsk eller dansk; det sender intet nogen steder hen.</p>
+<h2>3. Hvorfor, og med hvilket retsgrundlag (GDPR)</h2>
+<ul>
+<li><strong>Din konto, backuppen, gendannelsen på en ny telefon og delingen i familien</strong>: dit <strong>samtykke</strong>, GDPR artikel 6, stk. 1, litra a. Det er dit valg at logge ind, og det opretter kontoen (din e-mailadresse). Før appen uploader noget andet, spørger den på en <strong>særskilt samtykkeskærm</strong>, første gang du er logget ind på en telefon (og derfor også før du kan komme med i en familie): den siger, hvad der uploades (din log, dine børns navne og eventuelle fødselsdatoer samt din e-mailadresse), hvem der ser det (dig og medlemmerne af din familie), hvor det opbevares (Google Firebase, med databasen i EU), og hvordan du trækker samtykket tilbage, med en tydelig <strong>"Jeg giver samtykke"</strong>-knap. Intet uploades, før du trykker på den; "Ikke nu, log ud" logger dig ud i stedet. Appen husker dit svar på den telefon, for den konto, og spørger igen, når det, der uploades, ændrer sig (som da fødselsdatoer kom til).</li>
+<li><strong>Oplysninger om dit barn</strong> (måltider, bleer og søvn kan sige noget om et barns helbred): dit <strong>udtrykkelige samtykke</strong> som barnets forælder eller værge, GDPR artikel 6, stk. 1, litra a, og artikel 9, stk. 2, litra a, givet på den samme samtykkeskærm, som siger det.</li>
+<li><strong>Tilbagetrækning af dit samtykke</strong>, når som helst: <strong>log ud</strong> (intet mere uploades fra den telefon, og appen spørger igen, når du logger ind), <strong>forlad familien</strong> (Indstillinger › Familie), eller <strong>slet din konto</strong> (Indstillinger › Konto), som sletter det gemte som beskrevet i afsnit 6. At trække samtykket tilbage ændrer ikke ved det, der allerede er sket.</li>
+<li><strong>Sikkerhed og beskyttelse mod misbrug</strong> (for eksempel Googles grænser for forsøg på at oprette konti): GDPR artikel 6, stk. 1, litra f, den legitime interesse i at holde tjenesten sikker.</li>
+</ul>
+<p>Oplysningerne bruges ikke til andet: ingen profilering, ingen markedsføring, ingen reklamer, ingen analyse.</p>
+<h2>4. Hvor det opbevares, og hvem der behandler det</h2>
+<p>Backenden er <strong>Google Firebase</strong> (Firebase Authentication, Cloud Firestore og Firebase Hosting), leveret af Google Ireland Limited og Google LLC. Google er udviklerens <strong>databehandler</strong> efter <a href="https://firebase.google.com/terms/data-processing-terms">Firebase og Google Clouds databehandlervilkår</a>, som indeholder EU's standardkontraktbestemmelser for enhver overførsel uden for EU/EØS.</p>
+<p>Databasen (din log, dine børn og din familie) opbevares i Googles <strong>europæiske multiregion (<code>eur3</code>: Belgien og Holland)</strong>. Firebase Authentication er en global Google-tjeneste, så dine kontooplysninger kan blive behandlet uden for EU, også i USA, efter de vilkår (og EU-USA-databeskyttelsesrammen, som Google er certificeret under).</p>
+<h2>5. Hvem der kan se det</h2>
+<ul>
+<li><strong>Dig</strong>, på hver telefon, hvor du logger ind på din konto.</li>
+<li><strong>Medlemmerne af din familie.</strong> Når du er i en familie, ser hvert medlem familiens log, børn (med deres navne) og de andre medlemmers e-mailadresser. En familie er kun de personer, der er inviteret med et link, som et af dens medlemmer har delt, og hvert medlem kan se, hvem de er. Du kan forlade den når som helst. Den, der oprettede familien, kan fjerne medlemmer; forlader den person familien eller sletter sin konto, mens andre er tilbage, overtager det medlem, der kom med først.</li>
+<li><strong>Det, et medlem allerede har, bliver hos dem.</strong> Når nogen forlader familien eller bliver fjernet, holder de op med at se familiens oplysninger fra da af, men det, der allerede er nået frem til deres telefon (familiens log og børnenes navne, som sidst synkroniseret), bliver på deres telefon, ligesom på din: appen kan ikke tage det tilbage.</li>
+<li><strong>Ingen andre.</strong> Databasens sikkerhedsregler lader kun medlemmerne af en familie læse eller ændre dens oplysninger. Udvikleren kan teknisk set tilgå databasen for at drive tjenesten og svare på dine henvendelser, men ser ikke på og bruger ikke indholdet ellers. Intet deles med eller sælges til nogen, og Google bruger det kun til at levere Firebase til udvikleren.</li>
+</ul>
+<p>Et <strong>invitationslink</strong> er hemmeligt: enhver, der har det, kan bruge det til at komme med i din familie, og det viser den inviterendes e-mailadresse til den, der åbner det. Det virker én gang og i 6 dage, og kun så længe det medlem, der lavede det, stadig er i familien. Del det kun med den, du vil invitere.</p>
+<h2>6. Hvor længe det gemmes, og hvordan du sletter det</h2>
+<p>Dine oplysninger gemmes, indtil du sletter dem, sådan her:</p>
+<ul>
+<li><strong>Slet din konto</strong> i appen: Indstillinger › Konto › Slet konto. Det sletter din konto, dit medlemskab af din familie, henvisningen til den, den backup, en tidligere version af appen kan have gemt for din konto, og de ubrugte invitationer, du har lavet på den telefon. Var du <strong>det sidste medlem</strong> af din familie, slettes også familiens hele log og børn. Oprettede du familien, og er der andre tilbage, overtager det medlem, der kom med først. Loggen på din telefon bliver på din telefon.</li>
+<li><strong>Forlad en familie</strong> i Indstillinger › Familie. Dit medlemskab (og din e-mailadresse på medlemslisten) fjernes, og det samme gør de ubrugte invitationer, du har lavet på den telefon. Registreringer, der allerede er logget i familien, bliver i familiens fælles log for de andre medlemmer, fordi de er en del af den log, de deler; din telefon beholder sin egen kopi og tager backup af den i en ny, tom familie for dig selv.</li>
+<li><strong>Bliver du fjernet</strong> fra en familie, slettes dit medlemskab; din telefon beholder sin log og tager backup af den i en ny familie for dig selv.</li>
+<li><strong>Når det sidste medlem forlader familien eller sletter sin konto</strong>, slettes familiens log og børn med den. Tilbage bliver en tom registrering af familien: dens tilfældige id, bruger-id'et på den, der sidst stod for den, og hvornår den blev oprettet, så ingen nogensinde kan oprette en familie med samme id og overtage det, der stadig henviser til den (en gammel invitation, for eksempel). Den indeholder ingen e-mailadresse, log eller navne.</li>
+<li>En <strong>invitation</strong> slettes, når den bliver brugt, eller når den, der lavede den, forlader familien eller sletter sin konto på den telefon, den blev lavet på. Den holder op med at virke efter 6 dage, eller så snart den, der lavede den, ikke længere er i familien, og en daglig oprydning sletter den inden for et døgn, efter den er udløbet.</li>
+<li><strong>At logge ud</strong> lader det gemte være, som det er; intet mere uploades fra den telefon, og logger du ind igen, spørges du om samtykke igen.</li>
+<li><strong>At slette en registrering</strong> fjerner dens tider og detaljer fra backuppen med det samme; kun markeringen beskrevet i afsnit 2 bliver tilbage, indtil familiens log slettes.</li>
+<li><strong>Konti, som ingen bruger</strong>, slettes automatisk: en konto uden log ind og uden brug af appen i <strong>2 år</strong> slettes med alt det, "Slet konto" sletter, af den daglige oprydning. Den samme oprydning sletter det, der er tilbage i databasen fra konti, der er fjernet på andre måder.</li>
+<li>Du kan også bede om sletning <strong>pr. e-mail</strong> til <a href="mailto:mathias.lorenzen@live.com">mathias.lorenzen@live.com</a>, for eksempel hvis du ikke længere har appen. Skriv venligst fra kontoens adresse.</li>
+</ul>
+<p>Slettede oplysninger fjernes fra Googles systemer som beskrevet i Googles databehandlervilkår (backups kan tage lidt længere tid om at udløbe).</p>
+<h2>7. Børn</h2>
+<p>Pooparazzi er lavet til forældre og omsorgspersoner. Konti er til voksne; appen er ikke beregnet til at blive brugt af børn. Oplysningerne om et barn (dets navn, dets fødselsdato, hvis den er angivet, og dets log) indtastes af barnets forælder eller værge, som bestemmer, om der skal tages backup af dem, og hvem de skal deles med, og som kan udøve barnets rettigheder på barnets vegne.</p>
+<h2>8. Dine rettigheder</h2>
+<p>Efter GDPR har du ret til:</p>
+<ul>
+<li><strong>indsigt</strong> i dine oplysninger og en kopi af dem;</li>
+<li><strong>berigtigelse</strong> (du kan omdøbe børn, ændre eller fjerne deres fødselsdatoer og rette eller slette registreringer i appen når som helst);</li>
+<li><strong>sletning</strong> (afsnit 6);</li>
+<li><strong>begrænsning</strong> af behandlingen eller at <strong>gøre indsigelse</strong> mod den;</li>
+<li><strong>dataportabilitet</strong>: at få dem i et struktureret, maskinlæsbart format (JSON). Indstillinger › Om › <strong>Download mine data</strong> gemmer loggen og børnene (med deres navne og fødselsdatoer), der er på din telefon, som en ZIP-fil med JSON-filer (og <strong>Importér data</strong> læser den ind igen); skriv til os for det, kun backuppen har, som din konto og din families medlemsliste;</li>
+<li>at <strong>trække dit samtykke tilbage</strong> når som helst, uden at det ændrer ved det, der allerede er sket.</li>
+</ul>
+<p>Skriv til <a href="mailto:mathias.lorenzen@live.com">mathias.lorenzen@live.com</a>; du får svar inden for en måned. Du kan også klage til <strong>Datatilsynet</strong> (Carl Jacobsens Vej 35, 2500 Valby, <a href="https://www.datatilsynet.dk">www.datatilsynet.dk</a>) eller til databeskyttelsesmyndigheden, hvor du bor.</p>
+<h2>9. Sikkerhed</h2>
+<p>Al trafik mellem appen og Firebase er krypteret (TLS), og Google krypterer de gemte oplysninger. Firestores sikkerhedsregler giver hver konto adgang til kun sin egen families oplysninger, og man kan kun komme med i en familie med en gyldig invitation fra en, der stadig er i den. At oprette eller komme med i en familie og at invitere kræver en bekræftet e-mailadresse (Google eller log ind-linket), så ingen kan optræde i en familie under en andens adresse. Der er ingen adgangskoder, der kan lække: log ind sker med Google eller med et engangslink sendt til din e-mail. Skulle nogen have registreret din adresse med en adgangskode, før du første gang loggede ind med et link, fjerner appen den adgangskode, når du gør. På din telefon og dit ur gemmes appens oplysninger i appens private lager.</p>
+<h2>10. Ændringer</h2>
+<p>Ændres denne politik, offentliggøres den nye version på dens webside (linket fra appens Indstillinger › Om) med en ny dato. Væsentlige ændringer vises også i appen, før de træder i kraft.</p>
+<h2>11. Kontakt</h2>
 <p>Mathias Lorenzen · <a href="mailto:mathias.lorenzen@live.com">mathias.lorenzen@live.com</a></p>
 </article>
 </main>

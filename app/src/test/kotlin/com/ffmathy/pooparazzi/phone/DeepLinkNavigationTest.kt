@@ -18,6 +18,7 @@ import com.ffmathy.pooparazzi.phone.system.SurfacePrefs
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,6 +40,9 @@ class DeepLinkNavigationTest {
     val compose = createEmptyComposeRule()
 
     private val app: Application = ApplicationProvider.getApplicationContext()
+
+    @Before
+    fun skipTheBabyQuestion() = BabyAlreadyAsked.apply()
 
     @After
     fun tearDown() = Core.reset()

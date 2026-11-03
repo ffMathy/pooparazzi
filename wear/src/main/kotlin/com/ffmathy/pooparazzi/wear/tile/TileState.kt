@@ -7,6 +7,7 @@ import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.wear.glance.GlanceTitle
 import com.ffmathy.pooparazzi.wear.glance.WatchGlance
 import com.ffmathy.pooparazzi.wear.state.GuardKind
+import java.time.LocalDate
 import java.time.ZoneId
 
 /** How long the "just logged" title shows after a tile log (DESIGN_SPEC §5.12: 10 s timeline entry). */
@@ -117,8 +118,15 @@ data class TileUiState(
          * The tile for [summary] (the current baby's entries). [babyId] is the current baby: a confirmation of a log
          * for another baby (made before a switch) is dropped.
          */
-        fun from(summary: Summary, babyName: String, feedback: TileFeedback?, guard: TileGuard?, babyId: String? = null) = TileUiState(
-            glance = WatchGlance.from(summary, babyName),
+        fun from(
+            summary: Summary,
+            babyName: String,
+            feedback: TileFeedback?,
+            guard: TileGuard?,
+            babyId: String? = null,
+            birthDate: LocalDate? = null,
+        ) = TileUiState(
+            glance = WatchGlance.from(summary, babyName, birthDate),
             feedback = feedback?.takeIf { it.untilMillis > summary.now && it.forBaby(babyId) && it.stillStands(summary) },
             guard = guard?.takeIf { it.untilMillis > summary.now },
         )

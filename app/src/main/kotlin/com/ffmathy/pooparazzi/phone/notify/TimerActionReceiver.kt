@@ -20,8 +20,8 @@ import java.time.ZoneId
 /**
  * The timer notifications' broadcasts (not exported): "Woke up", which ends the running sleep without opening the app
  * (also from the lock screen); the Earlier offsets of the woke-up notification that follows, which move the wake-up
- * time; the dismissal of a notification, which is remembered so it is not posted again (DESIGN_SPEC §10.5); and the
- * once-a-minute refresh of the running sleep's duration.
+ * time; the dismissal of a notification (a running sleep's, or a prediction's), which is remembered so it is not
+ * posted again (DESIGN_SPEC §10.5); and the once-a-minute refresh of the running sleep's duration and the estimates.
  */
 class TimerActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -43,6 +43,11 @@ class TimerActionReceiver : BroadcastReceiver() {
                 val prefs = SurfacePrefs(context)
                 prefs.dismissedTimers = prefs.dismissedTimers + entryId
             }
+            ACTION_FORECAST_DISMISSED -> {
+                val key = intent.getStringExtra(EXTRA_FORECAST_KEY) ?: return
+                val prefs = SurfacePrefs(context)
+                prefs.dismissedForecasts = prefs.dismissedForecasts + key
+            }
         }
     }
 
@@ -63,6 +68,8 @@ class TimerActionReceiver : BroadcastReceiver() {
         const val ACTION_EARLIER = "com.ffmathy.pooparazzi.phone.action.WOKE_UP_EARLIER"
         const val ACTION_DISMISSED = "com.ffmathy.pooparazzi.phone.action.TIMER_DISMISSED"
         const val ACTION_REFRESH = "com.ffmathy.pooparazzi.phone.action.TIMER_REFRESH"
+        const val ACTION_FORECAST_DISMISSED = "com.ffmathy.pooparazzi.phone.action.FORECAST_DISMISSED"
+        const val EXTRA_FORECAST_KEY = "forecast_key"
         const val EXTRA_ENTRY_ID = "entry_id"
         const val EXTRA_BABY_ID = "baby_id"
         private const val EXTRA_BASE = "base_millis"
@@ -122,7 +129,7 @@ class TimerActionReceiver : BroadcastReceiver() {
             return moved
         }
 
-        /** Re-renders the running sleep's notification with the current time (the once-a-minute alarm). */
+        /** Re-renders the running sleep's and the predictions' notifications with the current time (the once-a-minute alarm). */
         suspend fun refresh(context: Context) {
             val graph = Core.ensureInitialized(context)
             TimerNotifications(context).render(state(graph))
@@ -140,6 +147,14 @@ class TimerActionReceiver : BroadcastReceiver() {
             broadcast(context, ACTION_WOKE_UP, entryId, babyId)
 
         fun dismissedIntent(context: Context, entryId: String): PendingIntent = broadcast(context, ACTION_DISMISSED, entryId)
+
+        /** A prediction notification swiped away: its estimate ([key]) is not posted again. */
+        fun forecastDismissedIntent(context: Context, key: String): PendingIntent = PendingIntent.getBroadcast(
+            context,
+            key.hashCode(),
+            Intent(context, TimerActionReceiver::class.java).setAction(ACTION_FORECAST_DISMISSED).putExtra(EXTRA_FORECAST_KEY, key),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
 
         /** One Earlier offset of the woke-up notification; [current] is the offset applied when it was posted. */
         fun earlierIntent(context: Context, entryId: String, baseMillis: Long, minutes: Int, current: Int): PendingIntent {

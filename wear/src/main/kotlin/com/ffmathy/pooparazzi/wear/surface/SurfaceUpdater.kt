@@ -77,8 +77,8 @@ class SurfaceUpdater(
     }
 
     /**
-     * Where updates go; replaced in tests. [settings] are what the surfaces show of the settings: the babies, the
-     * current one and the language ([shown]).
+     * Where updates go; replaced in tests. [settings] are what the surfaces show of the settings: the babies (with
+     * their birth dates), the current one, the language and the estimates chosen for the watch face ([shown]).
      */
     fun interface Surfaces {
         fun update(summary: Summary, settings: Settings)
@@ -91,7 +91,7 @@ class SurfaceUpdater(
                 XComplicationService.requestUpdateAll(context)
                 // The Ongoing Activity names the baby when there are two or more ("Noa · Feed 2h 05m").
                 val baby = if (settings.hasSeveralBabies) LabelFormatter(context).currentBaby(settings) else null
-                running.sync(summary, baby)
+                running.sync(summary, baby, settings.watchForecasts, settings.selectedBaby.born)
             }
         }
     }
@@ -100,7 +100,11 @@ class SurfaceUpdater(
         const val TAG = "SurfaceUpdater"
 
         /** The part of the settings the surfaces show (the appearance does not matter on the watch). */
-        fun shown(settings: Settings) =
-            Settings(babies = settings.babies, language = settings.language, selectedBabyId = settings.selectedBaby.id)
+        fun shown(settings: Settings) = Settings(
+            babies = settings.babies,
+            language = settings.language,
+            selectedBabyId = settings.selectedBaby.id,
+            watchForecasts = settings.watchForecasts,
+        )
     }
 }

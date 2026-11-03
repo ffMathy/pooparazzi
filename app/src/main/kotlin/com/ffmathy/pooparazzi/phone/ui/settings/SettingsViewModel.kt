@@ -14,6 +14,7 @@ import com.ffmathy.pooparazzi.core.cloud.NoopCloudSync
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EntryRepository
 import com.ffmathy.pooparazzi.core.data.SystemClock
+import com.ffmathy.pooparazzi.core.domain.ForecastKind
 import com.ffmathy.pooparazzi.core.export.LogExport
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
@@ -31,6 +32,11 @@ import com.ffmathy.pooparazzi.phone.account.PrivacyPolicy
 import com.ffmathy.pooparazzi.phone.app.AppLocales
 import com.ffmathy.pooparazzi.phone.app.LocaleApplier
 import com.ffmathy.pooparazzi.phone.watch.WatchInstall
+import java.io.InputStream
+import java.io.OutputStream
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -46,10 +52,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.InputStream
-import java.io.OutputStream
-import java.time.ZoneId
-import java.util.concurrent.ConcurrentHashMap
 
 /** What Settings › Account says (BABIES_AND_BACKUP §3.2). */
 @Immutable
@@ -78,6 +80,9 @@ sealed interface AccountSummary {
  * @property watchWithoutApp a watch is connected that does not have Pooparazzi: Settings › Watch offers "Install on your
  *   watch", which opens its Play Store page on the watch.
  * @property privacyUrl where Settings › About › Privacy policy opens ([PrivacyPolicy]).
+ * @property watchForecasts the estimates the watch face shows (Settings › Watch; [Settings.watchForecasts]).
+ * @property birthDateFor the baby whose birth date picker is open, or null.
+ * @property addingBaby the Add a baby dialog is open (the name and, optionally, the birth date).
  */
 @Immutable
 data class SettingsUiState(
@@ -93,6 +98,9 @@ data class SettingsUiState(
     val watchWithoutApp: Boolean = false,
     val privacyUrl: String = PrivacyPolicy.REPOSITORY_URL,
     val removing: Baby? = null,
+    val watchForecasts: Set<ForecastKind> = ForecastKind.entries.toSet(),
+    val birthDateFor: Baby? = null,
+    val addingBaby: Boolean = false,
 ) {
     val canRemoveBaby: Boolean get() = babies.size > 1
 }
@@ -106,8 +114,17 @@ interface SettingsActions {
     /** The keyboard's Done in baby [id]'s field: saves its name at once. */
     fun onBabyNameDone(id: String) {}
 
-    /** "Add a baby": appends an unnamed baby (the current baby stays). */
-    fun onAddBaby() {}
+    /** "Add a baby": opens the Add a baby dialog, which asks for the name and, optionally, the birth date. */
+    fun onStartAddBaby() {}
+
+    /**
+     * The Add a baby dialog's Add: appends a baby with [name] (empty: unnamed) and [birthDate] (null: not given); the
+     * current baby stays.
+     */
+    fun onAddBaby(name: String = "", birthDate: LocalDate? = null) {}
+
+    /** The Add a baby dialog's Cancel, or Back. */
+    fun onDismissAddBaby() {}
 
     /** A name field's remove button: asks "Remove <label>?" first. */
     fun onRemoveBaby(id: String) {}
@@ -117,6 +134,21 @@ interface SettingsActions {
 
     /** "Cancel" in the confirmation, or Back. */
     fun onDismissRemoveBaby() {}
+
+    /** A baby's "Add birth date" / "Born …" pill: opens the date picker. */
+    fun onEditBirthDate(id: String) {}
+
+    /** The date picker's OK (a date) or Remove (null): saves baby [id]'s birth date and closes the picker. */
+    fun onBirthDate(id: String, date: LocalDate?) {}
+
+    /** The date picker's Cancel, or Back. */
+    fun onDismissBirthDate() {}
+
+    /** Settings › Watch: one estimate shown on the watch face, or not. */
+    fun onWatchForecast(kind: ForecastKind, shown: Boolean) {}
+
+    /** Settings › Notifications: one kind of prediction notification, its channel page in the system settings. */
+    fun onOpenForecastChannel(kind: ForecastKind) {}
     fun onAppearance(appearance: Appearance) {}
     fun onLanguage(language: AppLanguage) {}
     fun onRetrySync() {}
@@ -193,6 +225,12 @@ class SettingsViewModel(
     /** The id of the baby whose removal waits for the parent's yes. */
     private val removing = MutableStateFlow<String?>(null)
 
+    /** The id of the baby whose birth date picker is open. */
+    private val pickingBirthDate = MutableStateFlow<String?>(null)
+
+    /** The Add a baby dialog is open. */
+    private val addingBaby = MutableStateFlow(false)
+
     /**
      * The typed names not written yet, by baby id; a write takes its baby's name atomically, so no keystroke is lost or
      * written twice.
@@ -212,11 +250,11 @@ class SettingsViewModel(
         }
     }
 
-    private val edits = combine(nameDrafts, removing, ::Pair)
+    private val edits = combine(nameDrafts, removing, pickingBirthDate, ::Triple)
 
-    private val watch = combine(oldWatch, missingApp, ::Pair)
+    private val watch = combine(oldWatch, missingApp, addingBaby, ::Triple)
 
-    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, edits, account, watch) { s, status, (drafts, removingId), account, (old, missing) ->
+    val state: StateFlow<SettingsUiState?> = combine(settings.settings, sync.status, edits, account, watch) { s, status, (drafts, removingId, birthDateId), account, (old, missing, adding) ->
         SettingsUiState(
             babies = s.babies.map { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
             appearance = s.appearance,
@@ -230,6 +268,10 @@ class SettingsViewModel(
             privacyUrl = PrivacyPolicy.url(accounts.hostingDomain),
             removing = s.babies.takeIf { it.size > 1 }?.firstOrNull { it.id == removingId }
                 ?.let { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
+            watchForecasts = s.watchForecasts,
+            birthDateFor = s.babies.firstOrNull { it.id == birthDateId }
+                ?.let { baby -> drafts[baby.id]?.let { baby.copy(name = it) } ?: baby },
+            addingBaby = adding && !old && s.babies.size < Settings.MAX_BABIES,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -253,9 +295,27 @@ class SettingsViewModel(
         nameJobs[id] = writeScope.launch { flushName(id) }
     }
 
-    override fun onAddBaby() {
+    override fun onStartAddBaby() {
         if (oldWatch.value) return
-        viewModelScope.launch { settings.addBaby() }
+        addingBaby.value = true
+    }
+
+    override fun onDismissAddBaby() {
+        addingBaby.value = false
+    }
+
+    /** In the app's scope, so leaving Settings at once cannot cut the writes short. */
+    override fun onAddBaby(name: String, birthDate: LocalDate?) {
+        addingBaby.value = false
+        if (oldWatch.value) return
+        writeScope.launch {
+            // At the cap nothing is added (and the last baby would come back): it must not be renamed.
+            if (settings.current().babies.size >= Settings.MAX_BABIES) return@launch
+            val baby = settings.addBaby()
+            val clean = Settings.sanitizeName(name)
+            if (clean.isNotEmpty()) settings.renameBaby(baby.id, clean)
+            if (birthDate != null) settings.setBabyBirthDate(baby.id, birthDate)
+        }
     }
 
     override fun onRemoveBaby(id: String) {
@@ -280,6 +340,24 @@ class SettingsViewModel(
             val after = settings.removeBaby(id)
             if (after.babies.none { it.id == id }) entries?.deleteBabyEntries(id)
         }
+    }
+
+    override fun onEditBirthDate(id: String) {
+        pickingBirthDate.value = id
+    }
+
+    override fun onDismissBirthDate() {
+        pickingBirthDate.value = null
+    }
+
+    /** In the app's scope, so leaving Settings at once cannot cut the write short. */
+    override fun onBirthDate(id: String, date: LocalDate?) {
+        pickingBirthDate.value = null
+        writeScope.launch { settings.setBabyBirthDate(id, date) }
+    }
+
+    override fun onWatchForecast(kind: ForecastKind, shown: Boolean) {
+        viewModelScope.launch { settings.setWatchForecast(kind, shown) }
     }
 
     override fun onAppearance(appearance: Appearance) {

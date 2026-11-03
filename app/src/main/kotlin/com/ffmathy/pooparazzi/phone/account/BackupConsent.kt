@@ -48,16 +48,30 @@ open class MemoryConsent(initial: Set<String> = emptySet()) : BackupConsent {
 /**
  * [BackupConsent] in shared preferences. Device-local: excluded from backup and device transfer
  * (res/xml/data_extraction_rules.xml), so a new phone asks again.
+ *
+ * A consent covers the text it was given to. When what is uploaded changes, the key changes ([KEY_AGREED]), so every
+ * signed-in account sees the consent screen again, with the new text, before anything more is uploaded; the answers
+ * kept under older keys are dropped.
  */
 class ConsentPrefs private constructor(private val prefs: SharedPreferences) :
     MemoryConsent(prefs.getStringSet(KEY_AGREED, null).orEmpty().toSet()) {
 
     constructor(context: Context) : this(context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE))
 
+    init {
+        // Consents given to an older text do not count for the current one.
+        if (OLD_KEYS.any(prefs::contains)) prefs.edit { OLD_KEYS.forEach(::remove) }
+    }
+
     override fun saved(agreed: Set<String>) = prefs.edit { putStringSet(KEY_AGREED, agreed) }
 
     internal companion object {
         const val FILE = "account_consent"
-        private const val KEY_AGREED = "agreed"
+
+        /** The current consent text's answers: version 2 (November 2026) added the babies' birth dates. */
+        private const val KEY_AGREED = "agreed_v2"
+
+        /** The answers to earlier texts: "agreed" (version 1: the log, the babies' names and the email address). */
+        private val OLD_KEYS = listOf("agreed")
     }
 }

@@ -1,10 +1,15 @@
 package com.ffmathy.pooparazzi.core.domain
 
+import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
+import com.ffmathy.pooparazzi.core.model.FeedType
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import kotlin.math.abs
+import kotlin.math.pow
 
 /**
  * One expected moment ("wakes in about 40m"): [atMillis] is the estimate, fixed for the whole stretch, so once it has
@@ -43,13 +48,35 @@ data class Expected(val atMillis: Long, val goneAtMillis: Long, val samples: Int
 data class Forecast(val sleep: Expected?, val feed: Expected?, val poop: Expected?) {
     val isEmpty: Boolean get() = sleep == null && feed == null && poop == null
 
+    /** The estimate of [kind]. */
+    operator fun get(kind: ForecastKind): Expected? = when (kind) {
+        ForecastKind.FEED -> feed
+        ForecastKind.POOP -> poop
+        ForecastKind.SLEEP -> sleep
+    }
+
+    /** Only the estimates of [kinds]; the others are left out. */
+    fun only(kinds: Set<ForecastKind>): Forecast = Forecast(
+        sleep = sleep.takeIf { ForecastKind.SLEEP in kinds },
+        feed = feed.takeIf { ForecastKind.FEED in kinds },
+        poop = poop.takeIf { ForecastKind.POOP in kinds },
+    )
+
     companion object {
         val NONE = Forecast(null, null, null)
     }
 }
 
 /**
- * The [Forecast] for [summary], from the stretches of the last [ForecastRules.LOOKBACK_DAYS] days.
+ * The kinds of estimate a [Forecast] holds, as the parent turns them on and off: the phone's prediction notifications
+ * have a channel each, and the watch's Ongoing Activity uses the kinds chosen in Settings › Watch. [SLEEP] is both the
+ * next sleep (awake) and the wake-up (asleep).
+ */
+enum class ForecastKind { FEED, POOP, SLEEP }
+
+/**
+ * The [Forecast] for [summary], from the stretches of the last [ForecastRules.LOOKBACK_DAYS] days. [birthDate] is the
+ * baby's, when the parent gave it: some rules depend on the baby's age, and without it they are left out.
  *
  * Babies' days are only loosely regular, and a sleep at night lasts longer than a nap at noon, so each estimate:
  *  1. takes the past week's stretches of the same kind (sleeps, wake windows, gaps between feeds, gaps between poops);
@@ -57,12 +84,21 @@ data class Forecast(val sleep: Expected?, val feed: Expected?, val poop: Expecte
  *     the whole day, until there are enough), except for poop, which follows no clock;
  *  3. gives up when the stretches are too few (under 5, or from fewer than 3 days) or spread too widely (interquartile range over 1.5 × the median), or
  *     when the current stretch is already twice the longest of them (logging has probably stopped);
- *  4. adds their median to the current stretch's start. The estimate stays put as the stretch goes on, so a late one
- *     reads "now" instead of moving on to a new guess.
+ *  4. adds their median to the current stretch's start, the recent days counting more than the older ones
+ *     ([ForecastRules.HALF_LIFE_DAYS]: a growth spurt changes the rhythm for a few days, and the estimate follows it
+ *     sooner). The estimate stays put as the stretch goes on, so a late one reads "now" instead of moving on to a new
+ *     guess.
  *
  * Poop that follows no gap falls back to [poopAfterFeed]: newborns often poop shortly after each feed.
+ *
+ * With a [birthDate], two rules follow the baby's age:
+ *  - no sleep estimate before [ForecastRules.MIN_SLEEP_AGE_DAYS]: a newborn's sleep has no day–night rhythm yet, so
+ *    the time of day says little;
+ *  - from [ForecastRules.BREASTFED_POOP_AGE_DAYS], a breastfed baby ([isBreastfed]) gets no estimate from the gaps
+ *    between poops: days without one are normal then, and an estimate would only worry. The poop after a feed still
+ *    shows while it holds.
  */
-fun forecast(summary: Summary): Forecast {
+fun forecast(summary: Summary, birthDate: LocalDate? = null): Forecast {
     val now = summary.now
     val zone = summary.zone
     val since = now - ForecastRules.LOOKBACK_DAYS * DAY_MILLIS
@@ -70,19 +106,36 @@ fun forecast(summary: Summary): Forecast {
     val sleeps = recent.filter { it.kind == EntryKind.SLEEP && it.endMillis != null && it.endMillis <= now }
     val feeds = recent.filter { it.kind == EntryKind.FEED }
     val poops = recent.filter { it.kind == EntryKind.DIAPER && it.poop }
+    val ageDays = birthDate?.let { ChronoUnit.DAYS.between(it, localDate(now, zone)) }
 
     val running = summary.runningSleep
-    val sleep = if (running != null) {
-        val durations = sleeps.map { Stretch(it.startMillis, it.endMillis!! - it.startMillis) }
-        expect(durations, running.startMillis, now, zone, byTimeOfDay = true)
-    } else {
-        summary.lastSleepEnd?.let { wokeAt -> expect(wakeWindows(sleeps), wokeAt, now, zone, byTimeOfDay = true) }
+    val sleep = when {
+        ageDays != null && ageDays < ForecastRules.MIN_SLEEP_AGE_DAYS -> null
+        running != null -> {
+            val durations = sleeps.map { Stretch(it.startMillis, it.endMillis!! - it.startMillis) }
+            expect(durations, running.startMillis, now, zone, byTimeOfDay = true)
+        }
+        else -> summary.lastSleepEnd?.let { wokeAt -> expect(wakeWindows(sleeps), wokeAt, now, zone, byTimeOfDay = true) }
     }
     val feed = feeds.lastOrNull()?.let { expect(gaps(feeds), it.startMillis, now, zone, byTimeOfDay = true) }
+    val byGaps = !(ageDays != null && ageDays >= ForecastRules.BREASTFED_POOP_AGE_DAYS && isBreastfed(feeds))
     val poop = (summary.entries.lastOrNull { it.kind == EntryKind.DIAPER && it.poop })
+        ?.takeIf { byGaps }
         ?.let { expect(gaps(poops), it.startMillis, now, zone, byTimeOfDay = false) }
         ?: poopAfterFeed(feeds, poops, now, zone)
     return Forecast(sleep, feed, poop)
+}
+
+/**
+ * Whether [feeds] are a breastfed baby's: at least one of them says what was given, and every one that does is a breast
+ * feed or a bottle of breast milk. A bottle without its contents may have been formula, so it does not count as breast
+ * milk; feeds logged with just the time say nothing either way.
+ */
+fun isBreastfed(feeds: List<Entry>): Boolean {
+    val typed = feeds.filter { it.kind == EntryKind.FEED && it.feedType != null }
+    return typed.isNotEmpty() && typed.all {
+        it.feedType == FeedType.BREAST || (it.feedType == FeedType.BOTTLE && it.bottleContents == BottleContents.MILK)
+    }
 }
 
 /** Tuning of [forecast]. */
@@ -119,10 +172,26 @@ object ForecastRules {
 
     /** The spread test's floor for poop after a feed: delays of a few minutes may differ by a few minutes. */
     const val AFTER_FEED_MIN_SPREAD_BASE_MILLIS = 15 * 60_000L
+
+    /**
+     * A stretch this many days old counts half as much as one from today, a stretch twice as old a quarter: recent
+     * enough to follow a growth spurt within a few days, long enough that one odd day does not swing the estimate.
+     */
+    const val HALF_LIFE_DAYS = 3.0
+
+    /** Below this age (6 weeks) there is no sleep estimate: the day–night rhythm is still forming. */
+    const val MIN_SLEEP_AGE_DAYS = 42L
+
+    /** From this age (6 weeks) a breastfed baby's poop is not estimated from its gaps, which may then run for days. */
+    const val BREASTFED_POOP_AGE_DAYS = 42L
 }
 
 /** A past stretch: it began at [startMillis] and lasted [lengthMillis]. */
 private data class Stretch(val startMillis: Long, val lengthMillis: Long)
+
+/** How much a stretch that began at [startMillis] counts at [now]: halved every [ForecastRules.HALF_LIFE_DAYS]. */
+private fun weight(startMillis: Long, now: Long): Double =
+    0.5.pow(maxOf(0L, now - startMillis).toDouble() / DAY_MILLIS / ForecastRules.HALF_LIFE_DAYS)
 
 /** Time awake from each sleep's end to the next sleep's start. */
 private fun wakeWindows(sleeps: List<Entry>): List<Stretch> = sleeps.zipWithNext { a, b -> Stretch(a.endMillis!!, b.startMillis - a.endMillis) }
@@ -143,9 +212,10 @@ private fun expect(stretches: List<Stretch>, startMillis: Long, now: Long, zone:
     } else {
         stretches.takeIf(::enough)
     } ?: return null
+    val weighted = comparable.map { it.lengthMillis to weight(it.startMillis, now) }
     val lengths = comparable.map { it.lengthMillis }.sorted()
-    val median = quantile(lengths, 0.5)
-    if (quantile(lengths, 0.75) - quantile(lengths, 0.25) > ForecastRules.MAX_SPREAD * median) return null
+    val median = weightedQuantile(weighted, 0.5)
+    if (weightedQuantile(weighted, 0.75) - weightedQuantile(weighted, 0.25) > ForecastRules.MAX_SPREAD * median) return null
     // Far longer than any stretch of the week: logging has stopped (or this one was forgotten), so say nothing.
     val goneAt = startMillis + STALE_FACTOR * lengths.last()
     if (now > goneAt) return null
@@ -176,10 +246,11 @@ private fun poopAfterFeed(feeds: List<Entry>, poops: List<Entry>, now: Long, zon
     if (hits.size < ForecastRules.MIN_SAMPLES) return null
     if (hits.map { localDate(it.startMillis, zone) }.distinct().size < ForecastRules.MIN_DAYS) return null
     if (hits.size < ForecastRules.AFTER_FEED_MIN_SHARE * followed.size) return null
+    val weighted = hits.map { it.lengthMillis to weight(it.startMillis, now) }
     val delays = hits.map { it.lengthMillis }.sorted()
-    val median = quantile(delays, 0.5)
+    val median = weightedQuantile(weighted, 0.5)
     val spreadBase = maxOf(median, ForecastRules.AFTER_FEED_MIN_SPREAD_BASE_MILLIS.toDouble())
-    if (quantile(delays, 0.75) - quantile(delays, 0.25) > ForecastRules.MAX_SPREAD * spreadBase) return null
+    if (weightedQuantile(weighted, 0.75) - weightedQuantile(weighted, 0.25) > ForecastRules.MAX_SPREAD * spreadBase) return null
     val goneAt = current + minOf(STALE_FACTOR * delays.last(), ForecastRules.AFTER_FEED_WINDOW_MILLIS)
     if (now > goneAt) return null
     return Expected(current + median.toLong(), goneAtMillis = goneAt, samples = delays.size)
@@ -191,6 +262,25 @@ internal fun quantile(sorted: List<Long>, q: Double): Double {
     val low = sorted[position.toInt()]
     val high = sorted[minOf(position.toInt() + 1, sorted.size - 1)]
     return low + (high - low) * (position - position.toInt())
+}
+
+/**
+ * The [q] quantile of [values] (each a value and its weight), interpolating between neighbours. Each value sits at the
+ * middle of its share of the total weight, measured from the first value's middle to the last's, so with equal weights
+ * this is [quantile] exactly; a heavier value pulls the quantiles towards itself.
+ */
+internal fun weightedQuantile(values: List<Pair<Long, Double>>, q: Double): Double {
+    val sorted = values.sortedBy { it.first }
+    if (sorted.size == 1) return sorted.first().first.toDouble()
+    val first = sorted.first().second / 2
+    val span = sorted.sumOf { it.second } - first - sorted.last().second / 2
+    if (span <= 0.0) return quantile(sorted.map { it.first }, q)
+    var below = 0.0
+    val positions = sorted.map { (_, w) -> ((below + w / 2 - first) / span).also { below += w } }
+    val at = positions.indexOfFirst { it >= q }.coerceAtLeast(1)
+    val (p0, p1) = positions[at - 1] to positions[at]
+    val (v0, v1) = sorted[at - 1].first.toDouble() to sorted[at].first.toDouble()
+    return if (p1 <= p0) v1 else v0 + (v1 - v0) * ((q - p0) / (p1 - p0)).coerceIn(0.0, 1.0)
 }
 
 private fun minuteOfDay(millis: Long, zone: ZoneId): Int = Instant.ofEpochMilli(millis).atZone(zone).let { it.hour * 60 + it.minute }

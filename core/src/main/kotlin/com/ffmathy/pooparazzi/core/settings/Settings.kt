@@ -1,10 +1,17 @@
 package com.ffmathy.pooparazzi.core.settings
 
+import com.ffmathy.pooparazzi.core.domain.ForecastKind
 import com.ffmathy.pooparazzi.core.model.Baby
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
+import java.time.LocalDate
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
@@ -40,6 +47,9 @@ enum class AppLanguage(val tag: String?) {
  * phone edits the list. [removedBabies] are the tombstones of the babies the parent removed ([Baby.removed]): no baby
  * is in both lists, and a removed baby comes back only when a later version of it wins ([withMergedBabies]). Each
  * device has its own current baby, [selectedBabyId], which is never synced or merged.
+ *
+ * [watchForecasts] are the estimates the watch's Ongoing Activity shows (Settings › Watch on the phone): all of them
+ * until the parent turns some off.
  */
 @Serializable
 data class Settings(
@@ -52,6 +62,8 @@ data class Settings(
     val removedBabies: List<Baby> = emptyList(),
     /** This device's current baby. Local to the device: never synced (hence @Transient) and never merged. */
     @Transient val selectedBabyId: String = Baby.FIRST_ID,
+    @Serializable(with = ForecastKindSetSerializer::class)
+    val watchForecasts: Set<ForecastKind> = ForecastKind.entries.toSet(),
 ) {
     /** The baby this device shows and logs for: the one with [selectedBabyId], else the first. */
     val selectedBaby: Baby
@@ -80,7 +92,7 @@ data class Settings(
             .ifEmpty { listOf(Baby(Baby.FIRST_ID)) }
         val live = clean.mapTo(mutableSetOf()) { it.id }
         val gone = removedBabies.filter { it.id.isNotBlank() && it.id !in live }.distinctBy { it.id }
-            .map { it.copy(name = "", removed = true) }
+            .map { it.copy(name = "", removed = true, birthDate = null) }
         return copy(babies = clean, removedBabies = gone)
     }
 
@@ -101,6 +113,27 @@ data class Settings(
             },
         )
     }
+
+    /**
+     * These settings with baby [id] born on [date] (null: not given); unchanged for an unknown id or the same date.
+     * Stamped like [withBabyName], so it wins everywhere.
+     */
+    fun withBabyBirthDate(id: String, date: LocalDate?, atMillis: Long = 0L): Settings {
+        val iso = date?.toString()
+        return copy(
+            babies = babies.map {
+                when {
+                    it.id != id || it.birthDate == iso -> it
+                    atMillis > 0 -> it.copy(birthDate = iso, updatedAtMillis = maxOf(atMillis, it.updatedAtMillis + 1))
+                    else -> it.copy(birthDate = iso)
+                }
+            },
+        )
+    }
+
+    /** These settings with [kind] shown on the watch, or not. */
+    fun withWatchForecast(kind: ForecastKind, shown: Boolean): Settings =
+        copy(watchForecasts = if (shown) watchForecasts + kind else watchForecasts - kind)
 
     /**
      * These settings with unnamed babies appended for the unknown (and not removed), non-blank [ids], in the given order, stamped
@@ -124,7 +157,7 @@ data class Settings(
         val gone = removedBabies.toMutableList()
         for (raw in incoming) {
             if (raw.id.isBlank()) continue
-            val baby = if (raw.removed) raw.copy(name = "") else raw.copy(name = sanitizeName(raw.name))
+            val baby = if (raw.removed) raw.copy(name = "", birthDate = null) else raw.copy(name = sanitizeName(raw.name))
             val liveAt = live.indexOfFirst { it.id == baby.id }
             val goneAt = gone.indexOfFirst { it.id == baby.id }
             val stored = live.getOrNull(liveAt) ?: gone.getOrNull(goneAt)
@@ -191,6 +224,28 @@ data class Settings(
         /** Trims and limits a name typed by the parent. */
         fun sanitizeName(name: String): String = name.trim().replace(Regex("\\s+"), " ").take(MAX_BABY_NAME_LENGTH)
     }
+}
+
+/**
+ * [Settings.watchForecasts] as a JSON array of names, in [ForecastKind] order. Lenient: names this version does not know
+ * (from a newer device) are skipped instead of failing the whole settings.
+ */
+object ForecastKindSetSerializer : KSerializer<Set<ForecastKind>> {
+    private val names = ListSerializer(String.serializer())
+    override val descriptor: SerialDescriptor = names.descriptor
+
+    override fun serialize(encoder: Encoder, value: Set<ForecastKind>) =
+        names.serialize(encoder, ForecastKind.entries.filter { it in value }.map { it.name })
+
+    override fun deserialize(decoder: Decoder): Set<ForecastKind> =
+        decoder.decodeSerializableValue(names).mapNotNullTo(mutableSetOf()) { name -> ForecastKind.entries.firstOrNull { it.name == name } }
+
+    /** The stored form (the settings repository keeps it as one string). */
+    fun encode(value: Set<ForecastKind>): String = ForecastKind.entries.filter { it in value }.joinToString(",") { it.name }
+
+    /** [encode]'s form back; unknown names are skipped. */
+    fun decode(text: String): Set<ForecastKind> =
+        text.split(',').mapNotNullTo(mutableSetOf()) { name -> ForecastKind.entries.firstOrNull { it.name == name } }
 }
 
 /**

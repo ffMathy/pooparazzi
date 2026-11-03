@@ -26,18 +26,28 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.window.Dialog
+import androidx.compose.material3.Surface
+import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,13 +55,13 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -71,17 +81,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
+import com.ffmathy.pooparazzi.core.domain.ForecastKind
 import com.ffmathy.pooparazzi.core.format.Labels
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.core.settings.Appearance
+import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.settings.Settings
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
 import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
+import com.ffmathy.pooparazzi.phone.notify.ForecastNotifications
 import com.ffmathy.pooparazzi.phone.notify.NotificationLink
+import com.ffmathy.pooparazzi.phone.notify.openForecastChannelSettings
 import com.ffmathy.pooparazzi.phone.notify.openNotificationSettings
 import com.ffmathy.pooparazzi.phone.ui.account.backupStatusText
 import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
@@ -100,6 +114,9 @@ import com.ffmathy.pooparazzi.phone.ui.history.HistoryRowDefaults
 import com.ffmathy.pooparazzi.phone.ui.preview.SettingsSamples
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
 import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import com.ffmathy.pooparazzi.core.R as CoreR
@@ -119,8 +136,11 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
     val context = LocalContext.current
     // The permission and the system switch can change in system settings: re-read them whenever Settings resumes.
     var notifications by remember { mutableStateOf(NotificationLink.current(context)) }
+    // Each prediction notification's channel: on or off in the system settings.
+    var channels by remember { mutableStateOf(ForecastNotifications.channelStates(context)) }
     LifecycleResumeEffect(context) {
         notifications = NotificationLink.current(context)
+        channels = ForecastNotifications.channelStates(context)
         // A watch without Pooparazzi: asked again on every resume, so "Install on your watch" goes once it is installed.
         viewModel.refreshWatchApp()
         onPauseOrDispose {}
@@ -141,6 +161,8 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
             override fun onOpenLicences() = licences()
             override fun onOpenAccount() = account()
             override fun onOpenNotificationSettings() = context.openNotificationSettings(link)
+            override fun onOpenForecastChannel(kind: ForecastKind) =
+                context.openForecastChannelSettings(kind, viewModel.state.value?.language ?: AppLanguage.SYSTEM)
             override fun onOpenPrivacy() {
                 viewModel.state.value?.let { runCatching { uriHandler.openUri(it.privacyUrl) } }
             }
@@ -165,7 +187,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
     }
     val loaded = state
     if (loaded != null) {
-        SettingsScreen(loaded, actions, notifications = notifications, family = family, familyActions = familyViewModel)
+        SettingsScreen(loaded, actions, notifications = notifications, channels = channels, family = family, familyActions = familyViewModel)
     } else {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
     }
@@ -174,12 +196,15 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
 /**
  * Settings (DESIGN_SPEC §3.3.5; not drawn in the mockups, so it follows their language): the account and backup
  * (BABIES_AND_BACKUP §3.2), the babies, Appearance
- * (Auto · Night · Day), Language (System default · English · Dansk), watch sync with a retry (or "Install on your watch" for a watch without the app), Notifications (the link
- * to the system's Live Update setting, §10.5) and About (version, font licences), and at the bottom a footer: "Made with
+ * (each with an optional birth date), Appearance (Auto · Night · Day), Language (System default · English · Dansk), the
+ * watch (sync with a retry, or "Install on your watch" for a watch without the app, and the estimates its face shows),
+ * Notifications (the link to the system's Live Update setting, §10.5, and one row per prediction notification, each
+ * opening its channel's page) and About (version, font licences), and at the bottom a footer: "Made with
  * ❤️ by a father in Aarhus, Denmark", that Pooparazzi is open source, and GitHub and LinkedIn logo buttons. Section
  * headings are labelMedium; grouped rows use the History list's r 20 / r 6 corners.
  *
  * @param notifications what the Notifications row offers; the route reads it from the system.
+ * @param channels whether each prediction notification's channel is on; the route reads it from the system.
  */
 @Composable
 fun SettingsScreen(
@@ -187,6 +212,7 @@ fun SettingsScreen(
     actions: SettingsActions,
     modifier: Modifier = Modifier,
     notifications: NotificationLink = NotificationLink.LIVE_UPDATES,
+    channels: Map<ForecastKind, Boolean> = ForecastKind.entries.associateWith { true },
     windowInsets: WindowInsets = WindowInsets.safeDrawing,
     family: FamilyUiState = FamilyUiState(),
     familyActions: FamilyActions = FamilyActions.None,
@@ -235,9 +261,13 @@ fun SettingsScreen(
                 )
             }
             Section(stringResource(CoreR.string.settings_language)) { LanguageGroup(state.language, actions::onLanguage) }
-            Section(stringResource(R.string.settings_section_watch)) { SyncRow(state, actions) }
+            Section(stringResource(R.string.settings_section_watch)) {
+                SyncRow(state, actions)
+                WatchForecastsGroup(state.watchForecasts, actions)
+            }
             Section(stringResource(R.string.settings_section_notifications)) {
                 NotificationsRow(notifications, actions::onOpenNotificationSettings)
+                ForecastChannelsGroup(channels, actions)
             }
             Section(stringResource(R.string.settings_section_about)) {
                 AboutGroup(state.versionName, actions)
@@ -261,26 +291,24 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 }
 
 /**
- * Settings › Babies (BABIES_AND_BACKUP §2.4): one name field per baby (its label as the placeholder), "Add a baby"
- * (hidden at [Settings.MAX_BABIES]; the new baby's field takes the focus; disabled, with a line saying why, while the
- * paired watch runs a version from before several babies) and the hint that names stay on the parent's devices.
+ * Settings › Babies (BABIES_AND_BACKUP §2.4): one name field per baby (its label as the placeholder) with its birth
+ * date under it ("Add birth date", or "Born 14 Sep 2026"; both open the date picker), "Add a baby" (opens the Add a
+ * baby dialog, which asks for the name and, optionally, the birth date; hidden at [Settings.MAX_BABIES]; disabled, with
+ * a line saying why, while the paired watch runs a version from before several babies) and the hint that names and
+ * birth dates stay on the parent's devices (or go to the family and backup, signed in).
  */
 @Composable
 private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
     val labels = rememberFormatters(state.zone).labels
-    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    var focusAdded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         state.babies.forEach { baby ->
             key(baby.id) {
-                val requester = focusRequesters.getOrPut(baby.id) { FocusRequester() }
                 NameField(
                     name = baby.name,
                     // The label an empty name shows: "Baby", or "Baby 2" … with several.
                     placeholder = labels.baby(baby.copy(name = ""), state.babies),
                     onChange = { actions.onBabyNameChange(baby.id, it) },
                     onDone = { actions.onBabyNameDone(baby.id) },
-                    modifier = Modifier.focusRequester(requester),
                     removeLabel = if (state.canRemoveBaby) {
                         stringResource(R.string.settings_remove_baby_cd, labels.baby(baby, state.babies))
                     } else {
@@ -288,23 +316,14 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
                     },
                     onRemove = { actions.onRemoveBaby(baby.id) },
                 )
+                BirthDatePill(baby, onClick = { actions.onEditBirthDate(baby.id) })
             }
-        }
-    }
-    val newest = state.babies.last().id
-    LaunchedEffect(newest) {
-        if (focusAdded) {
-            focusAdded = false
-            focusRequesters[newest]?.requestFocus()
         }
     }
     if (state.canAddBaby) {
         OutlinePill(
             stringResource(R.string.settings_add_baby),
-            onClick = {
-                focusAdded = true
-                actions.onAddBaby()
-            },
+            onClick = actions::onStartAddBaby,
             icon = XIcons.plus,
             modifier = Modifier.padding(top = 4.dp),
             enabled = !state.watchNeedsUpdate,
@@ -321,6 +340,15 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
     // Signed in, the names go to the family's backup too (BABIES_AND_BACKUP §1).
     val signedIn = state.account is AccountSummary.SignedIn
     val hint = if (signedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint
+    // A baby without a birth date: why giving one helps.
+    if (state.babies.any { it.born == null }) {
+        Text(
+            stringResource(R.string.settings_add_baby_birth_date_why),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
+        )
+    }
     Text(
         stringResource(hint),
         style = MaterialTheme.typography.bodySmall,
@@ -328,7 +356,164 @@ private fun BabiesGroup(state: SettingsUiState, actions: SettingsActions) {
         modifier = Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp),
     )
     state.removing?.let { RemoveBabyDialog(labels.baby(it, state.babies), signedIn, actions) }
+    state.birthDateFor?.let { baby ->
+        BirthDateDialog(
+            initial = baby.born,
+            onPick = { actions.onBirthDate(baby.id, it) },
+            onDismiss = actions::onDismissBirthDate,
+        )
+    }
+    if (state.addingBaby) AddBabyDialog(placeholder = labels.baby(Baby(""), state.babies + Baby("")), signedIn, actions)
 }
+
+/**
+ * "Add a baby": the new baby's name (optional; its label shows until one is typed) and, optionally, its birth date
+ * ("Add birth date" opens the date picker), with why it is asked: a birth date makes the predictions and estimates fit
+ * the baby's age. A line under it says where names and birth dates go (this phone and the watch, or the family and the
+ * backup when signed in). Cancel adds nothing; Add adds the baby (the current baby stays).
+ */
+@Composable
+private fun AddBabyDialog(placeholder: String, signedIn: Boolean, actions: SettingsActions) {
+    Dialog(onDismissRequest = actions::onDismissAddBaby) {
+        AddBabyCard(placeholder, signedIn, onAdd = actions::onAddBaby, onCancel = actions::onDismissAddBaby)
+    }
+}
+
+/**
+ * The Add a baby dialog's card, in Material's dialog style (r 28, surfaceContainerHigh, 24 dp padding): the title, the
+ * name field, the birth date pill (it opens the date picker), why the birth date helps, where names and birth dates
+ * go, and Cancel and Add. Apart from the dialog's window, so a screenshot test can draw it on its own.
+ */
+@Composable
+internal fun AddBabyCard(
+    placeholder: String,
+    signedIn: Boolean,
+    onAdd: (name: String, birthDate: LocalDate?) -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    var name by rememberSaveable { mutableStateOf("") }
+    var born by rememberSaveable { mutableStateOf<String?>(null) }
+    var picking by rememberSaveable { mutableStateOf(false) }
+    val date = born?.let { LocalDate.parse(it) }
+    Surface(
+        modifier = modifier.widthIn(min = 280.dp, max = 560.dp),
+        shape = AlertDialogDefaults.shape,
+        color = AlertDialogDefaults.containerColor,
+        tonalElevation = AlertDialogDefaults.TonalElevation,
+    ) {
+        Column(
+            Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.settings_add_baby_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = colors.onSurface,
+                modifier = Modifier.padding(bottom = 8.dp).semantics { heading() },
+            )
+            NameField(
+                name = name,
+                placeholder = placeholder,
+                onChange = { name = it.take(Settings.MAX_BABY_NAME_LENGTH) },
+                onDone = {},
+            )
+            BirthDatePill(date, onClick = { picking = true })
+            Text(
+                stringResource(R.string.settings_add_baby_birth_date_why),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurface,
+            )
+            Text(
+                stringResource(if (signedIn) R.string.settings_babies_hint_family else R.string.settings_babies_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onCancel) { Text(stringResource(android.R.string.cancel)) }
+                TextButton(onClick = { onAdd(name, date) }) { Text(stringResource(R.string.settings_add_baby_confirm)) }
+            }
+        }
+    }
+    if (picking) {
+        BirthDateDialog(
+            initial = date,
+            onPick = {
+                born = it?.toString()
+                picking = false
+            },
+            onDismiss = { picking = false },
+        )
+    }
+}
+
+/** "Add birth date", or "Born 14 Sep 2026" (the date in the app language's medium style); opens the date picker. */
+@Composable
+private fun BirthDatePill(baby: Baby, onClick: () -> Unit) = BirthDatePill(baby.born, onClick)
+
+@Composable
+internal fun BirthDatePill(born: LocalDate?, onClick: () -> Unit) {
+    val locale = LocalConfiguration.current.locales[0]
+    val text = if (born == null) {
+        stringResource(R.string.settings_birth_date_add)
+    } else {
+        stringResource(R.string.settings_birth_date, DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(born))
+    }
+    OutlinePill(text, onClick = onClick, icon = if (born == null) XIcons.plus else XIcons.edit)
+}
+
+/**
+ * The birth date picker (Material's date picker, today and earlier only): OK picks the date, Remove (when one is
+ * set) forgets it ([onPick] with null), Cancel leaves it as it was. The birth date tunes what comes next to the baby's
+ * age.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun BirthDateDialog(initial: LocalDate?, onPick: (LocalDate?) -> Unit, onDismiss: () -> Unit) {
+    val today = remember { LocalDate.now() }
+    val picker = rememberDatePickerState(
+        initialSelectedDateMillis = initial?.let { it.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() },
+        yearRange = (today.year - MAX_AGE_YEARS)..today.year,
+        selectableDates = remember(today) {
+            object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    utcTimeMillis <= today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+                override fun isSelectableYear(year: Int): Boolean = year <= today.year
+            }
+        },
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val picked = picker.selectedDateMillis?.let { java.time.Instant.ofEpochMilli(it).atOffset(ZoneOffset.UTC).toLocalDate() }
+                    if (picked != null) onPick(picked) else onDismiss()
+                },
+            ) { Text(stringResource(android.R.string.ok)) }
+        },
+        dismissButton = {
+            Row {
+                if (initial != null) {
+                    TextButton(onClick = { onPick(null) }) { Text(stringResource(R.string.settings_birth_date_remove)) }
+                }
+                TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+            }
+        },
+    ) {
+        DatePicker(picker, title = {
+            Text(
+                stringResource(R.string.settings_birth_date_title),
+                modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
+            )
+        })
+    }
+}
+
+/** Babies older than this are not expected: the picker's years start here. */
+private const val MAX_AGE_YEARS = 5
 
 /** "Remove Noa?": the baby's log goes with it (for the whole family when signed in), with Cancel and "Remove". */
 @Composable
@@ -360,7 +545,7 @@ private fun RemoveBabyDialog(label: String, signedIn: Boolean, actions: Settings
  * With a [removeLabel] (two or more babies) a 48 dp remove button ends the field.
  */
 @Composable
-private fun NameField(
+internal fun NameField(
     name: String,
     placeholder: String,
     onChange: (String) -> Unit,
@@ -501,6 +686,91 @@ private fun SyncRow(state: SettingsUiState, actions: SettingsActions) {
             }
         }
     }
+}
+
+/**
+ * Settings › Watch › On the watch face: one checkbox row per estimate (the next feed, the next poop, the next sleep and
+ * the wake-up), all on until the parent turns some off. The watch face shows the earliest of those ticked, while the
+ * baby sleeps and while awake; a hint says so.
+ */
+@Composable
+private fun WatchForecastsGroup(shown: Set<ForecastKind>, actions: SettingsActions) {
+    val colors = MaterialTheme.colorScheme
+    Text(
+        stringResource(R.string.settings_watch_forecasts),
+        style = MaterialTheme.typography.titleSmall,
+        color = colors.onSurface,
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp, start = 4.dp, end = 4.dp),
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
+        ForecastKind.entries.forEachIndexed { index, kind ->
+            val checked = kind in shown
+            GroupRow(first = index == 0, last = index == ForecastKind.entries.lastIndex) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .toggleable(value = checked, role = Role.Checkbox, onValueChange = { actions.onWatchForecast(kind, it) })
+                        .padding(start = 16.dp, end = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(forecastLabel(kind)), style = MaterialTheme.typography.titleMedium, color = colors.onSurface, modifier = Modifier.weight(1f))
+                    XIcon(
+                        if (checked) XIcons.checkboxChecked else XIcons.checkbox,
+                        contentDescription = null,
+                        tint = if (checked) colors.onSurface else colors.outline,
+                        size = 24.dp,
+                    )
+                }
+            }
+        }
+    }
+    Text(
+        stringResource(R.string.settings_watch_forecasts_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.onSurfaceVariant,
+        modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp),
+    )
+}
+
+/**
+ * Settings › Notifications › What comes next: one row per prediction notification, saying whether its channel is on
+ * ("On" / "Off"); a tap opens that channel's page in the system's notification settings, where it is turned on or off.
+ */
+@Composable
+private fun ForecastChannelsGroup(channels: Map<ForecastKind, Boolean>, actions: SettingsActions) {
+    val colors = MaterialTheme.colorScheme
+    Text(
+        stringResource(R.string.settings_forecast_notifications),
+        style = MaterialTheme.typography.titleSmall,
+        color = colors.onSurface,
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp, start = 4.dp, end = 4.dp),
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(HistoryRowDefaults.Gap)) {
+        ForecastKind.entries.forEachIndexed { index, kind ->
+            GroupRow(first = index == 0, last = index == ForecastKind.entries.lastIndex) {
+                val on = channels[kind] ?: true
+                LinkRow(
+                    stringResource(forecastLabel(kind)),
+                    stringResource(if (on) R.string.settings_channel_on else R.string.settings_channel_off),
+                    onClick = { actions.onOpenForecastChannel(kind) },
+                )
+            }
+        }
+    }
+    Text(
+        stringResource(R.string.settings_forecast_notifications_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.onSurfaceVariant,
+        modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp),
+    )
+}
+
+/** "Next feed", "Next poop", "Next sleep and wake-up": the estimates' names, as their channels are named. */
+private fun forecastLabel(kind: ForecastKind): Int = when (kind) {
+    ForecastKind.FEED -> R.string.notification_channel_forecast_feed
+    ForecastKind.POOP -> R.string.notification_channel_forecast_poop
+    ForecastKind.SLEEP -> R.string.notification_channel_forecast_sleep
 }
 
 /**

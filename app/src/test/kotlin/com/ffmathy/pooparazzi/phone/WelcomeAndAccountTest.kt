@@ -39,7 +39,10 @@ class WelcomeAndAccountTest {
     @get:Rule(order = 0)
     val fakeAccounts = object : ExternalResource() {
         // The address the Account screen test signs in with agreed earlier; the Welcome's Google account has not.
-        override fun before() = AppAccounts.install(accounts, consent = MemoryConsent(setOf(accounts.nextUser.uid)))
+        override fun before() {
+            AppAccounts.install(accounts, consent = MemoryConsent(setOf(accounts.nextUser.uid)))
+            BabyAlreadyAsked.apply()
+        }
     }
 
     @get:Rule(order = 1)

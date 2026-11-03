@@ -12,6 +12,8 @@ import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationManagerCompat
 import com.ffmathy.pooparazzi.core.domain.DayCounts
+import com.ffmathy.pooparazzi.core.domain.Forecast
+import com.ffmathy.pooparazzi.core.domain.forecast
 import com.ffmathy.pooparazzi.core.domain.localTime
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.format.ClockFormatter
@@ -53,6 +55,9 @@ data class SleepingBaby(val baby: Baby, val sleep: RunningTimer)
  * feed and diaper, today's counts), and the babies (for their labels) and language the text uses. Equal states post
  * nothing new; [now] moves once a minute, so the "1h 25m" in the text follows the clock. Feeds are instants
  * (breastfeeds too), so nothing else ever runs.
+ *
+ * [forecasts] are each baby's estimates (tuned to the baby's age when its birth date is known), for the prediction
+ * notifications ([ForecastNotifications]); a baby with nothing logged has none.
  */
 data class TimerState(
     val sleeping: List<SleepingBaby>,
@@ -61,6 +66,7 @@ data class TimerState(
     val zone: ZoneId,
     val now: Long = 0L,
     val days: Map<String, BabyDay> = emptyMap(),
+    val forecasts: Map<String, Forecast> = emptyMap(),
 ) {
     /** Baby [babyId]'s day; empty for a baby with nothing logged. */
     fun dayOf(babyId: String): BabyDay = days[babyId] ?: BabyDay()
@@ -88,6 +94,10 @@ data class TimerState(
                 days = summaries
                     .filterKeys { id -> byBaby.containsKey(id) }
                     .mapValues { (_, summary) -> BabyDay(summary.lastFeed, summary.lastDiaper, summary.today) },
+                forecasts = babies
+                    .filter { byBaby.containsKey(it.id) }
+                    .associate { it.id to forecast(summaries.getValue(it.id), it.born) }
+                    .filterValues { !it.isEmpty },
             )
         }
     }
@@ -114,8 +124,9 @@ data class TimerState(
 class TimerNotifications(context: Context, private val prefs: SurfacePrefs = SurfacePrefs(context)) {
     private val context = context.applicationContext
     private val manager = context.getSystemService(NotificationManager::class.java)
+    private val forecasts = ForecastNotifications(context, prefs)
 
-    /** Posts, updates or cancels the notifications so they match [state]. */
+    /** Posts, updates or cancels the notifications so they match [state], the prediction notifications too. */
     fun render(state: TimerState) {
         // Forget dismissals of sleeps that have ended, so the next sleep gets its notification again.
         val running = state.sleeping.mapTo(mutableSetOf()) { it.sleep.entryId }
@@ -131,7 +142,8 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
             manager.cancel(tag, WOKE_UP_ID)
             sleeping.sleep.entryId !in dismissed && post(tag, SLEEP_ID, state) { buildSleep(state, sleeping) }
         }
-        scheduleMinuteRefresh(shown.any { it })
+        val predicted = forecasts.render(state)
+        scheduleMinuteRefresh(shown.any { it } || predicted)
         // A breastfeed notification posted by an older version (when breastfeeds were timed) is never wanted now.
         manager.cancel(LEGACY_FEED_ID)
     }
@@ -188,8 +200,8 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
         context.hasNotificationPermission() && NotificationManagerCompat.from(context).areNotificationsEnabled()
 
     /**
-     * Re-renders at the next minute while the sleep notification shows, so its "1h 07m" follows the clock. The alarm
-     * does not wake the phone: one that sleeps gets the update as soon as it wakes up.
+     * Re-renders at the next minute while the sleep notification or a prediction shows, so its "1h 07m" (or "in 55m")
+     * follows the clock. The alarm does not wake the phone: one that sleeps gets the update as soon as it wakes up.
      */
     private fun scheduleMinuteRefresh(on: Boolean) {
         val alarms = context.getSystemService(AlarmManager::class.java) ?: return
