@@ -21,11 +21,12 @@ import com.ffmathy.pooparazzi.core.R as CoreR
  * - the title line ([title]);
  * - the Feed row: the time since the last feed, then the expected next feed;
  * - the Diaper row: the time since the last diaper, then the expected next poop;
- * - the sleep toggle: "Woke up" while [runningSleep] runs, "Start sleep" otherwise, with the expected wake-up or next
- *   sleep under it.
+ * - the sleep toggle: "Woke up" while [runningSleep] runs, "Start sleep" otherwise, with how long the baby has been
+ *   asleep or awake ([sleepStateSince]) and the expected wake-up or next sleep under it.
  *
  * @property babyName the name the title shows (empty: unnamed, the title falls back to the last diaper).
  * @property forecast what the past week expects next (V1_ADDITIONS §9); [Forecast.NONE] when it cannot say.
+ * @property lastSleep the most recent completed sleep: the baby has been awake since it ended.
  */
 @Immutable
 data class WatchGlance(
@@ -36,6 +37,7 @@ data class WatchGlance(
     val lastDiaper: Entry?,
     val runningSleep: Entry?,
     val forecast: Forecast = Forecast.NONE,
+    val lastSleep: Entry? = null,
 ) {
     /** Asleep, then the name, then the last diaper. */
     val title: GlanceTitle
@@ -47,6 +49,9 @@ data class WatchGlance(
         }
 
     val asleep: Boolean get() = runningSleep != null
+
+    /** When the current state began: the running sleep's start, else the last sleep's end (null: no sleep yet). */
+    val sleepStateSince: Long? get() = runningSleep?.startMillis ?: lastSleep?.endMillis
 
     /** The expected wake-up while asleep, the expected next sleep while awake. */
     val nextSleep: Expected? get() = forecast.sleep
@@ -68,6 +73,7 @@ data class WatchGlance(
             lastDiaper = summary.lastDiaper,
             runningSleep = summary.runningSleep,
             forecast = forecast(summary, birthDate),
+            lastSleep = summary.lastSleep,
         )
     }
 }

@@ -54,7 +54,7 @@ data class MainUiState(
     val forecast: Forecast = Forecast.NONE,
 ) {
     /** What Main shows, the same model the Tile is built from. */
-    val glance: WatchGlance get() = WatchGlance(now, zone, baby.name, lastFeed, lastDiaper, runningSleep, forecast)
+    val glance: WatchGlance get() = WatchGlance(now, zone, baby.name, lastFeed, lastDiaper, runningSleep, forecast, lastSleep)
 
     val mode: MainMode
         get() = if (runningSleep != null) MainMode.ASLEEP else MainMode.IDLE
