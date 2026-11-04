@@ -103,7 +103,7 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Main, idle | Main, asleep | Main, after a breast feed | Feed type |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/watch-main-idle.png" width="170" alt="Watch main, idle, as the Tile: the feed icon with 2h 10m since and 1h 00m to the next; the diaper icon with 48m since; a large Start sleep button, next in 50m"> | <img src="docs/screenshots/en/watch-main-asleep.png" width="170" alt="Watch main, asleep: Asleep 1h 07m, Feed with Next in 2h 45m, Diaper, Woke up in 2h 15m"> | <img src="docs/screenshots/en/watch-main-after-breast.png" width="170" alt="Watch main after a breast feed"> | <img src="docs/screenshots/en/watch-feed-type.png" width="170" alt="Watch feed type"> |
+| <img src="docs/screenshots/en/watch-main-idle.png" width="170" alt="Watch main, idle, as the Tile: the feed icon with 2h 10m since and 1h 00m to the next; the diaper icon with 48m since; a large Start sleep button, awake 1h 05m, next sleep in 45m"> | <img src="docs/screenshots/en/watch-main-asleep.png" width="170" alt="Watch main, asleep: Asleep 1h 07m, Feed with Next in 2h 45m, Diaper, Woke up with asleep 1h 07m and wake-up in 2h 15m"> | <img src="docs/screenshots/en/watch-main-after-breast.png" width="170" alt="Watch main after a breast feed"> | <img src="docs/screenshots/en/watch-feed-type.png" width="170" alt="Watch feed type"> |
 
 | Side | Diaper | Diaper, colour | Diaper, texture |
 |:---:|:---:|:---:|:---:|
@@ -115,7 +115,7 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Logged + Undo | Time (from Logged) | Undone | Tile |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/en/watch-logged.png" width="170" alt="Watch logged breast feed with its side order and Undo"> | <img src="docs/screenshots/en/watch-time.png" width="170" alt="Watch Time screen, opened from Logged: Feed · −7m over 14:25, −5m and +5m buttons and Done; the crown moves the time a minute at a time"> | <img src="docs/screenshots/en/watch-undone.png" width="140" alt="Watch undone"> | <img src="docs/screenshots/en/watch-tile.png" width="140" alt="Watch tile"> |
+| <img src="docs/screenshots/en/watch-logged.png" width="170" alt="Watch logged breast feed with its side order and Undo"> | <img src="docs/screenshots/en/watch-time.png" width="170" alt="Watch Time screen, opened from Logged: Feed · −7m over 14:25, −5m and +5m buttons and Done; the crown moves the time a minute at a time"> | <img src="docs/screenshots/en/watch-undone.png" width="140" alt="Watch undone"> | <img src="docs/screenshots/en/watch-tile.png" width="140" alt="Watch tile: Feed and Diaper rows, and Start sleep with awake 1h 05m and next sleep in 45m"> |
 
 | Tile, asleep | Tile, second baby | Complications | Main, two babies |
 |:---:|:---:|:---:|:---:|

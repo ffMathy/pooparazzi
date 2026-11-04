@@ -432,30 +432,35 @@ private class TileContent(
 
     // ---- Edge ------------------------------------------------------------------------------------
 
-    /** The sleep toggle: "Start sleep" (SLEEP container) or "Woke up" (containerLit + 1.5 dp strong border). */
+    /**
+     * The sleep toggle: "Start sleep" (SLEEP container) or "Woke up" (containerLit + 1.5 dp strong border), over how
+     * long the baby has been awake or asleep after `history` ("⟲ 1h 05m") and the expected next sleep or wake-up after
+     * `upcoming` ("⟳ 50m"), as the phone's widget toggle.
+     */
     fun sleepToggle(): LayoutElement = with(scope) {
         val sleep = events.sleep
         val asleep = state.runningSleep != null
         val label = res.getString(if (asleep) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
-        // Under the word, as on Main: the expected wake-up or next sleep ("⟳ 45m"), when there is one. Start-aligned, so
-        // the time sits right after the icon; the pair is centred under the word.
+        val since = state.glance.sleepStateSince
         val next = state.glance.nextSleep
         val action = res.getString(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep)
-        val description = next?.let { res.getString(R.string.spoken_pair, action, glanceText.nextSleepSpoken(it, asleep)) } ?: action
+        // Read as "Start sleep, Awake since 13:27, expected to sleep again around 15:20".
+        val spokenSince = since?.let {
+            res.getString(R.string.status_since, res.getString(if (asleep) CoreR.string.status_asleep else CoreR.string.status_awake), text.formatters.relative.since(it, text.zone))
+        }
+        val description = listOfNotNull(action, spokenSince, next?.let { glanceText.nextSleepSpoken(it, asleep) })
+            .reduce { said, more -> res.getString(R.string.spoken_pair, said, more) }
         val modifier = LayoutModifier.contentDescription(description)
         // The tap says what it showed: "Woke up" for this sleep, or "Start sleep" (see TileActions).
         val clickId = state.runningSleep?.let { TileAction.SLEEP_END.clickId(token, it.id) } ?: TileAction.SLEEP_START.clickId(token)
         // Fixed-size type, as the stock EdgeButton's: a larger font would cut "Start sleep" at the button's width.
         val word = plainText(label.layoutString, Typography.LABEL_MEDIUM, sleep.onContainer.layout, scalable = false)
-        val content = if (next == null) {
-            word
-        } else {
-            column(
-                word,
-                iconLine(XDrawables.upcoming, estimate(next, TEXT_ALIGN_START), Typography.LABEL_SMALL, sleep.onContainer, LINE_ICON, TEXT_ALIGN_START, scalable = false),
-                horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
-            )
-        }
+        // Start-aligned, so each time sits right after its icon; each line is centred under the word.
+        val lines = listOfNotNull(
+            since?.let { iconLine(XDrawables.history, text.since(it, now).layout(TEXT_ALIGN_START), Typography.LABEL_SMALL, sleep.onContainer, LINE_ICON, TEXT_ALIGN_START, scalable = false) },
+            next?.let { iconLine(XDrawables.upcoming, estimate(it, TEXT_ALIGN_START), Typography.LABEL_SMALL, sleep.onContainer, LINE_ICON, TEXT_ALIGN_START, scalable = false) },
+        )
+        val content = if (lines.isEmpty()) word else column(word, *lines.toTypedArray(), horizontalAlignment = HORIZONTAL_ALIGN_CENTER)
         tallEdgeButton(
             onClick = Clickable.Builder().setId(clickId).setOnClick(loadAction()).build(),
             modifier = if (asleep) modifier.border(LIT_BORDER, sleep.strong.layout) else modifier,
@@ -567,8 +572,8 @@ private class TileContent(
         const val LINE_ICON = 14f
 
         /** The sleep toggle's height (the stock EdgeButton's is 46 dp), and below 225 dp. */
-        const val EDGE_HEIGHT = 62f
-        const val EDGE_HEIGHT_SMALL = 56f
+        const val EDGE_HEIGHT = 70f
+        const val EDGE_HEIGHT_SMALL = 62f
 
         /** The stock EdgeButton's shape and padding (EdgeButtonDefaults). */
         const val EDGE_TOP_CORNER = 17f

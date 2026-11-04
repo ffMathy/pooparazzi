@@ -473,8 +473,9 @@ private fun EventRow(
 
 /**
  * The sleep toggle (§3.5.1–2): "Start sleep" (SLEEP container) or "Woke up" (SLEEP containerLit + border), the stock
- * collapsing EdgeButton, with the expected next sleep or wake-up under the word ("⟳ 50m"). It is Medium wherever
- * the rows leave room for it. A rejected toggle shows two centred lines ("Already / asleep") instead of the label for
+ * collapsing EdgeButton, with how long the baby has been awake or asleep ("⟲ 1h 05m") and the expected next sleep or
+ * wake-up ("⟳ 50m") under the word, as on the Tile. It is Medium wherever the rows leave room for it; a Small one has
+ * room for the estimate only (the time since is still read, as its state). A rejected toggle shows two centred lines ("Already / asleep") instead of the label for
  * 2 s.
  */
 @Composable
@@ -516,10 +517,18 @@ private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: Edge
             // button's curve begins. Each line steps down on its own until it fits.
             val wide = if (size == EdgeButtonSize.Medium) EDGE_WIDTH_MEDIUM else EDGE_WIDTH_SMALL
             val style = MaterialTheme.typography.labelMedium
+            val sinceLine = state.glance.sleepStateSince?.takeIf { guardText == null && size == EdgeButtonSize.Medium }
+                ?.let { IconLine(XIcons.history, sinceText(it, state.now, f)) }
             val nextText = next?.takeIf { guardText == null }?.let { IconLine(XIcons.upcoming, words.nextShort(it, state.now)) }
             val nextStyle = MaterialTheme.typography.labelSmall
             val labelFit = if (guardText != null) EDGE_MAX_FONT_SCALE else minOf(EDGE_MAX_FONT_SCALE, widthScale(AnnotatedString(label), style, wide))
-            val nextFit = nextText?.let { minOf(EDGE_MAX_FONT_SCALE, widthScale(it.measured(), nextStyle, wide - EDGE_LOWER_LINE_INSET)) }
+            // Both lower lines at one size, measured where the button's curve leaves the least room (the lowest).
+            // With both, they keep to the default size: larger, the lowest would be cut by the button's curve.
+            val both = sinceLine != null && nextText != null
+            val lowerWidth = wide - EDGE_LOWER_LINE_INSET * (if (both) 2 else 1)
+            val lowerMax = if (both) EDGE_THREE_LINE_FONT_SCALE else EDGE_MAX_FONT_SCALE
+            val nextFit = listOfNotNull(sinceLine, nextText).takeIf { it.isNotEmpty() }
+                ?.minOf { minOf(lowerMax, widthScale(it.measured(), nextStyle, lowerWidth)) }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CappedFontScale(labelFit.coerceAtLeast(MIN_FIT_FONT_SCALE)) {
                     Text(
@@ -532,9 +541,10 @@ private fun SleepEdgeButton(state: MainUiState, actions: MainActions, size: Edge
                         modifier = if (guardText != null) Modifier.widthIn(max = EDGE_GUARD_WIDTH) else Modifier.requiredWidthIn(max = wide),
                     )
                 }
-                if (nextText != null && nextFit != null) {
+                if (nextFit != null) {
                     CappedFontScale(nextFit.coerceAtLeast(MIN_FIT_FONT_SCALE)) {
-                        IconLineText(nextText.annotated(), nextStyle, content)
+                        sinceLine?.let { IconLineText(it.annotated(), nextStyle, content) }
+                        nextText?.let { IconLineText(it.annotated(), nextStyle, content) }
                     }
                 }
             }
@@ -569,6 +579,9 @@ private val EDGE_GUARD_WIDTH = 96.dp
 
 /** The sleep toggle's largest font scale. */
 private const val EDGE_MAX_FONT_SCALE = 1.15f
+
+/** The largest font scale of the sleep toggle's two lower lines when both show ("⟲ 1h 05m" over "⟳ 45m"). */
+private const val EDGE_THREE_LINE_FONT_SCALE = 1f
 
 
 // ---- Previews --------------------------------------------------------------------------------

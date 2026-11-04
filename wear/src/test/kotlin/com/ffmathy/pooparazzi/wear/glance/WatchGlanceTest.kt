@@ -11,6 +11,7 @@ import com.ffmathy.pooparazzi.core.sync.SyncStatus
 import com.ffmathy.pooparazzi.wear.state.MainUiState
 import com.ffmathy.pooparazzi.wear.tile.TileUiState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -58,6 +59,15 @@ class WatchGlanceTest {
         assertTrue(glance.title is GlanceTitle.Asleep)
         assertEquals("2h 15m", words.nextShort(glance.nextSleep!!, glance.now))
         assertEquals("expected to wake around 05:25", words.nextSleepSpoken(glance.nextSleep!!, asleep = true))
+    }
+
+    @Test
+    fun theSleepToggleSaysHowLongAwakeOrAsleep() {
+        val awake = WatchGlance.from(summarize(SampleData.history(), SampleData.NOW_1432, SampleData.ZONE), SampleData.BABY_NAME)
+        assertEquals(SampleData.at(13, 27), awake.sleepStateSince)
+        val asleep = WatchGlance.from(summarize(SampleData.historyAt0312(), SampleData.NOW_0312, SampleData.ZONE), SampleData.BABY_NAME)
+        assertEquals(asleep.runningSleep!!.startMillis, asleep.sleepStateSince)
+        assertNull(WatchGlance.from(summarize(emptyList(), SampleData.NOW_1432, SampleData.ZONE), SampleData.BABY_NAME).sleepStateSince)
     }
 
     private fun <T : Any> assertNotNull(value: T?): T = requireNotNull(value) { "no estimate" }
