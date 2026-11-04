@@ -437,7 +437,8 @@ private class TileContent(
         val sleep = events.sleep
         val asleep = state.runningSleep != null
         val label = res.getString(if (asleep) CoreR.string.action_woke_up else CoreR.string.action_start_sleep)
-        // Under the word, as on Main: the expected wake-up or next sleep ("~05:25"), when there is one.
+        // Under the word, as on Main: the expected wake-up or next sleep ("⟳ 45m"), when there is one. Start-aligned, so
+        // the time sits right after the icon; the pair is centred under the word.
         val next = state.glance.nextSleep
         val action = res.getString(if (asleep) R.string.cd_woke_up_end_sleep else CoreR.string.action_start_sleep)
         val description = next?.let { res.getString(R.string.spoken_pair, action, glanceText.nextSleepSpoken(it, asleep)) } ?: action
@@ -451,7 +452,7 @@ private class TileContent(
         } else {
             column(
                 word,
-                iconLine(XDrawables.upcoming, estimate(next, TEXT_ALIGN_CENTER), Typography.LABEL_SMALL, sleep.onContainer, LINE_ICON, scalable = false),
+                iconLine(XDrawables.upcoming, estimate(next, TEXT_ALIGN_START), Typography.LABEL_SMALL, sleep.onContainer, LINE_ICON, TEXT_ALIGN_START, scalable = false),
                 horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
             )
         }
