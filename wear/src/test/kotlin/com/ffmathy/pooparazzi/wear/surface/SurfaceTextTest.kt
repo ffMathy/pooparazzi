@@ -134,6 +134,9 @@ class EnglishSurfaceTextTest : SurfaceTextTest(ULocale.ENGLISH) {
         // Tile text is laid out for the widest value it ticks to.
         assertEquals("00h 00m ago", text.ago(SampleData.at(14, 30), SampleData.NOW_1432).longest)
         assertEquals("Asleep 00h 00m", text.template(SurfaceText.Template("Asleep %1\$s"), text.duration(SampleData.at(14, 0), SampleData.NOW_1432)).longest)
+        // An estimate counts down, so it is laid out for its value now (or "soon"), not for "00h 00m".
+        assertEquals("soon", text.estimate(SampleData.NOW_1432 + 45 * 60_000L, "45m", "%1\$s", "soon", "now").longest)
+        assertEquals("0h 00m", text.estimate(SampleData.NOW_1432 + 65 * 60_000L, "1h 05m", "%1\$s", "soon", "now").longest)
     }
 }
 

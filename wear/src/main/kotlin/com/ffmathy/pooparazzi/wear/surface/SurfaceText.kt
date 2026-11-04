@@ -88,6 +88,10 @@ class SurfaceText(
      * An estimate relative to the platform clock, by the rules of `GlanceText.next`: [inTemplate] with the time until
      * [atMillis] rounded up to five minutes ("Next in 55m"), [soon] under five minutes, then [due] once it has come
      * ("Due now"; never a time in the past). [static] is the line at the time the surface was built.
+     *
+     * An estimate only counts down, so it never grows wider than [static] (digits widened to "0"), [soon] or [due]:
+     * that, not the widest duration ("00h 00m"), is its layout width, so a short "45m" is not set in a box made for
+     * "00h 00m", apart from the icon before it.
      */
     fun estimate(atMillis: Long, static: String, inTemplate: String, soon: String, due: String): TimeText {
         val until = DynamicInstant.platformTimeWithSecondsPrecision().durationUntil(DynamicInstant.withSecondsPrecision(Instant.ofEpochMilli(atMillis)))
@@ -99,7 +103,7 @@ class SurfaceText(
                 DynamicString.onCondition(seconds.gt(0)).use(DynamicString.constant(soon))
                     .elseUse(DynamicString.constant(due)),
             )
-        return TimeText(static, dynamic, longestOf(static, ahead.fill(widestDuration), soon, due))
+        return TimeText(static, dynamic, longestOf(static.replace(DIGIT, "0"), soon, due))
     }
 
     /** Clock time "14:32" (absolute, never changes). */
@@ -258,6 +262,7 @@ class SurfaceText(
         private const val OTHER_QUANTITY = 5
         private const val LESS_THAN_ONE = "<1"
         private const val WIDE_NUMBER = "00"
+        private val DIGIT = Regex("[0-9]")
         private val TWO_DIGITS = DynamicInt32.IntFormatter.Builder().setMinIntegerDigits(2).build()
 
         /** Text in [context]'s language (the app language synced from the phone) and the device 12/24 h setting. */
