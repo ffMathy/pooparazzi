@@ -130,8 +130,8 @@ internal val Color.layout: LayoutColor get() = toArgb().argb
  * Feed and Diaper open the same screens as Main's buttons, so the details are asked for exactly as in the app.
  *
  * No button ever relabels or moves for feedback (§3.6): only the title changes, and the background opens Logged with
- * Undo while a confirmation shows. Below 225 dp, where there is no title, Row A's secondary label carries the
- * confirmation instead ("Woke up 14:32 · Undo"), as §3.6 allows.
+ * Undo while a confirmation shows. Below 225 dp, where there is no title, the sleep toggle's first time line carries
+ * the confirmation instead ("✓ Woke up 14:32"), under its unchanged word, as §3.6 allows.
  *
  * @param token makes this layout's clickable ids unique (see [TileMemory.claim]).
  * @param dynamic false renders every time-dependent text as its value at [TileUiState.now] only (screenshots;
@@ -139,12 +139,12 @@ internal val Color.layout: LayoutColor get() = toArgb().argb
  */
 fun MaterialScope.pooparazziTile(state: TileUiState, text: SurfaceText, token: Long, dynamic: Boolean = true): LayoutElement {
     val small = deviceConfiguration.screenWidthDp < SMALL_WATCH_DP
-    val builder = TileContent(this, state, text, token, dynamic, confirmInRowA = small)
+    val builder = TileContent(this, state, text, token, dynamic, confirmOnToggle = small)
     val undoEntry = state.undoEntryId
     val title = if (small) null else builder.title()
     return primaryLayout(
         titleSlot = title,
-        mainSlot = { builder.rows(withTitle = title != null) },
+        mainSlot = { builder.rows() },
         bottomSlot = { builder.sleepToggle() },
         onClick = undoEntry?.let { builder.openApp(MainActivity.OPEN_LOGGED, CLICK_UNDO, it) },
     )
@@ -161,8 +161,8 @@ private class TileContent(
     private val text: SurfaceText,
     private val token: Long,
     private val useDynamic: Boolean,
-    /** No title on this screen: Row A's secondary label shows the just-logged confirmation. */
-    private val confirmInRowA: Boolean,
+    /** No title on this screen: the sleep toggle's first time line shows the just-logged confirmation. */
+    private val confirmOnToggle: Boolean,
 ) {
     private val context = scope.context
     private val res = context.resources
@@ -234,8 +234,18 @@ private class TileContent(
         GlanceTitle.None -> null
     }
 
-    /** What a just-logged confirmation says: its glyph, word, time (none for "Sleep cancelled") and spoken form. */
-    private class Confirmation(@DrawableRes val glyph: Int, val glyphTint: Color, val label: String, val time: String?, val spoken: String)
+    /**
+     * What a just-logged confirmation says: its glyph, word, time (none for "Sleep cancelled") and spoken form, and
+     * [shortLabel], a shorter word for the sleep toggle's line ("Cancelled" under "Start sleep").
+     */
+    private class Confirmation(
+        @DrawableRes val glyph: Int,
+        val glyphTint: Color,
+        val label: String,
+        val time: String?,
+        val spoken: String,
+        val shortLabel: String? = null,
+    )
 
     private fun confirmation(feedback: TileFeedback): Confirmation {
         val undoHint = { said: String -> res.getString(R.string.tile_cd_logged, said) }
@@ -248,7 +258,7 @@ private class TileContent(
             }
             TileFeedbackKind.SLEEP_CANCELLED -> {
                 val label = res.getString(CoreR.string.receipt_sleep_cancelled)
-                Confirmation(XDrawables.wake, events.sleep.strong, label, null, undoHint(label))
+                Confirmation(XDrawables.wake, events.sleep.strong, label, null, undoHint(label), res.getString(R.string.tile_toggle_sleep_cancelled))
             }
         }
     }
@@ -306,8 +316,8 @@ private class TileContent(
 
     // ---- Main slot ---------------------------------------------------------------------------
 
-    fun rows(withTitle: Boolean): LayoutElement = column(
-        rowA(withTitle),
+    fun rows(): LayoutElement = column(
+        rowA(),
         spacer(height = dp(ROW_GAP)),
         rowB(),
         width = expand(),
@@ -315,43 +325,25 @@ private class TileContent(
         horizontalAlignment = HORIZONTAL_ALIGN_CENTER,
     )
 
-    /**
-     * Row A: Feed opens the app's Feed type screen; feeds are never logged from the tile.
-     * Without a title (below 225 dp) its secondary label shows a just-logged confirmation for its 10 s.
-     */
-    private fun rowA(withTitle: Boolean): LayoutElement = with(scope) {
+    /** Row A: Feed opens the app's Feed type screen; feeds are never logged from the tile. */
+    private fun rowA(): LayoutElement = with(scope) {
         val lastFeed = state.lastFeed
         val next = state.glance.nextFeed
         val spoken = lastFeed?.let {
             text.template(SurfaceText.Template.of(res, R.string.tile_cd_feed), text.spokenAgo(it.startMillis, now))
         }?.withNext(next?.let(glanceText::nextFeedSpoken))
-        val spokenStatic = spoken?.static ?: res.getString(R.string.tile_cd_feed_none)
+        val description = LayoutModifier.contentDescription(
+            spoken?.static ?: res.getString(R.string.tile_cd_feed_none),
+            spoken?.dynamic?.takeIf { useDynamic },
+        )
         val secondary = lastFeed?.let { text.since(it.startMillis, now).layout(TEXT_ALIGN_START) }
             ?: res.getString(R.string.status_no_feed_yet).layoutString
-        val confirmed = (state.title as? TileTitle.Logged)?.feedback?.takeIf { confirmInRowA }?.let(::confirmation)
-        val description = if (confirmed != null) {
-            // The confirmation first: on these watches nothing else says it.
-            LayoutModifier.contentDescription(res.getString(R.string.spoken_then_action, confirmed.spoken, spokenStatic))
-        } else {
-            LayoutModifier.contentDescription(spokenStatic, spoken?.dynamic?.takeIf { useDynamic })
-        }
-        val shownSecondary = confirmed?.let {
-            RowAConfirmation.text(
-                label = it.label,
-                labelWithTime = it.time?.let { time -> res.getString(R.string.tile_title_logged, it.label, time) },
-                separator = DOT_SEPARATOR,
-                undo = res.getString(CoreR.string.action_undo),
-                maxWidthDp = TileTextMeasure.rowATextWidthDp(deviceConfiguration, withTitle),
-                measure = TileTextMeasure.labelSmall(deviceConfiguration.fontScale),
-            ).layoutString
-        } ?: secondary
         sheetButton(
-            events.feed, XDrawables.feed, shownSecondary,
-            secondaryIcon = XDrawables.history.takeIf { confirmed == null && lastFeed != null },
-            next = next?.takeIf { confirmed == null && lastFeed != null && roomForEstimates }?.let { estimate(it, TEXT_ALIGN_START) },
+            events.feed, XDrawables.feed, secondary,
+            secondaryIcon = XDrawables.history.takeIf { lastFeed != null },
+            next = next?.takeIf { lastFeed != null && roomForEstimates }?.let { estimate(it, TEXT_ALIGN_START) },
             description = description,
             onClick = openApp(MainActivity.OPEN_FEED_TYPE, CLICK_OPEN_FEED),
-            confirmation = confirmed != null,
         )
     }
 
@@ -403,15 +395,12 @@ private class TileContent(
         next: LayoutString?,
         description: LayoutModifier,
         onClick: Clickable,
-        /** A just-logged confirmation in [secondary]: the smaller type it is measured for. */
-        confirmation: Boolean = false,
     ): LayoutElement = button(
         onClick = onClick,
         modifier = description,
         iconContent = { glyph(icon, event.strong, ROW_ICON) },
         labelContent = {
-            val type = if (confirmation) Typography.LABEL_SMALL else Typography.LABEL_MEDIUM
-            val since = iconLine(secondaryIcon, secondary, type, event.onContainer, LINE_ICON, TEXT_ALIGN_START)
+            val since = iconLine(secondaryIcon, secondary, Typography.LABEL_MEDIUM, event.onContainer, LINE_ICON, TEXT_ALIGN_START)
             if (next == null) {
                 since
             } else {
@@ -435,7 +424,8 @@ private class TileContent(
     /**
      * The sleep toggle: "Start sleep" (SLEEP container) or "Woke up" (containerLit + 1.5 dp strong border), over how
      * long the baby has been awake or asleep after `history` ("⟲ 1h 05m") and the expected next sleep or wake-up after
-     * `upcoming` ("⟳ 50m"), as the phone's widget toggle.
+     * `upcoming` ("⟳ 50m"), as the phone's widget toggle. Below 225 dp, where there is no title, a just-logged
+     * confirmation takes the first time line for its 10 s ("✓ Woke up 14:32"); the word and the tap stay the toggle's.
      */
     fun sleepToggle(): LayoutElement = with(scope) {
         val sleep = events.sleep
@@ -448,16 +438,24 @@ private class TileContent(
         val spokenSince = since?.let {
             res.getString(R.string.status_since, res.getString(if (asleep) CoreR.string.status_asleep else CoreR.string.status_awake), text.formatters.relative.since(it, text.zone))
         }
-        val description = listOfNotNull(action, spokenSince, next?.let { glanceText.nextSleepSpoken(it, asleep) })
+        val toggleDescription = listOfNotNull(action, spokenSince, next?.let { glanceText.nextSleepSpoken(it, asleep) })
             .reduce { said, more -> res.getString(R.string.spoken_pair, said, more) }
+        val confirmed = (state.title as? TileTitle.Logged)?.feedback?.takeIf { confirmOnToggle }?.let(::confirmation)
+        // The confirmation first: on these watches nothing else says it.
+        val description = confirmed?.let { res.getString(R.string.spoken_then_action, it.spoken, toggleDescription) } ?: toggleDescription
         val modifier = LayoutModifier.contentDescription(description)
         // The tap says what it showed: "Woke up" for this sleep, or "Start sleep" (see TileActions).
         val clickId = state.runningSleep?.let { TileAction.SLEEP_END.clickId(token, it.id) } ?: TileAction.SLEEP_START.clickId(token)
         // Fixed-size type, as the stock EdgeButton's: a larger font would cut "Start sleep" at the button's width.
         val word = plainText(label.layoutString, Typography.LABEL_MEDIUM, sleep.onContainer.layout, scalable = false)
         // Start-aligned, so each time sits right after its icon; each line is centred under the word.
+        val sinceLine = when {
+            confirmed != null -> confirmationLine(confirmed)
+            since != null -> iconLine(XDrawables.history, text.since(since, now).layout(TEXT_ALIGN_START), Typography.LABEL_SMALL, sleep.onContainer, LINE_ICON, TEXT_ALIGN_START, scalable = false)
+            else -> null
+        }
         val lines = listOfNotNull(
-            since?.let { iconLine(XDrawables.history, text.since(it, now).layout(TEXT_ALIGN_START), Typography.LABEL_SMALL, sleep.onContainer, LINE_ICON, TEXT_ALIGN_START, scalable = false) },
+            sinceLine,
             next?.let { iconLine(XDrawables.upcoming, estimate(it, TEXT_ALIGN_START), Typography.LABEL_SMALL, sleep.onContainer, LINE_ICON, TEXT_ALIGN_START, scalable = false) },
         )
         val content = if (lines.isEmpty()) word else column(word, *lines.toTypedArray(), horizontalAlignment = HORIZONTAL_ALIGN_CENTER)
@@ -470,14 +468,41 @@ private class TileContent(
     }
 
     /**
+     * A just-logged confirmation as the sleep toggle's first time line: the longest of "✓ Woke up 14:32",
+     * "Woke up 14:32" and "Woke up" that fits the button's width (§3.6); "Cancelled" for a "Sleep cancelled" too long
+     * for it.
+     */
+    private fun MaterialScope.confirmationLine(confirmed: Confirmation): LayoutElement {
+        val fit = ToggleConfirmation.fitting(
+            label = confirmed.label,
+            labelWithTime = confirmed.time?.let { res.getString(R.string.tile_title_logged, confirmed.label, it) },
+            shortLabel = confirmed.shortLabel,
+            maxWidthDp = edgeContentWidthDp(deviceConfiguration.screenWidthDp.toFloat()),
+            // The toggle's lines keep their size at any font scale.
+            measure = TileTextMeasure.labelSmall(1f),
+        )
+        val line = fit.text.layoutString
+        val color = events.sleep.onContainer
+        return if (fit.glyph) {
+            row(
+                glyph(confirmed.glyph, confirmed.glyphTint, LINE_ICON),
+                spacer(width = dp(ToggleConfirmation.GLYPH_GAP_DP)),
+                plainText(line, Typography.LABEL_SMALL, color.layout, TEXT_ALIGN_START, scalable = false),
+                verticalAlignment = VERTICAL_ALIGN_CENTER,
+            )
+        } else {
+            plainText(line, Typography.LABEL_SMALL, color.layout, TEXT_ALIGN_CENTER, scalable = false)
+        }
+    }
+
+    /**
      * The stock EdgeButton (`textEdgeButton`) with room for two lines: its shape, width, top padding and "EB" tag (so
      * `primaryLayout` hugs it to the screen's bottom edge), but [EDGE_HEIGHT] tall instead of 46 dp, so the expected next
      * sleep fits under the word at a readable size. The rows above are shorter for it.
      */
     private fun MaterialScope.tallEdgeButton(onClick: Clickable, modifier: LayoutModifier, container: LayoutColor, content: LayoutElement): LayoutElement {
         val screen = deviceConfiguration.screenWidthDp.toFloat()
-        val marginPercent = if (screen >= SMALL_WATCH_DP) 26f else 24f
-        val width = screen * (100f - 2 * marginPercent) / 100f
+        val width = edgeWidthDp(screen)
         val height = if (screen >= SMALL_WATCH_DP) EDGE_HEIGHT else EDGE_HEIGHT_SMALL
         val button = box(
             content,
@@ -503,6 +528,15 @@ private class TileContent(
             verticalAlignment = VERTICAL_ALIGN_BOTTOM,
         )
     }
+
+    /** The stock EdgeButton's width on a [screen] dp wide watch (EdgeButtonDefaults' side margins). */
+    private fun edgeWidthDp(screen: Float): Float {
+        val marginPercent = if (screen >= SMALL_WATCH_DP) 26f else 24f
+        return screen * (100f - 2 * marginPercent) / 100f
+    }
+
+    /** The width the sleep toggle's lines have inside its side padding. */
+    private fun edgeContentWidthDp(screen: Float): Float = edgeWidthDp(screen) - 2 * EDGE_SIDE_PADDING
 
     // ---- Helpers ---------------------------------------------------------------------------------
 

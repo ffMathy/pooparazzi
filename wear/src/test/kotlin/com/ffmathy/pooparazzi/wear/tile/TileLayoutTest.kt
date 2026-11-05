@@ -251,14 +251,17 @@ class TileLayoutTest {
     }
 
     @Test
-    fun onSmallWatchesRowACarriesTheConfirmation() {
-        // No title below 225 dp (DESIGN_SPEC §3.6): the feedback is Row A's secondary label for the 10 s.
+    fun onSmallWatchesTheSleepToggleCarriesTheConfirmation() {
+        // No title below 225 dp (DESIGN_SPEC §3.6): the feedback is the sleep toggle's first time line for the 10 s.
         val proto = build(WearSamples.tileJustLogged(), sizeDp = 192)
         assertFalse(proto.has("Noa"))
-        assertTrue(proto, proto.has("Woke up · Undo") || proto.has("Woke up 14:32 · Undo") || proto.has("Woke up 14:32"))
-        assertTrue(proto.contains("Woke up at 14:32. Tap the tile to undo. Feed."))
-        // Without a confirmation Row A says the time since the last feed.
-        assertTrue(build(WearSamples.tileIdle(), sizeDp = 192).has("2h 10m"))
+        assertTrue(proto, proto.has("Woke up 14:32") || proto.has("Woke up"))
+        assertTrue(proto, proto.contains("Woke up at 14:32. Tap the tile to undo. Start sleep"))
+        // Row A keeps the time since the last feed, and is read as Feed only.
+        assertTrue(proto, proto.has("2h 10m"))
+        assertTrue(proto, proto.has("Feed. Last feed 2 hours 10 minutes ago"))
+        // Without a confirmation the toggle says how long the baby has been awake.
+        assertFalse(build(WearSamples.tileIdle(), sizeDp = 192).contains("Tap the tile to undo"))
     }
 
     @Test

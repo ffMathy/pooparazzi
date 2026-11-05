@@ -98,14 +98,20 @@ class TileTitleFitTest {
         .build()
 
     @Test
-    fun onSmallWatchesTheRowAConfirmationFitsItsLine() {
-        val small = device(192)
-        val width = TileTextMeasure.rowATextWidthDp(small, withTitle = false)
+    fun onSmallWatchesTheToggleConfirmationFitsItsLine() {
+        // The sleep toggle's lines inside its 8 dp side padding on a 192 dp watch (EdgeButton margins 24 %).
+        val width = 192f * 0.52f - 16f
         val measure = TileTextMeasure.labelSmall(1f)
-        val english = RowAConfirmation.text("Both", "Both 14:32", DOT_SEPARATOR, "Undo", width, measure)
-        assertTrue(english, english.endsWith("Undo"))
-        val danish = RowAConfirmation.text("Begge", "Begge 14:32", DOT_SEPARATOR, "Fortryd", width, measure)
-        assertTrue(danish, measure.widthDp(danish) <= width)
-        assertTrue(danish, danish.startsWith("Begge"))
+        fun fits(fit: ToggleConfirmation.Fit) =
+            measure.widthDp(fit.text) + (if (fit.glyph) TileTextMeasure.LINE_ICON_DP + ToggleConfirmation.GLYPH_GAP_DP else 0f) <= width
+        val english = ToggleConfirmation.fitting("Woke up", "Woke up 14:32", width, measure)
+        assertTrue(english.toString(), english.text.startsWith("Woke up") && fits(english))
+        val danish = ToggleConfirmation.fitting("Vågnede", "Vågnede 14:32", width, measure)
+        assertTrue(danish.toString(), danish.text.startsWith("Vågnede") && fits(danish))
+        // "Sleep cancelled" is too long for the line: the short word under "Start sleep".
+        val cancelled = ToggleConfirmation.fitting("Søvn annulleret", null, width, measure, shortLabel = "Annulleret")
+        assertTrue(cancelled.toString(), cancelled.text == "Annulleret" && fits(cancelled))
+        // Nothing fits: the bare word.
+        assertEquals(ToggleConfirmation.Fit("Woke up", glyph = false), ToggleConfirmation.fitting("Woke up", "Woke up 14:32", 10f, measure))
     }
 }
