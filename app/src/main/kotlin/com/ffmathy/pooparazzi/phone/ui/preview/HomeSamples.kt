@@ -190,6 +190,25 @@ object HomeSamples {
         sheet = SheetModel.Diaper(stamp = SampleData.NOW_1432, offsetMinutes = -10, pee = true),
     )
 
+    /**
+     * 03:12, asleep since 02:05: the Feed sheet says "Woke up will be logged too" (DESIGN_SPEC §4.4), as saving ends the
+     * sleep at the feed's time.
+     */
+    fun feedSheetAsleep(): HomeUiState = build(
+        SampleData.historyAt0312(zone),
+        SampleData.NOW_0312,
+        sync = SyncStatus.Synced(SampleData.SYNCED_0311),
+        sheet = SheetModel.Feed(SampleData.NOW_0312),
+    )
+
+    /** 03:12, asleep since 02:05: the Diaper sheet with Pee on and "Woke up will be logged too". */
+    fun diaperSheetAsleep(): HomeUiState = build(
+        SampleData.historyAt0312(zone),
+        SampleData.NOW_0312,
+        sync = SyncStatus.Synced(SampleData.SYNCED_0311),
+        sheet = SheetModel.Diaper(stamp = SampleData.NOW_0312, pee = true),
+    )
+
     /** The Diaper sheet with Poop on and Pale selected: the health hint shows. */
     fun diaperSheetHint(): HomeUiState = build(
         SampleData.scenario(zone),

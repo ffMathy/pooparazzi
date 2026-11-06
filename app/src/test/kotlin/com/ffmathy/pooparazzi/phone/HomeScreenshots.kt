@@ -94,6 +94,11 @@ abstract class HomeScreenshots(private val language: String) {
     /** The Diaper sheet after two taps on −5m: the time moved back 10 minutes, with "was 14:32". */
     @Test fun diaperSheetNudged() = sheet("08b-diaper-sheet-nudged", night = true, HomeSamples.diaperSheetNudged())
 
+    /** Asleep since 02:05: saving also logs Woke up, and the sheets say so (DESIGN_SPEC §4.4). */
+    @Test fun feedSheetAsleep() = sheet("08c-feed-sheet-asleep", night = true, HomeSamples.feedSheetAsleep())
+
+    @Test fun diaperSheetAsleep() = sheet("08d-diaper-sheet-asleep", night = true, HomeSamples.diaperSheetAsleep())
+
     @Test fun diaperSheetHint() = sheet("09-diaper-sheet-hint", night = true, HomeSamples.diaperSheetHint())
 
     /** Twins (BABIES_AND_BACKUP §2.2): the current baby's name with a chevron is the switcher. */

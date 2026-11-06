@@ -12,6 +12,8 @@
     <string name="cd_close">Close</string>
     <!-- Name of the checked sleep toggle: the visible label plus what a tap does -->
     <string name="cd_woke_up_end_sleep">Woke up, end sleep</string>
+    <!-- Feed and Diaper sheets while a sleep runs: saving also ends the sleep at the sheet's time (DESIGN_SPEC §4.4) -->
+    <string name="sheet_wakes_note">Woke up will be logged too</string>
 
     <!-- Lamp before the first feed is logged -->
     <string name="lamp_no_feed">No feeds yet</string>

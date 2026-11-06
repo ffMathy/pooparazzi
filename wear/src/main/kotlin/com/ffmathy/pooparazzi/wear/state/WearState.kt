@@ -206,12 +206,20 @@ sealed interface Undo {
 }
 
 /**
+ * The sleep a feed or diaper logged during it ended (DESIGN_SPEC §4.4): [previous] is its running snapshot, which Undo
+ * writes back; [cancelled] when it had run under a minute and was discarded instead ("Sleep cancelled too").
+ */
+@Immutable
+data class Woke(val previous: Entry, val cancelled: Boolean = false)
+
+/**
  * A Logged confirmation with its Undo.
  *
  * @property entry the entry as written (or the existing one for a [duplicate]).
  * @property duplicate the log matched an entry within 5 s: "Already logged" (DESIGN_SPEC §4.4).
  * @property fromTile opened from the Tile's undo path: Undo and dismiss are active at once (§10.7).
  * @property serial distinguishes two otherwise equal receipts, so the 5 s window restarts on a repeat.
+ * @property woke the running sleep this feed or diaper ended ("Woke up too"); Undo resumes it as well.
  */
 @Immutable
 data class Receipt(
@@ -222,6 +230,7 @@ data class Receipt(
     val duplicate: Boolean = false,
     val fromTile: Boolean = false,
     val serial: Long = 0,
+    val woke: Woke? = null,
 )
 
 /** Haptics the app plays (DESIGN_SPEC §5.11), mapped onto Compose `HapticFeedbackType` by the UI. */

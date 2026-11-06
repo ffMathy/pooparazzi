@@ -108,6 +108,7 @@ internal fun FeedSheetContent(
         )
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
+        if (sheet.wakes) WakeNote()
         Spacer(Modifier.height(12.dp))
         if (sheet.breast) {
             BreastStep(sheet, readiness, callbacks)
@@ -439,4 +440,29 @@ internal fun SheetChipRow(chips: List<OffsetChipUi>, formatters: Formatters, rea
         modifier = Modifier.alpha(readiness.alpha),
         acceptsTaps = readiness.ready,
     )
+}
+
+/**
+ * "Woke up will be logged too" under the nudge chips of the Feed and Diaper sheets while a sleep runs since before the
+ * sheet's time (DESIGN_SPEC §4.4): `wake` 18 in SLEEP strong + bodyMedium onSurfaceVariant. A polite live region, so a
+ * nudge to before the sleep began (which hides it) or back is announced.
+ */
+@Composable
+internal fun WakeNote(modifier: Modifier = Modifier) {
+    val events = LocalXPalette.current.events
+    Row(
+        modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        XIcon(XIcons.wake, contentDescription = null, tint = events.sleep.strong, size = 18.dp)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            stringResource(R.string.sheet_wakes_note),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }

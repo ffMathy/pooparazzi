@@ -10,6 +10,8 @@
     <string name="cd_woke_up_end_sleep">Vågnede, afslut søvn</string>
 
     <string name="logged_already_logged">Allerede registreret</string>
+    <string name="logged_woke_up_too">Vågnede også</string>
+    <string name="logged_sleep_cancelled_too">Søvn også annulleret</string>
     <string name="logged_dismiss">Luk</string>
     <string name="logged_change_time">Ret tidspunkt</string>
 

@@ -91,6 +91,7 @@ internal fun DiaperSheetContent(sheet: HomeSheetUi.Diaper, zone: ZoneId, formatt
         )
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
+        if (sheet.wakes) WakeNote()
         Spacer(Modifier.height(12.dp))
         DiaperToggleTiles(
             pee = sheet.pee,

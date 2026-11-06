@@ -151,10 +151,14 @@ fun LoggedScreen(
     // A large font scale grows the title: tighten the top so the sync icon stays clear of Undo. A second line
     // ("Left → Right · 18m") moves the block up a little for the same reason (§3.5.6: sync icon at y 148–168).
     val compact = LocalConfiguration.current.fontScale > 1.15f
-    val line2 = receiptLine2(receipt, f)
-    // Both (a large font and a second line, "Formula · 120 ml"): the tightest, with a smaller circle; the second line
-    // may wrap and the sync icon (also on Main) gives way, so nothing slides under Undo.
-    val tight = compact && line2 != null
+    val details = receiptDetails(receipt, f)
+    val wake = wakeLine(receipt)
+    // "Woke up too" (a feed or diaper that ended a sleep) is line 2 on its own, or a third line under the details.
+    val line2 = details ?: wake
+    val line3 = wake.takeIf { details != null }
+    // Both (a large font and a second line, "Formula · 120 ml"), or three lines: the tightest, with a smaller circle;
+    // the second line may wrap and the sync icon (also on Main) gives way, so nothing slides under Undo.
+    val tight = (compact && line2 != null) || line3 != null
     val top = when {
         tight -> 0.05f
         compact -> 0.08f
@@ -208,8 +212,17 @@ fun LoggedScreen(
                         MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto),
                         if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant,
                         minSize = 11,
-                        maxLines = if (tight) 2 else 1,
+                        maxLines = if (tight && line3 == null) 2 else 1,
                         modifier = Modifier.padding(horizontal = 12.dp).semantics { contentDescription = line.spoken },
+                    )
+                }
+                line3?.let { line ->
+                    AutoSizeLine(
+                        line.shown,
+                        MaterialTheme.typography.bodyMedium,
+                        if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant,
+                        minSize = 11,
+                        modifier = Modifier.padding(horizontal = 16.dp).semantics { contentDescription = line.spoken },
                     )
                 }
                 val syncText = if (sync == SyncStatus.Pending) null else f.labels.syncLine(sync, SyncPeer.PHONE, f.clock, f.zone)
@@ -378,12 +391,20 @@ private fun withTime(label: String, millis: Long, f: Formatters, timeColor: Colo
 /** A line as shown ("Left → Right") and as read ("Left then right"). */
 private class Line(val shown: String, val spoken: String)
 
+/** "Woke up too" ("Sleep cancelled too") for a feed or diaper that ended a sleep (DESIGN_SPEC §4.4); else null. */
+@Composable
+private fun wakeLine(receipt: Receipt): Line? {
+    val woke = receipt.woke ?: return null
+    val text = stringResource(if (woke.cancelled) R.string.logged_sleep_cancelled_too else R.string.logged_woke_up_too)
+    return Line(text, text)
+}
+
 /**
  * Line 2: "Slept 1h 07m", "Left → Right" (a breast feed's side order), "Formula · 120 ml" (a bottle's contents
  * and amount), "Already logged".
  */
 @Composable
-private fun receiptLine2(receipt: Receipt, f: Formatters): Line? {
+private fun receiptDetails(receipt: Receipt, f: Formatters): Line? {
     val entry = receipt.entry
     val end = entry.endMillis
     if (receipt.duplicate) return stringResource(R.string.logged_already_logged).let { Line(it, it) }

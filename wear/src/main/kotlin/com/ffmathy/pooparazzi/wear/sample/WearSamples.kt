@@ -3,6 +3,7 @@ package com.ffmathy.pooparazzi.wear.sample
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.BottleContents
+import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.PoopColor
@@ -20,6 +21,7 @@ import com.ffmathy.pooparazzi.wear.state.SideDraft
 import com.ffmathy.pooparazzi.wear.state.TimeDraft
 import com.ffmathy.pooparazzi.wear.state.TimeTitle
 import com.ffmathy.pooparazzi.wear.state.Undo
+import com.ffmathy.pooparazzi.wear.state.Woke
 import com.ffmathy.pooparazzi.wear.tile.TILE_FEEDBACK_MILLIS
 import com.ffmathy.pooparazzi.wear.tile.TILE_GUARD_MILLIS
 import com.ffmathy.pooparazzi.wear.tile.TileFeedback
@@ -94,6 +96,23 @@ object WearSamples {
     fun receiptBreast(): Receipt {
         val entry = SampleData.recentBreastfeed()
         return Receipt(ReceiptKind.FEED_LOGGED, entry, Undo.Delete(entry.id), zone)
+    }
+
+    /**
+     * "Breast at 03:12" / "Left → Right · Woke up too": a breast feed saved while asleep since 02:05, which ended the
+     * sleep at 03:12 (DESIGN_SPEC §4.4).
+     */
+    fun receiptBreastWokeUp(): Receipt {
+        val entry = Entry.breastfeed(SampleData.NOW_0312, BreastSide.LEFT_THEN_RIGHT, id = "sample-breast-0312")
+        val sleep = Entry.sleep(SampleData.NOW_0312 - 67 * 60_000L, id = "sample-sleep-0205")
+        return Receipt(ReceiptKind.FEED_LOGGED, entry, Undo.Delete(entry.id), zone, woke = Woke(sleep))
+    }
+
+    /** "Pee at 03:12" / "Woke up too": a wet diaper saved while asleep since 02:05. */
+    fun receiptDiaperWokeUp(): Receipt {
+        val entry = Entry.diaper(SampleData.NOW_0312, pee = true, poop = false, id = "sample-pee-0312")
+        val sleep = Entry.sleep(SampleData.NOW_0312 - 67 * 60_000L, id = "sample-sleep-0205")
+        return Receipt(ReceiptKind.DIAPER_LOGGED, entry, Undo.Delete(entry.id), zone, woke = Woke(sleep))
     }
 
     /** "Bottle at 14:32" / "Formula · 120 ml": the bottle feed saved on the Bottle screen. */

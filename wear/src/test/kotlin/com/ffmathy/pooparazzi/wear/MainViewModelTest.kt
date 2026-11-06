@@ -32,6 +32,7 @@ import com.ffmathy.pooparazzi.wear.state.ReceiptKind
 import com.ffmathy.pooparazzi.wear.state.TimeTitle
 import com.ffmathy.pooparazzi.wear.state.Undo
 import com.ffmathy.pooparazzi.wear.state.WearEvent
+import com.ffmathy.pooparazzi.wear.state.Woke
 import com.ffmathy.pooparazzi.wear.state.XHaptic
 import com.ffmathy.pooparazzi.wear.testing.FakeSettingsRepository
 import kotlinx.coroutines.CoroutineScope
@@ -195,6 +196,58 @@ class MainViewModelTest {
         awaitEvent(WearEvent.ShowLogged)
         assertEquals(listOf(XHaptic.CONFIRM), haptics())
         assertEquals(listOf(receipt.entry), stored())
+    }
+
+    // ---- Awake on a log (DESIGN_SPEC §4.4) ------------------------------------------------------
+
+    @Test
+    fun aFeedDuringASleepEndsItAndLoggedSaysWokeUpToo() = test {
+        val sleep = repo.startSleep(at(13, 25)).getOrThrow()
+        vm.beginFeed()
+        vm.chooseFeedType(FeedType.FOOD).join()
+
+        val receipt = present(vm.receipt.value)
+        assertEquals(Woke(sleep), receipt.woke)
+        assertEquals(SampleData.NOW_1432, repo.get(sleep.id)?.endMillis)
+        assertEquals(listOf(XHaptic.CONFIRM), haptics())
+    }
+
+    @Test
+    fun undoOnAFeedThatWokeTheBabyResumesTheSleep() = test {
+        val sleep = repo.startSleep(at(13, 25)).getOrThrow()
+        vm.beginDiaper()
+        vm.setPee(true)
+        vm.saveDiaper().join()
+        assertTrue(present(vm.receipt.value).woke != null)
+
+        vm.undo().join()
+
+        assertEquals(listOf(sleep.id), stored().map { it.id })
+        assertNull("running again", repo.get(sleep.id)?.endMillis)
+    }
+
+    @Test
+    fun theTimeOnLoggedMovesTheWakeUpWithTheFeed() = test {
+        val sleep = repo.startSleep(at(13, 25)).getOrThrow()
+        vm.beginFeed()
+        vm.chooseFeedType(null).join()
+
+        assertTrue(vm.beginReceiptTime())
+        vm.shiftTime(-12)
+        vm.saveTime().join()
+
+        assertEquals(SampleData.NOW_1432 - 12 * minute, repo.get(sleep.id)?.endMillis)
+    }
+
+    @Test
+    fun aFeedBackdatedToBeforeTheSleepLeavesItRunning() = test {
+        val sleep = repo.startSleep(at(14, 25)).getOrThrow()
+        vm.beginFeed()
+        vm.shiftFeedTime(-15)
+        vm.chooseFeedType(FeedType.FOOD).join()
+
+        assertNull(present(vm.receipt.value).woke)
+        assertNull(repo.get(sleep.id)?.endMillis)
     }
 
     @Test
