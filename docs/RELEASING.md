@@ -1,11 +1,12 @@
 # Releasing Pooparazzi
 
-Four GitHub Actions workflows build, ship and check the apps and the backend:
+Five GitHub Actions workflows build, ship and check the apps and the backend:
 
 | Workflow | When | What it does |
 |---|---|---|
 | [`ci.yml`](../.github/workflows/ci.yml) | Every pull request (and by hand) | Unit tests of `:core`, `:app` and `:wear`, and debug builds of both apps. Needs no secrets. |
 | [`release.yml`](../.github/workflows/release.yml) | Every push to `main` (a merged pull request), and by hand | Unit tests, signed release **app bundles** (AAB) and **APKs** of the phone and the watch app, a **GitHub Release** with both APKs for side-loading, and an upload of both bundles to Google Play. The bundles and R8 mapping files are also kept as a workflow artifact. |
+| [`store-listing.yml`](../.github/workflows/store-listing.yml) | Every push to `main` that changes the Google Play images in `docs/play/` (and by hand) | Uploads the phone and Wear OS screenshots, the feature graphic and the icon to the Play store listing, English (en-US) and Danish (da-DK) ([Store listing images](#store-listing-images)). Needs `PLAY_SERVICE_ACCOUNT_JSON`; without it, does nothing. |
 | [`rules.yml`](../.github/workflows/rules.yml) | Pull requests that change `firebase/` (and by hand) | The Firestore security rules' tests on the Firestore emulator ([BACKEND.md](BACKEND.md#testing-the-rules)). Needs no secrets. |
 | [`deploy.yml`](../.github/workflows/deploy.yml) | Every push to `main` that changes the rules, the indexes or the website in `firebase/` (and by hand) | The rules' tests, then a deploy of the Firestore rules and indexes and the website to Firebase. Needs the `FIREBASE_DEPLOY_SERVICE_ACCOUNT` secret ([BACKEND.md](BACKEND.md#4-deploy-the-rules-and-the-website)); without it, does nothing. |
 
@@ -108,11 +109,29 @@ Later runs number their builds above this one, so the automatic uploads continue
 
 1. In [Google Cloud console](https://console.cloud.google.com/), pick or create a project and enable the **Google Play Android Developer API** for it.
 2. IAM & Admin › Service accounts › **Create service account** (no Cloud roles needed). Open it › Keys › Add key › **JSON**, and save the downloaded file's whole content as the `PLAY_SERVICE_ACCOUNT_JSON` secret.
-3. In Play Console › **Users and permissions** › Invite new users: enter the service account's email address, add the Pooparazzi app, and grant at least **Release apps to testing tracks** (and **Release to production, exclude devices, and use Play App Signing** if `PLAY_TRACK` will be `production`). Invitations to service accounts are accepted automatically; permissions can take a while (up to a day) to take effect.
+3. In Play Console › **Users and permissions** › Invite new users: enter the service account's email address, add the Pooparazzi app, and grant at least **Release apps to testing tracks** (and **Release to production, exclude devices, and use Play App Signing** if `PLAY_TRACK` will be `production`), and **Manage store presence** so [`store-listing.yml`](#store-listing-images) can upload the store images). Invitations to service accounts are accepted automatically; permissions can take a while (up to a day) to take effect.
 
 ### Draft apps
 
 Until the app's first release has been reviewed and published, Play only accepts **draft** releases through the API ("Only releases with status draft may be created on draft app"). Set the repository variable `PLAY_RELEASE_STATUS` to `draft` until then, and roll the drafts out from Play Console; afterwards remove the variable (or set it to `completed`).
+
+## Store listing images
+
+The store images in [`docs/play/`](play/) are built from the recorded screenshots by `scripts/play_assets.py`, and the [Screenshots](../.github/workflows/screenshots.yml) workflow rebuilds and commits them on every pull request. When a merge to `main` changes them, [`store-listing.yml`](../.github/workflows/store-listing.yml) runs `scripts/play_listing_images.py`, which uploads them to the Play listing in one edit:
+
+| Play image type | en-US | da-DK |
+|---|---|---|
+| Phone screenshots | `docs/play/en/phone-*.png` | `docs/play/da/phone-*.png` |
+| Wear OS screenshots | `docs/play/en/watch-*.png` | `docs/play/da/watch-*.png` |
+| Feature graphic | `docs/play/en/feature-graphic.png` | `docs/play/da/feature-graphic.png` |
+| App icon | `docs/play/icon-512.png` | `docs/play/icon-512.png` |
+
+Each type is replaced only when its files differ from Play's (compared by SHA-256, in order), and an edit with nothing new is discarded, so running it by hand (Actions › **Store listing** › **Run workflow**) is safe at any time. The texts are not uploaded: they stay in [STORE_LISTING.md](play/STORE_LISTING.md) and are pasted into Play Console by hand.
+
+- The service account (step 5) needs the **Manage store presence** permission for the app as well.
+- The Danish listing must exist first (Play Console › Main store listing › Manage translations › Danish); until then da-DK is skipped with a warning.
+- Where Play will not send the change for review automatically (managed publishing, or an app not yet published), the images are saved without sending them, with a warning; send them for review in Play Console › Publishing overview.
+- To check what would be uploaded without credentials: `python3 scripts/play_listing_images.py --dry-run`.
 
 ## Side-loading the APKs
 
@@ -141,6 +160,6 @@ Until the four `UPLOAD_*` secrets are set, `release.yml` signs the APKs (and the
 - [ ] App `com.ffmathy.pooparazzi` created in Play Console, Play App Signing on (step 3)
 - [ ] Wear OS form factor enabled for the listing (step 4)
 - [ ] First phone and watch bundles uploaded by hand (step 4)
-- [ ] Service account invited in Play Console with release permissions (step 5)
+- [ ] Service account invited in Play Console with release permissions (step 5), and **Manage store presence** for the [store listing images](#store-listing-images)
 - [ ] `PLAY_RELEASE_STATUS=draft` while the app is still a draft; optional `PLAY_TRACK`
 - [ ] Optional backup: Firebase project set up and `GOOGLE_SERVICES_JSON` added ([BACKEND.md](BACKEND.md)); Play Console › App content › Data safety declares the account email and names a way to request account deletion
