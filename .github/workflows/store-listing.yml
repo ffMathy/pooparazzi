@@ -1,0 +1,45 @@
+# Merges to main that change the Google Play images in docs/play/ (which the Screenshots workflow rebuilds on every
+# pull request), and manual runs: upload them to the Play store listing, en-US and da-DK (docs/RELEASING.md#store-listing-images).
+# Only image types that differ from Play's are replaced, so a run with nothing new changes nothing.
+name: Store listing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/play/**.png"
+      - "scripts/play_listing_images.py"
+      - ".github/workflows/store-listing.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store-listing
+  cancel-in-progress: false
+
+env:
+  PACKAGE_NAME: com.ffmathy.pooparazzi
+
+jobs:
+  upload:
+    name: Upload the store listing images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - name: No Play service account
+        if: env.PLAY_SERVICE_ACCOUNT_JSON == ''
+        run: echo "::notice::PLAY_SERVICE_ACCOUNT_JSON is not set, so nothing is uploaded (docs/RELEASING.md)."
+
+      - name: Check out
+        if: env.PLAY_SERVICE_ACCOUNT_JSON != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Upload
+        if: env.PLAY_SERVICE_ACCOUNT_JSON != ''
+        run: |
+          python3 -m pip install --quiet google-auth requests
+          python3 scripts/play_listing_images.py

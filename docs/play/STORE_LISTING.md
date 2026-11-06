@@ -182,4 +182,5 @@ Den første udgave af Pooparazzi: log søvn, måltider og bleskift på telefonen
 
 `python3 scripts/play_assets.py` builds every image from the recorded screenshots (`app/screenshots/`,
 `wear/screenshots/`), and the [Screenshots](../../.github/workflows/screenshots.yml) workflow rebuilds them on every
-pull request, so they always show the current app. Captions, the tagline and which screens are shown are in the script.
+pull request, so they always show the current app. Merges to main that change them upload them to Play by
+themselves ([store-listing.yml](../../.github/workflows/store-listing.yml), [RELEASING.md](../RELEASING.md#store-listing-images)). Captions, the tagline and which screens are shown are in the script.

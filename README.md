@@ -204,7 +204,7 @@ On pull requests, the [`screenshots.yml`](.github/workflows/screenshots.yml) wor
 
 ## Releasing
 
-Every merge to `main` builds signed app bundles and APKs for the phone and the watch, attaches both APKs to a [GitHub Release](../../releases) for side-loading under a new version tag (a patch bump, or minor / major with the pull request's `release: minor` / `release: major` label), and uploads the bundles to Google Play (the closed-testing track, `alpha`, by default) with the [`release.yml`](.github/workflows/release.yml) workflow; pull requests run the unit tests and a debug build ([`ci.yml`](.github/workflows/ci.yml)). The secrets, the upload key, the Play service account and the one-time manual steps are in [docs/RELEASING.md](docs/RELEASING.md).
+Every merge to `main` builds signed app bundles and APKs for the phone and the watch, attaches both APKs to a [GitHub Release](../../releases) for side-loading under a new version tag (a patch bump, or minor / major with the pull request's `release: minor` / `release: major` label), and uploads the bundles to Google Play (the closed-testing track, `alpha`, by default) with the [`release.yml`](.github/workflows/release.yml) workflow; pull requests run the unit tests and a debug build ([`ci.yml`](.github/workflows/ci.yml)). The Google Play store images in `docs/play/` are rebuilt from the screenshots on every pull request and uploaded to the store listing when a merge changes them ([`store-listing.yml`](.github/workflows/store-listing.yml)). The secrets, the upload key, the Play service account and the one-time manual steps are in [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Licences
 
