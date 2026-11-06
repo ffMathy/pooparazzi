@@ -33,6 +33,8 @@
     <string name="tile_guard_already_asleep">Sover allerede</string>
     <string name="tile_guard_already_awake">Allerede vågen</string>
     <string name="tile_cd_logged">%1$s. Tryk på flisen for at fortryde</string>
+    <!-- "Sleep cancelled" under the tile's "Start sleep" on small watches, where the full phrase does not fit. -->
+    <string name="tile_toggle_sleep_cancelled">Annulleret</string>
     <string name="tile_cd_last_diaper">Sidste bleskift, %1$s, %2$s</string>
     <string name="tile_cd_asleep">Sover, %1$s</string>
     <string name="tile_cd_feed">Måltid. Sidste måltid %1$s</string>

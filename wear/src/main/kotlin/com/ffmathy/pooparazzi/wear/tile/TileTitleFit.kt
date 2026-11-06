@@ -41,19 +41,30 @@ enum class LoggedTitleParts(val check: Boolean, val undoGlyph: Boolean, val time
 }
 
 /**
- * The just-logged confirmation as Row A's secondary label, on watches below 225 dp where the title is hidden
- * (DESIGN_SPEC §3.6: the feedback is then the secondary-label change). The longest of "Pee 14:32 · Undo",
- * "Pee · Undo", "Pee 14:32" and "Pee" that fits the row; buttons never relabel or move.
+ * The just-logged confirmation as the sleep toggle's first time line, on watches below 225 dp where the title is
+ * hidden (DESIGN_SPEC §3.6). The longest of "✓ Woke up 14:32", "Woke up 14:32", "✓ Woke up" and "Woke up" that fits
+ * the button, then the short label ("Cancelled" for "Sleep cancelled", under "Start sleep"); the word above it and the
+ * tap stay the toggle's.
  */
-object RowAConfirmation {
-    fun text(label: String, labelWithTime: String?, separator: String, undo: String, maxWidthDp: Float, measure: TileTextMeasure): String {
+object ToggleConfirmation {
+    /** What fits: [text], after the confirmation glyph when [glyph]. */
+    data class Fit(val text: String, val glyph: Boolean)
+
+    fun fitting(label: String, labelWithTime: String?, maxWidthDp: Float, measure: TileTextMeasure, shortLabel: String? = null): Fit {
+        val glyphWidth = TileTextMeasure.LINE_ICON_DP + GLYPH_GAP_DP
         val candidates = listOfNotNull(
-            labelWithTime?.let { it + separator + undo },
-            label + separator + undo,
-            labelWithTime,
+            labelWithTime?.let { Fit(it, glyph = true) },
+            labelWithTime?.let { Fit(it, glyph = false) },
+            Fit(label, glyph = true),
+            Fit(label, glyph = false),
+            shortLabel?.let { Fit(it, glyph = true) },
         )
-        return candidates.firstOrNull { measure.widthDp(it) <= maxWidthDp } ?: label
+        return candidates.firstOrNull { measure.widthDp(it.text) + (if (it.glyph) glyphWidth else 0f) <= maxWidthDp }
+            ?: Fit(shortLabel ?: label, glyph = false)
     }
+
+    /** The gap after the glyph, as after the toggle's `history` icon. */
+    const val GLYPH_GAP_DP = 3f
 }
 
 /**
@@ -94,6 +105,9 @@ class TileTextMeasure(
 
     companion object {
         const val TITLE_ICON_DP = 14f
+
+        /** The `history` / `upcoming` / confirmation icon before a line of the sleep toggle. */
+        const val LINE_ICON_DP = 14f
         private const val TITLE_SMALL_SP = 14f
         private const val TRACKING_SP = 0.4f
         private const val TITLE_WEIGHT = 500
@@ -102,7 +116,7 @@ class TileTextMeasure(
         private const val MEASURE_SCALE = 10f
 
         /**
-         * Material 3 `labelSmall` (Row A's secondary label, Row B): 13 sp, weight 500. Calibrated against rendered
+         * Material 3 `labelSmall` (the sleep toggle's time lines): 13 sp, weight 500. Calibrated against rendered
          * tiles ("Poop" 30 dp, "Begge" 37 dp, "2t 10m siden" 80 dp): the platform font measures 2–5 % wider than the
          * renderer draws, which is margin enough, so no extra safety.
          */
@@ -114,27 +128,8 @@ class TileTextMeasure(
         /** Material 3 `primaryLayout` insets its title by 14.5 % of the screen width on each side. */
         private const val TITLE_SIDE_MARGIN = 0.145f
 
-        /**
-         * `primaryLayout`'s default side margins around the main slot with an edge button: 7.1 % of the width with a
-         * title, 12 % without; plus about 2 dp the renderer keeps on each side (measured: 191 dp at 227, 144 dp at 192).
-         */
-        private const val MAIN_SIDE_MARGIN_WITH_TITLE = 0.071f
-        private const val MAIN_SIDE_MARGIN_WITHOUT_TITLE = 0.12f
-        private const val MAIN_SIDE_INSET_DP = 2f
-
-        /** Row A's text column: the button less its 16 dp start padding, 24 dp icon, 6 dp gap and 14 dp end padding. */
-        private const val ROW_A_TEXT_INSET_DP = 16f + 24f + 6f + 14f
-
         /** The title slot's width on [device]. */
         fun titleSlotWidthDp(device: DeviceParameters): Float = device.screenWidthDp * (1f - 2f * TITLE_SIDE_MARGIN)
 
-        /** The main slot's width on [device], with or without the title slot. */
-        fun mainSlotWidthDp(device: DeviceParameters, withTitle: Boolean): Float {
-            val margin = if (withTitle) MAIN_SIDE_MARGIN_WITH_TITLE else MAIN_SIDE_MARGIN_WITHOUT_TITLE
-            return device.screenWidthDp * (1f - 2f * margin) - 2f * MAIN_SIDE_INSET_DP
-        }
-
-        /** The width of Row A's secondary label. */
-        fun rowATextWidthDp(device: DeviceParameters, withTitle: Boolean): Float = mainSlotWidthDp(device, withTitle) - ROW_A_TEXT_INSET_DP
     }
 }

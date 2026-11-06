@@ -132,6 +132,13 @@ object WearSamples {
         return TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null)
     }
 
+    /** 14:32, a sleep started at 14:31.5 stopped from the tile under a minute: "Sleep cancelled" with Undo. */
+    fun tileSleepCancelled(): TileUiState {
+        val summary = summarize(SampleData.history(), SampleData.NOW_1432, zone)
+        val feedback = TileFeedback(TileFeedbackKind.SLEEP_CANCELLED, "sample-cancelled", SampleData.NOW_1432, SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS)
+        return TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null)
+    }
+
     /** A Start sleep tap within 2 s of the last toggle at 03:12: "Already asleep". */
     fun tileGuard(): TileUiState =
         tileAsleep().copy(guard = TileGuard(GuardKind.ALREADY_ASLEEP, SampleData.NOW_0312 + TILE_GUARD_MILLIS))

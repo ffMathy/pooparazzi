@@ -69,6 +69,8 @@
     <string name="tile_guard_already_awake">Already awake</string>
     <!-- TalkBack -->
     <string name="tile_cd_logged">%1$s. Tap the tile to undo</string>
+    <!-- "Sleep cancelled" under the tile's "Start sleep" on small watches, where the full phrase does not fit. -->
+    <string name="tile_toggle_sleep_cancelled">Cancelled</string>
     <string name="tile_cd_last_diaper">Last diaper, %1$s, %2$s</string>
     <string name="tile_cd_asleep">Asleep, %1$s</string>
     <!-- Row A. %1$s is spoken time since the last feed ("2 hours 10 minutes ago"). -->

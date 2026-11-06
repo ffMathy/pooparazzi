@@ -635,9 +635,9 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 |---|---|
 | Header | `diaper` 24 `#E8D8C3`, y 11–35 (system app icon: the tile's icon, the app's launcher glyph) |
 | Title (titleSlot) | y 37–53, titleSmall `#E8D8C3`, centred: the baby's name; unnamed, **"Pee 48m ago"** (last diaper). The same title as Main's (§3.5.1) |
-| Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; as on Main no label (the content description names it), `history` 14 + "2h 10m" over `upcoming` 14 + "55m" (the expected next feed, kept current by a dynamic expression) labelMedium 15 sp `#FFDCBB`. A just-logged confirmation below 225 dp is labelSmall. Opens the app's Feed type screen |
+| Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; as on Main no label (the content description names it), `history` 14 + "2h 10m" over `upcoming` 14 + "55m" (the expected next feed, kept current by a dynamic expression) labelMedium 15 sp `#FFDCBB`. Opens the app's Feed type screen |
 | Row B | Diaper button 184 × 52, r 26, DIAPER container `#13312C`: `diaper` 24 DIAPER strong at 16 from the start; `history` "48m" (or "No diapers yet", no icon) over `upcoming` "3h 10m" (the expected next poop) labelMedium `#BFE9E0`. Opens the app's Diaper screen, like Main's Diaper button; diapers are never logged from the tile |
-| EdgeButton | the stock EdgeButton's shape, width and "EB" tag (so `primaryLayout` keeps it on the bottom edge), but drawn **70** tall (62 below 225 dp) instead of 46, built by hand since `textEdgeButton` has one fixed height; Row A and Row B are shorter for it. Fill `#222844`, "Start sleep" labelMedium 15 sp `#D6DBF6` over how long awake `history` 14 + "1h 05m" and the expected next sleep `upcoming` 14 + "45m", both labelSmall (asleep: "Woke up" over how long asleep and the expected wake-up; read "Start sleep, Awake since 13:27, expected to sleep again around 15:20"). Its three lines keep their size at any font scale, as the stock EdgeButton's label does, so "Start sleep" is never cut |
+| EdgeButton | the stock EdgeButton's shape, width and "EB" tag (so `primaryLayout` keeps it on the bottom edge), but drawn **70** tall (62 below 225 dp) instead of 46, built by hand since `textEdgeButton` has one fixed height; Row A and Row B are shorter for it. Fill `#222844`, "Start sleep" labelMedium 15 sp `#D6DBF6` over how long awake `history` 14 + "1h 05m" and the expected next sleep `upcoming` 14 + "45m", both labelSmall (asleep: "Woke up" over how long asleep and the expected wake-up; read "Start sleep, Awake since 13:27, expected to sleep again around 15:20"). Its three lines keep their size at any font scale, as the stock EdgeButton's label does, so "Start sleep" is never cut. Below 225 dp a just-logged confirmation takes the first time line for its 10 s: `check` 14 + "Woke up 14:32" (dropping the glyph, then the time, where it would not fit), or `wake` 14 + "Cancelled" for a Sleep cancelled; the word and the tap stay the toggle's, and it is read first ("Woke up at 14:32. Tap the tile to undo. Start sleep, …") |
 
 | State | Title | Other changes |
 |---|---|---|
@@ -649,7 +649,7 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 - With both "just logged" and "asleep" active, the just-logged title wins.
 - **No button ever relabels or moves.** Undo is reached through the background tap, never in a log button's place.
 - The tile title keeps "Fed 14:32" without "at": with "at" it would exceed the ≈168 dp title chord.
-- Below 225 dp the title is hidden. Feedback is then the secondary-label change plus the background-tap undo path.
+- Below 225 dp the title is hidden. Feedback is then the sleep toggle's first time line (the toggle is what was tapped; the Feed and Diaper rows never show it) plus the background-tap undo path. "Undo" is not written on the toggle, whose tap starts a sleep.
 - Above a 1.15 font scale the rows keep to two lines (tile text cannot step down to fit); the estimates are still read.
 
 ### 3.7 W10 Complications
