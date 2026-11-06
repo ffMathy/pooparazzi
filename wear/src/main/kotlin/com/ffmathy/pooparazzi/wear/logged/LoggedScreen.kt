@@ -106,6 +106,9 @@ const val LOGGED_WINDOW_MILLIS = 5_000
 /** Undo and dismiss ignore taps this long after Logged appears (§5.9), unless opened from the Tile. */
 const val LOGGED_INERT_MILLIS = 1_000
 
+/** A "… · Woke up too" line longer than this may take two lines rather than shrink. */
+private const val WAKE_LINE_CHARS = 24
+
 /**
  * Logged (DESIGN_SPEC §3.5.6; V1_ADDITIONS §2.2, §3.2): the check circle in the event container, the title with
  * the time in the event colour, an optional second line, the sync icon and a Small Undo EdgeButton, under a 270°
@@ -208,7 +211,7 @@ fun LoggedScreen(
                         MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto),
                         if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant,
                         minSize = 11,
-                        maxLines = if (tight) 2 else 1,
+                        maxLines = if (tight || (receipt.woke != null && line.shown.length > WAKE_LINE_CHARS)) 2 else 1,
                         modifier = Modifier.padding(horizontal = 12.dp).semantics { contentDescription = line.spoken },
                     )
                 }
@@ -380,10 +383,19 @@ private class Line(val shown: String, val spoken: String)
 
 /**
  * Line 2: "Slept 1h 07m", "Left → Right" (a breast feed's side order), "Formula · 120 ml" (a bottle's contents
- * and amount), "Already logged".
+ * and amount), "Already logged". A feed or diaper that ended a sleep adds "Woke up too" ("Left → Right · Woke up too").
  */
 @Composable
 private fun receiptLine2(receipt: Receipt, f: Formatters): Line? {
+    val details = receiptDetails(receipt, f)
+    val woke = receipt.woke ?: return details
+    val wake = stringResource(if (woke.cancelled) R.string.logged_sleep_cancelled_too else R.string.logged_woke_up_too)
+    if (details == null) return Line(wake, wake)
+    return Line(details.shown + DOT_SEPARATOR + wake, spokenText().pair(details.spoken, wake))
+}
+
+@Composable
+private fun receiptDetails(receipt: Receipt, f: Formatters): Line? {
     val entry = receipt.entry
     val end = entry.endMillis
     if (receipt.duplicate) return stringResource(R.string.logged_already_logged).let { Line(it, it) }

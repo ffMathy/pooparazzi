@@ -10,8 +10,10 @@ import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.data.Clock
 import com.ffmathy.pooparazzi.core.data.EndResult
 import com.ffmathy.pooparazzi.core.data.EntryRepository
+import com.ffmathy.pooparazzi.core.data.EntryRules
 import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.LogResult
+import com.ffmathy.pooparazzi.core.data.wakeFor
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.lastBottleAmountMl
 import com.ffmathy.pooparazzi.core.domain.summarize
@@ -46,6 +48,7 @@ import com.ffmathy.pooparazzi.wear.state.TimeDraft
 import com.ffmathy.pooparazzi.wear.state.TimeTitle
 import com.ffmathy.pooparazzi.wear.state.Undo
 import com.ffmathy.pooparazzi.wear.state.WearEvent
+import com.ffmathy.pooparazzi.wear.state.Woke
 import com.ffmathy.pooparazzi.wear.state.XHaptic
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -195,7 +198,7 @@ class MainViewModel(
         val draft = _feedDraft.consume() ?: return@action
         restoreOnFailure(_feedDraft, draft) {
             val result = repository.logFeedChecked(type, draft.at)
-            showReceipt(ReceiptKind.FEED_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
+            showLogReceipt(ReceiptKind.FEED_LOGGED, result)
         }
     }
 
@@ -226,7 +229,7 @@ class MainViewModel(
         restoreOnFailure(_sideDraft, draft) {
             val result = repository.logFeedChecked(FeedType.BREAST, draft.at, draft.side)
             _feedDraft.value = null
-            showReceipt(ReceiptKind.FEED_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
+            showLogReceipt(ReceiptKind.FEED_LOGGED, result)
         }
     }
 
@@ -270,7 +273,7 @@ class MainViewModel(
         restoreOnFailure(_bottleDraft, draft) {
             val result = repository.logFeedChecked(FeedType.BOTTLE, draft.at, amountMl = draft.amountMl, contents = draft.contents)
             _feedDraft.value = null
-            showReceipt(ReceiptKind.FEED_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
+            showLogReceipt(ReceiptKind.FEED_LOGGED, result)
         }
     }
 
@@ -370,7 +373,7 @@ class MainViewModel(
         restoreOnFailure(_diaperDraft, draft) {
             // Details kept while Poop was off are not saved.
             val result = repository.logDiaperChecked(draft.at, draft.pee, draft.poop, draft.color.takeIf { draft.poop }, draft.texture.takeIf { draft.poop })
-            showReceipt(ReceiptKind.DIAPER_LOGGED, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate)
+            showLogReceipt(ReceiptKind.DIAPER_LOGGED, result)
         }
     }
 
@@ -424,6 +427,7 @@ class MainViewModel(
                 val entry = receipt.entry
                 val moved = if (draft.title == TimeTitle.WOKE_UP) entry.copy(endMillis = draft.at) else entry.copy(startMillis = draft.at)
                 val updated = repository.update(moved)
+                moveWake(receipt.woke, draft.at)
                 _receipt.value = receipt.copy(entry = updated, duplicate = false, serial = ++receiptSerial)
             }
         }
@@ -468,6 +472,8 @@ class MainViewModel(
     fun undo(): Job = action {
         val receipt = _receipt.value ?: return@action
         try {
+            // The sleep a feed or diaper ended runs again first: if another sleep started meanwhile, nothing changes.
+            receipt.woke?.let { repository.restore(it.previous) }
             when (val undo = receipt.undo) {
                 is Undo.Delete -> repository.delete(undo.id)
                 is Undo.Restore -> repository.restore(undo.previous)
@@ -577,8 +583,55 @@ class MainViewModel(
         }
     }
 
-    private fun showReceipt(kind: ReceiptKind, entry: Entry, undo: Undo, duplicate: Boolean = false, haptic: XHaptic? = null) {
-        _receipt.value = Receipt(kind, entry, undo, zone(), duplicate = duplicate, serial = ++receiptSerial)
+    /**
+     * Logged for a feed or diaper. A new log during a sleep first ends it at the log's time (DESIGN_SPEC §4.4), and
+     * Logged says so ("Woke up too"); a repeat ("Already logged") changes nothing.
+     */
+    private suspend fun showLogReceipt(kind: ReceiptKind, result: LogResult) {
+        val woke = if (result is LogResult.Logged) wake(result.entry) else null
+        showReceipt(kind, result.entry, Undo.Delete(result.entry.id), duplicate = result is LogResult.Duplicate, woke = woke)
+    }
+
+    /** Ends the running sleep [logged] wakes the baby from; a failure there leaves the log as it is. */
+    private suspend fun wake(logged: Entry): Woke? {
+        val result = try {
+            repository.wakeFor(logged)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Ending the sleep for a log failed", e)
+            null
+        }
+        return when (result) {
+            is EndResult.Ended -> Woke(result.previous)
+            is EndResult.Discarded -> Woke(result.previous, cancelled = true)
+            is EndResult.NotRunning, null -> null
+        }
+    }
+
+    /** A feed or diaper that ended a sleep moved to [at] on the Time screen: the sleep now ends there too, where it can. */
+    private suspend fun moveWake(woke: Woke?, at: Long) {
+        if (woke == null || woke.cancelled) return
+        val sleep = repository.get(woke.previous.id)?.takeUnless { it.deleted || it.endMillis == null } ?: return
+        if (at - sleep.startMillis < EntryRules.MIS_TAP_MILLIS) return
+        try {
+            repository.update(sleep.copy(endMillis = at))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Moving the wake-up with the log failed", e)
+        }
+    }
+
+    private fun showReceipt(
+        kind: ReceiptKind,
+        entry: Entry,
+        undo: Undo,
+        duplicate: Boolean = false,
+        haptic: XHaptic? = null,
+        woke: Woke? = null,
+    ) {
+        _receipt.value = Receipt(kind, entry, undo, zone(), duplicate = duplicate, serial = ++receiptSerial, woke = woke)
         haptic(if (duplicate) XHaptic.REJECT else haptic ?: XHaptic.CONFIRM)
         send(WearEvent.ShowLogged)
     }

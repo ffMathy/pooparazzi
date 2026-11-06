@@ -1,6 +1,7 @@
 package com.ffmathy.pooparazzi.phone.ui.home
 
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
+import com.ffmathy.pooparazzi.core.data.sleepWokenBy
 import com.ffmathy.pooparazzi.core.domain.LampState
 import com.ffmathy.pooparazzi.core.domain.forecast
 import com.ffmathy.pooparazzi.core.domain.Summary
@@ -141,9 +142,12 @@ internal object HomeStateBuilder {
         // A chip is enabled when one more tap is allowed: never into the future, and within the entry's own bounds.
         fun chips(allowed: (Int) -> Boolean = { m -> sheet.stamp + m * MINUTE_MILLIS <= now }) =
             OFFSET_CHIPS.map { OffsetChipUi(it, enabled = allowed(sheet.offsetMinutes + it)) }
+        // A feed or diaper logged during a sleep also logs Woke up (DESIGN_SPEC §4.4): the sheet says so.
+        val wakes = entries.sleepWokenBy(sheet.stamp + sheet.offsetMinutes * MINUTE_MILLIS) != null
         return when (sheet) {
             is SheetModel.Feed -> HomeSheetUi.Feed(
                 sheet.stamp, sheet.offsetMinutes, chips(), sheet.breast, sheet.ticks, sheet.bottle, sheet.amountMl, sheet.contents,
+                wakes = wakes,
             )
             is SheetModel.Diaper -> HomeSheetUi.Diaper(
                 stamp = sheet.stamp,
@@ -153,6 +157,7 @@ internal object HomeStateBuilder {
                 poop = sheet.poop,
                 color = sheet.color,
                 texture = sheet.texture,
+                wakes = wakes,
             )
             is SheetModel.Adjust -> {
                 val entry = entries.firstOrNull { it.id == sheet.entryId && !it.deleted }

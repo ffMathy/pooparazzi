@@ -14,6 +14,7 @@ import com.ffmathy.pooparazzi.core.data.EntryRepository
 import com.ffmathy.pooparazzi.core.data.FixedClock
 import com.ffmathy.pooparazzi.core.data.LogResult
 import com.ffmathy.pooparazzi.core.data.observeCurrentLog
+import com.ffmathy.pooparazzi.core.data.wakeFor
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
@@ -473,14 +474,22 @@ class HomeViewModel(
         val at = feedSheet.stamp + feedSheet.offsetMinutes * MINUTE_MILLIS
         closeSheet(committed = true)
         attempt { repository.logFeedChecked(type, at, side, amountMl, contents) }
-            .onSuccess { result ->
-                when (result) {
-                    // The sheet already picked the time: no receipt follows (the since-rows show the log).
-                    is LogResult.Logged -> haptic(HomeHaptic.CONFIRM)
-                    is LogResult.Duplicate -> showDuplicate(result.entry)
-                }
-            }
+            .onSuccess { onLogged(it) }
             .onFailure { haptic(HomeHaptic.REJECT) }
+    }
+
+    /**
+     * A feed or diaper saved from its sheet. The sheet already picked the time: no receipt follows (the since-rows show
+     * the log). A log during a sleep also ends it at the log's time, as the sheet said it would (DESIGN_SPEC §4.4).
+     */
+    private suspend fun onLogged(result: LogResult) {
+        when (result) {
+            is LogResult.Logged -> {
+                attempt { repository.wakeFor(result.entry) }
+                haptic(HomeHaptic.CONFIRM)
+            }
+            is LogResult.Duplicate -> showDuplicate(result.entry)
+        }
     }
 
     override fun onDiaperPee(checked: Boolean) = updateDiaper { it.copy(pee = checked) }
@@ -512,13 +521,7 @@ class HomeViewModel(
                 texture = diaper.texture.takeIf { diaper.poop },
             )
         }
-            .onSuccess { result ->
-                when (result) {
-                    // The sheet already picked the time: no receipt follows (the since-rows show the log).
-                    is LogResult.Logged -> haptic(HomeHaptic.CONFIRM)
-                    is LogResult.Duplicate -> showDuplicate(result.entry)
-                }
-            }
+            .onSuccess { onLogged(it) }
             .onFailure { haptic(HomeHaptic.REJECT) }
     }
 

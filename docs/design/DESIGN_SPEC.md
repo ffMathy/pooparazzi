@@ -315,7 +315,7 @@ Receipt rules:
 | State | Trigger | Visible change |
 |---|---|---|
 | Idle | no running sleep | FEED Lamp (Night glow / Day disc); rows Awake + last diaper; Today grid |
-| Just logged | Feed or Diaper sheet saved | the sheet closes; the Lamp / since-rows show the log, `Confirm` |
+| Just logged | Feed or Diaper sheet saved | the sheet closes; the Lamp / since-rows show the log, `Confirm`. During a sleep it is ended too (§4.4) |
 | Toggled | Start sleep, Woke up | the receipt sheet (no timeout) |
 | Running, Night = **lights-down** | Night active and a sleep running | "Noa" in onSurfaceVariant (the status icons and the History, Statistics and Settings buttons already are); glow 0.45 SLEEP + orbit; Today numbers onSurfaceVariant; toggle checked. Nothing else changes |
 | Running, Day | Day active and a sleep running | no dimming; SLEEP disc + track + cut-out ember |
@@ -360,6 +360,7 @@ Modal bottom sheet over Home with the scrim. It is a dialog labelled by its titl
 | Bottom | empty sheet area over the gesture inset |
 
 - No "Last: …" line (the fact is already on Home).
+- While a sleep runs since before the sheet's time, "Woke up will be logged too" shows under the chips (§4.4); the Feed sheet shows it too.
 - Tile → log at stamp + offset and close the sheet; no receipt follows (the sheet already picked the time). Home shows the log (e.g. since-row 2 "Pee 10m ago · 14:22"). Haptic `Confirm`.
 - Cancel or a scrim tap closes without logging.
 - **Cooldown**: chips and tiles ignore taps for 500 ms each time the sheet appears. They fade 0.6 → 1 over that time and are exposed as disabled until ready. Reason: the Diaper button lies 47 % under the Both tile and 21 % under Poop, so a double tap would log Both.
@@ -581,8 +582,9 @@ The watch does not edit history: that is on the phone. Only the time just logged
 | wake | `#222844` / `#7C88C4` | "Woke up at 14:40" (time `#AEB6E6`) | "Slept 8m" |
 | cancelled (stopped < 1 min) | `#222844` / `wake` `#7C88C4` | "Sleep cancelled" | "Slept <1m" |
 | feed, deduped (< 5 s) | as feed | "Fed at 14:32" (the existing entry) | "Already logged" (+ `Reject`; the 5 s drain restarts) |
+| feed or diaper during a sleep (§4.4) | as the kind | as the kind | "Woke up too", after any details ("Left → Right · Woke up too"; may wrap to two lines); "Sleep cancelled too" for a sleep under a minute old |
 
-Undo removes the entry (wake and cancelled: the sleep is running again) → Undone. Ambient: the bezel arc is hidden, Undo is drawn as an outline, the 5 s window keeps running and expiry returns to Main.
+Undo removes the entry (wake and cancelled: the sleep is running again; a feed or diaper that ended a sleep: the sleep runs again too) → Undone. Moving a feed or diaper's time on Time moves the wake-up with it. Ambient: the bezel arc is hidden, Undo is drawn as an outline, the 5 s window keeps running and expiry returns to Main.
 
 #### 3.5.7 W7 Undone
 
@@ -726,7 +728,7 @@ Counts: Both adds 1 to pee **and** 1 to poop.
 | Double-toggle guard | 2 s after any toggle (phone toggle, watch EdgeButton, Tile EdgeButton, widget toggle); visible feedback + `Reject` |
 | Mis-tap sleep | a sleep stopped < 60 s after its start is discarded ("Sleep cancelled", with Undo, on phone and watch) |
 | Long sleep | past 12 h: "Asleep 12h 10m · still asleep?" with "Fix end time" / "Yes" |
-| No auto-ending | a feed or diaper during a sleep offers "End sleep" in the card; a sleep is never ended automatically |
+| Awake on a log | a feed or diaper logged during a sleep (its time after the sleep's start) first ends the sleep at that time, as Woke up would (a sleep under 60 s old is discarded, as a mis-tap). The phone's Feed and Diaper sheets say so before saving: "Woke up will be logged too" under the nudge chips (`wake` 18 SLEEP strong + bodyMedium onSurfaceVariant, a polite live region), shown while the sheet's time is after the running sleep's start, so a nudge to before it hides the note and leaves the sleep running. The watch's Logged says it after: line 2 "Woke up too" (§3.5.6). A repeat log (dedupe) changes nothing |
 | Offsets | nudges add up from the base time, shown as "was 14:32" once moved |
 | Time limits | no start or end in the future; no end before start (chips disabled; edit sheet validation) |
 | Day boundary | "Today" starts at 00:00 by default (configurable; open question 4). A sleep crossing the boundary is drawn as one bar (flush at 00:00 on the later day) and listed as one row with a day prefix |

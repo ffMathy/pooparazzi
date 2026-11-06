@@ -155,7 +155,8 @@ sealed interface HomeSheetUi {
      * sheet shows the optional side [ticks] (Left / Right checkboxes, in the order ticked; [side] is what that order
      * records, null for none) and "Log feed", which logs the breast feed at [time]. Once Bottle is tapped
      * ([bottle]), the sheet shows the optional contents ([contents], Milk | Formula, null for none), the optional amount
-     * slider ([amountMl], null for none) and "Log feed".
+     * slider ([amountMl], null for none) and "Log feed". [wakes]: a sleep runs since before [time], so logging the feed
+     * also logs Woke up (DESIGN_SPEC §4.4), as the sheet says.
      */
     data class Feed(
         override val stamp: Long,
@@ -166,13 +167,14 @@ sealed interface HomeSheetUi {
         val bottle: Boolean = false,
         val amountMl: Int? = null,
         val contents: BottleContents? = null,
+        val wakes: Boolean = false,
     ) : HomeSheetUi {
         val side: BreastSide? get() = BreastSide.fromOrder(ticks)
     }
 
     /**
      * Diaper sheet (V1_ADDITIONS §3.1): optional Pee / Poop checkboxes, optional colour and texture. Save is always
-     * allowed: nothing ticked logs a plain diaper change.
+     * allowed: nothing ticked logs a plain diaper change. [wakes]: saving also logs Woke up, as for [Feed].
      */
     data class Diaper(
         override val stamp: Long,
@@ -182,6 +184,7 @@ sealed interface HomeSheetUi {
         val poop: Boolean,
         val color: PoopColor?,
         val texture: PoopTexture?,
+        val wakes: Boolean = false,
     ) : HomeSheetUi
 
     /**

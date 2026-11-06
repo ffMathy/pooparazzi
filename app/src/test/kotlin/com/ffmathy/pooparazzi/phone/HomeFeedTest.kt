@@ -282,15 +282,15 @@ class HomeFeedTest : HomeViewModelTestBase() {
     }
 
     @Test
-    fun aFeedLoggedDuringASleepLeavesTheSleepRunning() = homeTest { home ->
+    fun aBreastFeedLoggedDuringASleepEndsTheSleepAtTheFeedsTime() = homeTest { home ->
         val sleep = home.repository.startSleep(SampleData.at(13, 50)).getOrThrow()
         home.tapFeed()
         home.viewModel.onFeedType(FeedType.BREAST)
         home.viewModel.onLogBreastfeed()
         val state = home.settle()
         assertNull(state.sheet)
-        // The sleep keeps the Lamp: a breast feed is an instant.
-        assertTrue(state.lamp is LampState.SleepRunning)
-        assertNull(home.repository.get(sleep.id)!!.endMillis)
+        // A feed during a sleep logs Woke up too (DESIGN_SPEC §4.4): the Lamp is back to the feed.
+        assertTrue(state.lamp is LampState.FeedIdle)
+        assertEquals(SampleData.NOW_1432, home.repository.get(sleep.id)!!.endMillis)
     }
 }

@@ -184,6 +184,18 @@ abstract class WatchScreenshots(private val lang: String) {
         LoggedScreen(WearSamples.receiptFormula(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
     }
 
+    /** A breast feed saved while asleep: it ended the sleep, so Logged says "Left → Right · Woke up too". */
+    @Test
+    fun s09e_loggedWokeUp() = capture("09e-logged-woke-up", SampleData.NOW_0312, timeText = false) {
+        LoggedScreen(WearSamples.receiptBreastWokeUp(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
+    }
+
+    /** A wet diaper saved while asleep: "Pee at 03:12" / "Woke up too". */
+    @Test
+    fun s09f_loggedDiaperWokeUp() = capture("09f-logged-diaper-woke-up", SampleData.NOW_0312, timeText = false) {
+        LoggedScreen(WearSamples.receiptDiaperWokeUp(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
+    }
+
     /** As it opens: the title, the Pee | Poop tiles (V1_ADDITIONS §3.2) and the inline time's "Earlier?". */
     @Test
     fun s07_diaper() = capture("07-diaper", SampleData.NOW_1432) { DiaperScreen(WearSamples.emptyDiaperDraft(), DiaperActions()) }

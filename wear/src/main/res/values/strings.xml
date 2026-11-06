@@ -20,6 +20,10 @@
 
     <!-- Logged -->
     <string name="logged_already_logged">Already logged</string>
+    <!-- Logged after a feed or diaper during a sleep, which ended it at the same time (DESIGN_SPEC §4.4) -->
+    <string name="logged_woke_up_too">Woke up too</string>
+    <!-- As logged_woke_up_too, for a sleep under a minute old, which is discarded instead -->
+    <string name="logged_sleep_cancelled_too">Sleep cancelled too</string>
     <!-- TalkBack name of the full-screen dismiss target behind the Logged confirmation -->
     <string name="logged_dismiss">Dismiss</string>
     <!-- TalkBack click label of the time on Logged: it opens the Time screen -->
