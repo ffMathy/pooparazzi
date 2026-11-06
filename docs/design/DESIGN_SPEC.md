@@ -582,7 +582,7 @@ The watch does not edit history: that is on the phone. Only the time just logged
 | wake | `#222844` / `#7C88C4` | "Woke up at 14:40" (time `#AEB6E6`) | "Slept 8m" |
 | cancelled (stopped < 1 min) | `#222844` / `wake` `#7C88C4` | "Sleep cancelled" | "Slept <1m" |
 | feed, deduped (< 5 s) | as feed | "Fed at 14:32" (the existing entry) | "Already logged" (+ `Reject`; the 5 s drain restarts) |
-| feed or diaper during a sleep (§4.4) | as the kind | as the kind | "Woke up too", after any details ("Left → Right · Woke up too"; may wrap to two lines); "Sleep cancelled too" for a sleep under a minute old |
+| feed or diaper during a sleep (§4.4) | as the kind | as the kind | "Woke up too", on a third line under any details ("Left → Right" / "Woke up too": the circle shrinks to 40 and the sync icon gives way); "Sleep cancelled too" for a sleep under a minute old |
 
 Undo removes the entry (wake and cancelled: the sleep is running again; a feed or diaper that ended a sleep: the sleep runs again too) → Undone. Moving a feed or diaper's time on Time moves the wake-up with it. Ambient: the bezel arc is hidden, Undo is drawn as an outline, the 5 s window keeps running and expiry returns to Main.
 

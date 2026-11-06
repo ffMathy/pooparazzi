@@ -123,7 +123,7 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Baby picker | Logged while asleep | Diaper while asleep |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/en/watch-baby-picker.png" width="170" alt="Watch Switch baby picker with Noa selected and Ida"> | <img src="docs/screenshots/en/watch-logged-woke-up.png" width="170" alt="Watch logged breast feed at 03:12 during a sleep: Left → Right · Woke up too, and Undo"> | <img src="docs/screenshots/en/watch-logged-diaper-woke-up.png" width="170" alt="Watch logged pee at 03:12 during a sleep: Woke up too, and Undo"> |
+| <img src="docs/screenshots/en/watch-baby-picker.png" width="170" alt="Watch Switch baby picker with Noa selected and Ida"> | <img src="docs/screenshots/en/watch-logged-woke-up.png" width="170" alt="Watch logged breast feed at 03:12 during a sleep: Left → Right, then Woke up too, and Undo"> | <img src="docs/screenshots/en/watch-logged-diaper-woke-up.png" width="170" alt="Watch logged pee at 03:12 during a sleep: Woke up too, and Undo"> |
 
 ## Project structure
 
