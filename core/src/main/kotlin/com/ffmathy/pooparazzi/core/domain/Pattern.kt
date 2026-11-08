@@ -5,10 +5,12 @@ import com.ffmathy.pooparazzi.core.model.EntryKind
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import kotlin.math.abs
 
 /**
  * A typical stretch: half of the past stretches lasted [lowMillis]..[highMillis] (the interquartile range) and
- * [medianMillis] is the middle one. [samples] is how many stretches it rests on.
+ * [medianMillis] is the middle one. [samples] is how many stretches it rests on, after the ones unlike the rest were
+ * left out (see [dailyPattern]).
  */
 data class PatternInterval(val medianMillis: Long, val lowMillis: Long, val highMillis: Long, val samples: Int)
 
@@ -33,7 +35,8 @@ data class PatternIntervals(
  * Each of [sleep], [feeds] and [diapers] has one share 0..1 per [PatternRules.SLOT_MINUTES] slot of the local day
  * (slot 0 starts at 00:00): for sleep, the share of the slot spent asleep on an average day; for feeds and diapers,
  * the share of days with one starting in the slot. Only days on which that kind was logged count (like Statistics),
- * so a forgotten day does not water the pattern down; a lane is empty (all 0) when no day counts.
+ * so a forgotten day does not water the pattern down, and of those only the days that look like the others (see
+ * [dailyPattern]); a lane is empty (all 0) when no day counts.
  *
  * @property days the days of [from]..[to] on which anything was logged.
  */
@@ -61,6 +64,22 @@ object PatternRules {
 
     const val SLOT_MINUTES = 30
     const val SLOTS = 24 * 60 / SLOT_MINUTES
+
+    /**
+     * How far from the middle a value may be and still look like the others, in median absolute deviations (scaled
+     * to a standard deviation's size). Further out it is noise and is left out of the pattern.
+     */
+    const val SIMILAR_DEVIATIONS = 2.5
+
+    /** A day's sleep may differ from the usual day's by this mean share per half hour (about 5 hours) and still count. */
+    const val MIN_SLEEP_DAY_TOLERANCE = 0.1
+
+    /** A day's feeds or diapers may be this share of the usual count off (and at least 1) and still count. */
+    const val MIN_COUNT_TOLERANCE_SHARE = 0.25
+
+    /** A stretch may be this share of the middle stretch off (and at least [MIN_STRETCH_TOLERANCE_MILLIS]) and still count. */
+    const val MIN_STRETCH_TOLERANCE_SHARE = 0.25
+    const val MIN_STRETCH_TOLERANCE_MILLIS = 15 * 60_000L
 }
 
 /**
@@ -69,6 +88,13 @@ object PatternRules {
  * when it starts in [nightStart]..[nightEnd] (the night window, 19:00–07:00 by default), otherwise by day. Feeds or
  * diapers under [ForecastRules.MIN_GAP_MILLIS] apart are one (a feed per side), and gaps over
  * [ForecastRules.MAX_GAP_MILLIS] are a forgotten log, not a stretch. Entries after [now] are ignored.
+ *
+ * Noise is left out, so the pattern rests on the values that look alike: a day whose sleep is unlike the usual day's
+ * (half an hour by half an hour), or whose count of feeds or diapers is far from the usual count (a half-logged or a
+ * double-logged day), leaves that lane and its stretches; and of the stretches left, one far from the middle one (a
+ * forgotten wake-up, a one-off long nap) is left out of its interval. "Far" is over [PatternRules.SIMILAR_DEVIATIONS]
+ * median absolute deviations from the middle, and never closer than the rules' minimum tolerances, so ordinary spread
+ * stays in.
  */
 fun dailyPattern(
     entries: List<Entry>,
@@ -95,32 +121,43 @@ fun dailyPattern(
 
     val dates = generateSequence(from) { it.plusDays(1) }.takeWhile { it <= to }.toList()
     val sleepDays = dates.filter { date -> inWindow.any { it.kind == EntryKind.SLEEP && localDate(it.startMillis, zone) == date } }
-    val sleepShares = FloatArray(PatternRules.SLOTS)
-    for (date in sleepDays) {
+    val sleepByDay = sleepDays.associateWith { date ->
         // Only the sleeps that touch the day: a range may be months long.
         val bounds = DayBounds.of(date, zone)
         val onDay = sleeps.filter { it.startMillis < bounds.endMillis && it.effectiveEndIn(now) > bounds.startMillis }
-        for (slot in 0 until PatternRules.SLOTS) {
+        List(PatternRules.SLOTS) { slot ->
             val (start, end) = slotBounds(date, slot, zone)
             val asleep = onDay.sumOf { sleep -> (minOf(sleep.effectiveEndIn(now), end) - maxOf(sleep.startMillis, start)).coerceAtLeast(0L) }
-            sleepShares[slot] += (asleep.toFloat() / (end - start)).coerceAtMost(1f)
+            (asleep.toFloat() / (end - start)).coerceAtMost(1f)
         }
     }
-
-    fun instantShares(instants: List<Entry>): List<Float> {
-        val counted = instants.map { localDate(it.startMillis, zone) }.toSet()
-        if (counted.isEmpty()) return List(PatternRules.SLOTS) { 0f }
-        val hits = Array(PatternRules.SLOTS) { mutableSetOf<LocalDate>() }
-        for (entry in instants) hits[slotOf(entry.startMillis, zone)] += localDate(entry.startMillis, zone)
-        return hits.map { it.size.toFloat() / counted.size }
+    val typicalSleepDays = similarSleepDays(sleepByDay)
+    val sleepShares = List(PatternRules.SLOTS) { slot ->
+        if (typicalSleepDays.isEmpty()) 0f else typicalSleepDays.sumOf { sleepByDay.getValue(it)[slot].toDouble() }.toFloat() / typicalSleepDays.size
     }
 
+    val typicalFeedDays = similarCountDays(feeds, zone)
+    val typicalDiaperDays = similarCountDays(diapers, zone)
+
+    fun instantShares(instants: List<Entry>, days: Set<LocalDate>): List<Float> {
+        if (days.isEmpty()) return List(PatternRules.SLOTS) { 0f }
+        val hits = Array(PatternRules.SLOTS) { mutableSetOf<LocalDate>() }
+        for (entry in instants) {
+            val date = localDate(entry.startMillis, zone)
+            if (date in days) hits[slotOf(entry.startMillis, zone)] += date
+        }
+        return hits.map { it.size.toFloat() / days.size }
+    }
+
+    fun List<Pair<Long, Long>>.onDays(days: Set<LocalDate>) = filter { (start, _) -> localDate(start, zone) in days }
+
     val completedSleeps = sleeps.filter { it.endMillis != null && it.endMillis <= now && it.startMillis >= windowStart }
-    val feedGaps = gaps(feeds)
-    val diaperGaps = gaps(diapers)
-    val sleepLengths = completedSleeps.map { it.startMillis to it.endMillis!! - it.startMillis }
+    val feedGaps = gaps(feeds).onDays(typicalFeedDays)
+    val diaperGaps = gaps(diapers).onDays(typicalDiaperDays)
+    val sleepLengths = completedSleeps.map { it.startMillis to it.endMillis!! - it.startMillis }.onDays(typicalSleepDays)
     val wakeWindows = completedSleeps.zipWithNext { a, b -> a.endMillis!! to b.startMillis - a.endMillis }
         .filter { (_, length) -> length in ForecastRules.MIN_GAP_MILLIS..ForecastRules.MAX_GAP_MILLIS }
+        .onDays(typicalSleepDays)
 
     fun intervals(night: Boolean): PatternIntervals {
         fun pick(stretches: List<Pair<Long, Long>>) =
@@ -132,9 +169,9 @@ fun dailyPattern(
         from = from,
         to = to,
         days = loggedDays.size,
-        sleep = sleepShares.map { if (sleepDays.isEmpty()) 0f else it / sleepDays.size },
-        feeds = instantShares(feeds),
-        diapers = instantShares(diapers),
+        sleep = sleepShares,
+        feeds = instantShares(feeds, typicalFeedDays),
+        diapers = instantShares(diapers, typicalDiaperDays),
         day = intervals(night = false),
         night = intervals(night = true),
     )
@@ -151,9 +188,55 @@ private fun gaps(instants: List<Entry>): List<Pair<Long, Long>> =
     instants.zipWithNext { a, b -> a.startMillis to b.startMillis - a.startMillis }
         .filter { (_, length) -> length <= ForecastRules.MAX_GAP_MILLIS }
 
+/**
+ * The days whose sleep looks like the others': each day's half hours against the usual day (the middle share of each
+ * half hour), and a day too far from it, compared with how far the days usually are, is noise.
+ */
+private fun similarSleepDays(byDay: Map<LocalDate, List<Float>>): Set<LocalDate> {
+    if (byDay.isEmpty()) return emptySet()
+    val usual = List(PatternRules.SLOTS) { slot -> median(byDay.values.map { it[slot].toDouble() }) }
+    val distance = byDay.mapValues { (_, shares) -> shares.indices.sumOf { abs(shares[it] - usual[it]) } / shares.size }
+    // Only too far counts as noise: a day closer to the usual day than the others is the most typical of them.
+    val band = similarBand(distance.values.toList(), PatternRules.MIN_SLEEP_DAY_TOLERANCE)
+    return distance.filterValues { it <= band.endInclusive }.keys
+}
+
+/** The days with [instants] whose count of them looks like the other days' (not half or double logged). */
+private fun similarCountDays(instants: List<Entry>, zone: ZoneId): Set<LocalDate> {
+    val counts = instants.groupingBy { localDate(it.startMillis, zone) }.eachCount()
+    if (counts.isEmpty()) return emptySet()
+    val values = counts.values.map { it.toDouble() }
+    val band = similarBand(values, maxOf(1.0, PatternRules.MIN_COUNT_TOLERANCE_SHARE * median(values)))
+    return counts.filterValues { it.toDouble() in band }.keys
+}
+
+/**
+ * The values that look like the others: within [PatternRules.SIMILAR_DEVIATIONS] scaled median absolute deviations
+ * of the median, and never closer than [minTolerance]. At least half the values always fall inside.
+ */
+private fun similarBand(values: List<Double>, minTolerance: Double): ClosedFloatingPointRange<Double> {
+    val middle = median(values)
+    val deviation = median(values.map { abs(it - middle) })
+    val tolerance = maxOf(PatternRules.SIMILAR_DEVIATIONS * MAD_TO_SD * deviation, minTolerance)
+    return (middle - tolerance)..(middle + tolerance)
+}
+
+private fun median(values: List<Double>): Double {
+    val sorted = values.sorted()
+    val mid = sorted.size / 2
+    return if (sorted.size % 2 == 1) sorted[mid] else (sorted[mid - 1] + sorted[mid]) / 2
+}
+
+/** A median absolute deviation times this is a standard deviation, for normally spread values. */
+private const val MAD_TO_SD = 1.4826
+
 private fun interval(lengths: List<Long>): PatternInterval? {
     if (lengths.size < PatternRules.MIN_SAMPLES) return null
-    val sorted = lengths.sorted()
+    val values = lengths.map { it.toDouble() }
+    val minTolerance = maxOf(PatternRules.MIN_STRETCH_TOLERANCE_SHARE * median(values), PatternRules.MIN_STRETCH_TOLERANCE_MILLIS.toDouble())
+    val band = similarBand(values, minTolerance)
+    val sorted = lengths.filter { it.toDouble() in band }.sorted()
+    if (sorted.size < PatternRules.MIN_SAMPLES) return null
     return PatternInterval(
         medianMillis = quantile(sorted, 0.5).toLong(),
         lowMillis = quantile(sorted, 0.25).toLong(),

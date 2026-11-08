@@ -92,6 +92,54 @@ class PatternTest {
     }
 
     @Test
+    fun aHalfLoggedDayIsLeftOutOfItsLanes() {
+        // Day 3 has only its first two feeds and diapers and no sleep from its own night onwards.
+        val entries = regularDays(7).filterNot { entry ->
+            val day3 = entry.id.startsWith("f3-") || entry.id.startsWith("d3-")
+            (day3 && entry.id.substringAfter('-').toInt() >= 2) || entry.id == "nap3" || entry.id == "night3"
+        } + Entry.sleep(at(3, 1), at(3, 1, 20), id = "odd3")
+        val p = week(entries, 7, at(7, 12))!!
+        assertEquals(7, p.days)
+        // 06:00 has a feed on every day that counts: the half-logged day does not water it down.
+        assertEquals(1f, p.feeds[12], 0.001f)
+        assertEquals(1f, p.diapers[13], 0.001f)
+        // The nap shows on every day that counts, and the odd 20-minute sleep is not among the sleeps.
+        assertEquals(1f, p.sleep[26], 0.001f)
+        assertEquals(6 * HOUR, p.night.sleep!!.lowMillis)
+    }
+
+    @Test
+    fun aStretchUnlikeTheOthersIsLeftOutOfItsInterval() {
+        // One nap of 4 hours among naps of an hour.
+        val entries = regularDays(7).map { if (it.id == "nap2") Entry.sleep(at(2, 10), at(2, 14), id = "nap2") else it }
+        val p = week(entries, 7, at(7, 12))!!
+        assertEquals(HOUR, p.day.sleep!!.medianMillis)
+        assertEquals(HOUR, p.day.sleep!!.highMillis)
+        assertEquals(6, p.day.sleep!!.samples)
+    }
+
+    @Test
+    fun ordinarySpreadStays() {
+        // Naps of 50, 55, 60, 65, 70, 75 and 80 minutes all look alike.
+        val entries = regularDays(7).map { entry ->
+            val d = entry.id.removePrefix("nap").toIntOrNull()
+            if (entry.id.startsWith("nap") && d != null) Entry.sleep(at(d, 13), at(d, 13) + (50 + 5 * d) * MINUTE, id = entry.id) else entry
+        }
+        val p = week(entries, 7, at(7, 12))!!
+        assertEquals(7, p.day.sleep!!.samples)
+        assertEquals(65 * MINUTE, p.day.sleep!!.medianMillis)
+    }
+
+    @Test
+    fun aDoubleLoggedDayIsLeftOutOfTheFeeds() {
+        // Day 4 also has a feed at every half past, twice the usual count.
+        val entries = regularDays(7) + (0 until 8).map { k -> Entry.feed(FeedType.BOTTLE, at(4, 3 * k + 1, 30), id = "x$k") }
+        val p = week(entries, 7, at(7, 12))!!
+        assertEquals(0f, p.feeds[3], 0.001f) // 01:30, only on the double-logged day
+        assertEquals(3 * HOUR, p.day.betweenFeeds!!.lowMillis)
+    }
+
+    @Test
     fun theSampleWeekHasAPattern() {
         val p = dailyPattern(SampleData.history(), SampleData.TODAY.minusDays(7), SampleData.YESTERDAY, SampleData.NOW_1432, SampleData.ZONE)!!
         assertEquals(7, p.days)
