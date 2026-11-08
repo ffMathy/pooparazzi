@@ -150,7 +150,7 @@ internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: Loca
                     style = labelStyle,
                     color = colors.onSurface,
                     maxLines = 2,
-                    modifier = Modifier.underBar(selected ?: 0, chart.bars.size),
+                    modifier = Modifier.underBar(selected, chart.bars.size),
                 )
             }
         }
