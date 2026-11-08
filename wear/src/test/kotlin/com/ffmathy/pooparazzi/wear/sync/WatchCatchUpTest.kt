@@ -1,5 +1,6 @@
 package com.ffmathy.pooparazzi.wear.sync
 
+import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
@@ -15,6 +16,7 @@ import com.ffmathy.pooparazzi.wear.testing.FakeSettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -27,6 +29,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -85,7 +88,16 @@ class WatchCatchUpTest {
     @Test
     fun `the periodic worker succeeds`() {
         val worker = TestListenableWorkerBuilder<WatchCatchUp.CatchUpWorker>(ApplicationProvider.getApplicationContext()).build()
-        val result = runBlocking { worker.doWork() }
-        assertEquals(ListenableWorker.Result.success(), result)
+        // Off the main thread, as WorkManager runs it: the surfaces are drawn on the main looper, idled here.
+        val result = scope.async { worker.doWork() }
+        runBlocking {
+            withTimeout(30_000) {
+                while (!result.isCompleted) {
+                    shadowOf(Looper.getMainLooper()).idle()
+                    delay(10)
+                }
+            }
+        }
+        assertEquals(ListenableWorker.Result.success(), runBlocking { result.await() })
     }
 }
