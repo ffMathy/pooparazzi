@@ -205,7 +205,7 @@ Swipe right (system swipe-to-dismiss) cancels Diaper, Side, Bottle and Time (the
 | P5 | Phone | Home-screen widgets 4×2, 3×1 | Feed and Diaper open the app's sheets; the sleep toggle logs in one tap |
 | P6 | Phone | Live Update (running sleep) | Status chip and an ongoing notification with "Woke up" |
 | P7 | Phone | Splash | System splash, dark at night and light by day |
-| P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day over a chosen range (the last 7, 30 or 90 days, all days or chosen dates; default the last 30 days), with a bar chart of one kind |
+| P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day over a chosen range (the last 7, 30 or 90 days, all days or chosen dates; default the last 30 days), with a bar chart of one kind; pressing or hovering a bar shows its day and value |
 | W1 | Watch | Main, idle | As the Tile: name, Feed and Diaper rows with time since and next estimate, "Start sleep" with how long awake and the next sleep |
 | W2 | Watch | Main, asleep | As the Tile: "Asleep 1h 07m", Feed and Diaper rows, "Woke up" with the expected wake-up |
 | W3 | Watch | Diaper (and Feed type, Side, Bottle) | Pee \| Poop tiles, colour and texture chips, the inline time (−15m / −5m / +5m), Save |

@@ -240,3 +240,26 @@ private fun spokenBarValue(bar: StatsBar, chart: StatsChart, formatters: Formatt
         else -> formatTenths(average.tenths, formatters.clock.locale)
     }
 }
+
+/**
+ * The readout of the pressed or hovered bar: its day and value, "Wed 7 Oct · 5" ("Wed 7 Oct · 15h 27m" for sleep), or
+ * for bars of several days their dates and average per day, "11 May – 17 May · 3.3". A gap shows "–".
+ */
+@Composable
+@ReadOnlyComposable
+internal fun barReadout(bar: StatsBar, chart: StatsChart, year: Boolean, formatters: Formatters): String {
+    val dates = if (bar.from == bar.to) {
+        formatDate(bar.from, if (year) R.string.statistics_pattern_short_day_year else R.string.statistics_pattern_short_day, formatters)
+    } else {
+        stringResource(R.string.join_dash, visibleDate(bar.from, year, formatters), visibleDate(bar.to, year, formatters))
+    }
+    val average = bar.average
+    val value = when {
+        average == null -> stringResource(R.string.statistics_no_value)
+        chart.metric == StatsMetric.SLEEP ->
+            formatters.duration.format((if (chart.binDays == 1) bar.total else average.minutes) * MINUTE_MILLIS)
+        chart.binDays == 1 -> bar.total.toString()
+        else -> formatTenths(average.tenths, formatters.clock.locale)
+    }
+    return stringResource(R.string.join_dot, dates, value)
+}

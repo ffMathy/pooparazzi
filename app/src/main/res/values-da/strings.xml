@@ -88,6 +88,8 @@
     <string name="statistics_pattern_spoken_date_year">d. MMMM yyyy</string>
     <string name="statistics_pattern_spoken_day">EEEE \'den\' d. MMMM</string>
     <string name="statistics_pattern_spoken_day_year">EEEE \'den\' d. MMMM yyyy</string>
+    <string name="statistics_pattern_short_day">EEE d. MMM</string>
+    <string name="statistics_pattern_short_day_year">EEE d. MMM yyyy</string>
 
     <!-- Redigering -->
     <string name="edit_title_sleep">Rediger søvn</string>

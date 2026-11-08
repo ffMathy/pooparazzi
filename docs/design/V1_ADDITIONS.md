@@ -476,6 +476,7 @@ Everything scrolls in one column (the menu and the dialog are popups). At large 
 - **The range's average** is a dashed 2 dp onSurfaceVariant line across the plot, on a 4 dp halo in the card colour so it stays visible over the bars. Nothing else is marked: no second range is drawn.
 - **Scale:** counts up to the next whole number (at least 1), sleep up to the next whole hour.
 - **Legend:** the range's name (dashed swatch), "Each bar is 7 days" for binned bars; in a row, or stacked from 130 % font.
+- **Picking a bar:** pressing a bar, dragging across the plot or hovering it with a mouse or stylus picks the bar under the pointer: the other bars fade to 35 %, a 1 dp onSurfaceVariant guide runs through its slot, and its readout replaces the first and last dates, centred under the bar and kept inside the row (labelSmall onSurface): "Wed 7 Oct · 5" / "ons. 7. okt. · 5", "Wed 7 Oct · 15h 27m" for sleep, for bars of several days their dates and average per day, "11 May – 17 May · 3.3"; a gap shows "–". The pick stays after the finger lifts, until the same bar is tapped again, the column scrolls, or a mouse leaves the plot; a vertical drag is left to the scrolling column. It is visual only: TalkBack keeps the chart's one summary (§8.5), which already names the highest and lowest bars.
 - **Not by colour alone:** the dashed line, legend words, a zero mark versus no mark, one series per chart named by the row. Bars reach 3 : 1 on the card in both themes.
 
 ### 8.5 TalkBack
