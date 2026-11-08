@@ -9,10 +9,14 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.phone.ui.preview.StatisticsSamples
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsActions
+import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsChartDefaults
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsRangeDialog
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsScreen
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsUiState
@@ -32,8 +36,8 @@ import java.time.LocalDate
 
 /**
  * Statistics (P8) on the reference phone (390 × 844 dp, xxhdpi) with the sample history and a fixed clock (V1_ADDITIONS
- * §6, §8), in English and Danish: `app/screenshots/<lang>/21-…22-*.png`, continuing the tour after the notifications, and
- * and `45-statistics-typical-day.png` scrolled to the Typical day card. The other states are written under `build/outputs/roborazzi/` for review.
+ * §6, §8), in English and Danish: `app/screenshots/<lang>/21-…22-*.png`, continuing the tour after the notifications,
+ * `53-statistics-bar.png` with a bar pressed, and `45-statistics-typical-day.png` scrolled to the Typical day card. The other states are written under `build/outputs/roborazzi/` for review.
  * The status and navigation bars are left empty (24 dp insets, as on the reference device).
  */
 abstract class StatisticsScreenshots(private val language: String) {
@@ -48,6 +52,26 @@ abstract class StatisticsScreenshots(private val language: String) {
     @Test fun statisticsDay() = screen("21-statistics", night = false) { Statistics(StatisticsSamples.lastThirtyDays()) }
 
     @Test fun statisticsNight() = screen("22-statistics-night", night = true) { Statistics(StatisticsSamples.night()) }
+
+    /** A bar pressed: the others fade, a guide marks its slot, and its day and value show under it. */
+    @Test fun statisticsBarPicked() = barPicked("53-statistics-bar", night = false, StatisticsSamples.lastThirtyDays())
+
+    @Test fun statisticsBarPickedNight() = barPicked("statistics-bar-night", night = true, StatisticsSamples.night(), tour = false)
+
+    /** Seven-day bars: the bar's dates and its average per day. */
+    @Test fun statisticsBarPickedHalfYear() = barPicked("statistics-bar-half-year", night = false, StatisticsSamples.halfYear(), tour = false)
+
+    /** Taps the chart's highest bar (in the plot, below the scale label) and captures the screen. */
+    private fun barPicked(name: String, night: Boolean, state: StatisticsUiState, tour: Boolean = true) {
+        val chart = requireNotNull(state.chart)
+        val index = chart.bars.indexOf(chart.highest)
+        compose.setContent { NightLightTheme(night = night) { Statistics(state) } }
+        compose.onNodeWithTag(StatisticsChartDefaults.TEST_TAG).performTouchInput {
+            click(Offset(width * (index + 0.5f) / chart.bars.size, 60.dp.toPx()))
+        }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage(path(name, tour))
+    }
 
     /** Not part of the tour (written under build/): the other rows, ranges and amounts of logging. */
     @Test fun statisticsLastSevenDays() = screen("statistics-last-7-days", night = false, tour = false) { Statistics(StatisticsSamples.lastSevenDays()) }

@@ -138,6 +138,9 @@
     <string name="statistics_pattern_spoken_date_year">d MMMM yyyy</string>
     <string name="statistics_pattern_spoken_day">EEEE d MMMM</string>
     <string name="statistics_pattern_spoken_day_year">EEEE d MMMM yyyy</string>
+    <!-- The pressed or hovered bar's day in the chart's readout: "Wed 7 Oct" -->
+    <string name="statistics_pattern_short_day">EEE d MMM</string>
+    <string name="statistics_pattern_short_day_year">EEE d MMM yyyy</string>
     <!-- No average (nothing counted): a dash, never "0" -->
     <string name="statistics_no_value" translatable="false">–</string>
     <!-- A range of visible dates: "26 Sep – 25 Oct" -->

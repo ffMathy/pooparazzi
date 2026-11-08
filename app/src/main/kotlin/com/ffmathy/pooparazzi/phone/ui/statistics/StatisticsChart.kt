@@ -1,7 +1,12 @@
 package com.ffmathy.pooparazzi.phone.ui.statistics
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,15 +18,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -44,6 +58,9 @@ import kotlin.math.min
 internal object StatisticsChartDefaults {
     val PlotHeight = 112.dp
 
+    /** The chart's one node, for tests that press a bar. */
+    const val TEST_TAG = "statistics-chart"
+
     /** A bar is 60 % of its slot, between 2 and 12 wide, at least 3 tall when its value is above 0. */
     const val BAR_FRACTION = 0.6f
     const val BAR_MIN_WIDTH = 2f
@@ -62,6 +79,10 @@ internal object StatisticsChartDefaults {
     const val DASH_ON = 6f
     const val DASH_OFF = 4f
 
+    /** While a bar is pressed or hovered, the other bars fade to this alpha, over a 1 dp guide through its slot. */
+    const val FADED_ALPHA = 0.35f
+    const val GUIDE_WIDTH = 1f
+
     val SwatchWidth = 20.dp
     val SwatchHeight = 12.dp
     const val SWATCH_RADIUS = 3f
@@ -79,6 +100,10 @@ internal fun metricStrong(metric: StatsMetric, events: EventPalette): Color = wh
  * The open row's bar chart of [chart] (V1_ADDITIONS §8): the scale label over a decorative hairline, the plot (bars in
  * the metric's strong colour, 2 dp marks for real zeros, nothing for gaps; the range's average dashed), the first and last dates, the legend and the gaps note. TalkBack hears
  * one summary instead ([chartSpoken]). With nothing counted it is just "Nothing logged on these days.".
+ *
+ * Pressing a bar, dragging across the plot or hovering it with a mouse picks the bar under the pointer: the others fade,
+ * a guide marks its slot, and its day and value ([barReadout]) replace the first and last dates, under the bar. The pick
+ * stays after a tap, until the same bar is tapped again; a mouse leaving the plot or a vertical scroll clears it.
  */
 @Composable
 internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: LocalDate, formatters: Formatters, modifier: Modifier = Modifier) {
@@ -100,29 +125,32 @@ internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: Loca
     val rangeLine = colors.onSurfaceVariant
     val labelStyle = MaterialTheme.typography.labelSmall
     val year = showsYear(chart.from, chart.to, today)
-    Column(modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = summary }) {
+    // A new chart (another row or range) starts with nothing picked.
+    val selection = remember(chart) { mutableStateOf<Int?>(null) }
+    val selected = selection.value
+    val readout = selected?.let { barReadout(chart.bars[it], chart, year, formatters) }
+    Column(modifier.fillMaxWidth().testTag(StatisticsChartDefaults.TEST_TAG).clearAndSetSemantics { contentDescription = summary }) {
         Text(scaleLabel(chart, formatters), style = labelStyle, color = colors.onSurfaceVariant)
         Spacer(Modifier.height(2.dp))
-        Canvas(Modifier.fillMaxWidth().height(StatisticsChartDefaults.PlotHeight)) {
-            plot(chart, bar = bar, card = card, hairline = hairline, rangeColor = rangeLine)
+        Canvas(
+            Modifier
+                .fillMaxWidth()
+                .height(StatisticsChartDefaults.PlotHeight)
+                .barPicking(chart.bars.size, selection),
+        ) {
+            plot(chart, bar = bar, card = card, hairline = hairline, rangeColor = rangeLine, selected = selected)
         }
         Spacer(Modifier.height(4.dp))
-        Row(Modifier.fillMaxWidth()) {
-            Text(
-                visibleDate(chart.from, year, formatters),
-                style = labelStyle,
-                color = colors.onSurfaceVariant,
-                maxLines = 2,
-                modifier = Modifier.weight(1f),
-            )
-            if (chart.to != chart.from) {
+        Box(Modifier.fillMaxWidth()) {
+            // The dates keep their place while the readout shows, so the chart does not move.
+            Dates(chart, year, formatters, Modifier.alpha(if (readout == null) 1f else 0f))
+            if (readout != null) {
                 Text(
-                    visibleDate(chart.to, year, formatters),
+                    readout,
                     style = labelStyle,
-                    color = colors.onSurfaceVariant,
+                    color = colors.onSurface,
                     maxLines = 2,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.underBar(selected ?: 0, chart.bars.size),
                 )
             }
         }
@@ -139,8 +167,96 @@ internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: Loca
     }
 }
 
-/** Hairline, bars and zero marks, then the dashed average line (V1_ADDITIONS §8). */
-private fun DrawScope.plot(chart: StatsChart, bar: Color, card: Color, hairline: Color, rangeColor: Color) {
+/** The first and last dates under the plot (one date for a one-day window). */
+@Composable
+private fun Dates(chart: StatsChart, year: Boolean, formatters: Formatters, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val labelStyle = MaterialTheme.typography.labelSmall
+    Row(modifier.fillMaxWidth()) {
+        Text(
+            visibleDate(chart.from, year, formatters),
+            style = labelStyle,
+            color = colors.onSurfaceVariant,
+            maxLines = 2,
+            modifier = Modifier.weight(1f),
+        )
+        if (chart.to != chart.from) {
+            Text(
+                visibleDate(chart.to, year, formatters),
+                style = labelStyle,
+                color = colors.onSurfaceVariant,
+                maxLines = 2,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/** The bar whose slot holds [x] on a plot [width] wide with [count] bars. */
+private fun barAt(x: Float, width: Int, count: Int): Int = (x / width * count).toInt().coerceIn(0, count - 1)
+
+/**
+ * Picks a bar of [count] with the pointer: a touch picks the bar under it and follows a horizontal drag (a vertical
+ * drag is left to the scrolling column, and clears the pick); a tap on the picked bar clears it. A mouse or stylus
+ * picks the bar it hovers, and clears it as it leaves.
+ */
+private fun Modifier.barPicking(count: Int, selection: MutableState<Int?>): Modifier {
+    fun onSelect(index: Int?) {
+        selection.value = index
+    }
+    return this
+        .pointerInput(count, selection) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                val before = selection.value
+                val index = barAt(down.position.x, size.width, count)
+                onSelect(index)
+                val drag = awaitHorizontalTouchSlopOrCancellation(down.id) { change, _ ->
+                    change.consume()
+                    onSelect(barAt(change.position.x, size.width, count))
+                }
+                if (drag != null) {
+                    horizontalDrag(drag.id) { change ->
+                        change.consume()
+                        onSelect(barAt(change.position.x, size.width, count))
+                    }
+                } else if (currentEvent.changes.any { it.pressed }) {
+                    onSelect(null) // the column is scrolling
+                } else if (before == index && down.type == PointerType.Touch) {
+                    onSelect(null) // a second tap on the picked bar
+                }
+            }
+        }
+        .pointerInput(count, selection) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val change = event.changes.firstOrNull() ?: continue
+                    if (change.type != PointerType.Mouse && change.type != PointerType.Stylus) continue
+                    when (event.type) {
+                        PointerEventType.Enter, PointerEventType.Move -> onSelect(barAt(change.position.x, size.width, count))
+                        PointerEventType.Exit -> onSelect(null)
+                    }
+                }
+            }
+        }
+}
+
+/** Places the readout centred under bar [index] of [count], kept inside the row. */
+private fun Modifier.underBar(index: Int, count: Int): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minWidth = 0))
+    val width = constraints.maxWidth
+    val centre = (index + 0.5f) * width / count
+    val x = (centre - placeable.width / 2f).toInt().coerceIn(0, maxOf(0, width - placeable.width))
+    layout(width, placeable.height) { placeable.place(x, 0) }
+}
+
+/**
+ * Hairline, bars and zero marks, then the dashed average line (V1_ADDITIONS §8). With a [selected] bar, a guide through
+ * its slot and the other bars faded.
+ */
+private fun DrawScope.plot(chart: StatsChart, bar: Color, card: Color, hairline: Color, rangeColor: Color, selected: Int?) {
     val d = density
     val height = size.height
     val slot = size.width / chart.bars.size
@@ -150,12 +266,18 @@ private fun DrawScope.plot(chart: StatsChart, bar: Color, card: Color, hairline:
 
     drawRect(hairline, topLeft = Offset.Zero, size = Size(size.width, StatisticsChartDefaults.HAIRLINE * d))
 
+    if (selected != null) {
+        val x = (selected + 0.5f) * slot
+        drawLine(rangeColor, Offset(x, 0f), Offset(x, height), strokeWidth = StatisticsChartDefaults.GUIDE_WIDTH * d)
+    }
+
     chart.bars.forEachIndexed { index, stat ->
         val value = stat.value ?: return@forEachIndexed
+        val alpha = if (selected == null || selected == index) 1f else StatisticsChartDefaults.FADED_ALPHA
         val left = (index + 0.5f) * slot - barWidth / 2
         if (value <= 0.0) {
             val zero = StatisticsChartDefaults.ZERO_HEIGHT * d
-            drawRect(bar, topLeft = Offset(left, height - zero), size = Size(barWidth, zero))
+            drawRect(bar, topLeft = Offset(left, height - zero), size = Size(barWidth, zero), alpha = alpha)
         } else {
             val barHeight = max((value / chart.top).toFloat() * height, StatisticsChartDefaults.BAR_MIN_HEIGHT * d)
             drawRoundRect(
@@ -163,6 +285,7 @@ private fun DrawScope.plot(chart: StatsChart, bar: Color, card: Color, hairline:
                 topLeft = Offset(left, height - barHeight),
                 size = Size(barWidth, barHeight),
                 cornerRadius = CornerRadius(min(StatisticsChartDefaults.BAR_RADIUS * d, barWidth / 2)),
+                alpha = alpha,
             )
         }
     }
