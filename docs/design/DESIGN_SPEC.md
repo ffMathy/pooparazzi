@@ -1399,6 +1399,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 - `allowDynamicTheme = false` (a deliberate deviation from Google's tile guidance, §10.13).
 - Preview image 400 × 400 of the idle state.
 - The mainSlot is designed to become a 2 × 2 Wear Widget later.
+- **Phone changes**: the sync listener merges them, then redraws the tile, complications and Ongoing Activity before it returns (a cached process is soon frozen, and a redraw left for later waited until the app was opened). Because Play Services may deliver a change to the listener late, the watch also merges what its own Data Layer holds when the tile is drawn (in the background, at most once a minute; anything new asks for another tile) and every 15 minutes from WorkManager, which also redraws every surface.
 
 ### 10.10 Complications
 

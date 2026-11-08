@@ -17,6 +17,7 @@ import com.ffmathy.pooparazzi.core.format.LabelFormatter
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.wear.surface.SurfaceHaptics
 import com.ffmathy.pooparazzi.wear.surface.SurfaceText
+import com.ffmathy.pooparazzi.wear.sync.WatchCatchUp
 import kotlinx.coroutines.flow.first
 import java.time.ZoneId
 
@@ -33,6 +34,8 @@ class PooparazziTileService : Material3TileService(allowDynamicTheme = false, de
 
     override suspend fun MaterialScope.tileResponse(requestParams: TileRequest): Tile {
         val graph = Core.init(applicationContext)
+        // Phone changes the sync listener missed: merged in the background, then a new tile is asked for.
+        WatchCatchUp.onTileRequest(graph)
         val memory = PreferencesTileMemory.of(applicationContext)
         val zone = ZoneId.systemDefault()
 
