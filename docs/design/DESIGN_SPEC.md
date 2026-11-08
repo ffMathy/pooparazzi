@@ -635,7 +635,7 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 
 | Element | Spec (reference 228) |
 |---|---|
-| Header | `diaper` 24 `#E8D8C3`, y 11–35 (system app icon: the tile's icon, the app's launcher glyph) |
+| Header | `diaper` 24 `#E8D8C3`, y 11–35 (system app icon: the tile service's `android:icon`, `tile_icon`, the app's launcher glyph with its `#E8D8C3` baked in, since the system draws it untinted; never the white `x_diaper`) |
 | Title (titleSlot) | y 37–53, titleSmall `#E8D8C3`, centred: the baby's name; unnamed, **"Pee 48m ago"** (last diaper). The same title as Main's (§3.5.1) |
 | Row A | Feed button 184 × 52, r 26, `#3B2715`: `feed` 24 `#F2B577` at 16 from the start; as on Main no label (the content description names it), `history` 14 + "2h 10m" over `upcoming` 14 + "55m" (the expected next feed, kept current by a dynamic expression) labelMedium 15 sp `#FFDCBB`. Opens the app's Feed type screen |
 | Row B | Diaper button 184 × 52, r 26, DIAPER container `#13312C`: `diaper` 24 DIAPER strong at 16 from the start; `history` "48m" (or "No diapers yet", no icon) over `upcoming` "3h 10m" (the expected next poop) labelMedium `#BFE9E0`. Opens the app's Diaper screen, like Main's Diaper button; diapers are never logged from the tile |

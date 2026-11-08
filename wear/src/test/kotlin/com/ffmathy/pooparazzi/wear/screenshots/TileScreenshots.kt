@@ -9,7 +9,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.graphics.toArgb
 import androidx.test.core.app.ApplicationProvider
 import androidx.wear.protolayout.DeviceParametersBuilders.DEVICE_PLATFORM_WEAR_OS
 import androidx.wear.protolayout.DeviceParametersBuilders.DeviceParameters
@@ -23,8 +22,7 @@ import com.ffmathy.pooparazzi.core.format.LabelFormatter
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.Settings as CoreSettings
-import com.ffmathy.pooparazzi.core.ui.icons.XDrawables
-import com.ffmathy.pooparazzi.core.ui.tokens.XTokens
+import com.ffmathy.pooparazzi.wear.R
 import com.ffmathy.pooparazzi.wear.sample.WearSamples
 import com.ffmathy.pooparazzi.wear.surface.SurfaceText
 import com.ffmathy.pooparazzi.wear.tile.TileTheme
@@ -49,8 +47,8 @@ import kotlin.math.roundToInt
  * Two things differ from a watch, both because there is no tile host here:
  * - time-dependent text is rendered as its static value at the sample time (the renderer would otherwise evaluate the
  *   dynamic expressions against the real clock, not the scenario's 14:32);
- * - the header icon is drawn by the system on a watch; here the harness draws the app's `diaper` glyph into the icon
- *   slot the layout reserves for it.
+ * - the header icon is drawn by the system on a watch, from the tile service's `android:icon`; here the harness draws
+ *   that same resource, untinted as the system draws it, into the icon slot the layout reserves for it.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -138,12 +136,11 @@ abstract class TileScreenshots(private val lang: String) {
         parent.captureRoboImage(filePath = "screenshots/$lang/$name.png", roborazziOptions = RoundWatch)
     }
 
-    /** The header icon the tile host draws above the title (DESIGN_SPEC §3.6: `diaper` 24, onSurface). */
+    /** The header icon the tile host draws above the title (DESIGN_SPEC §3.6: the service icon, `diaper` 24 `#E8D8C3`). */
     private fun addSystemIcon(activity: Context, parent: FrameLayout, sizeDp: Int, density: Float) {
         val iconPx = (ICON_DP * density).roundToInt()
         val icon = ImageView(activity).apply {
-            setImageResource(XDrawables.diaper)
-            setColorFilter(XTokens.Watch.onSurface.toArgb())
+            setImageResource(R.drawable.tile_icon)
         }
         parent.addView(
             icon,

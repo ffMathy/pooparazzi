@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The tile's service icon (DESIGN_SPEC §3.6): the `diaper` glyph (XIconSpecs.diaper) in the launcher glyph colour.
+    The watch draws it untinted in the tile's header and in the tile picker, so the colour is baked in here; the
+    white `x_diaper` would show as a plain white icon.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M3 6.5h18v4a3.5 3.5 0 0 0-3.5 3.5v1.5a3 3 0 0 1-3 3h-5a3 3 0 0 1-3-3V14A3.5 3.5 0 0 0 3 10.5z"
+        android:fillColor="#00000000"
+        android:strokeColor="@color/launcher_glyph"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M3 9h18"
+        android:fillColor="#00000000"
+        android:strokeColor="@color/launcher_glyph"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
