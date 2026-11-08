@@ -11,7 +11,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 /**
  * Receives `/entries/<id>` and `/settings` changes from the other device and merges them (last-writer-wins).
  * Declared in core's manifest, so it is merged into both apps. Play Services calls it on a background
- * thread, so blocking until the merge is written is fine (and keeps the work inside the service's lifetime).
+ * thread, so blocking until the merge is written is fine (and keeps the work inside the service's lifetime), and so is
+ * waiting for [CoreGraph.afterRemoteMerge][com.ffmathy.pooparazzi.core.CoreGraph.afterRemoteMerge] (the watch's tile,
+ * complications and Ongoing Activities).
  */
 class EntrySyncListenerService : WearableListenerService() {
 
@@ -22,7 +24,10 @@ class EntrySyncListenerService : WearableListenerService() {
             if (items.isEmpty()) return
             val graph = Core.ensureInitialized(applicationContext)
             runBlocking {
-                withTimeoutOrNull(RECEIVE_TIMEOUT_MILLIS) { graph.sync.receive(items) }
+                val applied = withTimeoutOrNull(RECEIVE_TIMEOUT_MILLIS) { graph.sync.receive(items) } ?: 0
+                // Inside the service's lifetime: the process may be frozen soon after this returns.
+                val after = graph.afterRemoteMerge
+                if (applied > 0 && after != null) withTimeoutOrNull(AFTER_MERGE_TIMEOUT_MILLIS) { after() }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Could not merge remote data", e)
@@ -32,6 +37,7 @@ class EntrySyncListenerService : WearableListenerService() {
     internal companion object {
         private const val TAG = "EntrySyncListener"
         private const val RECEIVE_TIMEOUT_MILLIS = 20_000L
+        private const val AFTER_MERGE_TIMEOUT_MILLIS = 5_000L
 
         /**
          * Copies the changed items out of [events], with the writing node from the item's URI host. Deletions are

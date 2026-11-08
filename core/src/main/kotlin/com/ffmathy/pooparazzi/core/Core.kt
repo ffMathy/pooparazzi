@@ -53,6 +53,15 @@ class CoreGraph(
     private val adopting = AtomicBoolean(false)
 
     /**
+     * Runs after the sync listener merged something from the other device, before the listener returns. Play Services
+     * lets the process go as soon as `onDataChanged` returns, and a cached process is soon frozen: work left to a flow
+     * collector (a new tile, the Ongoing Activity) could then wait until the user opens the app. The watch sets this
+     * to bring its surfaces up to date at once.
+     */
+    @Volatile
+    var afterRemoteMerge: (suspend () -> Unit)? = null
+
+    /**
      * Startup work: purge old soft deletes, merge what arrived while the app was not running, push pending writes;
      * then start the backup.
      */

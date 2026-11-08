@@ -68,6 +68,8 @@ dependencies {
     implementation(libs.wear.complications.data.source.ktx)
     implementation(libs.wear.ongoing)
     implementation(libs.androidx.core.ktx)
+    // The periodic catch-up with the phone (WatchCatchUp).
+    implementation(libs.androidx.work.runtime.ktx)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.wear.tiles.tooling)
 
@@ -75,6 +77,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.work.testing)
     testImplementation(libs.roborazzi)
     testImplementation(libs.roborazzi.compose)
     testImplementation(libs.compose.ui.test.junit4)

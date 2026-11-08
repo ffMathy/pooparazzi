@@ -13,6 +13,7 @@ import androidx.annotation.RequiresApi
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.wear.surface.SurfaceUpdater
+import com.ffmathy.pooparazzi.wear.sync.WatchCatchUp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +28,8 @@ import kotlinx.coroutines.withContext
 
 /**
  * The watch application: builds the shared [Core] graph, follows the language chosen on the phone, and keeps the
- * tile, complications and Ongoing Activities in step with the data ([SurfaceUpdater]).
+ * tile, complications and Ongoing Activities in step with the data ([SurfaceUpdater]), also when the phone's changes
+ * are not delivered to the sync listener ([WatchCatchUp]).
  */
 class WearApp : Application() {
     private var surfaces: SurfaceUpdater? = null
@@ -45,7 +47,11 @@ class WearApp : Application() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             SyncedLanguage.follow(this, graph.settings, graph.scope)
         }
-        surfaces = SurfaceUpdater(this, graph.repository, graph.settings, graph.clock).also { it.start(graph.scope) }
+        val updater = SurfaceUpdater(this, graph.repository, graph.settings, graph.clock).also { it.start(graph.scope) }
+        surfaces = updater
+        // A merge from the phone redraws the tile and the Ongoing Activity before the listener lets the process go.
+        graph.afterRemoteMerge = { updater.updateNow() }
+        WatchCatchUp.schedule(this)
         // System broadcasts only (the 12/24 h toggle is sent as TIME_SET); nothing from other apps.
         val timeSettings = IntentFilter().apply {
             addAction(Intent.ACTION_TIMEZONE_CHANGED)
@@ -74,6 +80,11 @@ class WearApp : Application() {
     internal fun onTimeSettingsChanged() {
         refreshSurfaces()
         _timeSettingsChanges.update { it + 1 }
+    }
+
+    /** Brings the tile, complications and Ongoing Activities up to date now; returns when done. */
+    internal suspend fun updateSurfacesNow() {
+        surfaces?.updateNow()
     }
 
     /**
