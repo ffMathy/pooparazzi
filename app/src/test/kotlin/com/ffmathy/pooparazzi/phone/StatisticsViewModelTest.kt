@@ -172,7 +172,10 @@ class StatisticsViewModelTest : CoreTestBase() {
 
         val week = statistics.report().window
         assertEquals(oct(20) to oct(26), week.from to week.to)
-        assertEquals(listOf(64L, 63L, 23L, 775L), week.averages())
+        // Mon 26 Oct was logged only until 14:32: its sleep is far below the other days', so it is unusual for sleep and
+        // left out of that average (its feeds and diapers are near enough to the usual count to count).
+        assertTrue(week.days.last().unusual(StatsMetric.SLEEP))
+        assertEquals(listOf(64L, 63L, 23L, 824L), week.averages())
     }
 
     @Test
