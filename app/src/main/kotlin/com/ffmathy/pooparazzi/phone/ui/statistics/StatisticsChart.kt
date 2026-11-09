@@ -98,7 +98,9 @@ internal fun metricStrong(metric: StatsMetric, events: EventPalette): Color = wh
 
 /**
  * The open row's bar chart of [chart] (V1_ADDITIONS §8): the scale label over a decorative hairline, the plot (bars in
- * the metric's strong colour, 2 dp marks for real zeros, nothing for gaps; the range's average dashed), the first and last dates, the legend and the gaps note. TalkBack hears
+ * the metric's strong colour, 2 dp marks for real zeros, nothing for gaps, grey bars for days unlike the others, which
+ * the average leaves out; the range's average dashed), the first and last dates, the legend, the unusual-days note and
+ * the gaps note. TalkBack hears
  * one summary instead ([chartSpoken]). With nothing counted it is just "Nothing logged on these days.".
  *
  * Pressing a bar, dragging across the plot or hovering it with a mouse picks the bar under the pointer: the others fade,
@@ -120,6 +122,8 @@ internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: Loca
     val summary = chartSpoken(chart, report, today, formatters)
     // Colours are read here, never inside the Canvas (as in HistoryRibbon).
     val bar = metricStrong(chart.metric, LocalXPalette.current.events)
+    // A day unlike the others: drawn, but grey, as it is left out of the average.
+    val unusual = colors.outline
     val card = colors.surfaceContainer
     val hairline = colors.outlineVariant
     val rangeLine = colors.onSurfaceVariant
@@ -138,7 +142,7 @@ internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: Loca
                 .height(StatisticsChartDefaults.PlotHeight)
                 .barPicking(chart.bars.size, selection),
         ) {
-            plot(chart, bar = bar, card = card, hairline = hairline, rangeColor = rangeLine, selected = selected)
+            plot(chart, bar = bar, unusual = unusual, card = card, hairline = hairline, rangeColor = rangeLine, selected = selected)
         }
         Spacer(Modifier.height(4.dp))
         Box(Modifier.fillMaxWidth()) {
@@ -155,7 +159,15 @@ internal fun StatisticsChart(chart: StatsChart, report: StatsReport, today: Loca
             }
         }
         Spacer(Modifier.height(8.dp))
-        Legend(chart, report, rangeColor = rangeLine)
+        Legend(chart, report, rangeColor = rangeLine, unusualColor = unusual)
+        if (chart.unusualDays > 0) {
+            Text(
+                stringResource(R.string.statistics_unusual_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
         if (chart.gapDays > 0) {
             Text(
                 gapsNote(chart.metric),
@@ -256,7 +268,7 @@ private fun Modifier.underBar(index: Int, count: Int): Modifier = layout { measu
  * Hairline, bars and zero marks, then the dashed average line (V1_ADDITIONS §8). With a [selected] bar, a guide through
  * its slot and the other bars faded.
  */
-private fun DrawScope.plot(chart: StatsChart, bar: Color, card: Color, hairline: Color, rangeColor: Color, selected: Int?) {
+private fun DrawScope.plot(chart: StatsChart, bar: Color, unusual: Color, card: Color, hairline: Color, rangeColor: Color, selected: Int?) {
     val d = density
     val height = size.height
     val slot = size.width / chart.bars.size
@@ -273,15 +285,16 @@ private fun DrawScope.plot(chart: StatsChart, bar: Color, card: Color, hairline:
 
     chart.bars.forEachIndexed { index, stat ->
         val value = stat.value ?: return@forEachIndexed
+        val fill = if (stat.unusual) unusual else bar
         val alpha = if (selected == null || selected == index) 1f else StatisticsChartDefaults.FADED_ALPHA
         val left = (index + 0.5f) * slot - barWidth / 2
         if (value <= 0.0) {
             val zero = StatisticsChartDefaults.ZERO_HEIGHT * d
-            drawRect(bar, topLeft = Offset(left, height - zero), size = Size(barWidth, zero), alpha = alpha)
+            drawRect(fill, topLeft = Offset(left, height - zero), size = Size(barWidth, zero), alpha = alpha)
         } else {
             val barHeight = max((value / chart.top).toFloat() * height, StatisticsChartDefaults.BAR_MIN_HEIGHT * d)
             drawRoundRect(
-                bar,
+                fill,
                 topLeft = Offset(left, height - barHeight),
                 size = Size(barWidth, barHeight),
                 cornerRadius = CornerRadius(min(StatisticsChartDefaults.BAR_RADIUS * d, barWidth / 2)),
@@ -299,11 +312,11 @@ private fun DrawScope.plot(chart: StatsChart, bar: Color, card: Color, hairline:
 }
 
 /**
- * The range ("Last 30 days", a dashed line) and "Each bar is 7 days" for bars of several days: in a row, or stacked from
- * 130 % font.
+ * The range ("Last 30 days", a dashed line), "Unusual day" (a grey bar) when there are any, and "Each bar is 7 days"
+ * for bars of several days: in a row, or stacked from 130 % font.
  */
 @Composable
-private fun Legend(chart: StatsChart, report: StatsReport, rangeColor: Color) {
+private fun Legend(chart: StatsChart, report: StatsReport, rangeColor: Color, unusualColor: Color) {
     val showBins = chart.binDays > 1
     val stacked = LocalDensity.current.fontScale >= LARGE_FONT_SCALE
     val content: @Composable () -> Unit = {
@@ -314,6 +327,19 @@ private fun Legend(chart: StatsChart, report: StatsReport, rangeColor: Color) {
                     floatArrayOf(StatisticsChartDefaults.DASH_ON * density, StatisticsChartDefaults.DASH_OFF * density),
                 )
                 drawLine(rangeColor, Offset(0f, y), Offset(size.width, y), strokeWidth = StatisticsChartDefaults.LINE_WIDTH * density, pathEffect = dashes)
+            }
+        }
+        if (chart.unusualDays > 0) {
+            LegendItem(stringResource(R.string.statistics_unusual_legend)) {
+                Canvas(Modifier.size(StatisticsChartDefaults.SwatchWidth, StatisticsChartDefaults.SwatchHeight)) {
+                    val width = StatisticsChartDefaults.BAR_MAX_WIDTH * density
+                    drawRoundRect(
+                        unusualColor,
+                        topLeft = Offset((size.width - width) / 2, 0f),
+                        size = Size(width, size.height),
+                        cornerRadius = CornerRadius(StatisticsChartDefaults.SWATCH_RADIUS * density),
+                    )
+                }
             }
         }
         if (showBins) {

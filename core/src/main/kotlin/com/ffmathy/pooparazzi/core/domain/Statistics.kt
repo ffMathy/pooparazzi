@@ -43,8 +43,8 @@ enum class DayStatus {
 }
 
 /**
- * One local day of a window: its [counts] (exactly [dailyCounts], so what History shows for the day) and how many
- * diapers and sleeps start on it.
+ * One local day of a window: its [counts] (exactly [dailyCounts], so what History shows for the day), how many
+ * diapers and sleeps start on it, and the metrics it is unlike the other days for ([unusualFor], see [unusualDays]).
  */
 data class StatsDay(
     val date: LocalDate,
@@ -52,6 +52,7 @@ data class StatsDay(
     val counts: DayCounts,
     val diaperStarts: Int,
     val sleepStarts: Int,
+    val unusualFor: Set<StatsMetric> = emptySet(),
 ) {
     /**
      * Whether the day counts for [metric]: something was logged on it and an entry of the metric's kind starts on it
@@ -63,6 +64,12 @@ data class StatsDay(
         StatsMetric.PEE, StatsMetric.POOP -> diaperStarts > 0
         StatsMetric.SLEEP -> sleepStarts > 0
     }
+
+    /** Counted for [metric] but unlike the other days (half or double logged, an odd day's sleep): noise. */
+    fun unusual(metric: StatsMetric): Boolean = counted(metric) && metric in unusualFor
+
+    /** Counted for [metric] and like the other days: part of the averages and of the bars' values. */
+    fun averaged(metric: StatsMetric): Boolean = counted(metric) && metric !in unusualFor
 
     /** Feeds, pee or poop on the day, or its sleep in clock minutes. */
     fun value(metric: StatsMetric): Long = when (metric) {
@@ -98,12 +105,15 @@ data class StatsWindow(val from: LocalDate, val to: LocalDate, val days: List<St
 
     fun countedDays(metric: StatsMetric): Int = days.count { it.counted(metric) }
 
-    /** The average per counted day, or null when no day counts for [metric]. */
+    /** Counted days left out of [metric]'s average as noise. */
+    fun unusualDays(metric: StatsMetric): Int = days.count { it.unusual(metric) }
+
+    /** The average per counted day that is like the others, or null when no day counts for [metric]. */
     fun average(metric: StatsMetric): StatsAverage? {
         var total = 0L
         var counted = 0
         for (day in days) {
-            if (day.counted(metric)) {
+            if (day.averaged(metric)) {
                 total += day.value(metric)
                 counted++
             }
@@ -150,18 +160,28 @@ fun statsReport(entries: List<Entry>, now: Long, zone: ZoneId, range: StatsRange
     val firstDay = if (soFar) firstLogged else firstLogged.plusDays(1)
     val effective = range.clamped(firstDay, lastDay)
     val (from, to) = effective.window(firstDay, lastDay)
+    // Noise is judged among the days that count, so not from the first, partial day of logging.
+    val unusual = if (maxOf(from, firstDay) > to) UnusualDays.NONE else unusualDays(entries, maxOf(from, firstDay), to, now, zone)
     return StatsReport(
         today = today,
         firstDay = firstDay,
         lastDay = lastDay,
         range = effective,
-        window = StatsWindow(from, to, statsDays(entries, from, to, firstDay, now, zone)),
+        window = StatsWindow(from, to, statsDays(entries, from, to, firstDay, unusual, now, zone)),
         soFar = soFar,
     )
 }
 
 /** Every day from [from] to [to] with its counts, starts and status. */
-private fun statsDays(entries: List<Entry>, from: LocalDate, to: LocalDate, firstDay: LocalDate, now: Long, zone: ZoneId): List<StatsDay> {
+private fun statsDays(
+    entries: List<Entry>,
+    from: LocalDate,
+    to: LocalDate,
+    firstDay: LocalDate,
+    unusual: UnusualDays,
+    now: Long,
+    zone: ZoneId,
+): List<StatsDay> {
     val counts = dailyCounts(entries, from, to, now, zone)
     val anyStarts = IntArray(counts.size)
     val diaperStarts = IntArray(counts.size)
@@ -186,7 +206,12 @@ private fun statsDays(entries: List<Entry>, from: LocalDate, to: LocalDate, firs
             anyStarts[i] == 0 -> DayStatus.NOTHING_LOGGED
             else -> DayStatus.COUNTED
         }
-        StatsDay(date, status, counts[i], diaperStarts[i], sleepStarts[i])
+        val unusualFor = buildSet {
+            if (date in unusual.feeds) add(StatsMetric.FEEDS)
+            if (date in unusual.diapers) addAll(listOf(StatsMetric.PEE, StatsMetric.POOP))
+            if (date in unusual.sleep) add(StatsMetric.SLEEP)
+        }
+        StatsDay(date, status, counts[i], diaperStarts[i], sleepStarts[i], unusualFor)
     }
 }
 
@@ -229,12 +254,30 @@ fun roundedTenths(total: Long, days: Int): Int = ((total * 20 + days) / (2L * da
 /** [total] / [days] rounded half up to a whole number (859.5 minutes is 860). */
 fun roundedMinutes(total: Long, days: Int): Long = (total * 2 + days) / (2L * days)
 
-/** One bar of a chart: the days [from]..[to], of which [countedDays] count for its metric. 0 counted days is a gap. */
-data class StatsBar(val from: LocalDate, val to: LocalDate, val total: Long, val countedDays: Int) {
-    /** The value per counted day (a whole day's value for a one-day bar), or null for a gap. */
-    val value: Double? get() = if (countedDays == 0) null else total.toDouble() / countedDays
+/**
+ * One bar of a chart: the days [from]..[to], of which [countedDays] count for its metric and are like the others (their
+ * [total]), and [unusualDays] count but are noise (their [unusualTotal]). A bar's value rests on its usual days only;
+ * a bar with only unusual days is [unusual] (drawn apart, at their value), and one with neither is a gap.
+ */
+data class StatsBar(
+    val from: LocalDate,
+    val to: LocalDate,
+    val total: Long,
+    val countedDays: Int,
+    val unusualTotal: Long = 0,
+    val unusualDays: Int = 0,
+) {
+    /** Only unusual days: drawn apart, and never the highest or lowest. */
+    val unusual: Boolean get() = countedDays == 0 && unusualDays > 0
 
-    val average: StatsAverage? get() = if (countedDays == 0) null else StatsAverage(total, countedDays)
+    /** The value per counted day (a whole day's value for a one-day bar), or null for a gap. */
+    val value: Double? get() = average?.let { it.total.toDouble() / it.days }
+
+    val average: StatsAverage? get() = when {
+        countedDays > 0 -> StatsAverage(total, countedDays)
+        unusualDays > 0 -> StatsAverage(unusualTotal, unusualDays)
+        else -> null
+    }
 }
 
 /**
@@ -243,9 +286,11 @@ data class StatsBar(val from: LocalDate, val to: LocalDate, val total: Long, val
  * @property binDays days per bar; bars are cut from the end, so only the oldest can be shorter.
  * @property rangeLine the rounded average of the whole window, drawn dashed.
  * @property top the top of the scale: a whole count, or a whole hour of sleep in minutes.
- * @property highest the bar with the highest value (the latest of equal ones), null when nothing counts.
- * @property lowest the bar with the lowest value (the latest of equal ones).
+ * @property highest the bar with the highest value (the latest of equal ones), null when nothing counts; unusual bars
+ * are never it.
+ * @property lowest the bar with the lowest value (the latest of equal ones), likewise.
  * @property gapDays days from the first full day of logging on that do not count for [metric].
+ * @property unusualDays counted days that are noise for [metric] ([StatsDay.unusual]): drawn apart, out of the average.
  * @property daysBeforeLogging days before the first full day of logging.
  */
 data class StatsChart(
@@ -260,6 +305,7 @@ data class StatsChart(
     val lowest: StatsBar?,
     val gapDays: Int,
     val daysBeforeLogging: Int,
+    val unusualDays: Int = 0,
 ) {
     /** No day of the window counts for [metric]. */
     val isEmpty: Boolean get() = highest == null
@@ -276,13 +322,18 @@ fun StatsReport.chart(metric: StatsMetric): StatsChart {
         val last = n - (count - 1 - k) * bin - 1
         var total = 0L
         var counted = 0
+        var unusualTotal = 0L
+        var unusual = 0
         for (i in first..last) {
-            if (days[i].counted(metric)) {
+            if (days[i].averaged(metric)) {
                 total += days[i].value(metric)
                 counted++
+            } else if (days[i].unusual(metric)) {
+                unusualTotal += days[i].value(metric)
+                unusual++
             }
         }
-        StatsBar(days[first].date, days[last].date, total, counted)
+        StatsBar(days[first].date, days[last].date, total, counted, unusualTotal, unusual)
     }
     val rangeLine = window.average(metric)?.shown(metric)
     val peak = (bars.mapNotNull { it.value } + listOfNotNull(rangeLine)).maxOrNull() ?: 0.0
@@ -299,6 +350,7 @@ fun StatsReport.chart(metric: StatsMetric): StatsChart {
         highest = valued.maxWithOrNull(compareBy<StatsBar> { it.value }.thenBy { it.to }),
         lowest = valued.minWithOrNull(compareBy<StatsBar> { it.value }.thenByDescending { it.to }),
         gapDays = days.count { it.date >= firstDay && !it.counted(metric) },
+        unusualDays = days.count { it.unusual(metric) },
         daysBeforeLogging = days.count { it.date < firstDay },
     )
 }

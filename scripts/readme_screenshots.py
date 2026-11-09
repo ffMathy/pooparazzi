@@ -56,6 +56,7 @@ PHONE = {
     "20-notifications.png": "notifications",
     "21-statistics.png": "statistics",
     "53-statistics-bar.png": "statistics-bar",
+    "54-statistics-unusual.png": "statistics-unusual",
     "45-statistics-typical-day.png": "statistics-typical-day",
     "22-statistics-night.png": "statistics-night",
     "23-home-twins.png": "home-twins",

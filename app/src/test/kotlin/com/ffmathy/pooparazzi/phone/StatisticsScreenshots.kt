@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.phone.ui.preview.StatisticsSamples
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsActions
+import com.ffmathy.pooparazzi.core.domain.StatsChart
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsChartDefaults
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsRangeDialog
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsScreen
@@ -62,10 +63,25 @@ abstract class StatisticsScreenshots(private val language: String) {
     /** Seven-day bars: the bar's dates and its average per day. */
     @Test fun statisticsBarPickedHalfYear() = barPicked("statistics-bar-half-year", night = false, StatisticsSamples.halfYear(), tour = false)
 
-    /** Taps the chart's highest bar (in the plot, below the scale label) and captures the screen. */
-    private fun barPicked(name: String, night: Boolean, state: StatisticsUiState, tour: Boolean = true) {
+    /** A half-logged day: its bar grey and picked ("· Unusual"), left out of the average, with the legend and note. */
+    @Test fun statisticsUnusualDay() = barPicked("54-statistics-unusual", night = false, StatisticsSamples.unusual()) { chart ->
+        chart.bars.indexOfFirst { it.from == StatisticsSamples.HALF_LOGGED_DAY }
+    }
+
+    @Test fun statisticsUnusualDayNight() = barPicked("statistics-unusual-night", night = true, StatisticsSamples.unusual(), tour = false) { chart ->
+        chart.bars.indexOfFirst { it.from == StatisticsSamples.HALF_LOGGED_DAY }
+    }
+
+    /** Taps the chart's highest bar, or the one [pick] names (in the plot, below the scale label) and captures the screen. */
+    private fun barPicked(
+        name: String,
+        night: Boolean,
+        state: StatisticsUiState,
+        tour: Boolean = true,
+        pick: (StatsChart) -> Int = { it.bars.indexOf(it.highest) },
+    ) {
         val chart = requireNotNull(state.chart)
-        val index = chart.bars.indexOf(chart.highest)
+        val index = pick(chart)
         compose.setContent { NightLightTheme(night = night) { Statistics(state) } }
         compose.onNodeWithTag(StatisticsChartDefaults.TEST_TAG).performTouchInput {
             click(Offset(width * (index + 0.5f) / chart.bars.size, 60.dp.toPx()))

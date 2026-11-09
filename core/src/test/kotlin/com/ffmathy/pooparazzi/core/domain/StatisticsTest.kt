@@ -416,3 +416,72 @@ class StatisticsEdgeTest {
         assertEquals(report(), report(SampleData.history().shuffled(Random(7))))
     }
 }
+
+/** Days unlike the others (noise) are drawn apart and left out of the averages (`history()` at Mon 26 Oct 14:32). */
+class StatisticsNoiseTest {
+    /** `history()` with Sat 10 Oct logged only until 06:00: a half-logged day. */
+    private val halfLogged = SampleData.history().filterNot { it.startMillis >= at(oct(10), 6) && it.startMillis < at(oct(11), 0) }
+
+    private fun StatsWindow.day(date: LocalDate) = days.single { it.date == date }
+
+    @Test
+    fun theSampleMonthHasNoUnusualDays() {
+        val window = month()
+        StatsMetric.entries.forEach { assertEquals(0, window.unusualDays(it)) }
+    }
+
+    @Test
+    fun aHalfLoggedDayIsUnusualForEveryKind() {
+        val window = month(halfLogged)
+        StatsMetric.entries.forEach { metric ->
+            assertTrue("$metric", window.day(oct(10)).unusual(metric))
+            assertEquals("$metric", 1, window.unusualDays(metric))
+        }
+    }
+
+    @Test
+    fun theAveragesLeaveTheUnusualDayOut() {
+        val window = month(halfLogged)
+        StatsMetric.entries.forEach { metric ->
+            val usual = window.days.filter { it.counted(metric) && it.date != oct(10) }
+            assertEquals("$metric", StatsAverage(usual.sumOf { it.value(metric) }, usual.size), window.average(metric))
+        }
+        // Still logged: it is part of the coverage, only not of the averages.
+        assertEquals(30, window.loggedDays)
+    }
+
+    @Test
+    fun theUnusualDaysBarIsDrawnApartAndIsNeverTheLowest() {
+        val chart = report(halfLogged).chart(StatsMetric.FEEDS)
+        val bar = chart.bars.single { it.from == oct(10) }
+        assertTrue(bar.unusual)
+        assertEquals(0, bar.countedDays)
+        assertEquals(1, bar.unusualDays)
+        assertEquals(month(halfLogged).day(oct(10)).value(StatsMetric.FEEDS).toDouble(), bar.value)
+        assertEquals(1, chart.unusualDays)
+        assertTrue(chart.lowest != bar && chart.highest != bar)
+        assertTrue(chart.bars.filter { it != bar }.none { it.unusual })
+    }
+
+    @Test
+    fun aDoubleLoggedDayIsUnusualForFeedsOnly() {
+        val day = oct(14)
+        val twice = SampleData.history() + SampleData.history()
+            .filter { it.kind == com.ffmathy.pooparazzi.core.model.EntryKind.FEED && localDate(it.startMillis, ZONE) == day }
+            .map { Entry.feed(FeedType.BOTTLE, it.startMillis + 90 * 60_000L, id = it.id + "-again") }
+        val window = month(twice)
+        assertTrue(window.day(day).unusual(StatsMetric.FEEDS))
+        assertFalse(window.day(day).unusual(StatsMetric.SLEEP))
+        assertFalse(window.day(day).unusual(StatsMetric.PEE))
+        // The other days' average, without the doubled day.
+        val usual = window.days.filter { it.counted(StatsMetric.FEEDS) && it.date != day }
+        assertEquals(StatsAverage(usual.sumOf { it.value(StatsMetric.FEEDS) }, usual.size), window.average(StatsMetric.FEEDS))
+    }
+
+    @Test
+    fun aBarOfSeveralDaysAveragesItsUsualDaysOnly() {
+        val bar = StatsBar(oct(5), oct(11), total = 6 * 800L, countedDays = 6, unusualTotal = 200, unusualDays = 1)
+        assertEquals(800.0, bar.value)
+        assertFalse(bar.unusual)
+    }
+}
