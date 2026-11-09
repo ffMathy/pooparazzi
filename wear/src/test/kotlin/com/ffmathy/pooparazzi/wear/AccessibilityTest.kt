@@ -421,8 +421,8 @@ class DanishAccessibilityTest {
                 SemanticsActions.OnClick in it.config && it.config[SemanticsActions.OnClick].label == "Ryd"
             },
         )
-        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasContentDescription("Tidspunkt, 14:32"))
-        compose.onNodeWithContentDescription("Tidspunkt, 14:32").assertExists()
-        compose.onNodeWithContentDescription("15 minutter tidligere").assertIsEnabled()
+        // No inline time: the time moves afterwards, from Logged.
+        compose.onNodeWithText("Tidligere?").assertDoesNotExist()
+        compose.onNodeWithContentDescription("15 minutter tidligere").assertDoesNotExist()
     }
 }
