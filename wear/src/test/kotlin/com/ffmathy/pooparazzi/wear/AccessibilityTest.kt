@@ -247,35 +247,13 @@ class AccessibilityTest {
     }
 
     @Test
-    fun theInlineTimeReadsTheTimeAndOffersMinuteSteps() {
-        val shifts = mutableListOf<Int>()
-        show { DiaperScreen(WearSamples.emptyDiaperDraft(), DiaperActions(onShiftTime = { shifts += it })) }
+    fun thePickersHaveNoInlineTimeTheTimeMovesFromLoggedOnly() {
+        show { DiaperScreen(WearSamples.emptyDiaperDraft(), DiaperActions()) }
         compose.mainClock.advanceTimeBy(600)
-        scrollTo(hasContentDescription("Time, 14:32"))
-        // Never later than the Diaper tap: no "later" yet.
-        compose.onNodeWithContentDescription("Time, 14:32").assert(isLiveRegion).assert(hasCustomActions("1 minute earlier"))
-        scrollTo(hasContentDescription("5 minutes later"))
-        compose.onNodeWithContentDescription("5 minutes later").assertIsNotEnabled()
-        compose.onNodeWithContentDescription("5 minutes earlier").assertIsEnabled()
-        compose.onNodeWithContentDescription("15 minutes earlier").assertIsEnabled().performClick()
-        assertEquals(listOf(-15), shifts)
-    }
-
-    @Test
-    fun aMovedTimeIsReadWithItsOffsetAndBothMinuteSteps() {
-        val shifts = mutableListOf<Int>()
-        show { DiaperScreen(WearSamples.emptyDiaperDraft().copy(offsetMinutes = -10), DiaperActions(onShiftTime = { shifts += it })) }
-        compose.mainClock.advanceTimeBy(600)
-        compose.onNodeWithText("Diaper · 14:22").assertExists()
-        scrollTo(hasContentDescription("10 minutes earlier, 14:22"))
-        val readout = compose.onNodeWithContentDescription("10 minutes earlier, 14:22")
-            .assert(isLiveRegion)
-            .assert(hasCustomActions("1 minute earlier", "1 minute later"))
-        val actions = readout.fetchSemanticsNode().config[SemanticsActions.CustomActions]
-        compose.runOnIdle { actions.forEach { it.action() } }
-        assertEquals(listOf(-1, 1), shifts)
-        scrollTo(hasContentDescription("5 minutes later"))
-        compose.onNodeWithContentDescription("5 minutes later").assertIsEnabled()
+        compose.onNodeWithText("Diaper · 14:32").assertExists()
+        compose.onNodeWithText("Earlier?").assertDoesNotExist()
+        compose.onNodeWithContentDescription("5 minutes earlier").assertDoesNotExist()
+        compose.onNodeWithContentDescription("15 minutes earlier").assertDoesNotExist()
     }
 
     @Test
@@ -443,8 +421,8 @@ class DanishAccessibilityTest {
                 SemanticsActions.OnClick in it.config && it.config[SemanticsActions.OnClick].label == "Ryd"
             },
         )
-        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasContentDescription("Tidspunkt, 14:32"))
-        compose.onNodeWithContentDescription("Tidspunkt, 14:32").assertExists()
-        compose.onNodeWithContentDescription("15 minutter tidligere").assertIsEnabled()
+        // No inline time: the time moves afterwards, from Logged.
+        compose.onNodeWithText("Tidligere?").assertDoesNotExist()
+        compose.onNodeWithContentDescription("15 minutter tidligere").assertDoesNotExist()
     }
 }

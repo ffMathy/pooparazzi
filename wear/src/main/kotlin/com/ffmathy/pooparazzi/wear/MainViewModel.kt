@@ -82,8 +82,8 @@ import java.time.ZoneId
  * The watch app's state holder, shared by every destination (it lives as long as the activity).
  *
  * It derives Main and Today from the repository, the sync status and a minute ticker; keeps the drafts of the
- * pickers (Feed type, Side, Bottle, Diaper, each with its inline time) and of the Time screen, and the current Logged
- * receipt; and performs every write.
+ * pickers (Feed type, Side, Bottle, Diaper) and of the Time screen, and the current Logged receipt; and performs
+ * every write.
  * Haptics and navigation that depend on a write's outcome are sent as one-shot [events]
  * (DESIGN_SPEC §3.5, §5.11, §5.12; V1_ADDITIONS §2.2, §3.2).
  *
@@ -168,21 +168,16 @@ class MainViewModel(
         choiceAt.clear()
     }
 
-    /** A nudge on the Feed type screen ("−15m", "−5m", "+5m"): moves its time (see [shiftOffset]). */
-    fun shiftFeedTime(minutes: Int) {
-        _feedDraft.shiftOffset(minutes, { it.offsetMinutes }) { draft, offset -> draft.copy(offsetMinutes = offset) }
-    }
-
     /**
      * Breast opens the Side screen for the optional side order, Bottle the Bottle screen for the optional contents and
-     * amount; both log there, at this screen's time (which the nudges there can still change). Food and "Just the
+     * amount; both log there, at this screen's time. Food and "Just the
      * time" ([type] null) log an instant and show Logged ("Already logged" for a repeat within 5 s).
      */
     fun chooseFeedType(type: FeedType?): Job = action {
         // The Feed type draft stays, so swiping back from Side or Bottle keeps its time; Save there uses it up.
         if (type == FeedType.BREAST) {
             val draft = _feedDraft.value ?: return@action
-            _sideDraft.value = SideDraft(stamp = draft.stamp, zone = draft.zone, offsetMinutes = draft.offsetMinutes)
+            _sideDraft.value = SideDraft(stamp = draft.stamp, zone = draft.zone)
             send(WearEvent.ShowSide)
             return@action
         }
@@ -190,14 +185,14 @@ class MainViewModel(
             val draft = _feedDraft.value ?: return@action
             // Taken once: the amount chips never change under a finger.
             val last = lastBottleAmountMl(log.value?.entries.orEmpty(), clock.now(), QUICK_DAYS)
-            _bottleDraft.value = BottleDraft(stamp = draft.stamp, zone = draft.zone, offsetMinutes = draft.offsetMinutes, lastAmountMl = last)
+            _bottleDraft.value = BottleDraft(stamp = draft.stamp, zone = draft.zone, lastAmountMl = last)
             send(WearEvent.ShowBottle)
             return@action
         }
         // A second tap that reached the leaving screen finds the draft used and does nothing.
         val draft = _feedDraft.consume() ?: return@action
         restoreOnFailure(_feedDraft, draft) {
-            val result = repository.logFeedChecked(type, draft.at)
+            val result = repository.logFeedChecked(type, draft.stamp)
             showLogReceipt(ReceiptKind.FEED_LOGGED, result)
         }
     }
@@ -210,36 +205,20 @@ class MainViewModel(
     }
 
     /**
-     * A nudge on the Side screen: moves the breast feed's time, and the Feed type screen's under it, so swiping back
-     * shows the same time.
-     */
-    fun shiftSideTime(minutes: Int) {
-        val offset = _sideDraft.shiftOffset(minutes, { it.offsetMinutes }) { draft, offset -> draft.copy(offsetMinutes = offset) } ?: return
-        _feedDraft.update { it?.copy(offsetMinutes = offset) }
-    }
-
-    /**
-     * Save on the Side screen: logs the breast feed at its time (the Feed type screen's, or as the nudges on Side set
-     * it) with the ticked order (no side when nothing is ticked) and shows Logged ("Already logged" for a repeat
-     * within 5 s).
+     * Save on the Side screen: logs the breast feed at the time of the Feed tap with the ticked order (no side when
+     * nothing is ticked) and shows Logged ("Already logged" for a repeat within 5 s).
      */
     fun saveBreastfeed(): Job = action {
         // Consumed: a second tap on the leaving Side screen must not log the feed again.
         val draft = _sideDraft.consume() ?: return@action
         restoreOnFailure(_sideDraft, draft) {
-            val result = repository.logFeedChecked(FeedType.BREAST, draft.at, draft.side)
+            val result = repository.logFeedChecked(FeedType.BREAST, draft.stamp, draft.side)
             _feedDraft.value = null
             showLogReceipt(ReceiptKind.FEED_LOGGED, result)
         }
     }
 
     // ---- Bottle ------------------------------------------------------------------------------
-
-    /** A nudge on the Bottle screen: moves the bottle feed's time, and the Feed type screen's under it (as Side). */
-    fun shiftBottleTime(minutes: Int) {
-        val offset = _bottleDraft.shiftOffset(minutes, { it.offsetMinutes }) { draft, offset -> draft.copy(offsetMinutes = offset) } ?: return
-        _feedDraft.update { it?.copy(offsetMinutes = offset) }
-    }
 
     /** Milk or Formula tapped on Bottle, or null to clear the one chosen (ignored within [CLEAR_GUARD_MILLIS] of choosing it). */
     fun chooseBottleContents(contents: BottleContents?) {
@@ -271,7 +250,7 @@ class MainViewModel(
         // Consumed: a second tap on the leaving Bottle screen must not log the feed again.
         val draft = _bottleDraft.consume() ?: return@action
         restoreOnFailure(_bottleDraft, draft) {
-            val result = repository.logFeedChecked(FeedType.BOTTLE, draft.at, amountMl = draft.amountMl, contents = draft.contents)
+            val result = repository.logFeedChecked(FeedType.BOTTLE, draft.stamp, amountMl = draft.amountMl, contents = draft.contents)
             _feedDraft.value = null
             showLogReceipt(ReceiptKind.FEED_LOGGED, result)
         }
@@ -340,11 +319,6 @@ class MainViewModel(
         choiceAt.clear()
     }
 
-    /** A nudge on the Diaper screen: moves the diaper's time. */
-    fun shiftDiaperTime(minutes: Int) {
-        _diaperDraft.shiftOffset(minutes, { it.offsetMinutes }) { draft, offset -> draft.copy(offsetMinutes = offset) }
-    }
-
     fun setPee(on: Boolean) = _diaperDraft.update { it?.copy(pee = on) }
 
     /**
@@ -364,7 +338,7 @@ class MainViewModel(
     }
 
     /**
-     * Save: logs the diaper at stamp + offset and shows Logged. With both checkboxes off it is a plain change; colour and
+     * Save: logs the diaper at the time of the Diaper tap and shows Logged. With both checkboxes off it is a plain change; colour and
      * texture only go with Poop on.
      */
     fun saveDiaper(): Job = action {
@@ -372,7 +346,7 @@ class MainViewModel(
         val draft = _diaperDraft.consume() ?: return@action
         restoreOnFailure(_diaperDraft, draft) {
             // Details kept while Poop was off are not saved.
-            val result = repository.logDiaperChecked(draft.at, draft.pee, draft.poop, draft.color.takeIf { draft.poop }, draft.texture.takeIf { draft.poop })
+            val result = repository.logDiaperChecked(draft.stamp, draft.pee, draft.poop, draft.color.takeIf { draft.poop }, draft.texture.takeIf { draft.poop })
             showLogReceipt(ReceiptKind.DIAPER_LOGGED, result)
         }
     }
@@ -526,20 +500,6 @@ class MainViewModel(
     // ---- Internals ---------------------------------------------------------------------------
 
     private suspend fun currentSummary(): Summary = summarize(repository.observeEntries().first(), clock.now(), zone())
-
-    /**
-     * Moves a picker draft's time offset by [minutes] (the nudges: taps add up), kept between 12 hours back and the
-     * stamp (never later than the Feed or Diaper tap). A tick per change, nothing at a limit. Returns the new offset,
-     * or null when nothing changed.
-     */
-    private inline fun <T : Any> MutableStateFlow<T?>.shiftOffset(minutes: Int, offset: (T) -> Int, with: (T, Int) -> T): Int? {
-        val before = value ?: return null
-        val after = (offset(before) + minutes).coerceIn(-MAX_SHIFT_MINUTES, 0)
-        if (after == offset(before)) return null
-        value = with(before, after)
-        haptic(XHaptic.SEGMENT_TICK)
-        return after
-    }
 
     /**
      * Sets a draft's optional [choice] to [value]. A null (the selected option tapped again) clears it, unless it was

@@ -189,7 +189,6 @@ fun WearNavHost(
                     it,
                     FeedTypeActions(
                         onType = gate.tapWith { type -> viewModel.chooseFeedType(type) },
-                        onShiftTime = gate.tapWith { minutes -> viewModel.shiftFeedTime(minutes) },
                     ),
                 )
             }
@@ -202,7 +201,6 @@ fun WearNavHost(
                     it,
                     SideActions(
                         onTick = gate.tapWith { breast -> viewModel.tickSide(breast) },
-                        onShiftTime = gate.tapWith { minutes -> viewModel.shiftSideTime(minutes) },
                         onSave = gate.tap { viewModel.saveBreastfeed() },
                     ),
                 )
@@ -218,7 +216,6 @@ fun WearNavHost(
                         onContents = gate.tapWith { contents -> viewModel.chooseBottleContents(contents) },
                         onAmountChip = gate.tapWith { amount -> viewModel.chooseBottleAmount(amount) },
                         onAmountStep = gate.tapWith { amount -> viewModel.setBottleAmount(amount) },
-                        onShiftTime = gate.tapWith { minutes -> viewModel.shiftBottleTime(minutes) },
                         onSave = gate.tap { viewModel.saveBottle() },
                     ),
                 )
@@ -235,7 +232,6 @@ fun WearNavHost(
                         onPoop = gate.tapWith { on -> viewModel.setPoop(on) },
                         onColour = gate.tapWith { color -> viewModel.choosePoopColor(color) },
                         onTexture = gate.tapWith { texture -> viewModel.choosePoopTexture(texture) },
-                        onShiftTime = gate.tapWith { minutes -> viewModel.shiftDiaperTime(minutes) },
                         onSave = gate.tap { viewModel.saveDiaper() },
                     ),
                 )

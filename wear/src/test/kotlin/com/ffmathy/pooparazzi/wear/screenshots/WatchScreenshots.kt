@@ -128,12 +128,6 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s05_feedType() = capture("05-feed-type", SampleData.NOW_1432) { FeedTypeScreen(WearSamples.feedDraft(), FeedTypeActions()) }
 
-    /** Scrolled to the end: the inline time, moved back 10 minutes with −5m twice ("14:22 · −10m"). */
-    @Test
-    fun s05b_feedTypeTime() = capture("05b-feed-type-time", SampleData.NOW_1432, after = { scrollToIndex(FEED_TYPE_LAST) }) {
-        FeedTypeScreen(WearSamples.feedDraft().copy(offsetMinutes = -10), FeedTypeActions())
-    }
-
     /** After Breast on Feed type: "Which side?", "Breast · 14:32", Left / Right and Save. */
     @Test
     fun s06_side() = capture("06-side", SampleData.NOW_1432) { SideScreen(WearSamples.sideDraft(), SideActions()) }
@@ -142,12 +136,6 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s06_sideTicked() = capture("06-side-ticked", SampleData.NOW_1432) {
         SideScreen(WearSamples.sideDraft().copy(ticks = listOf(Breast.RIGHT, Breast.LEFT)), SideActions())
-    }
-
-    /** Scrolled to the end: the order line and the inline time (it can still move after Breast), above Save. */
-    @Test
-    fun s06b_sideTime() = capture("06b-side-time", SampleData.NOW_1432, after = { scrollToIndex(SIDE_LAST) }) {
-        SideScreen(WearSamples.sideDraft().copy(offsetMinutes = -10, ticks = listOf(Breast.LEFT)), SideActions())
     }
 
     /** After Bottle on Feed type, as it opens: "Bottle · 14:32", Milk and Formula, Save. */
@@ -172,12 +160,6 @@ abstract class WatchScreenshots(private val lang: String) {
         BottleScreen(WearSamples.emptyBottleDraft().copy(lastAmountMl = 120), BottleActions())
     }
 
-    /** Scrolled to the end: the inline time, 10 minutes back. */
-    @Test
-    fun s06e_bottleTime() = capture("06e-bottle-time", SampleData.NOW_1432, after = { scrollToIndex(BOTTLE_LAST) }) {
-        BottleScreen(WearSamples.bottleDraft().copy(offsetMinutes = -10), BottleActions())
-    }
-
     /** The bottle feed saved: "Bottle at 14:32" with "Formula · 120 ml" under it. */
     @Test
     fun s09d_loggedBottle() = capture("09d-logged-bottle", SampleData.NOW_1432, timeText = false) {
@@ -196,7 +178,7 @@ abstract class WatchScreenshots(private val lang: String) {
         LoggedScreen(WearSamples.receiptDiaperWokeUp(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
     }
 
-    /** As it opens: the title, the Pee | Poop tiles (V1_ADDITIONS §3.2) and the inline time's "Earlier?". */
+    /** As it opens: the title and the Pee | Poop tiles (V1_ADDITIONS §3.2), over Save. */
     @Test
     fun s07_diaper() = capture("07-diaper", SampleData.NOW_1432) { DiaperScreen(WearSamples.emptyDiaperDraft(), DiaperActions()) }
 
@@ -204,12 +186,6 @@ abstract class WatchScreenshots(private val lang: String) {
     @Test
     fun s07b_diaperOptions() = capture("07b-diaper-options", SampleData.NOW_1432, after = { scrollToIndex(DIAPER_COLOURS) }) {
         DiaperScreen(WearSamples.diaperDraft().copy(texture = null), DiaperActions())
-    }
-
-    /** Pee only, 5 minutes back: the inline time right under the tiles. */
-    @Test
-    fun s07c_diaperTime() = capture("07c-diaper-time", SampleData.NOW_1432, after = { scrollToIndex(DIAPER_LAST_WITHOUT_POOP) }) {
-        DiaperScreen(WearSamples.emptyDiaperDraft().copy(pee = true, offsetMinutes = -5), DiaperActions())
     }
 
     /** Always-on: outlines only, the swatches as rings, nothing filled (DESIGN_SPEC §10.6). */
@@ -349,20 +325,12 @@ abstract class WatchScreenshots(private val lang: String) {
 
 private const val FRAME = 16L
 
-/** List indices: Feed type's last item (the nudges); Side's. */
-private const val FEED_TYPE_LAST = 6
-private const val SIDE_LAST = 5
-
-/** Bottle: title, Milk, Formula, the stepper (3), the chips, the readout, the nudges. */
+/** List indices. Bottle: title, Milk, Formula, the stepper (3), the chips. */
 private const val BOTTLE_CHIPS = 4
-private const val BOTTLE_LAST = 6
 
-/** Diaper with Poop: title, tiles, "Colour", two colour rows, "Texture", two texture rows, readout, nudges. */
+/** Diaper with Poop: title, tiles, "Colour", two colour rows, "Texture", two texture rows. */
 private const val DIAPER_COLOURS = 3
 private const val DIAPER_TEXTURES = 6
-
-/** Diaper without Poop: title, tiles, readout, nudges. */
-private const val DIAPER_LAST_WITHOUT_POOP = 3
 
 /** A name as long as the phone lets the parent type (40 characters). */
 internal const val LONG_NAME = "Christian Frederik Valdemar Oldenborg"

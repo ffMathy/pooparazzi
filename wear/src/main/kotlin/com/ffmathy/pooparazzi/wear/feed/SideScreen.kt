@@ -68,28 +68,23 @@ import com.ffmathy.pooparazzi.wear.ui.pickerListTopPadding
 import com.ffmathy.pooparazzi.wear.ui.rememberCooldown
 import com.ffmathy.pooparazzi.wear.ui.LIST_SIDE_PADDING
 import com.ffmathy.pooparazzi.wear.ui.SaveEdgeButton
-import com.ffmathy.pooparazzi.wear.ui.rememberTimeNudgeLayout
 import com.ffmathy.pooparazzi.wear.ui.saveButtonSize
 import com.ffmathy.pooparazzi.wear.ui.saveListBottomPadding
-import com.ffmathy.pooparazzi.wear.ui.timeNudgeItems
 import com.ffmathy.pooparazzi.wear.ui.spokenText
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 @Immutable
 data class SideActions(
     val onTick: (Breast) -> Unit = {},
-    /** A time nudge: minutes to add (negative is earlier). */
-    val onShiftTime: (Int) -> Unit = {},
     val onSave: () -> Unit = {},
 )
 
 /**
  * Side (V1_ADDITIONS §2.2), after Breast on the Feed type screen: "Which side?" (with "Breast · 14:32", the time the
  * feed is logged at, under it), two CheckboxButtons Left and Right whose tick order is the order recorded (a "1" / "2"
- * badge on each ticked box and a "Left → Right" line under them), the inline time (as on Feed type: the time can still
- * be moved after Breast), and the pinned EdgeButton "Save" (Medium; Small below 225 dp). The side is optional: Save with
- * nothing ticked records only the time. Swipe right goes back to the Feed type screen without logging, and keeps the
- * time. 500 ms tap cooldown.
+ * badge on each ticked box and a "Left → Right" line under them), and the pinned EdgeButton "Save" (Medium; Small
+ * below 225 dp). The side is optional: Save with nothing ticked records only the time, which is moved afterwards, from
+ * Logged. Swipe right goes back to the Feed type screen without logging. 500 ms tap cooldown.
  */
 @Composable
 fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modifier) {
@@ -99,11 +94,9 @@ fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modi
     val ambient = isAmbient()
     val saveSize = saveButtonSize()
     val f = rememberFormatters(draft.zone)
-    val nudges = rememberTimeNudgeLayout(f)
-    val feedStrong = events().feed.strong
-    // "Breast · 14:32": what Save logs, so the parent can confirm the time (set with the nudges here or on Feed type).
+    // "Breast · 14:32": what Save logs, so the parent can confirm the time (stamped on the Feed tap).
     val breast = stringResource(CoreR.string.feed_type_breast)
-    val time = f.clock.format(draft.at, f.zone)
+    val time = f.clock.format(draft.stamp, f.zone)
     val summary = breast + DOT_SEPARATOR + time
     val spoken = spokenText().pair(breast, time)
     val variant = if (ambient) WatchAmbient.content else MaterialTheme.colorScheme.onSurfaceVariant
@@ -170,17 +163,6 @@ fun SideScreen(draft: SideDraft, actions: SideActions, modifier: Modifier = Modi
                             },
                     )
                 }
-                timeNudgeItems(
-                    offsetMinutes = draft.offsetMinutes,
-                    at = draft.at,
-                    f = f,
-                    eventColor = feedStrong,
-                    layout = nudges,
-                    enabled = cooldown.ready,
-                    alpha = cooldown.alpha,
-                    onShift = actions.onShiftTime,
-                    spec = spec,
-                )
             }
             SaveEdgeButton(
                 enabled = cooldown.ready,
