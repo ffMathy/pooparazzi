@@ -75,12 +75,10 @@ import com.ffmathy.pooparazzi.wear.ui.listContentWidth
 import com.ffmathy.pooparazzi.wear.ui.pickerListTopPadding
 import com.ffmathy.pooparazzi.wear.ui.rememberCooldown
 import com.ffmathy.pooparazzi.wear.ui.rememberGridColumns
-import com.ffmathy.pooparazzi.wear.ui.rememberTimeNudgeLayout
 import com.ffmathy.pooparazzi.wear.ui.rowTransformation
 import com.ffmathy.pooparazzi.wear.ui.saveButtonSize
 import com.ffmathy.pooparazzi.wear.ui.saveListBottomPadding
 import com.ffmathy.pooparazzi.wear.ui.spokenText
-import com.ffmathy.pooparazzi.wear.ui.timeNudgeItems
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 @Immutable
@@ -91,18 +89,16 @@ data class BottleActions(
     val onAmountChip: (Int?) -> Unit = {},
     /** The amount stepper's − / +: the new amount in millilitres, or null at "No amount". */
     val onAmountStep: (Int?) -> Unit = {},
-    /** A time nudge: minutes to add (negative is earlier). */
-    val onShiftTime: (Int) -> Unit = {},
     val onSave: () -> Unit = {},
 )
 
 /**
  * Bottle (V1_ADDITIONS §2.2), after Bottle on the Feed type screen; everything is picked on this one list.
- * "Bottle · 14:32" (the time the feed is logged at, live with the nudges), Milk and Formula as FEED radio buttons
+ * "Bottle · 14:32" (the time the feed is logged at: the Feed tap), Milk and Formula as FEED radio buttons
  * (optional, tap the chosen one again to clear it), the amount stepper "[−] 120 ml [+]" (10 ml or ½ fl oz a step),
- * three amount chips in ascending order (centred on the last bottle's amount, 60 · 90 · 120 ml without one), the
- * inline time ("Earlier?", −15m, −5m, +5m) and the pinned Save (Medium; Small below 225 dp). Save with nothing picked
- * records just the time. Swipe right goes back to Feed type and keeps the time. The crown always scrolls the list.
+ * three amount chips in ascending order (centred on the last bottle's amount, 60 · 90 · 120 ml without one) and the
+ * pinned Save (Medium; Small below 225 dp). Save with nothing picked
+ * records just the time; the time is moved afterwards, from Logged. Swipe right goes back to Feed type. The crown always scrolls the list.
  * 500 ms tap cooldown.
  */
 @Composable
@@ -125,7 +121,6 @@ fun BottleScreen(draft: BottleDraft, actions: BottleActions, modifier: Modifier 
         rememberGridColumns(listOf(volume.unitSymbol), ChipUnitStyle, chrome = (CHIP_GLYPH + CHIP_GLYPH_GAP) * 2),
     )
     val chipCell = gridCellWidth(listContentWidth(), chipColumns)
-    val time = rememberTimeNudgeLayout(f)
 
     ScreenScaffold(scrollState = listState, modifier = modifier) { contentPadding ->
         Box(Modifier.fillMaxSize()) {
@@ -142,7 +137,7 @@ fun BottleScreen(draft: BottleDraft, actions: BottleActions, modifier: Modifier 
             ) {
                 item(key = "title") {
                     ScreenTitle(
-                        stringResource(CoreR.string.feed_type_bottle) + DOT_SEPARATOR + f.clock.format(draft.at, f.zone),
+                        stringResource(CoreR.string.feed_type_bottle) + DOT_SEPARATOR + f.clock.format(draft.stamp, f.zone),
                         Modifier.transformedHeight(this, spec),
                     )
                 }
@@ -201,17 +196,6 @@ fun BottleScreen(draft: BottleDraft, actions: BottleActions, modifier: Modifier 
                         modifier = cellModifier.alpha(cooldown.alpha),
                     )
                 }
-                timeNudgeItems(
-                    offsetMinutes = draft.offsetMinutes,
-                    at = draft.at,
-                    f = f,
-                    eventColor = feed.strong,
-                    layout = time,
-                    enabled = cooldown.ready,
-                    alpha = cooldown.alpha,
-                    onShift = actions.onShiftTime,
-                    spec = spec,
-                )
             }
             SaveEdgeButton(
                 enabled = cooldown.ready,

@@ -102,7 +102,7 @@ enum class TimeTitle { FEED, DIAPER, WOKE_UP }
  * The Time screen (W4), opened from Logged only (tap its time, or turn the crown there): the logged entry's time, as
  * whole minutes from [base] (the time Logged shows), between [minOffset] and [maxOffset] (never in the future, never
  * past the sleep's start). The crown moves it by a minute per step, the buttons by 5; nothing is applied until Done.
- * The pickers set their time inline instead ([MAX_SHIFT_MINUTES], `TimeNudges`).
+ * It is the only way to move a watch log's time: the pickers log at the time of the Feed or Diaper tap.
  */
 @Immutable
 data class TimeDraft(
@@ -119,7 +119,7 @@ data class TimeDraft(
     fun shiftedBy(minutes: Int): TimeDraft = copy(offsetMinutes = (offsetMinutes + minutes).coerceIn(minOffset, maxOffset))
 }
 
-/** How far a time moves: up to 12 hours back on the pickers' nudges, 12 hours either way on the Time screen. */
+/** How far the Time screen moves a time: 12 hours either way. */
 const val MAX_SHIFT_MINUTES = 12 * 60
 
 /** The Time screen buttons' step; the crown moves a minute per step. */
@@ -137,28 +137,23 @@ const val QUICK_DAYS = 7
 private const val MINUTE_MILLIS = 60_000L
 
 /**
- * The Feed type screen: the time stamped on the Feed tap, plus the offset set with the inline nudges ("−15m", "−5m",
- * "+5m"), on this screen or on Side and Bottle (which write it back here, so swiping back shows the same time).
+ * The Feed type screen: the time stamped on the Feed tap, which the feed is logged at (on this screen, or on Side and
+ * Bottle). It is moved afterwards, from Logged (the Time screen).
  */
 @Immutable
-data class FeedDraft(val stamp: Long, val offsetMinutes: Int = 0, val zone: ZoneId) {
-    /** The time the feed is logged at. */
-    val at: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
-}
+data class FeedDraft(val stamp: Long, val zone: ZoneId)
 
 /**
- * The Side screen after Breast on the Feed type screen: the Feed tap's stamp and the offset (carried over from the
- * Feed type screen, and changed with the nudges on Side), so [at] is the time the breast feed is logged at; and the
- * Left / Right checkboxes ticked so far, in tick order ([side] is what that order records; null = no side).
+ * The Side screen after Breast on the Feed type screen: the Feed tap's stamp (the time the breast feed is logged at)
+ * and the Left / Right checkboxes ticked so far, in tick order ([side] is what that order records; null = no side).
  */
 @Immutable
-data class SideDraft(val stamp: Long, val zone: ZoneId, val offsetMinutes: Int = 0, val ticks: List<Breast> = emptyList()) {
-    val at: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
+data class SideDraft(val stamp: Long, val zone: ZoneId, val ticks: List<Breast> = emptyList()) {
     val side: BreastSide? get() = BreastSide.fromOrder(ticks)
 }
 
 /**
- * The Bottle screen after Bottle on the Feed type screen: the Feed tap's stamp and the offset (as [SideDraft]), and
+ * The Bottle screen after Bottle on the Feed type screen: the Feed tap's stamp (as [SideDraft]), and
  * what the bottle held and how much was given, both optional and both picked on the screen itself (null: not picked;
  * Save with neither records just the time). [lastAmountMl] is the last bottle's amount within [QUICK_DAYS], taken
  * once when Bottle is chosen: the amount chips centre on it, so they never change under a finger.
@@ -167,13 +162,10 @@ data class SideDraft(val stamp: Long, val zone: ZoneId, val offsetMinutes: Int =
 data class BottleDraft(
     val stamp: Long,
     val zone: ZoneId,
-    val offsetMinutes: Int = 0,
     val contents: BottleContents? = null,
     val amountMl: Int? = null,
     val lastAmountMl: Int? = null,
-) {
-    val at: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
-}
+)
 
 /**
  * The Diaper screen (V1_ADDITIONS §3.2). Pee and Poop start off and are optional: nothing ticked is a plain change.
@@ -184,14 +176,11 @@ data class BottleDraft(
 data class DiaperDraft(
     val stamp: Long,
     val zone: ZoneId,
-    val offsetMinutes: Int = 0,
     val pee: Boolean = false,
     val poop: Boolean = false,
     val color: PoopColor? = null,
     val texture: PoopTexture? = null,
-) {
-    val at: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
-}
+)
 
 /** What a Logged confirmation is for (DESIGN_SPEC §3.5.6, V1_ADDITIONS §2.2, §3.2). */
 enum class ReceiptKind { FEED_LOGGED, DIAPER_LOGGED, WOKE_UP, SLEEP_CANCELLED }

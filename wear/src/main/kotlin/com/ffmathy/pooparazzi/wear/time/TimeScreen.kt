@@ -32,6 +32,8 @@ import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 import com.ffmathy.pooparazzi.core.format.DOT_SEPARATOR
+import com.ffmathy.pooparazzi.core.format.DurationFormatter
+import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
@@ -47,13 +49,13 @@ import com.ffmathy.pooparazzi.wear.ui.events
 import com.ffmathy.pooparazzi.wear.ui.rememberCooldown
 import com.ffmathy.pooparazzi.wear.ui.rotarySteps
 import com.ffmathy.pooparazzi.wear.ui.StepButton
-import com.ffmathy.pooparazzi.wear.ui.offsetLabel
 import com.ffmathy.pooparazzi.wear.ui.spokenText
+import kotlin.math.abs
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 /**
- * Time (W4): corrects the time of the entry Logged shows (tap its time, or turn the crown there); the pickers set their
- * time inline before saving (`TimeNudges`). "Feed · −5m" over the time in the event colour; the crown moves it a
+ * Time (W4): corrects the time of the entry Logged shows (tap its time, or turn the crown there); the only place a
+ * watch log's time moves, for every kind (the pickers log at the time of the Feed or Diaper tap). "Feed · −5m" over the time in the event colour; the crown moves it a
  * minute per step (clockwise later), "−5m" / "+5m" by 5 minutes, never into the future. Done applies it and goes back
  * to Logged; swiping back leaves the time as it was. 500 ms tap cooldown.
  */
@@ -180,3 +182,14 @@ internal fun DoneEdgeButton(enabled: Boolean, onClick: () -> Unit, ambient: Bool
 @WearPreviewDevices
 @Composable
 private fun TimePreview() = XWearTheme { TimeScreen(WearSamples.timeDraft(), onShift = {}, onDone = {}) }
+
+/** "−5m", "+45m"; from an hour on "−1h 15m" (the spoken form is [com.ffmathy.pooparazzi.core.format.RelativeFormatter.offsetSpoken]). */
+internal fun offsetLabel(f: Formatters, minutes: Int): String {
+    val size = abs(minutes)
+    if (size < MINUTES_PER_HOUR) return f.duration.offset(minutes)
+    val sign = if (minutes < 0) DurationFormatter.MINUS else "+"
+    return sign + f.duration.format(size * MINUTE_MILLIS)
+}
+
+private const val MINUTES_PER_HOUR = 60
+private const val MINUTE_MILLIS = 60_000L

@@ -36,23 +36,19 @@ import com.ffmathy.pooparazzi.wear.ui.ambientBorder
 import com.ffmathy.pooparazzi.wear.ui.eventButtonColors
 import com.ffmathy.pooparazzi.wear.ui.events
 import com.ffmathy.pooparazzi.wear.ui.rememberCooldown
-import com.ffmathy.pooparazzi.wear.ui.rememberTimeNudgeLayout
-import com.ffmathy.pooparazzi.wear.ui.timeNudgeItems
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 @Immutable
 data class FeedTypeActions(
     /** Breast / Bottle / Food, or null for "Just the time" (a feed with no type). */
     val onType: (FeedType?) -> Unit = {},
-    /** A time nudge: minutes to add (negative is earlier). */
-    val onShiftTime: (Int) -> Unit = {},
 )
 
 /**
- * Feed type (V1_ADDITIONS §2.2): "Feed · 14:32" (stamped on the Feed tap, live with the nudges), three full-width FEED
+ * Feed type (V1_ADDITIONS §2.2): "Feed · 14:32" (stamped on the Feed tap), three full-width FEED
  * buttons (Breast / Bottle / Food), an outlined "Just the time" button (the type is optional: logs a feed with no
- * type), then the inline time ("Earlier?", −15m, −5m, +5m). Breast opens Side for the optional side order and Bottle
- * the Bottle screen (both log there, at this screen's time); Food and Just the time log at once.
+ * type). Breast opens Side for the optional side order and Bottle the Bottle screen (both log there, at this
+ * screen's time); Food and Just the time log at once. The time is moved afterwards, from Logged (the Time screen).
  * Taps are ignored for 500 ms after the screen appears (DESIGN_SPEC §5.9).
  */
 @Composable
@@ -63,11 +59,10 @@ fun FeedTypeScreen(draft: FeedDraft, actions: FeedTypeActions, modifier: Modifie
     val cooldown = rememberCooldown()
     val feed = events().feed
     val ambient = isAmbient()
-    val time = rememberTimeNudgeLayout(f)
     ScreenScaffold(scrollState = listState, modifier = modifier) { contentPadding ->
         TransformingLazyColumn(
             state = listState,
-            // Room under the nudges, so the last row scrolls up off the round bottom edge.
+            // Room under the last button, so it scrolls up off the round bottom edge.
             contentPadding = PaddingValues(
                 top = contentPadding.calculateTopPadding(),
                 bottom = contentPadding.calculateBottomPadding() + 28.dp,
@@ -77,7 +72,7 @@ fun FeedTypeScreen(draft: FeedDraft, actions: FeedTypeActions, modifier: Modifie
         ) {
             item(key = "title") {
                 ScreenTitle(
-                    stringResource(CoreR.string.kind_feed) + DOT_SEPARATOR + f.clock.format(draft.at, f.zone),
+                    stringResource(CoreR.string.kind_feed) + DOT_SEPARATOR + f.clock.format(draft.stamp, f.zone),
                     Modifier.transformedHeight(this, spec),
                 )
             }
@@ -110,17 +105,6 @@ fun FeedTypeScreen(draft: FeedDraft, actions: FeedTypeActions, modifier: Modifie
                     modifier = Modifier.transformedHeight(this, spec).alpha(cooldown.alpha),
                 )
             }
-            timeNudgeItems(
-                offsetMinutes = draft.offsetMinutes,
-                at = draft.at,
-                f = f,
-                eventColor = feed.strong,
-                layout = time,
-                enabled = cooldown.ready,
-                alpha = cooldown.alpha,
-                onShift = actions.onShiftTime,
-                spec = spec,
-            )
         }
     }
 }

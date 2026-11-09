@@ -34,10 +34,8 @@ import com.ffmathy.pooparazzi.wear.ui.ScreenTitle
 import com.ffmathy.pooparazzi.wear.ui.events
 import com.ffmathy.pooparazzi.wear.ui.pickerListTopPadding
 import com.ffmathy.pooparazzi.wear.ui.rememberCooldown
-import com.ffmathy.pooparazzi.wear.ui.rememberTimeNudgeLayout
 import com.ffmathy.pooparazzi.wear.ui.saveButtonSize
 import com.ffmathy.pooparazzi.wear.ui.saveListBottomPadding
-import com.ffmathy.pooparazzi.wear.ui.timeNudgeItems
 import com.ffmathy.pooparazzi.core.R as CoreR
 
 @Immutable
@@ -48,17 +46,15 @@ data class DiaperActions(
     val onColour: (PoopColor?) -> Unit = {},
     /** A texture chip tapped, or null when the chosen one is tapped again. */
     val onTexture: (PoopTexture?) -> Unit = {},
-    /** A time nudge: minutes to add (negative is earlier). */
-    val onShiftTime: (Int) -> Unit = {},
     val onSave: () -> Unit = {},
 )
 
 /**
- * Diaper (V1_ADDITIONS §3.2); everything is picked on this one list. "Diaper · 14:32" (stamped on the Diaper tap,
- * live with the nudges), Pee | Poop as two tiles (both off at first; two full-width checkbox rows when the labels do
- * not fit), and while Poop is on its colour and texture chips under "Colour" and "Texture"; then the inline time
- * ("Earlier?", −15m, −5m, +5m) and the pinned Save (Medium; Small below 225 dp), always enabled (nothing ticked logs a
- * plain diaper change). The crown always scrolls the list; nothing scrolls by itself.
+ * Diaper (V1_ADDITIONS §3.2); everything is picked on this one list. "Diaper · 14:32" (stamped on the Diaper tap),
+ * Pee | Poop as two tiles (both off at first; two full-width checkbox rows when the labels do not fit), while Poop
+ * is on its colour and texture chips under "Colour" and "Texture", and the pinned Save (Medium; Small below 225 dp),
+ * always enabled (nothing ticked logs a plain diaper change). The time is moved afterwards, from Logged (the Time
+ * screen). The crown always scrolls the list; nothing scrolls by itself.
  *
  * 500 ms tap cooldown when the screen appears, and again for everything below the tiles when Poop is turned on or
  * off (those items appear, or move, under the finger).
@@ -80,7 +76,6 @@ fun DiaperScreen(draft: DiaperDraft, actions: DiaperActions, modifier: Modifier 
     // Measured before the list's builder, which is not composable.
     val kinds = rememberKindLayout()
     val details = rememberPoopDetailLayout()
-    val time = rememberTimeNudgeLayout(f)
 
     ScreenScaffold(scrollState = listState, modifier = modifier) { contentPadding ->
         Box(Modifier.fillMaxSize()) {
@@ -98,7 +93,7 @@ fun DiaperScreen(draft: DiaperDraft, actions: DiaperActions, modifier: Modifier 
             ) {
                 item(key = "title") {
                     ScreenTitle(
-                        stringResource(CoreR.string.kind_diaper) + DOT_SEPARATOR + f.clock.format(draft.at, f.zone),
+                        stringResource(CoreR.string.kind_diaper) + DOT_SEPARATOR + f.clock.format(draft.stamp, f.zone),
                         Modifier.transformedHeight(this, spec),
                     )
                 }
@@ -158,17 +153,6 @@ fun DiaperScreen(draft: DiaperDraft, actions: DiaperActions, modifier: Modifier 
                         spec = spec,
                     )
                 }
-                timeNudgeItems(
-                    offsetMinutes = draft.offsetMinutes,
-                    at = draft.at,
-                    f = f,
-                    eventColor = events.diaper.text,
-                    layout = time,
-                    enabled = belowReady,
-                    alpha = belowAlpha,
-                    onShift = actions.onShiftTime,
-                    spec = spec,
-                )
             }
             SaveEdgeButton(
                 enabled = cooldown.ready,

@@ -240,52 +240,6 @@ class MainViewModelTest {
     }
 
     @Test
-    fun aFeedBackdatedToBeforeTheSleepLeavesItRunning() = test {
-        val sleep = repo.startSleep(at(14, 25)).getOrThrow()
-        vm.beginFeed()
-        vm.shiftFeedTime(-15)
-        vm.chooseFeedType(FeedType.FOOD).join()
-
-        assertNull(present(vm.receipt.value).woke)
-        assertNull(repo.get(sleep.id)?.endMillis)
-    }
-
-    @Test
-    fun theNudgesOnFeedTypeBackdateTheFeedAndAddUp() = test {
-        vm.beginFeed()
-        vm.shiftFeedTime(-15)
-        vm.shiftFeedTime(-5)
-        vm.shiftFeedTime(5)
-        assertEquals(-15, vm.feedDraft.value?.offsetMinutes)
-        assertEquals(SampleData.NOW_1432 - 15 * minute, vm.feedDraft.value?.at)
-        assertEquals("a tick per change", 3, haptics().count { it == XHaptic.SEGMENT_TICK })
-        assertTrue("nothing is logged before a type is chosen", stored().isEmpty())
-
-        vm.chooseFeedType(FeedType.FOOD).join()
-        assertEquals(SampleData.NOW_1432 - 15 * minute, vm.receipt.value?.entry?.startMillis)
-        assertEquals(FeedType.FOOD, vm.receipt.value?.entry?.feedType)
-    }
-
-    @Test
-    fun theNudgesNeverGoPastTheTapNorMoreThanTwelveHoursBack() = test {
-        vm.beginFeed()
-        vm.shiftFeedTime(5)
-        assertEquals("not later than the Feed tap", 0, vm.feedDraft.value?.offsetMinutes)
-        assertTrue("no tick without a change", haptics().none { it == XHaptic.SEGMENT_TICK })
-        vm.shiftFeedTime(-13 * 60)
-        assertEquals(-12 * 60, vm.feedDraft.value?.offsetMinutes)
-        vm.shiftFeedTime(-15)
-        assertEquals(-12 * 60, vm.feedDraft.value?.offsetMinutes)
-        assertEquals("nothing at the limit", 1, haptics().count { it == XHaptic.SEGMENT_TICK })
-
-        vm.beginDiaper()
-        vm.shiftDiaperTime(5)
-        assertEquals(0, vm.diaperDraft.value?.offsetMinutes)
-        vm.shiftDiaperTime(-12 * 60 - 5)
-        assertEquals(-12 * 60, vm.diaperDraft.value?.offsetMinutes)
-    }
-
-    @Test
     fun theTimeOnLoggedMovesTheLoggedFeed() = test {
         vm.beginFeed()
         vm.chooseFeedType(FeedType.FOOD).join()
@@ -366,11 +320,10 @@ class MainViewModelTest {
     @Test
     fun breastOpensSideWithTheFeedTypeScreensTimeAndLogsNothingYet() = test {
         vm.beginFeed()
-        vm.shiftFeedTime(-5)
         vm.chooseFeedType(FeedType.BREAST).join()
         awaitEvent(WearEvent.ShowSide)
         val draft = present(vm.sideDraft.value)
-        assertEquals(SampleData.NOW_1432 - 5 * minute, draft.at)
+        assertEquals(SampleData.NOW_1432, draft.stamp)
         assertEquals(emptyList<Breast>(), draft.ticks)
         assertTrue("nothing is logged before Save", stored().isEmpty())
         assertNull(vm.receipt.value)
@@ -393,31 +346,12 @@ class MainViewModelTest {
     }
 
     @Test
-    fun theNudgesOnSideMoveTheBreastFeedAndTheFeedTypeScreensTime() = test {
-        vm.beginFeed()
-        vm.chooseFeedType(FeedType.BREAST).join()
-        vm.shiftSideTime(-5)
-        vm.shiftSideTime(-5)
-        assertEquals(SampleData.NOW_1432 - 10 * minute, present(vm.sideDraft.value).at)
-        assertEquals("swiping back to Feed type shows the same time", -10, vm.feedDraft.value?.offsetMinutes)
-        vm.shiftSideTime(5)
-        assertEquals(-5, vm.feedDraft.value?.offsetMinutes)
-
-        vm.tickSide(Breast.LEFT)
-        vm.saveBreastfeed().join()
-        assertEquals(SampleData.NOW_1432 - 5 * minute, stored().single().startMillis)
-    }
-
-    // ---- Bottle ------------------------------------------------------------------------------------
-
-    @Test
     fun bottleOpensBottleWithTheFeedTypeScreensTimeAndLogsNothingYet() = test {
         vm.beginFeed()
-        vm.shiftFeedTime(-5)
         vm.chooseFeedType(FeedType.BOTTLE).join()
         awaitEvent(WearEvent.ShowBottle)
         val draft = present(vm.bottleDraft.value)
-        assertEquals(SampleData.NOW_1432 - 5 * minute, draft.at)
+        assertEquals(SampleData.NOW_1432, draft.stamp)
         assertNull(draft.contents)
         assertNull(draft.amountMl)
         assertNull("no bottle in the past week", draft.lastAmountMl)
@@ -432,8 +366,6 @@ class MainViewModelTest {
         vm.chooseBottleContents(BottleContents.MILK)
         vm.chooseBottleAmount(90)
         vm.setBottleAmount(120) // A step on from the chip.
-        vm.shiftBottleTime(-15)
-        assertEquals("swiping back to Feed type shows the same time", -15, vm.feedDraft.value?.offsetMinutes)
         assertNull("no screen of its own", vm.timeDraft.value)
         vm.saveBottle().join()
 
@@ -443,7 +375,7 @@ class MainViewModelTest {
         assertEquals(FeedType.BOTTLE, feed.feedType)
         assertEquals(BottleContents.MILK, feed.bottleContents)
         assertEquals(120, feed.amountMl)
-        assertEquals(SampleData.NOW_1432 - 15 * minute, feed.startMillis)
+        assertEquals(SampleData.NOW_1432, feed.startMillis)
         assertEquals(Undo.Delete(feed.id), receipt.undo)
         awaitEvent(WearEvent.ShowLogged)
         assertNull(vm.bottleDraft.value)
@@ -713,7 +645,6 @@ class MainViewModelTest {
         vm.setPoop(true)
         vm.choosePoopColor(PoopColor.YELLOW)
         vm.choosePoopTexture(PoopTexture.SEEDY)
-        vm.shiftDiaperTime(-5)
         vm.saveDiaper().join()
 
         val receipt = present(vm.receipt.value)
@@ -723,7 +654,7 @@ class MainViewModelTest {
         assertTrue(entry.pee && entry.poop)
         assertEquals(PoopColor.YELLOW, entry.poopColor)
         assertEquals(PoopTexture.SEEDY, entry.poopTexture)
-        assertEquals(SampleData.NOW_1432 - 5 * minute, entry.startMillis)
+        assertEquals("the time of the Diaper tap", SampleData.NOW_1432, entry.startMillis)
         awaitEvent(WearEvent.ShowLogged)
         assertEquals(XHaptic.CONFIRM, haptics().last())
     }

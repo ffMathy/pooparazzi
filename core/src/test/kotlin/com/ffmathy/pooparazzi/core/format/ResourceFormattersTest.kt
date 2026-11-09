@@ -225,7 +225,6 @@ class DanishResourceFormattersTest {
         assertEquals("Hvilken side?", res.getString(R.string.side_question))
         assertEquals("Sidste måltid", res.getString(R.string.status_last_fed))
         assertEquals("Ret start", res.getString(R.string.action_adjust_start))
-        assertEquals("Tidligere?", res.getString(R.string.action_earlier_question))
         assertEquals("Indstillinger", res.getString(R.string.nav_settings))
     }
 

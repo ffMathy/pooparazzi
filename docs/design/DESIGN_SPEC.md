@@ -56,7 +56,7 @@ Appendix A: Reference scenario · Appendix B: Not designed or deferred
 | Feed and Diaper open the app's own sheets/screens (offset, type, side order, pee/poop, colour, texture); sleep toggles in one tap | Phone widgets (4×2, 3×1, Samsung cover screen), watch Tile |
 | Status at a glance: time since last feed, awake/asleep duration, last diaper | Phone Home, watch Main, Tile, complications, widget, Live Update |
 | Undo after every log | Phone receipt sheet (logs with no sheet of their own; a Feed or Diaper sheet log is undone from its since-row's edit sheet), watch Logged screen, widget receipt, Tile title |
-| Backdating at log time and later editing | Feed and Diaper sheet offsets, phone receipt-sheet offsets, phone edit sheet |
+| Backdating at log time and later editing | Feed and Diaper sheet offsets, phone receipt-sheet offsets, phone edit sheet; on the watch only afterwards, for every log, from Logged (W4 Time) |
 | History: day ribbon, counts, list | Phone History (the watch has none) |
 | Phone-to-watch sync status | Phone top bar, watch Logged and Main list footer |
 | Automatic Night appearance (dark, low-blue, "lights-down" while asleep) | Phone, widget; the watch is always dark |
@@ -208,7 +208,7 @@ Swipe right (system swipe-to-dismiss) cancels Diaper, Side, Bottle and Time (the
 | P8 | Phone | Statistics | Average feeds, pee, poop and sleep per day over a chosen range (the last 7, 30 or 90 days, all days or chosen dates; default the last 30 days), with a bar chart of one kind; pressing or hovering a bar shows its day and value |
 | W1 | Watch | Main, idle | As the Tile: name, Feed and Diaper rows with time since and next estimate, "Start sleep" with how long awake and the next sleep |
 | W2 | Watch | Main, asleep | As the Tile: "Asleep 1h 07m", Feed and Diaper rows, "Woke up" with the expected wake-up |
-| W3 | Watch | Diaper (and Feed type, Side, Bottle) | Pee \| Poop tiles, colour and texture chips, the inline time (−15m / −5m / +5m), Save |
+| W3 | Watch | Diaper (and Feed type, Side, Bottle) | Pee \| Poop tiles, colour and texture chips, Save (the time is the tap's; it moves afterwards, from Logged) |
 | W4 | Watch | Time | Correct the time of the entry Logged shows: crown a minute per step, −5m / +5m, Done |
 | W6 | Watch | Logged | Confirmation plus a 5 s Undo |
 | W7 | Watch | Undone | Undo confirmation (1.5 s) |
@@ -524,25 +524,25 @@ Feed type, Side, Bottle and Diaper are each one `TransformingLazyColumn` under a
 | Element | Spec (reference 227 dp) |
 |---|---|
 | List | snap fling (Feed type: none), items 4 apart (Side 2), side padding 10 (Feed type: the scaffold's); top padding the scaffold's less 8 dp on watches ≥ 225 dp (the full scaffold padding below, and at font scales above 1.15), plus 18 × (font scale − 1) at large fonts, where the time text grows but the scaffold's padding does not (Feed type: the scaffold's); bottom padding 84 over a Medium Save, 70 over a Small one (Feed type, which has no Save: the scaffold's + 28, so the last row scrolls off the round edge) |
-| Title | "Diaper · 14:32" titleMedium onSurface, centred, a heading; stamped on the Diaper tap and following the offset live |
+| Title | "Diaper · 14:32" titleMedium onSurface, centred, a heading; stamped on the Diaper tap (the time Save logs) |
 | Pee \| Poop | two tiles in a ButtonGroup, 6 apart, nothing widens on press: each half the row, as wide as the rows below (the group adds no padding of its own; ≈ 100 × 60; 83 × 60 on 192 dp), r 26 in every state (unchecked, checked, pressed); height `max(60, 14 + 24 + labelMedium line height)`. Content: `checkbox` / `checkboxChecked` 20 + 4 + `pee` / `poop` 24 in the kind's strong colour, over the label labelMedium. Off: the kind's container, label onContainer, box onContainer at 70 %. On: DIAPER containerLit, 2 dp DIAPER strong border, box DIAPER strong. If a label + 16 does not fit its tile (measured; English at 200 % on 192 dp) they are two full-width `CheckboxButton` rows instead |
 | Colour (Poop on) | "Colour" header (labelMedium onSurfaceVariant, centred, ≥ 24, a heading) over six chips: 20 swatch + 4 + the name labelSmall 600, ≥ 56 tall; one per row (swatch beside the name, ≥ 52) when a single column is all that fits. Chosen: DIAPER containerLit, 2 dp DIAPER strong border and a 12 check on the swatch (ink `#1B1611` on Yellow, Green and Pale, white on Brown, Black and Red) |
 | Texture (Poop on) | "Texture" header over five chips: a 16 ring (1.5 onSurfaceVariant) over the label, ≥ 52; the ring becomes a DIAPER strong check when chosen |
-| Inline time | last: the readout ("Earlier?", then "14:22 · −10m" in DIAPER text) and −15m · −5m · +5m (V1_ADDITIONS §2.2) |
+| Time | none on the list: the log takes the time of the Diaper tap, and is moved afterwards from Logged (W4), as every watch log is |
 | Save | EdgeButton **Medium** (70), **Small** (56) below 225 dp, `primaryContainer`, `check` + "Save"; always enabled |
 | Cooldown | 500 ms when the screen appears; 500 ms again for everything under the tiles when Poop changes |
 
-At rest on 227 dp the list shows the title, the tiles and either the readout "Earlier?" (Poop off) or the "Colour" header and the top of the first swatch row (Poop on): proof that the tap revealed something.
+At rest on 227 dp the list shows the title, the tiles and, with Poop on, the "Colour" header and the top of the first swatch row (Poop on): proof that the tap revealed something.
 
-**Chip grids.** Colours, textures, the Bottle amount chips and the nudges pick 3, 2 or 1 columns by measuring their labels in the style they are drawn in (one line, plus the chip's padding) against `(W − 6 · (c − 1)) / c` with `W` = screen width − 20; remembered per configuration, so a layout never flips while a screen is open. Text in a grid never autosizes; columns drop instead. A short last row is centred at the same cell width. Chips (`Button`, r 20, padding 6): `surfaceContainer` / onSurface; chosen: the event's containerLit with a 2 dp border in its strong colour and a check, so never colour alone. A row of several controls gets the list's transformation once, on the row.
+**Chip grids.** Colours, textures and the Bottle amount chips pick 3, 2 or 1 columns by measuring their labels in the style they are drawn in (one line, plus the chip's padding) against `(W − 6 · (c − 1)) / c` with `W` = screen width − 20; remembered per configuration, so a layout never flips while a screen is open. Text in a grid never autosizes; columns drop instead. A short last row is centred at the same cell width. Chips (`Button`, r 20, padding 6): `surfaceContainer` / onSurface; chosen: the event's containerLit with a 2 dp border in its strong colour and a check, so never colour alone. A row of several controls gets the list's transformation once, on the row.
 
-**Bottle** (V1_ADDITIONS §2.2): title; Milk and Formula radio buttons (≥ 52, r 26, FEED container / containerLit with the dot in FEED strong; labels up to 3 lines, hyphenated); the amount stepper (two 48 dp CompactButtons around the value in titleMedium FEED strong, or "No amount" labelSmall; the value on its own line and the steps under it where "[−] 300 ml [+]" does not fit); three amount chips (the number titleMedium over the unit labelSmall 600, both centred; a 12 check when chosen, or `history` on the last bottle's amount, sits 2 left of the unit and takes no width, so the label never moves; the unit's column count measures it + 2 × 14); the inline time; Save.
+**Bottle** (V1_ADDITIONS §2.2): title; Milk and Formula radio buttons (≥ 52, r 26, FEED container / containerLit with the dot in FEED strong; labels up to 3 lines, hyphenated); the amount stepper (two 48 dp CompactButtons around the value in titleMedium FEED strong, or "No amount" labelSmall; the value on its own line and the steps under it where "[−] 300 ml [+]" does not fit); three amount chips (the number titleMedium over the unit labelSmall 600, both centred; a 12 check when chosen, or `history` on the last bottle's amount, sits 2 left of the unit and takes no width, so the label never moves; the unit's column count measures it + 2 × 14); Save.
 
-**Feed type**: title, Breast, Bottle, Food, Just the time, then the inline time. **Side**: title block, Left, Right, the order line, then the inline time; Save.
+**Feed type**: title, Breast, Bottle, Food, Just the time. **Side**: title block, Left, Right, the order line; Save.
 
 #### 3.5.4 W4 Time
 
-Opened only from Logged, by its time (tap it, or turn the crown there), to correct a saved entry: the logged time, which can move up to now, back up to 12 h, and a wake time no earlier than a minute after the sleep began; not for "Sleep cancelled". The logging screens set their time inline instead (§3.5.3).
+Opened only from Logged, by its time (tap it, or turn the crown there), to correct a saved entry: the logged time, which can move up to now, back up to 12 h, and a wake time no earlier than a minute after the sleep began; not for "Sleep cancelled". It is the only place a watch log's time moves, the same for every kind (feed, diaper, wake-up): the logging screens have no time of their own and log at the time of the Feed or Diaper tap (§3.5.3).
 
 | Element | Spec |
 |---|---|
@@ -918,7 +918,7 @@ Day has no containerLit. The checked Sleep toggle uses SLEEP container + a 2 dp 
 | labelMedium | GSF | 14 / 18 | 600 | 40 | yes | section labels "Today", "Fell asleep", Today captions |
 | labelSmall | GSF | 13 / 16 | 600 | 40 | yes | ribbon axis "00 06 12 18 24", stats captions |
 | bodyLarge | Atkinson | 18 / 26 | 400 | — | — | prose (reserved) |
-| bodyMedium | Atkinson | 16 / 22 | 400 | — | — | "Earlier?" |
+| bodyMedium | Atkinson | 16 / 22 | 400 | — | — | short prompts (reserved) |
 | bodySmall | Atkinson | 14 / 20 | 400 | — | — | help text (reserved) |
 
 Minimum phone text: 13 sp.
@@ -933,7 +933,7 @@ Minimum phone text: 13 sp.
 | titleMedium | 16 / 18 | 600 | 0 | yes | "Diaper · 14:32", ListHeader "Today" |
 | titleSmall | 14 / 16 | 600 | 0 | yes | status label "Fed at 12:22", "Asleep", tile title |
 | labelMedium | 16 / 19 (tile 15) | 600 | 0 | — | button labels |
-| labelSmall | 13 / 16 | 500 (CompactButton 600) | 0 | yes | secondary labels "48m ago · 13:44", "13:44"; watch nudges "−15m", chip labels "Yellow" |
+| labelSmall | 13 / 16 | 500 (CompactButton 600) | 0 | yes | secondary labels "48m ago · 13:44", "13:44"; watch steps "−5m", chip labels "Yellow" |
 | bodyMedium | 14 / 16 | 450 | 0 | yes | "since 02:05", " ago", Logged line 2 |
 | bodySmall | 12 / 14 | 500 | 0 | yes | sync lines |
 | timeText | 15 | 600 | 0 | yes | TimeText (system) |
@@ -976,7 +976,7 @@ The watch, tile and complications use GSF ROND 0 only as the mockup stand-in for
 | Where | Rule |
 |---|---|
 | Pickers: phone Diaper sheet chips and tiles; every target on the watch's Feed type, Side, Bottle, Diaper and Time screens | ignore taps for **500 ms** each time the picker appears; fade 0.6 → 1; exposed as disabled until ready |
-| Watch Diaper, Poop ticked or unticked | everything under the tiles (what appears, and the inline time it moves) ignores taps for **500 ms** again |
+| Watch Diaper, Poop ticked or unticked | everything under the tiles (what appears) ignores taps for **500 ms** again |
 | Watch inline choices (contents, amount chips, colour, texture) | a tap that would clear a choice made under **500 ms** ago is ignored, with no haptic: a double tap on an option leaves it chosen |
 | Phone Home after a sheet tile commits | Feed, Diaper and Sleep toggle ignore taps for **600 ms** after the sheet has finished closing (no haptic, no state change) |
 | Watch Logged | Undo **and** dismiss inert for **1000 ms** (not when opened from the Tile's undo path) |
@@ -1261,7 +1261,6 @@ Text needs 4.5:1 and graphics 3:1. 125 token pairs were verified with 0 failures
 | Watch Pee / Poop tiles (and their fallback rows) | checkboxes: "Pee, checkbox, not checked"; the icons are decorative |
 | Watch screen titles, "Colour", "Texture" | headings |
 | Watch amount | one node "Amount, 120 ml", polite live region; steps "10 ml less" / "10 ml more", disabled at the ends |
-| Watch inline time | "Time, 14:32" / "10 minutes earlier, 14:22", polite live region, custom actions "1 minute earlier" / "1 minute later"; nudges "15 minutes earlier", "5 minutes earlier", "5 minutes later", disabled at a limit |
 | Disabled chips | disabled (0.38) |
 | Cooldown targets, inert watch Undo | exposed as disabled until ready |
 | Sheets | dialog, modal, labelled by their title |
@@ -1281,7 +1280,6 @@ Every app-rendered duration carries a spoken form (`Modifier.semantics { content
 | "48m ago" | "48 minutes ago" |
 | "<1m" | "less than a minute" |
 | "−5m" / "+5m" chips | "5 minutes earlier" / "5 minutes later" |
-| watch inline time "14:27 · −5m" | "5 minutes earlier, 14:27" |
 | watch Time "Feed · −7m", "14:25" | "Feed, 14:25, 7 minutes earlier" |
 | complication | `ShortTextComplicationData.Builder(text, PlainComplicationText("Last feed 2 hours 10 minutes ago"))` |
 | tile button | `setContentDescription("Log feed. Last feed 2 hours 10 minutes ago")` |
@@ -1367,7 +1365,7 @@ away (`setDeleteIntent`) is not posted again for that estimate, the next estimat
 | Screen | Ambient rendering |
 |---|---|
 | Main idle | buttons become 2 dp outlines in their strong colour, no fills, text `#B8A48E` |
-| Diaper | tiles: no fill, a 2 dp border in the kind's strong colour, glyphs and label `#B8A48E`; chips: no fill, a 1 dp outline (2 dp `#B8A48E` when chosen, with its check); swatches are rings only; steps and nudges outlined; Save a 2 dp outline over a black fill, so the list never shows through it |
+| Diaper | tiles: no fill, a 2 dp border in the kind's strong colour, glyphs and label `#B8A48E`; chips: no fill, a 1 dp outline (2 dp `#B8A48E` when chosen, with its check); swatches are rings only; steps outlined; Save a 2 dp outline over a black fill, so the list never shows through it |
 | Bottle | Milk / Formula: no fill, a 1 dp outline (2 dp `#B8A48E` when chosen), the dot `#B8A48E`; amount chips as Diaper's; steps outlined |
 | Logged | bezel arc hidden; Undo outlined; the 5 s window keeps running and expiry returns to Main |
 | Main asleep | §3.5.2 ambient |

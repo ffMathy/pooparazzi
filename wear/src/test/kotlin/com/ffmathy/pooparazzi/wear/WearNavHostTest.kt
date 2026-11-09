@@ -208,20 +208,14 @@ class WearNavHostTest {
         val shown = volume.format(amount)
         waitForDescription("Amount, $shown")
 
-        scrollTo("timeNudges0")
-        compose.onNodeWithContentDescription("5 minutes earlier").performClick()
-        settle()
-        compose.onNodeWithContentDescription("5 minutes earlier").performClick()
-        settle()
-        waitForDescription("10 minutes earlier, 14:22")
-        assertEquals(at(14, 22), vm.bottleDraft.value?.at)
+        assertEquals(at(14, 32), vm.bottleDraft.value?.stamp)
         assertEquals("no logging flow opens a screen of its own", listOf(WearRoutes.FEED_TYPE, WearRoutes.BOTTLE), topRoutes())
         compose.onNodeWithText("Save").performClick()
 
-        waitFor("Bottle at 14:22")
+        waitFor("Bottle at 14:32")
         waitFor("Formula · $shown")
         val feed = entries().single()
-        assertEquals(at(14, 22), feed.startMillis)
+        assertEquals(at(14, 32), feed.startMillis)
         assertEquals(BottleContents.FORMULA, feed.bottleContents)
         assertEquals(amount, feed.amountMl)
     }
@@ -240,19 +234,16 @@ class WearNavHostTest {
         scrollTo("texture0")
         compose.onNodeWithText("Seedy").performClick()
         settle()
-        scrollTo("timeNudges0")
-        compose.onNodeWithContentDescription("15 minutes earlier").performClick()
         settle(1_000)
         assertEquals(listOf(WearRoutes.MAIN, WearRoutes.DIAPER), topRoutes())
-        waitForDescription("15 minutes earlier, 14:17")
 
         compose.onNodeWithText("Save").performClick()
-        waitFor("Pee + poop at 14:17")
+        waitFor("Pee + poop at 14:32")
         val diaper = entries().single()
         assertTrue(diaper.pee && diaper.poop)
         assertEquals(PoopColor.YELLOW, diaper.poopColor)
         assertEquals(com.ffmathy.pooparazzi.core.model.PoopTexture.SEEDY, diaper.poopTexture)
-        assertEquals(at(14, 17), diaper.startMillis)
+        assertEquals(at(14, 32), diaper.startMillis)
     }
 
     @Test

@@ -98,7 +98,6 @@
     <string name="action_delete">Delete</string>
     <string name="action_edit">Edit</string>
     <string name="action_earlier">Earlier</string>
-    <string name="action_earlier_question">Earlier?</string>
     <string name="action_adjust_start">Adjust start</string>
     <string name="action_retry">Tap to retry</string>
 

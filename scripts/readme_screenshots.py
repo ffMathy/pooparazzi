@@ -93,7 +93,6 @@ WATCH = {
     "06-side-ticked.png": "side",
     "06c-bottle.png": "bottle",
     "06d-bottle-amount.png": "bottle-amount",
-    "06e-bottle-time.png": "bottle-time",
     "09d-logged-bottle.png": "logged-bottle",
     "07-diaper.png": "diaper",
     "07b-diaper-options.png": "diaper-options",

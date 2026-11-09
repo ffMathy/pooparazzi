@@ -105,12 +105,6 @@ fun Formatters.spokenAgo(prefix: String, detail: String?, fromMillis: Long, now:
 fun Formatters.spokenRunning(status: String, fromMillis: Long, now: Long): String =
     spokenText().running(status, duration.spoken(clockDurationMillis(fromMillis, now)), relative.since(fromMillis, zone))
 
-/** Spoken offset choice: "5 minutes earlier, 14:27" (§9.5). */
-@Composable
-@ReadOnlyComposable
-fun Formatters.spokenOffset(minutes: Int, atMillis: Long): String =
-    spokenText().pair(relative.offsetSpoken(minutes), clock.format(atMillis, zone))
-
 /** "Asleep since 02:05" (shown and read). */
 @Composable
 @ReadOnlyComposable
