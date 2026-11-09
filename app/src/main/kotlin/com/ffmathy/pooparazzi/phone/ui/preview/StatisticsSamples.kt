@@ -75,8 +75,8 @@ object StatisticsSamples {
 
     /**
      * Feeds open over the last 30 days, with Sat 10 Oct logged only until 06:00 (half logged): unlike the other days for
-     * every kind, so its bar is grey and the averages leave it out (the same 7.1 · 7.6 · 1.8 · 14h 07m as
-     * [lastThirtyDays]), with the "Unusual day" legend and note.
+     * every kind, so its bar (1 feed) is grey and the averages leave it out: 7.1 · 7.5 · 1.8 · 14h 06m, with the
+     * "Unusual day" legend and note.
      */
     fun unusual(): StatisticsUiState = build(
         SampleData.history(zone = zone).filterNot { it.startMillis >= HALF_LOGGED_FROM && it.startMillis < HALF_LOGGED_UNTIL },

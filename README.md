@@ -73,7 +73,7 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 
 | Statistics, a bar pressed | Statistics, an unusual day |
 |:---:|:---:|
-| <img src="docs/screenshots/en/phone-statistics-bar.png" width="200" alt="Statistics with the highest poop bar pressed: the other bars fade, a guide marks its day, and its date and value show under it in place of the first and last dates"> | <img src="docs/screenshots/en/phone-statistics-unusual.png" width="200" alt="Statistics with Feeds open: a half-logged day's bar is grey and picked, reading Sat 10 Oct, 2, Unusual; the legend has Unusual day next to a grey bar, and a note says grey bars are days unlike the others, left out of the average"> |
+| <img src="docs/screenshots/en/phone-statistics-bar.png" width="200" alt="Statistics with the highest poop bar pressed: the other bars fade, a guide marks its day, and its date and value show under it in place of the first and last dates"> | <img src="docs/screenshots/en/phone-statistics-unusual.png" width="200" alt="Statistics with Feeds open: a half-logged day's bar is grey and picked, reading Sat 10 Oct, 1, Unusual; the legend has Unusual day next to a grey bar, and a note says grey bars are days unlike the others, left out of the average"> |
 
 #### Several babies and backup
 
