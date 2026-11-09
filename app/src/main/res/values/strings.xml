@@ -98,11 +98,20 @@
     <string name="statistics_gaps_feeds">Days with no feeds logged are left out.</string>
     <string name="statistics_gaps_diapers">Days with no diapers logged are left out.</string>
     <string name="statistics_gaps_sleep">Days with no sleep logged are left out.</string>
+    <!-- The chart's legend, next to a grey bar: a day unlike the others, left out of the average -->
+    <string name="statistics_unusual_legend">Unusual day</string>
+    <string name="statistics_unusual_note">Grey bars are days unlike the others, such as a half-logged day. They are left out of the average.</string>
+    <!-- After a picked grey bar's value: "Wed 7 Oct · 3 · Unusual" -->
+    <string name="statistics_unusual">Unusual</string>
+    <plurals name="statistics_spoken_unusual">
+        <item quantity="one">%d day unlike the others is left out of the average.</item>
+        <item quantity="other">%d days unlike the others are left out of the average.</item>
+    </plurals>
     <string name="statistics_chart_empty">Nothing logged on these days.</string>
     <string name="statistics_empty">Statistics start as soon as something is logged.</string>
     <!-- The footnote while no whole day has been logged yet (the first entry is from today or yesterday) -->
     <string name="statistics_footnote_so_far">No whole day has been logged yet, so these averages count today so far. From the first whole day on, they count whole days up to yesterday.</string>
-    <string name="statistics_footnote">Averages count whole days up to yesterday. A day counts for feeds, diapers or sleep only if any were logged that day. The first day of logging is left out.</string>
+    <string name="statistics_footnote">Averages count whole days up to yesterday. A day counts for feeds, diapers or sleep only if any were logged that day. The first day of logging is left out, and so is a day unlike the others (half logged, or logged twice).</string>
     <!-- TalkBack: "6.7 a day", "14 hours 1 minute a day" -->
     <string name="statistics_spoken_per_day">%1$s a day</string>
     <!-- TalkBack for "–" (nothing counted) -->

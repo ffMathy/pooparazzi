@@ -173,7 +173,7 @@ internal fun gapsNote(metric: StatsMetric): String = stringResource(
  * The chart's text alternative: "Poop per day, 26 September to 25 October. Highest 5 on Wednesday 7 October. Lowest 0
  * on Friday 23 October.", for bars of several days "Poop per day, 29 April to 25 October, each bar 7 days. Highest 3.3
  * from 11 May to 17 May. Lowest 1.1 from 17 August to 23 August.", then "2 days with no diapers logged are left out."
- * and "Days before 23 October are left out." when they apply. The oldest of several-day bars can be a single day; it
+ * "1 day unlike the others is left out of the average." and "Days before 23 October are left out." when they apply. The oldest of several-day bars can be a single day; it
  * is then said like a day ("Lowest 1.0 on Sunday 23 August.").
  */
 @Composable
@@ -199,6 +199,9 @@ internal fun chartSpoken(chart: StatsChart, report: StatsReport, today: LocalDat
             StatsMetric.SLEEP -> R.plurals.statistics_spoken_gaps_sleep
         }
         sentences += pluralStringResource(gaps, chart.gapDays, chart.gapDays)
+    }
+    if (chart.unusualDays > 0) {
+        sentences += pluralStringResource(R.plurals.statistics_spoken_unusual, chart.unusualDays, chart.unusualDays)
     }
     if (chart.daysBeforeLogging > 0) {
         sentences += stringResource(R.string.statistics_spoken_before, spokenDate(report.firstDay, year, formatters))
@@ -235,15 +238,16 @@ private fun spokenBarValue(bar: StatsBar, chart: StatsChart, formatters: Formatt
     val average = bar.average ?: return stringResource(R.string.statistics_spoken_not_logged)
     return when {
         chart.metric == StatsMetric.SLEEP ->
-            formatters.duration.spoken((if (chart.binDays == 1) bar.total else average.minutes) * MINUTE_MILLIS)
-        chart.binDays == 1 -> bar.total.toString()
+            formatters.duration.spoken((if (chart.binDays == 1) average.total else average.minutes) * MINUTE_MILLIS)
+        chart.binDays == 1 -> average.total.toString()
         else -> formatTenths(average.tenths, formatters.clock.locale)
     }
 }
 
 /**
  * The readout of the pressed or hovered bar: its day and value, "Wed 7 Oct · 5" ("Wed 7 Oct · 15h 27m" for sleep), or
- * for bars of several days their dates and average per day, "11 May – 17 May · 3.3". A gap shows "–".
+ * for bars of several days their dates and average per day, "11 May – 17 May · 3.3". A gap shows "–". A grey bar (days
+ * unlike the others) ends in "· Unusual".
  */
 @Composable
 @ReadOnlyComposable
@@ -257,9 +261,10 @@ internal fun barReadout(bar: StatsBar, chart: StatsChart, year: Boolean, formatt
     val value = when {
         average == null -> stringResource(R.string.statistics_no_value)
         chart.metric == StatsMetric.SLEEP ->
-            formatters.duration.format((if (chart.binDays == 1) bar.total else average.minutes) * MINUTE_MILLIS)
-        chart.binDays == 1 -> bar.total.toString()
+            formatters.duration.format((if (chart.binDays == 1) average.total else average.minutes) * MINUTE_MILLIS)
+        chart.binDays == 1 -> average.total.toString()
         else -> formatTenths(average.tenths, formatters.clock.locale)
     }
-    return stringResource(R.string.join_dot, dates, value)
+    val readout = stringResource(R.string.join_dot, dates, value)
+    return if (bar.unusual) stringResource(R.string.join_dot, readout, stringResource(R.string.statistics_unusual)) else readout
 }

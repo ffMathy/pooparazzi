@@ -67,8 +67,9 @@ class PatternTest {
         assertEquals(1f, p.sleep[26], 0.001f) // 13:00, the nap
         assertEquals(0f, p.sleep[28], 0.001f) // 14:00
         assertEquals(1f, p.sleep[44], 0.001f) // 22:00
-        // 00:00–02:00 of the first day comes from no night before it: 6 of 7 days.
-        assertEquals(6f / 7, p.sleep[0], 0.001f)
+        // The first day has no night before it, so 2 hours less sleep than the others: it is left out as unusual, and
+        // 00:00–02:00 is asleep on every day that counts.
+        assertEquals(1f, p.sleep[0], 0.001f)
     }
 
     @Test
@@ -110,9 +111,9 @@ class PatternTest {
 
     @Test
     fun aStretchUnlikeTheOthersIsLeftOutOfItsInterval() {
-        // One nap of 4 hours among naps of an hour.
-        val entries = regularDays(7).map { if (it.id == "nap2") Entry.sleep(at(2, 10), at(2, 14), id = "nap2") else it }
-        val p = week(entries, 7, at(7, 12))!!
+        // One nap of 4 hours among naps of an hour, over days 1–7 (each with a night before it).
+        val entries = regularDays(8).map { if (it.id == "nap2") Entry.sleep(at(2, 10), at(2, 14), id = "nap2") else it }
+        val p = week(entries, 8, at(8, 12))!!
         assertEquals(HOUR, p.day.sleep!!.medianMillis)
         assertEquals(HOUR, p.day.sleep!!.highMillis)
         assertEquals(6, p.day.sleep!!.samples)
@@ -120,12 +121,12 @@ class PatternTest {
 
     @Test
     fun ordinarySpreadStays() {
-        // Naps of 50, 55, 60, 65, 70, 75 and 80 minutes all look alike.
-        val entries = regularDays(7).map { entry ->
+        // Naps of 50, 55, 60, 65, 70, 75 and 80 minutes on days 1–7 all look alike.
+        val entries = regularDays(8).map { entry ->
             val d = entry.id.removePrefix("nap").toIntOrNull()
-            if (entry.id.startsWith("nap") && d != null) Entry.sleep(at(d, 13), at(d, 13) + (50 + 5 * d) * MINUTE, id = entry.id) else entry
+            if (entry.id.startsWith("nap") && d != null) Entry.sleep(at(d, 13), at(d, 13) + (45 + 5 * d) * MINUTE, id = entry.id) else entry
         }
-        val p = week(entries, 7, at(7, 12))!!
+        val p = week(entries, 8, at(8, 12))!!
         assertEquals(7, p.day.sleep!!.samples)
         assertEquals(65 * MINUTE, p.day.sleep!!.medianMillis)
     }

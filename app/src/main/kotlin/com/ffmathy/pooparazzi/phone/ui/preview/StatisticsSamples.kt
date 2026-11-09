@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.phone.ui.preview
 
 import com.ffmathy.pooparazzi.core.domain.StatsMetric
 import com.ffmathy.pooparazzi.core.domain.StatsRange
+import com.ffmathy.pooparazzi.core.domain.epochMillis
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.phone.ui.statistics.StatisticsStateBuilder
@@ -71,6 +72,23 @@ object StatisticsSamples {
      * No whole day logged yet (the scenario starts Sun 22:40): Sun and today so far count, 2 of 30 days logged, 5.0 feeds · 4.0 pee · 2.0 poop · 4h 39m sleep, and the "today so far" footnote.
      */
     fun soFar(): StatisticsUiState = build(SampleData.scenario(zone), SampleData.NOW_1432, StatsMetric.POOP, StatsRange.Last30Days)
+
+    /**
+     * Feeds open over the last 30 days, with Sat 10 Oct logged only until 06:00 (half logged): unlike the other days for
+     * every kind, so its bar (1 feed) is grey and the averages leave it out: 7.1 · 7.5 · 1.8 · 14h 06m, with the
+     * "Unusual day" legend and note.
+     */
+    fun unusual(): StatisticsUiState = build(
+        SampleData.history(zone = zone).filterNot { it.startMillis >= HALF_LOGGED_FROM && it.startMillis < HALF_LOGGED_UNTIL },
+        SampleData.NOW_1432,
+        StatsMetric.FEEDS,
+        StatsRange.Last30Days,
+    )
+
+    /** The half-logged day of [unusual]. */
+    val HALF_LOGGED_DAY: LocalDate = LocalDate.of(2026, 10, 10)
+    private val HALF_LOGGED_FROM = epochMillis(HALF_LOGGED_DAY, 6, 0, zone)
+    private val HALF_LOGGED_UNTIL = epochMillis(HALF_LOGGED_DAY.plusDays(1), 0, 0, zone)
 
     /** Nothing logged: the empty state. */
     fun empty(): StatisticsUiState = build(emptyList(), SampleData.NOW_1432, StatsMetric.POOP, StatsRange.Last30Days)

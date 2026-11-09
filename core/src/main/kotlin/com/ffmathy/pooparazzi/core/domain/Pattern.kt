@@ -69,13 +69,13 @@ object PatternRules {
      * How far from the middle a value may be and still look like the others, in median absolute deviations (scaled
      * to a standard deviation's size). Further out it is noise and is left out of the pattern.
      */
-    const val SIMILAR_DEVIATIONS = 2.5
+    const val SIMILAR_DEVIATIONS = 3.0
 
-    /** A day's sleep may differ from the usual day's by this mean share per half hour (about 5 hours) and still count. */
-    const val MIN_SLEEP_DAY_TOLERANCE = 0.1
+    /** A day's sleep may be this share of the usual day's off and still count. */
+    const val MIN_SLEEP_TOLERANCE_SHARE = 0.25
 
     /** A day's feeds or diapers may be this share of the usual count off (and at least 1) and still count. */
-    const val MIN_COUNT_TOLERANCE_SHARE = 0.25
+    const val MIN_COUNT_TOLERANCE_SHARE = 0.4
 
     /** A stretch may be this share of the middle stretch off (and at least [MIN_STRETCH_TOLERANCE_MILLIS]) and still count. */
     const val MIN_STRETCH_TOLERANCE_SHARE = 0.25
@@ -89,8 +89,8 @@ object PatternRules {
  * diapers under [ForecastRules.MIN_GAP_MILLIS] apart are one (a feed per side), and gaps over
  * [ForecastRules.MAX_GAP_MILLIS] are a forgotten log, not a stretch. Entries after [now] are ignored.
  *
- * Noise is left out, so the pattern rests on the values that look alike: a day whose sleep is unlike the usual day's
- * (half an hour by half an hour), or whose count of feeds or diapers is far from the usual count (a half-logged or a
+ * Noise is left out, so the pattern rests on the values that look alike: a day whose sleep in all is far from the usual
+ * day's, or whose count of feeds or diapers is far from the usual count (a half-logged or a
  * double-logged day), leaves that lane and its stretches; and of the stretches left, one far from the middle one (a
  * forgotten wake-up, a one-off long nap) is left out of its interval. "Far" is over [PatternRules.SIMILAR_DEVIATIONS]
  * median absolute deviations from the middle, and never closer than the rules' minimum tolerances, so ordinary spread
@@ -105,39 +105,19 @@ fun dailyPattern(
     nightStart: LocalTime = LocalTime.of(19, 0),
     nightEnd: LocalTime = LocalTime.of(7, 0),
 ): DailyPattern? {
-    val windowStart = DayBounds.of(from, zone).startMillis
-    val windowEnd = minOf(DayBounds.of(to, zone).endMillis, now)
-    val visible = entries
-        .filter { !it.deleted && it.startMillis <= now && it.startMillis < windowEnd }
-        .sortedWith(compareBy<Entry> { it.startMillis }.thenBy { it.id })
-    val inWindow = visible.filter { it.startMillis >= windowStart }
-    val loggedDays = inWindow.map { localDate(it.startMillis, zone) }.toSet()
-    if (loggedDays.size < PatternRules.MIN_DAYS) return null
-
-    val feeds = merged(inWindow.filter { it.kind == EntryKind.FEED })
-    val diapers = merged(inWindow.filter { it.kind == EntryKind.DIAPER })
-    // Sleeps that overlap the window, so a night sleep from the evening before still covers the first morning.
-    val sleeps = visible.filter { it.kind == EntryKind.SLEEP && it.effectiveEndIn(now) > windowStart }
-
-    val dates = generateSequence(from) { it.plusDays(1) }.takeWhile { it <= to }.toList()
-    val sleepDays = dates.filter { date -> inWindow.any { it.kind == EntryKind.SLEEP && localDate(it.startMillis, zone) == date } }
-    val sleepByDay = sleepDays.associateWith { date ->
-        // Only the sleeps that touch the day: a range may be months long.
-        val bounds = DayBounds.of(date, zone)
-        val onDay = sleeps.filter { it.startMillis < bounds.endMillis && it.effectiveEndIn(now) > bounds.startMillis }
-        List(PatternRules.SLOTS) { slot ->
-            val (start, end) = slotBounds(date, slot, zone)
-            val asleep = onDay.sumOf { sleep -> (minOf(sleep.effectiveEndIn(now), end) - maxOf(sleep.startMillis, start)).coerceAtLeast(0L) }
-            (asleep.toFloat() / (end - start)).coerceAtMost(1f)
-        }
-    }
-    val typicalSleepDays = similarSleepDays(sleepByDay)
+    val lanes = Lanes.of(entries, from, to, now, zone)
+    if (lanes.loggedDays.size < PatternRules.MIN_DAYS) return null
+    val windowStart = lanes.windowStart
+    val feeds = lanes.feeds
+    val diapers = lanes.diapers
+    val sleeps = lanes.sleeps
+    val sleepByDay = lanes.sleepByDay
+    val typicalSleepDays = lanes.typicalSleepDays
+    val typicalFeedDays = lanes.typicalFeedDays
+    val typicalDiaperDays = lanes.typicalDiaperDays
     val sleepShares = List(PatternRules.SLOTS) { slot ->
         if (typicalSleepDays.isEmpty()) 0f else typicalSleepDays.sumOf { sleepByDay.getValue(it)[slot].toDouble() }.toFloat() / typicalSleepDays.size
     }
-
-    val typicalFeedDays = similarCountDays(feeds, zone)
-    val typicalDiaperDays = similarCountDays(diapers, zone)
 
     fun instantShares(instants: List<Entry>, days: Set<LocalDate>): List<Float> {
         if (days.isEmpty()) return List(PatternRules.SLOTS) { 0f }
@@ -168,13 +148,92 @@ fun dailyPattern(
     return DailyPattern(
         from = from,
         to = to,
-        days = loggedDays.size,
+        days = lanes.loggedDays.size,
         sleep = sleepShares,
         feeds = instantShares(feeds, typicalFeedDays),
         diapers = instantShares(diapers, typicalDiaperDays),
         day = intervals(night = false),
         night = intervals(night = true),
     )
+}
+
+/**
+ * The days of [from]..[to] that are unlike the others for a kind (Statistics' noise): left out of the typical day, the
+ * averages and the bars' values, and drawn apart on the chart. Each set holds only days on which that kind was logged.
+ *
+ * @property feeds days whose count of feeds is far from the usual count (a half-logged or double-logged day).
+ * @property diapers the same for diapers; pee and poop go by it.
+ * @property sleep days whose sleep in all is far from the usual day's (a forgotten night, a sleep left running).
+ */
+data class UnusualDays(val feeds: Set<LocalDate>, val diapers: Set<LocalDate>, val sleep: Set<LocalDate>) {
+    companion object {
+        val NONE = UnusualDays(emptySet(), emptySet(), emptySet())
+    }
+}
+
+/**
+ * The [UnusualDays] of [from]..[to] (today only up to [now]), by the same rules as [dailyPattern]: a day is unusual for
+ * a kind when it is over [PatternRules.SIMILAR_DEVIATIONS] median absolute deviations from the usual day, and never
+ * closer than the rules' minimum tolerances. Under [PatternRules.MIN_DAYS] days of a kind, none of them is unusual.
+ */
+fun unusualDays(entries: List<Entry>, from: LocalDate, to: LocalDate, now: Long, zone: ZoneId): UnusualDays {
+    val lanes = Lanes.of(entries, from, to, now, zone)
+    return UnusualDays(
+        feeds = lanes.feedDays - lanes.typicalFeedDays,
+        diapers = lanes.diaperDays - lanes.typicalDiaperDays,
+        sleep = lanes.sleepByDay.keys - lanes.typicalSleepDays,
+    )
+}
+
+/** What [dailyPattern] and [unusualDays] share: the window's entries by kind, and which days look like the others. */
+private class Lanes(
+    val windowStart: Long,
+    val loggedDays: Set<LocalDate>,
+    val feeds: List<Entry>,
+    val diapers: List<Entry>,
+    /** Sleeps that overlap the window, so a night sleep from the evening before still covers the first morning. */
+    val sleeps: List<Entry>,
+    /** Each day with a sleep starting on it: the share of each half hour spent asleep. */
+    val sleepByDay: Map<LocalDate, List<Float>>,
+    val zone: ZoneId,
+) {
+    val feedDays: Set<LocalDate> get() = feeds.map { localDate(it.startMillis, zone) }.toSet()
+    val diaperDays: Set<LocalDate> get() = diapers.map { localDate(it.startMillis, zone) }.toSet()
+    val typicalSleepDays: Set<LocalDate> = similarSleepDays(sleepByDay)
+    val typicalFeedDays: Set<LocalDate> = similarCountDays(feeds, zone)
+    val typicalDiaperDays: Set<LocalDate> = similarCountDays(diapers, zone)
+
+    companion object {
+        fun of(entries: List<Entry>, from: LocalDate, to: LocalDate, now: Long, zone: ZoneId): Lanes {
+            val windowStart = DayBounds.of(from, zone).startMillis
+            val windowEnd = minOf(DayBounds.of(to, zone).endMillis, now)
+            val visible = entries
+                .filter { !it.deleted && it.startMillis <= now && it.startMillis < windowEnd }
+                .sortedWith(compareBy<Entry> { it.startMillis }.thenBy { it.id })
+            val inWindow = visible.filter { it.startMillis >= windowStart }
+            val sleeps = visible.filter { it.kind == EntryKind.SLEEP && it.effectiveEndIn(now) > windowStart }
+            val sleepDays = inWindow.filter { it.kind == EntryKind.SLEEP }.map { localDate(it.startMillis, zone) }.toSortedSet()
+            val sleepByDay = sleepDays.associateWith { date ->
+                // Only the sleeps that touch the day: a range may be months long.
+                val bounds = DayBounds.of(date, zone)
+                val onDay = sleeps.filter { it.startMillis < bounds.endMillis && it.effectiveEndIn(now) > bounds.startMillis }
+                List(PatternRules.SLOTS) { slot ->
+                    val (start, end) = slotBounds(date, slot, zone)
+                    val asleep = onDay.sumOf { sleep -> (minOf(sleep.effectiveEndIn(now), end) - maxOf(sleep.startMillis, start)).coerceAtLeast(0L) }
+                    (asleep.toFloat() / (end - start)).coerceAtMost(1f)
+                }
+            }
+            return Lanes(
+                windowStart = windowStart,
+                loggedDays = inWindow.map { localDate(it.startMillis, zone) }.toSet(),
+                feeds = merged(inWindow.filter { it.kind == EntryKind.FEED }),
+                diapers = merged(inWindow.filter { it.kind == EntryKind.DIAPER }),
+                sleeps = sleeps,
+                sleepByDay = sleepByDay,
+                zone = zone,
+            )
+        }
+    }
 }
 
 /** Drops an instant under [ForecastRules.MIN_GAP_MILLIS] after the one kept before it (one event logged twice). */
@@ -188,23 +247,18 @@ private fun gaps(instants: List<Entry>): List<Pair<Long, Long>> =
     instants.zipWithNext { a, b -> a.startMillis to b.startMillis - a.startMillis }
         .filter { (_, length) -> length <= ForecastRules.MAX_GAP_MILLIS }
 
-/**
- * The days whose sleep looks like the others': each day's half hours against the usual day (the middle share of each
- * half hour), and a day too far from it, compared with how far the days usually are, is noise.
- */
+/** The days whose sleep in all (the half hours asleep added up) looks like the other days'. */
 private fun similarSleepDays(byDay: Map<LocalDate, List<Float>>): Set<LocalDate> {
-    if (byDay.isEmpty()) return emptySet()
-    val usual = List(PatternRules.SLOTS) { slot -> median(byDay.values.map { it[slot].toDouble() }) }
-    val distance = byDay.mapValues { (_, shares) -> shares.indices.sumOf { abs(shares[it] - usual[it]) } / shares.size }
-    // Only too far counts as noise: a day closer to the usual day than the others is the most typical of them.
-    val band = similarBand(distance.values.toList(), PatternRules.MIN_SLEEP_DAY_TOLERANCE)
-    return distance.filterValues { it <= band.endInclusive }.keys
+    if (byDay.size < PatternRules.MIN_DAYS) return byDay.keys
+    val asleep = byDay.mapValues { (_, shares) -> shares.sum().toDouble() }
+    val band = similarBand(asleep.values.toList(), PatternRules.MIN_SLEEP_TOLERANCE_SHARE * median(asleep.values.toList()))
+    return asleep.filterValues { it in band }.keys
 }
 
 /** The days with [instants] whose count of them looks like the other days' (not half or double logged). */
 private fun similarCountDays(instants: List<Entry>, zone: ZoneId): Set<LocalDate> {
     val counts = instants.groupingBy { localDate(it.startMillis, zone) }.eachCount()
-    if (counts.isEmpty()) return emptySet()
+    if (counts.size < PatternRules.MIN_DAYS) return counts.keys
     val values = counts.values.map { it.toDouble() }
     val band = similarBand(values, maxOf(1.0, PatternRules.MIN_COUNT_TOLERANCE_SHARE * median(values)))
     return counts.filterValues { it.toDouble() in band }.keys
