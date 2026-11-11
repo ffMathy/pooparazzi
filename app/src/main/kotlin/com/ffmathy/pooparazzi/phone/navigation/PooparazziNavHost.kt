@@ -19,6 +19,7 @@ import com.ffmathy.pooparazzi.phone.ui.account.WelcomeRoute
 import com.ffmathy.pooparazzi.phone.ui.family.JoinRoute
 import com.ffmathy.pooparazzi.phone.ui.history.HistoryRoute
 import com.ffmathy.pooparazzi.phone.ui.home.HomeRoute
+import com.ffmathy.pooparazzi.phone.ui.intro.IntroRoute
 import com.ffmathy.pooparazzi.phone.ui.settings.BabyIntroRoute
 import com.ffmathy.pooparazzi.phone.ui.settings.LicencesRoute
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsRoute
@@ -51,6 +52,10 @@ data object Licences
 @Serializable
 data object Account
 
+/** The introduction again, from Settings › About › Introduction. */
+@Serializable
+data object Intro
+
 /** The join confirmation of an invite link (BABIES_AND_BACKUP §3.5). */
 @Serializable
 data object Join
@@ -81,6 +86,8 @@ data class AccountLinks(
  *   screen comes next, before everything else; links wait behind it.
  * @param babyIntro the first run's "Your baby" screen (the name and birth date, both optional) comes next, after the
  *   Welcome and the consent; [onBabyIntroDone] when it has been answered or skipped. Links wait behind it.
+ * @param intro the first run's introduction (a skippable tour of how to use the app) comes last, after "Your baby";
+ *   [onIntroDone] when it has been finished or skipped. Links wait behind it.
  * @param onLaunchedSheetClosed a sheet such a link opened has closed (see `HomeViewModel.launchedSheetClosed`).
  */
 @Composable
@@ -95,6 +102,8 @@ fun PooparazziPhoneApp(
     consentNeeded: Boolean = false,
     babyIntro: Boolean = false,
     onBabyIntroDone: () -> Unit = {},
+    intro: Boolean = false,
+    onIntroDone: () -> Unit = {},
     onLaunchedSheetClosed: () -> Unit = {},
     links: AccountLinks = AccountLinks(),
 ) {
@@ -107,6 +116,8 @@ fun PooparazziPhoneApp(
             ConsentRoute()
         } else if (babyIntro) {
             BabyIntroRoute(onDone = onBabyIntroDone)
+        } else if (intro) {
+            IntroRoute(onDone = onIntroDone)
         } else {
             PooparazziNavHost(
                 launch = launch,
@@ -119,7 +130,8 @@ fun PooparazziPhoneApp(
 }
 
 /**
- * Home, History, Statistics (over Home or History), Settings, the font licences, the Account screen and the join confirmation. The edit sheet (P4) is
+ * Home, History, Statistics (over Home or History), Settings, the font licences, the introduction (from Settings), the
+ * Account screen and the join confirmation. The edit sheet (P4) is
  * not a destination: it opens over the screen that asked for it (Home's since-rows and Adjust card, History's rows and
  * FAB), with its scrim over that screen. A deep link returns to Home first, which then opens the sheet or card it asks
  * for; [HomeLaunch.History] (the watch's "More on phone") opens History over Home instead.
@@ -189,8 +201,14 @@ fun PooparazziNavHost(
         composable<History> { HistoryRoute(onBack = back, onOpenStatistics = { switchTo(Statistics) }) }
         composable<Statistics> { StatisticsRoute(onBack = back, onOpenHistory = { switchTo(History) }) }
         composable<Settings> {
-            SettingsRoute(onBack = back, onOpenLicences = { open(Licences) }, onOpenAccount = { open(Account) })
+            SettingsRoute(
+                onBack = back,
+                onOpenLicences = { open(Licences) },
+                onOpenAccount = { open(Account) },
+                onOpenIntro = { open(Intro) },
+            )
         }
+        composable<Intro> { IntroRoute(onDone = back) }
         composable<Licences> { LicencesRoute(onBack = back) }
         composable<Account> { AccountRoute(onBack = back) }
         composable<Join> {

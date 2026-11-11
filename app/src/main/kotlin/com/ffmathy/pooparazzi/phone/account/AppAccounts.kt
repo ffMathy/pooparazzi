@@ -147,6 +147,14 @@ interface WelcomeStore {
         get() = true
         set(_) = Unit
 
+    /**
+     * Whether the first run's introduction (the tour of how to use the app) was finished or skipped on this phone.
+     * Stores that never show it say it was.
+     */
+    var introSeen: Boolean
+        get() = true
+        set(_) = Unit
+
     /** For builds and tests that never show it. */
     object Seen : WelcomeStore {
         override var seen: Boolean
@@ -170,9 +178,14 @@ class WelcomePrefs(context: Context) : WelcomeStore {
         get() = prefs.getBoolean(KEY_BABY_ASKED, false)
         set(value) = prefs.edit { putBoolean(KEY_BABY_ASKED, value) }
 
+    override var introSeen: Boolean
+        get() = prefs.getBoolean(KEY_INTRO_SEEN, false)
+        set(value) = prefs.edit { putBoolean(KEY_INTRO_SEEN, value) }
+
     internal companion object {
         const val FILE = "account_welcome"
         private const val KEY_SEEN = "welcome_seen"
         private const val KEY_BABY_ASKED = "baby_asked"
+        private const val KEY_INTRO_SEEN = "intro_seen"
     }
 }

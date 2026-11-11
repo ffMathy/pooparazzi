@@ -333,4 +333,8 @@ class MemoryFamilyCache : FamilyCache {
 }
 
 /** A [WelcomeStore] in memory. */
-class MemoryWelcomeStore(override var seen: Boolean = false, override var babyAsked: Boolean = false) : WelcomeStore
+class MemoryWelcomeStore(
+    override var seen: Boolean = false,
+    override var babyAsked: Boolean = false,
+    override var introSeen: Boolean = true,
+) : WelcomeStore

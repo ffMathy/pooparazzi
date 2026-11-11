@@ -83,6 +83,12 @@ PHONE = {
     "50-notification-forecasts.png": "notification-forecasts",
     "51-settings-add-baby.png": "settings-add-baby",
     "52-baby-intro.png": "baby-intro",
+    "56-intro-welcome.png": "intro-welcome",
+    "57-intro-sleep.png": "intro-sleep",
+    "58-intro-log.png": "intro-log",
+    "59-intro-fix.png": "intro-fix",
+    "60-intro-patterns.png": "intro-patterns",
+    "61-intro-everywhere.png": "intro-everywhere",
     "55-review-prompt.png": "review-prompt",
 }
 

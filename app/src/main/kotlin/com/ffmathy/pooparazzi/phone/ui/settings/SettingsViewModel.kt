@@ -163,6 +163,9 @@ interface SettingsActions {
     fun onRetryBackup() {}
     fun onOpenLicences() {}
 
+    /** Settings › About › Introduction: shows the introduction (the tour of how to use the app) again. */
+    fun onOpenIntro() {}
+
     /** Settings › About › Privacy policy: opens it in the browser. */
     fun onOpenPrivacy() {}
 

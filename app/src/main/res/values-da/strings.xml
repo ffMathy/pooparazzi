@@ -364,6 +364,25 @@
     <string name="settings_open_source">Pooparazzi er open source</string>
     <string name="cd_source_code">Kildekoden på GitHub</string>
     <string name="cd_linkedin">Udvikleren på LinkedIn</string>
+    <string name="intro_skip">Spring over</string>
+    <string name="intro_next">Næste</string>
+    <string name="intro_back">Tilbage</string>
+    <string name="intro_done">Kom i gang</string>
+    <string name="intro_page">Side %1$d af %2$d</string>
+    <string name="intro_welcome_title">Velkommen til Pooparazzi</string>
+    <string name="intro_welcome_body">Registrér søvn, måltider og bleskift med et eller to tryk, lavet til én hånd klokken 3 om natten. Sådan virker det; det tager et minut.</string>
+    <string name="intro_sleep_title">Søvn</string>
+    <string name="intro_sleep_body">Tryk på Start søvn, når barnet falder i søvn, og på samme knap, nu Vågnede, når det vågner. Mens barnet sover, viser forsiden hvor længe; tryk på ringen for at ændre, hvornår søvnen startede.</string>
+    <string name="intro_log_title">Måltider og bleskift</string>
+    <string name="intro_log_body">Tryk på Måltid eller Ble. Kun tidspunktet er nødvendigt: typen, brystsiden, tis eller bæ og resten er valgfrit, så Kun tidspunktet er fint. Skete det lidt før? −15m, −10m og −5m flytter tidspunktet tilbage.</string>
+    <string name="intro_fix_title">Ret hvad som helst</string>
+    <string name="intro_fix_body">Alt kan ændres. Tryk på Fortryd lige efter en søvn, eller tryk på et tidspunkt på forsiden (Sidste måltid, en siden-linje) eller en linje i Historik for at rette eller slette den.</string>
+    <string name="intro_patterns_title">Hvad kommer nu</string>
+    <string name="intro_patterns_body">Under hver knap viser forsiden, hvad de sidste 7 dage forventer, fx næste måltid. Historik viser hver dag på et 24-timers bånd, og Statistik gennemsnittet per dag.</string>
+    <string name="intro_everywhere_title">Altid ved hånden</string>
+    <string name="intro_everywhere_body">Tilføj en widget til din startskærm, og installér Pooparazzi på dit Wear OS-ur for at få dets felt og komplikationer. Er du logget ind, kan din familie også registrere. Du kan se denne introduktion igen under Indstillinger › Om.</string>
+    <string name="settings_intro">Introduktion</string>
+    <string name="settings_intro_summary">Sådan bruger du Pooparazzi, trin for trin</string>
     <!-- The review prompt over Home, once the app is in real use (DESIGN_SPEC §3.3.1). -->
     <string name="review_title">Glad for Pooparazzi?</string>
     <string name="review_body">Hvis den gør dage og nætter lidt lettere, hjælper en hurtig bedømmelse på Google Play andre trætte forældre med at finde den.</string>

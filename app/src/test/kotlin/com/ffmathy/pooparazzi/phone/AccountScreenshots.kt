@@ -24,6 +24,9 @@ import com.ffmathy.pooparazzi.phone.ui.settings.SettingsActions
 import com.ffmathy.pooparazzi.phone.ui.settings.SettingsScreen
 import com.ffmathy.pooparazzi.phone.ui.theme.NightLightTheme
 import com.ffmathy.pooparazzi.phone.ui.settings.BabyIntroScreen
+import com.ffmathy.pooparazzi.phone.ui.intro.IntroPage
+import com.ffmathy.pooparazzi.phone.ui.intro.IntroScreen
+import androidx.compose.foundation.pager.rememberPagerState
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
@@ -38,7 +41,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The first-run Welcome, Settings › Account, Settings › Family and the join confirmation (BABIES_AND_BACKUP §3) on the
  * reference phone (390 × 844 dp, xxhdpi), in English and Danish: `app/screenshots/<lang>/27-…29-*.png`, `33-*.png` and
- * `37-…42-*.png`, continuing the tour (with the consent before the first upload, removing a member, and a deletion
+ * `37-…42-*.png`, the introduction's pages `56-…61-intro-*.png`, continuing the tour (with the consent before the first upload, removing a member, and a deletion
  * link that asks again).
  */
 abstract class AccountScreenshots(private val language: String) {
@@ -58,6 +61,19 @@ abstract class AccountScreenshots(private val language: String) {
     /** The first run's "Your baby": the name and birth date, both optional, after the Welcome. */
     @Test fun babyIntro() = screen("52-baby-intro", night = false) {
         BabyIntroScreen(signedIn = false, onContinue = { _, _ -> }, onSkip = {}, windowInsets = ReferenceInsets)
+    }
+
+    /** The introduction after "Your baby", one shot per page (56-61), in both themes. */
+    @Test fun introWelcome() = intro("56-intro-welcome", IntroPage.WELCOME, night = false)
+    @Test fun introSleep() = intro("57-intro-sleep", IntroPage.SLEEP, night = true)
+    @Test fun introLog() = intro("58-intro-log", IntroPage.LOG, night = false)
+    @Test fun introFix() = intro("59-intro-fix", IntroPage.FIX, night = true)
+    @Test fun introPatterns() = intro("60-intro-patterns", IntroPage.PATTERNS, night = false)
+    @Test fun introEverywhere() = intro("61-intro-everywhere", IntroPage.EVERYWHERE, night = true)
+
+    private fun intro(name: String, page: IntroPage, night: Boolean) = screen(name, night) {
+        val pager = rememberPagerState(initialPage = page.ordinal) { IntroPage.entries.size }
+        IntroScreen(onDone = {}, pager = pager, windowInsets = ReferenceInsets)
     }
 
     @Test fun accountSignedOut() = screen("28-account-signed-out", night = false) {

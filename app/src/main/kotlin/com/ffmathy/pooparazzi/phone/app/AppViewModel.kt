@@ -112,6 +112,30 @@ class AppViewModel(
         !welcome && !consentNeeded && !asked && nothingLogged && baby != null && baby.name.isBlank() && baby.born == null
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    private val introSeen = MutableStateFlow(welcomeSeen.introSeen)
+
+    /**
+     * The first run's introduction (a skippable tour of how to use the app): after the Welcome, the consent and the
+     * "Your baby" screen, once per phone, and only while nothing is logged yet (a phone that already has a log, after
+     * an update or a restore, is not shown it; Settings › About › Introduction shows it at any time). Null until the
+     * log and settings have loaded, which keeps the splash on screen.
+     */
+    val intro: StateFlow<Boolean?> = combine(
+        showWelcome,
+        consentNeeded,
+        babyIntro,
+        introSeen,
+        repository.observeAllEntries().map { it.isEmpty() }.distinctUntilChanged(),
+    ) { welcome, consentNeeded, babyIntro, seen, nothingLogged ->
+        if (babyIntro == null) null else !welcome && !consentNeeded && !babyIntro && !seen && nothingLogged
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** The introduction was finished or skipped: not shown again on its own on this phone. */
+    fun finishIntro() {
+        welcomeSeen.introSeen = true
+        introSeen.value = true
+    }
+
     /** The "Your baby" screen was answered (its Continue or Skip): not asked again on this phone. */
     fun finishBabyIntro() {
         welcomeSeen.babyAsked = true

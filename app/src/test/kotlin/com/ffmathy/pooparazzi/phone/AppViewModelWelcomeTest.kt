@@ -122,4 +122,36 @@ class AppViewModelWelcomeTest : CoreTestBase() {
         runCurrent()
         assertEquals(true, vm.babyIntro.value)
     }
+
+    /** The introduction: after "Your baby", once, on a fresh start only. */
+    @Test
+    fun theIntroductionFollowsTheBabyOnce() = coreTest(seed = emptyList()) { core ->
+        core.settings.renameBaby(Baby.FIRST_ID, "")
+        val store = MemoryWelcomeStore(seen = true, introSeen = false)
+        val vm = AppViewModel(core.repository, core.settings, FakeAccounts(), store)
+        assertNull("the splash waits for it", vm.intro.value)
+        runCurrent()
+        assertEquals(true, vm.babyIntro.value)
+        assertEquals("not over Your baby", false, vm.intro.value)
+        vm.finishBabyIntro()
+        runCurrent()
+        assertEquals(true, vm.intro.value)
+        vm.finishIntro()
+        runCurrent()
+        assertEquals(false, vm.intro.value)
+        assertTrue(store.introSeen)
+        val again = AppViewModel(core.repository, core.settings, FakeAccounts(), store)
+        runCurrent()
+        assertEquals("not again", false, again.intro.value)
+    }
+
+    /** A phone that already has a log (an update) is not shown the introduction; Settings › About still has it. */
+    @Test
+    fun aPhoneWithALogIsNotShownTheIntroduction() = coreTest(seed = emptyList()) { core ->
+        core.repository.add(Entry.diaper(SampleData.NOW_1432, pee = true, poop = false))
+        val store = MemoryWelcomeStore(seen = true, babyAsked = true, introSeen = false)
+        val vm = AppViewModel(core.repository, core.settings, FakeAccounts(), store)
+        runCurrent()
+        assertEquals(false, vm.intro.value)
+    }
 }

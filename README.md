@@ -31,6 +31,7 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
   - Watch: a **Tile** (Feed and Diaper open the watch app's own screens, the sleep toggle works in place) that the watch app's main screen mirrors, both showing the time since the last feed and diaper and the estimated next feed, poop and sleep or wake-up; four **complications** (since last feed, last diaper, asleep/awake, sleep and last feed) and an **Ongoing Activity** on the watch face that says what comes next: while the baby sleeps ("Wakes 55m", or "Asleep 55m" when nothing is predicted) and while awake ("Feed 55m", "Sleep 20m"; nothing when nothing is predicted). Which estimates it uses (next feed, next poop, next sleep and wake-up) is chosen in the phone's Settings › Watch › On the watch face; all three until you untick some.
 - **Night and Day themes**: a dim, warm Night theme for the dark hours and a Day theme, chosen automatically (or fixed in Settings). Large targets, TalkBack descriptions in full words ("2 hours 10 minutes ago"), large-font and small-watch layouts.
 - **Open source**: made with ❤️ by a father in Aarhus, Denmark. The bottom of Settings says so, with a GitHub logo that opens this repository and a LinkedIn logo that opens the maker's profile.
+- **Introduction**: after the first run's "Your baby", a six-page tour shows how to log sleep, feeds and diapers, fix a log, read what comes next, and where else Pooparazzi is (widgets, the watch, the family). Swipe or tap Next; **Skip** closes it from any page. A phone that already has a log never gets it on its own, and Settings › About › **Introduction** shows it again at any time.
 - **A polite review prompt**: after a few days of real use (3 days since the app was first opened and at least 15 entries logged since then, on 3 different days; an import or a restored backup doesn't count), Home asks once, by day and only while nothing is running or open, **Enjoying Pooparazzi?** with **Rate on Google Play** (opens the app's Play Store page), **Not now** (asks once more a month later, then never) and **Don't ask again**.
 - **English and Danish**, with an in-app language choice (Settings › Language) that the widgets, notifications and the watch follow.
 
@@ -93,6 +94,18 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 | Your baby (first run) | Adding a baby | Review prompt |
 |:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-baby-intro.png" width="200" alt="Your baby: both are optional, skip them now and add them later in Settings. The name field, Add birth date, why the birth date improves the predictions and estimates, Continue and Skip for now"> | <img src="docs/screenshots/en/phone-settings-add-baby.png" width="200" alt="Add a baby: the name field, Add birth date, and that the birth date is optional but improves the predictions and estimates, which then follow the baby's age; Cancel and Add"> | <img src="docs/screenshots/en/phone-review-prompt.png" width="200" alt="Enjoying Pooparazzi? over Home by day, after a few days of logging: a quick rating on Google Play helps other tired parents find it; Rate on Google Play, Not now and Don't ask again"> |
+
+#### Introduction
+
+After "Your baby", a new phone gets a short tour of how to use the app. **Skip** closes it from any page; Settings › About › **Introduction** shows it again at any time.
+
+| Welcome | Sleep | Feeds and diapers |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/phone-intro-welcome.png" width="200" alt="Introduction, page 1 of 6: Welcome to Pooparazzi. Log sleep, feeds and diapers with one or two taps, made for one hand at 3am. Skip at the top, Next at the bottom"> | <img src="docs/screenshots/en/phone-intro-sleep.png" width="200" alt="Introduction, page 2 of 6, Night: Sleep. Tap Start sleep when the baby falls asleep, and the same button, now Woke up, when they wake"> | <img src="docs/screenshots/en/phone-intro-log.png" width="200" alt="Introduction, page 3 of 6: Feeds and diapers. Only the time is needed; −15m, −10m and −5m move the time back"> |
+
+| Fix anything | What comes next | Always at hand |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/phone-intro-fix.png" width="200" alt="Introduction, page 4 of 6, Night: Fix anything. Tap Undo right after a sleep, or tap a time on Home or a row in History to edit or delete it"> | <img src="docs/screenshots/en/phone-intro-patterns.png" width="200" alt="Introduction, page 5 of 6: What comes next. Home's buttons show what the last 7 days expect; History and Statistics"> | <img src="docs/screenshots/en/phone-intro-everywhere.png" width="200" alt="Introduction, last page, Night: Always at hand. Widgets, the Wear OS watch, the family, and Settings › About to see it again; Get started"> |
 
 #### Families and passwordless sign-in
 
