@@ -32,6 +32,7 @@ Only the time is ever required: the feed type, the breast side, pee/poop and the
 - **Night and Day themes**: a dim, warm Night theme for the dark hours and a Day theme, chosen automatically (or fixed in Settings). Large targets, TalkBack descriptions in full words ("2 hours 10 minutes ago"), large-font and small-watch layouts.
 - **Open source**: made with ❤️ by a father in Aarhus, Denmark. The bottom of Settings says so, with a GitHub logo that opens this repository and a LinkedIn logo that opens the maker's profile.
 - **Introduction**: after the first run's "Your baby", a six-page tour shows how to log sleep, feeds and diapers, fix a log, read what comes next, and where else Pooparazzi is (widgets, the watch, the family). Swipe or tap Next; **Skip** closes it from any page. A phone that already has a log never gets it on its own, and Settings › About › **Introduction** shows it again at any time.
+- **A polite review prompt**: after a few days of real use (3 days since the app was first opened and at least 15 entries logged since then, on 3 different days; an import or a restored backup doesn't count), Home asks once, by day and only while nothing is running or open, **Enjoying Pooparazzi?** with **Rate on Google Play** (opens the app's Play Store page), **Not now** (asks once more a month later, then never) and **Don't ask again**.
 - **English and Danish**, with an in-app language choice (Settings › Language) that the widgets, notifications and the watch follow.
 
 ## Screenshots
@@ -90,9 +91,9 @@ All screenshots are rendered by the Roborazzi screenshot tests under Robolectric
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-notification-twins.png" width="200" alt="One sleep notification per baby: Noa is asleep and Ida is asleep, each with Woke up"> | <img src="docs/screenshots/en/phone-settings-remove-baby.png" width="200" alt="Remove Baby 3? Their log is deleted for everyone in your family and from your backup; Cancel and Remove"> | <img src="docs/screenshots/en/phone-settings-watch-install.png" width="200" alt="Settings, Watch: Install on your watch. Pooparazzi isn't on your watch yet. Opens Google Play on the watch"> | <img src="docs/screenshots/en/phone-settings-no-watch.png" width="200" alt="Settings, Watch: No watch yet. Pooparazzi has a Wear OS watch app too. If you get a watch, log with a tap from your wrist; it syncs with this phone"> |
 
-| Your baby (first run) | Adding a baby |
-|:---:|:---:|
-| <img src="docs/screenshots/en/phone-baby-intro.png" width="200" alt="Your baby: both are optional, skip them now and add them later in Settings. The name field, Add birth date, why the birth date improves the predictions and estimates, Continue and Skip for now"> | <img src="docs/screenshots/en/phone-settings-add-baby.png" width="200" alt="Add a baby: the name field, Add birth date, and that the birth date is optional but improves the predictions and estimates, which then follow the baby's age; Cancel and Add"> |
+| Your baby (first run) | Adding a baby | Review prompt |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/phone-baby-intro.png" width="200" alt="Your baby: both are optional, skip them now and add them later in Settings. The name field, Add birth date, why the birth date improves the predictions and estimates, Continue and Skip for now"> | <img src="docs/screenshots/en/phone-settings-add-baby.png" width="200" alt="Add a baby: the name field, Add birth date, and that the birth date is optional but improves the predictions and estimates, which then follow the baby's age; Cancel and Add"> | <img src="docs/screenshots/en/phone-review-prompt.png" width="200" alt="Enjoying Pooparazzi? over Home by day, after a few days of logging: a quick rating on Google Play helps other tired parents find it; Rate on Google Play, Not now and Don't ask again"> |
 
 #### Introduction
 
