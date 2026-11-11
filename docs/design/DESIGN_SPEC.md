@@ -347,6 +347,11 @@ Receipt rules:
 
 Input cooldowns apply (§5.9): after a sheet tile commits, Feed, Diaper and the Sleep toggle ignore taps for 600 ms after the sheet has finished closing.
 
+**Review prompt** ("Enjoying Pooparazzi?"). Once the app is in real use, Home asks for a rating on Google Play in a Material alert dialog (surfaceContainerHigh, title onSurface, body onSurfaceVariant): "If it makes the days and nights a little easier, a quick rating on Google Play helps other tired parents find it.", then three full-width buttons stacked: a filled **Rate on Google Play** (opens Pooparazzi's page in the Play Store app, or on the web without it), **Not now** (text, onSurface) and **Don't ask again** (text, onSurfaceVariant). Back or a tap outside counts as Not now.
+- **When it is due** (`ReviewRule`): Home was first shown on this phone at least 3 days ago, and since then (entries backdated to the day before included) at least 15 entries of any baby are in the log, on at least 3 different days. Older entries (an import, the family's backup) do not count.
+- **When it shows**: only on an idle Home by day: no sheet, receipt, Switch baby or edit sheet open, nothing running, not Night (§8.1), and not while a widget or notification is opening something. It waits 1.5 s after Home became idle, so a closing sheet finishes first; once shown it stays until answered.
+- **Afterwards**: Rate and Don't ask again end it for good; Not now asks once more 30 days later at the earliest, and a second Not now ends it too. The memory (`review_prompt` preferences) travels with a backup or transfer to a new phone.
+
 #### 3.3.2 P2 Diaper sheet
 
 Modal bottom sheet over Home with the scrim. It is a dialog labelled by its title.

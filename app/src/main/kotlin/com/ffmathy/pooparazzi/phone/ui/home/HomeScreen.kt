@@ -20,10 +20,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,9 +37,13 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.phone.launch.HomeLaunch
 import com.ffmathy.pooparazzi.phone.notify.rememberNotificationPermissionPrompt
+import com.ffmathy.pooparazzi.phone.review.ReviewDialog
+import com.ffmathy.pooparazzi.phone.review.ReviewRule
+import com.ffmathy.pooparazzi.phone.review.ReviewViewModel
 import com.ffmathy.pooparazzi.phone.ui.edit.EditSheet
 import com.ffmathy.pooparazzi.phone.ui.edit.EditViewModel
 import com.ffmathy.pooparazzi.phone.ui.edit.rememberEditEffects
@@ -111,7 +119,50 @@ fun HomeRoute(
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
     }
     EditSheet(edit, editViewModel)
+    HomeReviewPrompt(
+        idle = loaded != null && loaded.sheet == null && !loaded.switchingBaby && !loaded.anythingRunning &&
+            edit == null && launch == null && !LocalNightLight.current.isNight,
+    )
 }
+
+/**
+ * "Enjoying Pooparazzi?" over Home (DESIGN_SPEC §3.3.1): once the app is in real use ([ReviewRule]), and only on an
+ * idle Home by day, [REVIEW_SETTLE_MILLIS] after it became idle, so it never covers a sheet, a running sleep or a
+ * night feed. Once shown it stays until answered.
+ */
+@Composable
+private fun HomeReviewPrompt(idle: Boolean) {
+    val context = LocalContext.current
+    val review: ReviewViewModel = viewModel(factory = ReviewViewModel.factory(context))
+    val due by review.due.collectAsStateWithLifecycle()
+    var showing by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(review) { review.onHomeShown() }
+    LaunchedEffect(due, idle) {
+        if (!due || !idle || showing) return@LaunchedEffect
+        delay(REVIEW_SETTLE_MILLIS)
+        showing = true
+    }
+    if (showing) {
+        ReviewDialog(
+            onRate = {
+                showing = false
+                review.onRate()
+                ReviewViewModel.openStore(context)
+            },
+            onLater = {
+                showing = false
+                review.onLater()
+            },
+            onNever = {
+                showing = false
+                review.onNever()
+            },
+        )
+    }
+}
+
+/** How long Home stays idle before the review prompt shows: a closing sheet or receipt finishes first. */
+private const val REVIEW_SETTLE_MILLIS = 1_500L
 
 /** The Compose haptic for a [HomeHaptic] (also used by the edit sheet). */
 internal fun HomeHaptic.feedbackType(): HapticFeedbackType = when (this) {

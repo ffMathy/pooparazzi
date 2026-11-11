@@ -464,4 +464,10 @@
     <string name="settings_open_source">Pooparazzi is open source</string>
     <string name="cd_source_code">Source code on GitHub</string>
     <string name="cd_linkedin">The maker on LinkedIn</string>
+    <!-- The review prompt over Home, once the app is in real use (DESIGN_SPEC §3.3.1). -->
+    <string name="review_title">Enjoying Pooparazzi?</string>
+    <string name="review_body">If it makes the days and nights a little easier, a quick rating on Google Play helps other tired parents find it.</string>
+    <string name="review_rate">Rate on Google Play</string>
+    <string name="review_later">Not now</string>
+    <string name="review_never">Don\'t ask again</string>
 </resources>

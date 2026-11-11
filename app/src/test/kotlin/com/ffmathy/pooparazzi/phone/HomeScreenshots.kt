@@ -12,6 +12,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.cloud.CloudStatus
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
+import com.ffmathy.pooparazzi.phone.review.ReviewDialog
 import com.ffmathy.pooparazzi.phone.ui.home.HomeActions
 import com.ffmathy.pooparazzi.phone.ui.home.HomeScreen
 import com.ffmathy.pooparazzi.phone.ui.home.HomeUiState
@@ -158,6 +159,18 @@ abstract class HomeScreenshots(private val language: String) {
         compose.setContent { Themed(night = true) { HomeScreen(state.value, HomeActions.None, windowInsets = ReferenceInsets) } }
         compose.waitForIdle()
         captureScreenRoboImage("build/outputs/roborazzi/font200-$language-diaper.png")
+    }
+
+    /** "Enjoying Pooparazzi?" over an idle Home by day, once the app is in real use (DESIGN_SPEC §3.3.1). */
+    @Test fun reviewPrompt() {
+        compose.setContent {
+            Themed(night = false) {
+                HomeScreen(HomeSamples.idle(), HomeActions.None, windowInsets = ReferenceInsets)
+                ReviewDialog(onRate = {}, onLater = {}, onNever = {})
+            }
+        }
+        compose.waitForIdle()
+        captureScreenRoboImage(path("55-review-prompt"))
     }
 
     private fun home(name: String, night: Boolean, state: HomeUiState) {
