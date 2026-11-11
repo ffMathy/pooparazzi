@@ -83,6 +83,12 @@ PHONE = {
     "50-notification-forecasts.png": "notification-forecasts",
     "51-settings-add-baby.png": "settings-add-baby",
     "52-baby-intro.png": "baby-intro",
+    "55-intro-welcome.png": "intro-welcome",
+    "56-intro-sleep.png": "intro-sleep",
+    "57-intro-log.png": "intro-log",
+    "58-intro-fix.png": "intro-fix",
+    "59-intro-patterns.png": "intro-patterns",
+    "60-intro-everywhere.png": "intro-everywhere",
 }
 
 # Recorded file (wear/screenshots/<lang>/) -> README file (docs/screenshots/<lang>/watch-<name>.png).

@@ -6,13 +6,16 @@ import com.ffmathy.pooparazzi.phone.account.WelcomePrefs
 import org.junit.rules.ExternalResource
 
 /**
- * Before the activity starts: the first run's "Your baby" screen counts as answered, so a test of a fresh install
- * lands where it did before that screen existed (Home, or the Welcome). [BabyIntroFlowTest] covers the screen itself.
+ * Before the activity starts: the first run's "Your baby" screen and the introduction count as answered, so a test of
+ * a fresh install lands where it did before those screens existed (Home, or the Welcome). [BabyIntroFlowTest] covers
+ * them.
  * Use it with an `order` before the activity's compose rule.
  */
 class BabyAlreadyAsked : ExternalResource() {
     override fun before() {
-        WelcomePrefs(ApplicationProvider.getApplicationContext<Application>()).babyAsked = true
+        val prefs = WelcomePrefs(ApplicationProvider.getApplicationContext<Application>())
+        prefs.babyAsked = true
+        prefs.introSeen = true
     }
 
     companion object {

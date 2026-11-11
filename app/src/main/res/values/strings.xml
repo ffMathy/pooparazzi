@@ -464,4 +464,26 @@
     <string name="settings_open_source">Pooparazzi is open source</string>
     <string name="cd_source_code">Source code on GitHub</string>
     <string name="cd_linkedin">The maker on LinkedIn</string>
+    <!-- The introduction: a skippable tour of how to use the app, after the first run's "Your baby" screen and from Settings › About. -->
+    <string name="intro_skip">Skip</string>
+    <string name="intro_next">Next</string>
+    <string name="intro_back">Back</string>
+    <string name="intro_done">Get started</string>
+    <!-- TalkBack, the page dots: "Page 2 of 6" -->
+    <string name="intro_page">Page %1$d of %2$d</string>
+    <string name="intro_welcome_title">Welcome to Pooparazzi</string>
+    <string name="intro_welcome_body">Log sleep, feeds and diapers with one or two taps, made for one hand at 3am. Here is how it works; it takes a minute.</string>
+    <string name="intro_sleep_title">Sleep</string>
+    <string name="intro_sleep_body">Tap Start sleep when the baby falls asleep, and the same button, now Woke up, when they wake. While the baby sleeps, Home shows how long; tap the ring to change when the sleep started.</string>
+    <string name="intro_log_title">Feeds and diapers</string>
+    <string name="intro_log_body">Tap Feed or Diaper. Only the time is needed: the type, the breast side, pee or poop and the rest are optional, so Just the time is fine. Did it happen a little earlier? −15m, −10m and −5m move the time back.</string>
+    <string name="intro_fix_title">Fix anything</string>
+    <string name="intro_fix_body">Every log can be changed. Tap Undo right after a sleep, or tap a time on Home (Last fed, a since row) or any row in History to edit it or delete it.</string>
+    <string name="intro_patterns_title">What comes next</string>
+    <string name="intro_patterns_body">Under each button, Home shows what the last 7 days expect next, such as the next feed. History shows each day on a 24-hour ribbon, and Statistics the averages per day.</string>
+    <string name="intro_everywhere_title">Always at hand</string>
+    <string name="intro_everywhere_body">Add a widget to your home screen, and install Pooparazzi on your Wear OS watch for its tile and complications. Signed in, your family can log too. You can see this introduction again in Settings › About.</string>
+    <!-- Settings › About: shows the introduction again. -->
+    <string name="settings_intro">Introduction</string>
+    <string name="settings_intro_summary">How to use Pooparazzi, step by step</string>
 </resources>

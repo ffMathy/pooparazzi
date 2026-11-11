@@ -151,6 +151,21 @@ class AppNavigationTest {
         compose.onNodeWithText("Google Sans Flex").assertExists()
     }
 
+    /** Settings › About › Introduction shows the introduction again; Skip returns to Settings. */
+    @Test
+    fun settingsShowTheIntroductionAgain() {
+        compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Introduction"), timeoutMillis = 5_000)
+        compose.onNodeWithText("Introduction").performScrollTo().performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Welcome to Pooparazzi"), timeoutMillis = 5_000)
+        compose.onNodeWithText("Next").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Sleep"), timeoutMillis = 5_000)
+        compose.onNodeWithText("Skip").performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Font licences"), timeoutMillis = 5_000)
+        compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(hasText("Welcome to Pooparazzi")).fetchSemanticsNodes().isEmpty() }
+    }
+
     /** Home › History › Statistics, waiting until History has gone. */
     private fun openStatistics() {
         compose.waitUntilAtLeastOneExists(hasText("Feed"), timeoutMillis = 10_000)

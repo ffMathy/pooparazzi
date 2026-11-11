@@ -123,7 +123,7 @@ import com.ffmathy.pooparazzi.core.R as CoreR
 
 /** Settings wired to its view model and navigation. */
 @Composable
-fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount: () -> Unit = {}) {
+fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount: () -> Unit = {}, onOpenIntro: () -> Unit = {}) {
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val familyViewModel: FamilyViewModel = viewModel(factory = FamilyViewModel.Factory)
@@ -133,6 +133,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
     val back by rememberUpdatedState(dropUnlessResumed(block = onBack))
     val licences by rememberUpdatedState(dropUnlessResumed(block = onOpenLicences))
     val account by rememberUpdatedState(dropUnlessResumed(block = onOpenAccount))
+    val intro by rememberUpdatedState(dropUnlessResumed(block = onOpenIntro))
     val context = LocalContext.current
     // The permission and the system switch can change in system settings: re-read them whenever Settings resumes.
     var notifications by remember { mutableStateOf(NotificationLink.current(context)) }
@@ -160,6 +161,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
             override fun onBack() = back()
             override fun onOpenLicences() = licences()
             override fun onOpenAccount() = account()
+            override fun onOpenIntro() = intro()
             override fun onOpenNotificationSettings() = context.openNotificationSettings(link)
             override fun onOpenForecastChannel(kind: ForecastKind) =
                 context.openForecastChannelSettings(kind, viewModel.state.value?.language ?: AppLanguage.SYSTEM)
@@ -199,7 +201,7 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicences: () -> Unit, onOpenAccount:
  * (each with an optional birth date), Appearance (Auto · Night · Day), Language (System default · English · Dansk), the
  * watch (sync with a retry, or "Install on your watch" for a watch without the app, and the estimates its face shows),
  * Notifications (the link to the system's Live Update setting, §10.5, and one row per prediction notification, each
- * opening its channel's page) and About (version, font licences), and at the bottom a footer: "Made with
+ * opening its channel's page) and About (version, the introduction, font licences), and at the bottom a footer: "Made with
  * ❤️ by a father in Aarhus, Denmark", that Pooparazzi is open source, and GitHub and LinkedIn logo buttons. Section
  * headings are labelMedium; grouped rows use the History list's r 20 / r 6 corners.
  *
@@ -817,7 +819,7 @@ private fun LinkRow(
 }
 
 /**
- * "Pooparazzi · Version 0.1.0", "Privacy policy" (opens it in the browser, BABIES_AND_BACKUP §3.2), "Download my data"
+ * "Pooparazzi · Version 0.1.0", "Introduction" (shows the tour of how to use the app again), "Privacy policy" (opens it in the browser, BABIES_AND_BACKUP §3.2), "Download my data"
  * (the log and the babies' names as one ZIP file, wherever the parent saves it), "Import data" (merges such a file into
  * the log) and "Font licences" (opens the OFL texts).
  */
@@ -837,6 +839,9 @@ private fun AboutGroup(versionName: String, actions: SettingsActions) {
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
                 Text(stringResource(R.string.settings_version, versionName), style = PhoneType.dataMedium, color = colors.onSurfaceVariant)
             }
+        }
+        GroupRow(first = false, last = false) {
+            LinkRow(stringResource(R.string.settings_intro), stringResource(R.string.settings_intro_summary), actions::onOpenIntro)
         }
         GroupRow(first = false, last = false) {
             LinkRow(stringResource(R.string.settings_privacy), stringResource(R.string.settings_privacy_summary), actions::onOpenPrivacy)

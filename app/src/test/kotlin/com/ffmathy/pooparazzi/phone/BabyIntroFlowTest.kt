@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
 /**
  * The first run's "Your baby" screen in the real app (a fresh install of a build without accounts, so there is no
  * Welcome before it): it says both are optional, Continue saves the name given, Skip saves nothing, and neither is
- * asked again.
+ * asked again. The introduction follows it, and is stepped through to Get started or skipped.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -68,7 +68,16 @@ class BabyIntroFlowTest {
         compose.onNodeWithText("The birth date is optional, but it improves the predictions and estimates", substring = true).assertExists()
         compose.onNode(hasSetTextAction()).performTextInput("Maja")
         compose.onNodeWithText("Continue").performScrollTo().performClick()
+        // The introduction comes next: Next through its pages, and Get started on the last one.
+        compose.waitUntilAtLeastOneExists(hasText("Welcome to Pooparazzi"), timeoutMillis = 5_000)
+        repeat(5) {
+            compose.onNodeWithText("Next").performClick()
+            compose.waitForIdle()
+        }
+        compose.onNodeWithText("Always at hand").assertExists()
+        compose.onNodeWithText("Get started").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
+        assertTrue(WelcomePrefs(app).introSeen)
         compose.waitUntil(timeoutMillis = 5_000) { runBlocking { Core.settings.current().babyName } == "Maja" }
         assertNull("no birth date was given", runBlocking { Core.settings.current().selectedBaby.born })
         assertTrue(WelcomePrefs(app).babyAsked)
@@ -79,7 +88,11 @@ class BabyIntroFlowTest {
         compose.waitUntilAtLeastOneExists(hasText("Your baby"), timeoutMillis = 10_000)
         compose.onNode(hasSetTextAction()).performTextInput("Maja")
         compose.onNodeWithText("Skip for now").performScrollTo().performClick()
+        // The introduction can be skipped from its first page.
+        compose.waitUntilAtLeastOneExists(hasText("Welcome to Pooparazzi"), timeoutMillis = 5_000)
+        compose.onNodeWithText("Skip").performClick()
         compose.waitUntilAtLeastOneExists(hasText("Start sleep"), timeoutMillis = 5_000)
+        assertTrue(WelcomePrefs(app).introSeen)
         assertEquals("", runBlocking { Core.settings.current().babyName })
         assertTrue(WelcomePrefs(app).babyAsked)
     }
