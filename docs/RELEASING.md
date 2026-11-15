@@ -10,7 +10,7 @@ Five GitHub Actions workflows build, ship and check the apps and the backend:
 | [`rules.yml`](../.github/workflows/rules.yml) | Pull requests that change `firebase/` (and by hand) | The Firestore security rules' tests on the Firestore emulator ([BACKEND.md](BACKEND.md#testing-the-rules)). Needs no secrets. |
 | [`deploy.yml`](../.github/workflows/deploy.yml) | Every push to `main` that changes the rules, the indexes or the website in `firebase/` (and by hand) | The rules' tests, then a deploy of the Firestore rules and indexes and the website to Firebase. Needs the `FIREBASE_DEPLOY_SERVICE_ACCOUNT` secret ([BACKEND.md](BACKEND.md#4-deploy-the-rules-and-the-website)); without it, does nothing. |
 
-The phone app and the Wear OS app are one Play listing: both use the applicationId **`com.ffmathy.pooparazzi`** (the Wearable Data Layer only pairs apps with the same applicationId and signing key). The phone bundle goes to the phone track (`alpha`, the default **Closed testing** track, by default) and the watch bundle to the matching **Wear OS form-factor track** (`wear:Closed - Wear OS`, the Wear OS closed testing track), which is where Play expects Wear OS releases.
+The phone app and the Wear OS app are one Play listing: both use the applicationId **`com.ffmathy.pooparazzi`** (the Wearable Data Layer only pairs apps with the same applicationId and signing key). The phone bundle goes to the phone track (`production` by default) and the watch bundle to the matching **Wear OS form-factor track** (`wear:production` by default), which is where Play expects Wear OS releases. Set `PLAY_TRACK` to `alpha` to publish to closed testing instead (the watch bundle then goes to `wear:Closed - Wear OS`).
 
 ## Version codes
 
@@ -86,7 +86,7 @@ Repository › Settings › Secrets and variables › Actions.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PLAY_TRACK` | `alpha` | Play track for the phone bundle: `internal` (internal testing), `alpha` (closed testing), `beta` (open testing) or `production` |
+| `PLAY_TRACK` | `production` | Play track for the phone bundle: `internal` (internal testing), `alpha` (closed testing), `beta` (open testing) or `production` |
 | `PLAY_WEAR_TRACK` | `wear:<PLAY_TRACK>` | Play track for the watch bundle. Always a Wear OS track: a value without the `wear:` prefix (e.g. `beta`) is read as `wear:beta`, because a watch bundle on a phone track is rejected and replaces the phone bundle in that track's draft. Wear OS has no `wear:alpha` track; its closed testing track is `wear:Closed - Wear OS`, so `alpha` (and `wear:alpha`) map to that. The Wear OS tracks are `wear:Closed - Wear OS`, `wear:beta`, `wear:internal` and `wear:production` |
 | `PLAY_RELEASE_STATUS` | `completed` | `completed` rolls the release out; use `draft` while the app has never been published (see below) |
 | `VERSION_CODE_OFFSET` | `100` | Added to the run number to make the version base |
@@ -109,7 +109,7 @@ Later runs number their builds above this one, so the automatic uploads continue
 
 1. In [Google Cloud console](https://console.cloud.google.com/), pick or create a project and enable the **Google Play Android Developer API** for it.
 2. IAM & Admin › Service accounts › **Create service account** (no Cloud roles needed). Open it › Keys › Add key › **JSON**, and save the downloaded file's whole content as the `PLAY_SERVICE_ACCOUNT_JSON` secret.
-3. In Play Console › **Users and permissions** › Invite new users: enter the service account's email address, add the Pooparazzi app, and grant at least **Release apps to testing tracks** (and **Release to production, exclude devices, and use Play App Signing** if `PLAY_TRACK` will be `production`), and **Manage store presence** so [`store-listing.yml`](#store-listing-images) can upload the store images). Invitations to service accounts are accepted automatically; permissions can take a while (up to a day) to take effect.
+3. In Play Console › **Users and permissions** › Invite new users: enter the service account's email address, add the Pooparazzi app, and grant **Release to production, exclude devices, and use Play App Signing** (production is the default `PLAY_TRACK`; **Release apps to testing tracks** is enough only if `PLAY_TRACK` is set to a testing track), and **Manage store presence** so [`store-listing.yml`](#store-listing-images) can upload the store images). Invitations to service accounts are accepted automatically; permissions can take a while (up to a day) to take effect.
 
 ### Draft apps
 

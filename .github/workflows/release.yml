@@ -196,7 +196,7 @@ jobs:
         id: tracks
         if: steps.secrets.outputs.play == 'true'
         env:
-          PLAY_TRACK: ${{ vars.PLAY_TRACK || 'alpha' }}
+          PLAY_TRACK: ${{ vars.PLAY_TRACK || 'production' }}
           PLAY_WEAR_TRACK: ${{ vars.PLAY_WEAR_TRACK }}
         run: |
           wear="${PLAY_WEAR_TRACK:-$PLAY_TRACK}"
