@@ -1,17 +1,17 @@
 package com.ffmathy.pooparazzi.phone
 
 import android.content.Intent
-import android.graphics.Color
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.Display
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.ffmathy.pooparazzi.core.Core
@@ -39,7 +39,7 @@ class MainActivity : AppCompatActivity() {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         splash.setKeepOnScreenCondition { appViewModel.appearance.value == null || appViewModel.babyIntro.value == null || appViewModel.intro.value == null }
-        enableEdgeToEdge()
+        drawEdgeToEdge()
         // A recreated activity (language change, process restore) gets its old intent again: handle it once only.
         if (savedInstanceState == null) handle(intent)
         setContent {
@@ -126,13 +126,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Edge to edge without androidx's `enableEdgeToEdge`, whose code references the window APIs Android 15 deprecated
+     * (`Window.setStatusBarColor`, `setNavigationBarColor`, `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`), which Play
+     * Console flags. Android 15+ draws edge to edge for this target SDK anyway; for Android 11–14 the theme makes the
+     * bars transparent and lays out into the cutout (`themes.xml`), and the window stops fitting the system bars here.
+     * Until Compose resolves the app's Night/Day, the bar icons follow the system theme.
+     */
+    private fun drawEdgeToEdge() {
+        // Deprecated (and a no-op) on Android 15+, where this target SDK is edge to edge already.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) WindowCompat.setDecorFitsSystemWindows(window, false)
+        val systemNight = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        setSystemBarIcons(systemNight)
+    }
+
+    /** Light icons on the app's dark Night surfaces, dark icons by Day. */
+    private fun setSystemBarIcons(night: Boolean) {
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !night
+            isAppearanceLightNavigationBars = !night
+        }
+    }
+
     /** System bars and the next launch's splash follow the resolved appearance (DESIGN_SPEC §3.3.8, §8.3). */
     private fun applyNight(night: Boolean) {
         if (appliedNight == night) return
         appliedNight = night
-        val transparent = Color.TRANSPARENT
-        val style = if (night) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent)
-        enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+        setSystemBarIcons(night)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Persisted by the system for the next cold start: a dark splash after a night-time session even when the
             // system theme is light.
