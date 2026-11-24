@@ -418,7 +418,7 @@ Behaviour:
 - Validation copy. The slot uses the error colour only when the rule blocks Save.
   - "Waking up must come after falling asleep." (blocks Save)
   - "13:50 hasn't happened yet. Log it for yesterday?" with "Use yesterday"
-  - "Overlaps the 12:10 sleep. Save anyway?" (non-blocking)
+  - "Overlaps the 12:10 sleep. Sleeps can't overlap." (blocks Save: a sleep is never saved on top of another, also not by moving a time or by a running sleep that would now overlap a later one)
   - "Changed on the watch meanwhile. Check and save again." (non-blocking): Save found the entry changed on the watch since the sheet opened (e.g. Woke up on a sleep whose start is being corrected). Nothing is overwritten; the sheet now shows the watch's version with the sheet's own changes on top. "Deleted on the watch meanwhile." blocks Save.
 - Delete closes the sheet and shows the card "Sleep deleted" with Undo (soft delete, §4.4).
 - **Add past entry** mode (from the FAB): title "Add past entry"; connected button group Sleep | Feed | Diaper with Feed preselected; defaults to now − 15m.

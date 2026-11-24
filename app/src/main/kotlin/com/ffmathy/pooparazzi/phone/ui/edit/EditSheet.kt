@@ -409,7 +409,7 @@ private fun ValidationSlot(state: EditUiState, formatters: Formatters, actions: 
             is EditIssue.EndBeforeStart -> stringResource(R.string.edit_error_wake_before_sleep) to false
             is EditIssue.InFuture -> stringResource(R.string.edit_error_future, formatters.clock.format(issue.at, state.zone)) to true
             is EditIssue.Overlaps -> stringResource(
-                R.string.edit_warning_overlap_sleep,
+                R.string.edit_error_overlap_sleep,
                 formatters.clock.format(issue.other.startMillis, state.zone),
             ) to true
             EditIssue.SaveFailed -> stringResource(R.string.edit_error_save_failed) to false

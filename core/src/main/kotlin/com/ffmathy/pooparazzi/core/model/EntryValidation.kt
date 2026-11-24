@@ -48,8 +48,30 @@ class AlreadyRunningException(val running: Entry) :
     IllegalStateException("A ${running.kind} is already running since ${running.startMillis} (${running.id})")
 
 /**
+ * Thrown when a sleep would overlap [other], another sleep of the same baby: a new sleep, an edited start or end, a
+ * removed end (a sleep that runs again) or an Undo that brings a sleep back. Sleeps of one baby never overlap.
+ */
+class SleepOverlapException(val sleep: Entry, val other: Entry) :
+    IllegalStateException("Sleep ${sleep.id} overlaps sleep ${other.id} (since ${other.startMillis})")
+
+/**
+ * The latest sleep in [others] whose interval overlaps [sleep]'s, or null (also when [sleep] is no sleep or deleted).
+ * [sleep] itself and deleted entries are skipped; pass the entries of [sleep]'s baby only. A running sleep lasts until
+ * [now]. Sleeps that only touch (one ends the minute the next starts) do not overlap.
+ */
+fun overlappingSleep(sleep: Entry, others: Iterable<Entry>, now: Long): Entry? {
+    if (!sleep.isSleep || sleep.deleted) return null
+    val from = sleep.startMillis
+    val to = sleep.endMillis ?: maxOf(now, from)
+    return others
+        .filter { it.id != sleep.id && !it.deleted && it.isSleep }
+        .filter { other -> other.startMillis < to && from < (other.endMillis ?: maxOf(now, other.startMillis)) }
+        .maxByOrNull { it.startMillis }
+}
+
+/**
  * Checks the structural invariants of [entry] (V1_ADDITIONS §1). Returns the first violation, or null when valid.
- * The single-running rule and future times need the repository's state and clock, so they are checked there.
+ * The single-running rule, overlapping sleeps ([overlappingSleep]) and future times need the repository's state and clock, so they are checked there.
  */
 fun validate(entry: Entry): EntryViolation? {
     if (entry.id.isBlank()) return EntryViolation.BLANK_ID

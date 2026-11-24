@@ -64,7 +64,9 @@ sealed interface LogResult {
  * another baby.
  *
  * Invalid writes throw [InvalidEntryException] (or return it as a failure for the `Result` functions);
- * a second running sleep is rejected with [AlreadyRunningException].
+ * a second running sleep is rejected with [AlreadyRunningException], and a sleep that would overlap another sleep of
+ * its baby (a new one, a moved start or end, a removed end, an Undo) with
+ * [com.ffmathy.pooparazzi.core.model.SleepOverlapException]. Merges from sync are not refused (see [applyRemoteAll]).
  * Local times may not lie in the future (beyond [EntryRules.FUTURE_TOLERANCE_MILLIS]).
  */
 interface EntryRepository {
@@ -103,7 +105,10 @@ interface EntryRepository {
         contents: BottleContents? = null,
     ): LogResult
 
-    /** Starts a sleep at [at]. Fails with [AlreadyRunningException] while one of the current baby's runs. */
+    /**
+     * Starts a sleep at [at]. Fails with [AlreadyRunningException] while one of the current baby's runs, and with
+     * [com.ffmathy.pooparazzi.core.model.SleepOverlapException] when another sleep ends after [at].
+     */
     suspend fun startSleep(at: Long): Result<Entry> = startSleep(at, babyId = null)
 
     /** [startSleep] for [babyId] (a widget set to a baby other than the current one); null is the current baby. */

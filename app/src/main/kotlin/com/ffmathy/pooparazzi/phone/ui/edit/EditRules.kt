@@ -10,7 +10,7 @@ import com.ffmathy.pooparazzi.core.model.FeedType
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
 import com.ffmathy.pooparazzi.core.model.clockMinutesBetween
 import com.ffmathy.pooparazzi.core.model.isBreastfeed
-import com.ffmathy.pooparazzi.core.model.isSleep
+import com.ffmathy.pooparazzi.core.model.overlappingSleep
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -99,7 +99,8 @@ internal object EditRules {
 
     /**
      * The first rule [draft] breaks, in order: an end not after its start (blocks Save); a time in the future (blocks
-     * Save; offers "Use yesterday"); an overlap with another sleep (a warning). Null when none.
+     * Save; offers "Use yesterday"); an overlap with another sleep (blocks Save: sleeps never overlap, so neither a
+     * moved time nor a removed end can put one sleep on top of another). Null when none.
      */
     fun validate(draft: EditDraft, entries: List<Entry>, now: Long): EditIssue? {
         val end = draft.end
@@ -110,16 +111,9 @@ internal object EditRules {
         return null
     }
 
-    /** The latest other sleep whose interval meets the draft sleep's. */
-    fun overlap(draft: EditDraft, entries: List<Entry>, now: Long): Entry? {
-        if (!draft.isInterval) return null
-        val from = draft.start
-        val to = draft.end ?: now
-        return entries
-            .filter { it.id != draft.id && !it.deleted && it.isSleep }
-            .filter { other -> other.startMillis < to && from < (other.endMillis ?: now) }
-            .maxByOrNull { it.startMillis }
-    }
+    /** The latest other sleep whose interval overlaps the draft sleep's (a running draft lasts until [now]). */
+    fun overlap(draft: EditDraft, entries: List<Entry>, now: Long): Entry? =
+        if (draft.isInterval) overlappingSleep(draft.toEntry(updatedAtMillis = 0), entries, now) else null
 
     /** The feed type after tapping [type] in the type selector: the selected type again clears it (no type). */
     fun tappedFeedType(draft: EditDraft, type: FeedType): FeedType? = type.takeUnless { draft.feedType == it }

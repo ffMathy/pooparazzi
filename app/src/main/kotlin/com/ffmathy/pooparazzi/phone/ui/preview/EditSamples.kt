@@ -51,6 +51,12 @@ object EditSamples {
         return edit(sleep, EditDraft.of(sleep).copy(end = sleep.startMillis - 10 * MINUTE))
     }
 
+    /** The same sleep with its start moved to 10:00, onto the 09:30 sleep: the blocking overlap message. */
+    fun sleepOverlap(): EditUiState {
+        val sleep = entry("sample-sleep-1240")
+        return edit(sleep, EditDraft.of(sleep).copy(start = SampleData.at(10, 0)))
+    }
+
     private fun entry(id: String): Entry = SampleData.scenario(zone).single { it.id == id }
 
     private fun edit(original: Entry, draft: EditDraft): EditUiState =

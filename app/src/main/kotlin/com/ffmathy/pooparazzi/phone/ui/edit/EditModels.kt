@@ -90,9 +90,9 @@ sealed interface EditIssue {
         override val blocksSave: Boolean get() = true
     }
 
-    /** "Overlaps the 12:10 sleep. Save anyway?" (a warning: Save stays enabled; only sleeps can overlap). */
+    /** "Overlaps the 12:10 sleep." (blocks Save: a sleep can never be saved on top of another; only sleeps can overlap). */
     data class Overlaps(val other: Entry) : EditIssue {
-        override val blocksSave: Boolean get() = false
+        override val blocksSave: Boolean get() = true
     }
 
     /** The last save was refused (e.g. another sleep started on the watch meanwhile). */

@@ -18,6 +18,7 @@ import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.lastBottleAmountMl
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
+import com.ffmathy.pooparazzi.core.model.SleepOverlapException
 import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
@@ -452,9 +453,11 @@ class MainViewModel(
                 is Undo.Delete -> repository.delete(undo.id)
                 is Undo.Restore -> repository.restore(undo.previous)
             }
-        } catch (e: AlreadyRunningException) {
-            // Another sleep started meanwhile (e.g. on the phone): the old one cannot run again.
-            Log.i(TAG, "Undo blocked by a running entry", e)
+        } catch (e: IllegalStateException) {
+            // Another sleep started meanwhile (e.g. on the phone), or a sleep now lies where this one would run again
+            // (AlreadyRunningException, SleepOverlapException): the old one cannot come back.
+            if (e !is AlreadyRunningException && e !is SleepOverlapException) throw e
+            Log.i(TAG, "Undo blocked by another sleep", e)
             _receipt.value = null
             haptic(XHaptic.REJECT)
             send(WearEvent.BackToMain)

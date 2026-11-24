@@ -194,6 +194,8 @@ abstract class HistoryEditSettingsScreenshots(private val language: String) {
     /** Not part of the tour (written under build/): the blocking validation line, and a past day. */
     @Test fun editValidation() = sheet("edit-validation", night = true, EditSamples.sleepEndBeforeStart(), tour = false)
 
+    @Test fun editOverlap() = sheet("edit-overlap", night = true, EditSamples.sleepOverlap(), tour = false)
+
     @Test fun historyYesterday() = screen("history-yesterday", night = false, tour = false) { History(HistorySamples.yesterday()) }
 
     /** 200 % font scale (DESIGN_SPEC §9.3): labels wrap, nothing clips. Written under build/ for review. */

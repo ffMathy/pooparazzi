@@ -116,20 +116,23 @@ class EditViewModelTest : CoreTestBase() {
     }
 
     @Test
-    fun anOverlapWarnsButSaveStaysEnabled() = coreTest { core ->
+    fun anOverlapBlocksSave() = coreTest { core ->
         val sheet = core.sheet()
+        val before = core.entry("sample-sleep-1240")!!.startMillis
         sheet.vm.openEntry("sample-sleep-1240")
         sheet.vm.onTimeSet(TimeField.START, 10, 0)
         val state = state(sheet)
 
         val overlap = state.issue as EditIssue.Overlaps
         assertEquals("sample-sleep-0930", overlap.other.id)
-        assertFalse(overlap.blocksSave)
-        assertTrue(state.canSave)
+        assertTrue(overlap.blocksSave)
+        assertFalse(state.canSave)
 
         sheet.vm.onSave()
         runCurrent()
-        assertEquals(at(10, 0), core.entry("sample-sleep-1240")!!.startMillis)
+        assertEquals(before, core.entry("sample-sleep-1240")!!.startMillis)
+        // The sheet stays open.
+        assertEquals(EditMode.EDIT, state(sheet).mode)
     }
 
     @Test
