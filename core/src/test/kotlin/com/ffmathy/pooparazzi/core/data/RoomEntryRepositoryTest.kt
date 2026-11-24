@@ -2,6 +2,7 @@ package com.ffmathy.pooparazzi.core.data
 
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
+import com.ffmathy.pooparazzi.core.model.SleepOverlapException
 import com.ffmathy.pooparazzi.core.model.BreastSide
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryJson
@@ -78,6 +79,87 @@ class RoomEntryRepositoryTest {
         val error = second.exceptionOrNull() as AlreadyRunningException
         assertEquals(first, error.running)
         assertEquals(1, repo.observeEntries().first().size)
+    }
+
+    // ---- Sleeps never overlap ------------------------------------------------------------------
+
+    /** A sleep from 60 to 30 minutes ago. */
+    private suspend fun pastSleep(): Entry {
+        val sleep = repo.startSleep(now - 60 * minute).getOrThrow()
+        return (repo.endSleep(sleep.id, now - 30 * minute) as EndResult.Ended).entry
+    }
+
+    @Test
+    fun aSleepCannotStartBeforeTheLastOneEnded() = test {
+        val past = pastSleep()
+        val error = repo.startSleep(now - 40 * minute).exceptionOrNull() as SleepOverlapException
+        assertEquals(past.id, error.other.id)
+        assertEquals(listOf(past), repo.observeEntries().first())
+        // Starting the minute it ended is fine.
+        assertTrue(repo.startSleep(now - 30 * minute).getOrThrow().isRunning)
+    }
+
+    @Test
+    fun aPastSleepCannotBeAddedOnTopOfAnother() = test {
+        val past = pastSleep()
+        val inside = assertThrows(SleepOverlapException::class.java) {
+            runBlocking { repo.add(Entry.sleep(now - 50 * minute, now - 45 * minute)) }
+        }
+        assertEquals(past.id, inside.other.id)
+        assertThrows(SleepOverlapException::class.java) {
+            runBlocking { repo.add(Entry.sleep(now - 90 * minute, now - 20 * minute)) }
+        }
+        // A running sleep lasts until now, so one started before a past sleep overlaps it.
+        assertThrows(SleepOverlapException::class.java) { runBlocking { repo.add(Entry.sleep(now - 90 * minute)) } }
+        assertEquals(listOf(past), repo.observeEntries().first())
+        // Touching ends are fine.
+        repo.add(Entry.sleep(now - 90 * minute, now - 60 * minute))
+        assertEquals(2, repo.observeEntries().first().size)
+    }
+
+    @Test
+    fun anEditCannotMoveASleepOntoAnother() = test {
+        val past = pastSleep()
+        val running = repo.startSleep(now - 10 * minute).getOrThrow()
+        val earlier = assertThrows(SleepOverlapException::class.java) {
+            runBlocking { repo.update(running.copy(startMillis = now - 35 * minute)) }
+        }
+        assertEquals(past.id, earlier.other.id)
+        assertThrows(SleepOverlapException::class.java) {
+            runBlocking { repo.update(past.copy(endMillis = now - 5 * minute)) }
+        }
+        assertEquals(running, repo.get(running.id))
+        assertEquals(past, repo.get(past.id))
+        // Up to the other sleep's edge is fine.
+        assertEquals(now - 30 * minute, repo.update(running.copy(startMillis = now - 30 * minute)).startMillis)
+    }
+
+    @Test
+    fun removingAnEndCannotPutASleepOnTopOfALaterOne() = test {
+        val past = pastSleep()
+        val later = repo.add(Entry.sleep(now - 20 * minute, now - 10 * minute))
+        // Running again would last until now, over the later sleep.
+        val error = assertThrows(SleepOverlapException::class.java) {
+            runBlocking { repo.update(past.copy(endMillis = null)) }
+        }
+        assertEquals(later.id, error.other.id)
+        assertEquals(past, repo.get(past.id))
+    }
+
+    @Test
+    fun undoCannotBringASleepBackOnTopOfAnother() = test {
+        val sleep = repo.startSleep(now - 60 * minute).getOrThrow()
+        val woke = repo.endSleep(sleep.id, now - 30 * minute) as EndResult.Ended
+        val later = repo.add(Entry.sleep(now - 20 * minute, now - 10 * minute))
+        // Undo of "Woke up" would make the first sleep run again, over the later one.
+        assertThrows(SleepOverlapException::class.java) { runBlocking { repo.restore(woke.previous) } }
+        assertEquals(woke.entry, repo.get(sleep.id))
+
+        // Undo of a delete, once another sleep took its place.
+        val deleted = repo.delete(later.id)!!
+        repo.add(Entry.sleep(now - 25 * minute, now - 15 * minute))
+        assertThrows(SleepOverlapException::class.java) { runBlocking { repo.restore(deleted) } }
+        assertTrue(repo.get(later.id)!!.deleted)
     }
 
     @Test

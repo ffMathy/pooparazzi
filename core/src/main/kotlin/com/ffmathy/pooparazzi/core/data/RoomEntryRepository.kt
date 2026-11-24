@@ -3,6 +3,8 @@ package com.ffmathy.pooparazzi.core.data
 import android.util.Log
 import androidx.room.withTransaction
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
+import com.ffmathy.pooparazzi.core.model.SleepOverlapException
+import com.ffmathy.pooparazzi.core.model.overlappingSleep
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.BreastSide
@@ -165,6 +167,7 @@ class RoomEntryRepository(
         val written = database.withTransaction {
             require(dao.get(entry.id) == null) { "Entry ${entry.id} already exists: use update()" }
             if (forCurrent.isRunning) runningConflict(forCurrent)?.let { throw AlreadyRunningException(it) }
+            checkNoOverlap(forCurrent)
             val stamped = forCurrent.copy(updatedAtMillis = clock.now())
             writeLocal(stamped, stored = null)
             stamped
@@ -181,6 +184,7 @@ class RoomEntryRepository(
             // An edit never moves an entry to another baby.
             val kept = entry.copy(babyId = stored.babyId)
             if (kept.isRunning) runningConflict(kept)?.let { throw AlreadyRunningException(it) }
+            checkNoOverlap(kept)
             val stamped = kept.copy(updatedAtMillis = nextStamp(stored.updatedAtMillis))
             writeLocal(stamped, stored)
             stamped
@@ -221,6 +225,7 @@ class RoomEntryRepository(
         val written = database.withTransaction {
             val stored = dao.get(restoring.id)
             if (restoring.isRunning) runningConflict(restoring)?.let { throw AlreadyRunningException(it) }
+            checkNoOverlap(restoring)
             val stamped = restoring.copy(updatedAtMillis = nextStamp(stored?.updatedAtMillis))
             writeLocal(stamped, stored)
             stamped
@@ -444,12 +449,16 @@ class RoomEntryRepository(
         }
         val result = database.withTransaction {
             val current = running().firstOrNull()
-            if (current != null) {
-                Result.failure(AlreadyRunningException(current.toEntry()))
-            } else {
-                val entry = build(clock.now()).requireValid()
-                writeLocal(entry, stored = null)
-                Result.success(entry)
+            val entry = build(clock.now())
+            val overlap = if (current == null) overlapOf(entry) else null
+            when {
+                current != null -> Result.failure(AlreadyRunningException(current.toEntry()))
+                overlap != null -> Result.failure(SleepOverlapException(entry, overlap))
+                else -> {
+                    entry.requireValid()
+                    writeLocal(entry, stored = null)
+                    Result.success(entry)
+                }
             }
         }
         result.getOrNull()?.let { push(it.id) }
@@ -486,6 +495,21 @@ class RoomEntryRepository(
             is EndResult.NotRunning -> Unit
         }
         return result
+    }
+
+    /**
+     * Another sleep of [entry]'s baby whose interval overlaps [entry]'s (V1_ADDITIONS §1: sleeps never overlap), if
+     * any; null for instants and deleted entries. Call inside a transaction.
+     */
+    private suspend fun overlapOf(entry: Entry): Entry? {
+        if (!entry.isSleep || entry.deleted) return null
+        val sleeps = dao.activeOf(entry.babyId).map { it.toEntry() }.filter { it.isSleep }
+        return overlappingSleep(entry, sleeps, clock.now())
+    }
+
+    /** Throws [SleepOverlapException] when [entry] would overlap another sleep. Call inside a transaction. */
+    private suspend fun checkNoOverlap(entry: Entry) {
+        overlapOf(entry)?.let { throw SleepOverlapException(entry, it) }
     }
 
     /** Another running entry of the same type and baby as [entry], if any. Call inside a transaction. */

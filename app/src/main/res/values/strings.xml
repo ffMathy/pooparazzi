@@ -182,7 +182,7 @@
     <string name="edit_error_wake_before_sleep">Waking up must come after falling asleep.</string>
     <string name="edit_error_future">%1$s hasn\'t happened yet. Log it for yesterday?</string>
     <string name="edit_use_yesterday">Use yesterday</string>
-    <string name="edit_warning_overlap_sleep">Overlaps the %1$s sleep. Save anyway?</string>
+    <string name="edit_error_overlap_sleep">Overlaps the %1$s sleep. Sleeps can\'t overlap.</string>
     <string name="edit_error_save_failed">Couldn\'t save this change. Try again.</string>
     <!-- The entry changed on the watch while the sheet was open: the sheet shows the merged version -->
     <string name="edit_notice_changed_on_watch">Changed on the watch meanwhile. Check and save again.</string>

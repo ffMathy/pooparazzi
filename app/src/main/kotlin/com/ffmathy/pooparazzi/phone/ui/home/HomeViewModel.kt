@@ -18,6 +18,7 @@ import com.ffmathy.pooparazzi.core.data.wakeFor
 import com.ffmathy.pooparazzi.core.domain.Summary
 import com.ffmathy.pooparazzi.core.domain.summarize
 import com.ffmathy.pooparazzi.core.model.AlreadyRunningException
+import com.ffmathy.pooparazzi.core.model.overlappingSleep
 import com.ffmathy.pooparazzi.core.model.BottleContents
 import com.ffmathy.pooparazzi.core.model.Breast
 import com.ffmathy.pooparazzi.core.model.BreastSide
@@ -368,6 +369,12 @@ class HomeViewModel(
         val entry = repository.get(adjust.entryId)?.takeUnless { it.deleted } ?: return
         val next = adjust.offsetMinutes + minutes
         if (!HomeStateBuilder.offsetAllowed(entry, MoveField.START, adjust.stamp, next, clock.now())) {
+            haptic(HomeHaptic.REJECT)
+            return
+        }
+        // Never back onto an earlier sleep: the start stops at its end.
+        val moved = entry.moved(MoveField.START, adjust.stamp + next * MINUTE_MILLIS)
+        if (overlappingSleep(moved, repository.observeEntries().first(), clock.now()) != null) {
             haptic(HomeHaptic.REJECT)
             return
         }

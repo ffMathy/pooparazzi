@@ -118,7 +118,7 @@
     <string name="edit_error_wake_before_sleep">Opvågningen skal ligge efter, at barnet faldt i søvn.</string>
     <string name="edit_error_future">Kl. %1$s er ikke kommet endnu. Registrér den i går i stedet?</string>
     <string name="edit_use_yesterday">Brug i går</string>
-    <string name="edit_warning_overlap_sleep">Overlapper søvnen kl. %1$s. Gem alligevel?</string>
+    <string name="edit_error_overlap_sleep">Overlapper søvnen kl. %1$s. Søvn kan ikke overlappe.</string>
     <string name="edit_error_save_failed">Ændringen blev ikke gemt. Prøv igen.</string>
     <string name="edit_notice_changed_on_watch">Ændret på uret imens. Tjek og gem igen.</string>
     <string name="edit_error_deleted_on_watch">Slettet på uret imens.</string>
