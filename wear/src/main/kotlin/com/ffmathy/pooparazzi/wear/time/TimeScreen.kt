@@ -37,6 +37,7 @@ import com.ffmathy.pooparazzi.core.format.Formatters
 import com.ffmathy.pooparazzi.core.format.rememberFormatters
 import com.ffmathy.pooparazzi.core.ui.icons.XIcon
 import com.ffmathy.pooparazzi.core.ui.icons.XIcons
+import com.ffmathy.pooparazzi.wear.R
 import com.ffmathy.pooparazzi.wear.sample.WearSamples
 import com.ffmathy.pooparazzi.wear.state.TIME_BUTTON_STEP_MINUTES
 import com.ffmathy.pooparazzi.wear.state.TimeDraft
@@ -70,6 +71,7 @@ fun TimeScreen(draft: TimeDraft, onShift: (Int) -> Unit, onDone: () -> Unit, mod
         when (draft.title) {
             TimeTitle.FEED -> CoreR.string.kind_feed
             TimeTitle.DIAPER -> CoreR.string.kind_diaper
+            TimeTitle.SLEEP_STARTED -> R.string.logged_fell_asleep
             TimeTitle.WOKE_UP -> CoreR.string.action_woke_up
         },
     )

@@ -548,11 +548,11 @@ At rest on 227 dp the list shows the title, the tiles and, with Poop on, the "Co
 
 #### 3.5.4 W4 Time
 
-Opened only from Logged, by its time (tap it, or turn the crown there), to correct a saved entry: the logged time, which can move up to now, back up to 12 h, and a wake time no earlier than a minute after the sleep began; not for "Sleep cancelled". It is the only place a watch log's time moves, the same for every kind (feed, diaper, wake-up): the logging screens have no time of their own and log at the time of the Feed or Diaper tap (§3.5.3).
+Opened only from Logged, by its time (tap it, or turn the crown there), to correct a saved entry: the logged time, which can move up to now, back up to 12 h, and a wake time no earlier than a minute after the sleep began; a sleep's start or wake time never onto another sleep (a start goes back to the previous sleep's end at most, a wake time up to the next sleep's start); not for "Sleep cancelled". It is the only place a watch log's time moves, the same for every kind (feed, diaper, sleep start, wake-up): the logging screens have no time of their own and log at the time of the Feed or Diaper tap (§3.5.3).
 
 | Element | Spec |
 |---|---|
-| Heading | y ≈ 12 % from the top: "Feed" / "Diaper" / "Woke up", then " · −7m" (the offset from the time it opened with; from an hour "−1h 05m") once it differs. titleMedium onSurface, one line |
+| Heading | y ≈ 12 % from the top: "Feed" / "Diaper" / "Asleep" / "Woke up", then " · −7m" (the offset from the time it opened with; from an hour "−1h 05m") once it differs. titleMedium onSurface, one line |
 | Time | "14:25", displaySmall, in the event colour (feed strong / diaper text / sleep text). Heading and time are one node, read "Feed, 14:25, 7 minutes earlier" and announced politely |
 | Buttons | two tonal CompactButtons 64 wide, r 16, 8 apart, under the time: "−5m" / "+5m" (spoken "5 minutes earlier" / "5 minutes later"); disabled at their limit |
 | Crown | turning moves the time a minute per step (about 18 dp of rotation, one detent of a rotating bezel); clockwise later. `SegmentTick` per change, nothing at a limit |
@@ -625,7 +625,7 @@ Layouts use percentage padding.
 | Amount − / + | a step; nothing past either end | `SegmentTick` |
 | −15m / −5m / +5m | move the time (taps add up; never later than the tap, at most 12 h back) | `SegmentTick` (none at a limit) |
 | Save (Side, Bottle, Diaper) | log at stamp + offset → Logged | `Confirm` |
-| Start sleep | running; Main (asleep); 2 s guard | `ToggleOn` |
+| Start sleep | running; Logged "Asleep at 14:32" (its time moves from there, as a feed's; Undo removes the sleep), then Main (asleep); 2 s guard | `ToggleOn` |
 | Woke up | < 1 min: Logged "Sleep cancelled"; else Logged wake | `ToggleOff` |
 | Toggle within the guard | two-line "Already / asleep" for 2 s | `Reject` |
 | Time: crown step or −5m / +5m | shift the time | `SegmentTick` |
@@ -650,7 +650,7 @@ Fixed neutral chrome (`allowDynamicTheme = false`), container fills only (night-
 | State | Title | Other changes |
 |---|---|---|
 | Idle | "Pee 48m ago" | — |
-| Just logged (10 s, a Woke up or Sleep cancelled from the tile) | `check` 14 `#7C88C4` + 4 + "Woke up 14:32 · " `#E8D8C3` + `undo` 14 + 3 + "Undo" (weight 700) | The tile background opens Logged for that entry with Undo active at once |
+| Just logged (10 s, a Start sleep, Woke up or Sleep cancelled from the tile) | `check` 14 `#7C88C4` + 4 + "Woke up 14:32 · " (or "Asleep 14:32 · ") `#E8D8C3` + `undo` 14 + 3 + "Undo" (weight 700) | The tile background opens Logged for that entry with Undo active at once, where its time can also move (W4) |
 | Asleep | `sleepRunning` 14 `#7C88C4` + 4 + "Asleep 1h 07m" titleSmall `#AEB6E6` | Row A secondary "1h 32m ago"; EdgeButton fill `#2E3660` + 1.5 dp `#7C88C4` border, "Woke up" |
 | Guard (2 s) | `sleep` + "Already asleep" (or `awake` + "Already awake") in `#AEB6E6` | `Reject`; nothing moves |
 

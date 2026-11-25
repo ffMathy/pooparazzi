@@ -104,11 +104,14 @@ class TileActions(
         if (shownSleepId == null && running != null) return guard(GuardKind.ALREADY_ASLEEP, now)
         if (shownSleepId != null && running?.id != shownSleepId) return guard(GuardKind.ALREADY_AWAKE, now)
         if (running == null) {
-            val error = repository.startSleep(now).exceptionOrNull()
+            val started = repository.startSleep(now)
+            val error = started.exceptionOrNull()
             return when {
                 error == null -> {
+                    val sleep = started.getOrThrow()
                     memory.lastSleepToggleAt = now
                     memory.guard = null
+                    memory.feedback = TileFeedback(TileFeedbackKind.SLEEP_STARTED, sleep.id, sleep.startMillis, now + TILE_FEEDBACK_MILLIS, sleep.babyId)
                     XHaptic.TOGGLE_ON
                 }
                 error is AlreadyRunningException -> guard(GuardKind.ALREADY_ASLEEP, now)

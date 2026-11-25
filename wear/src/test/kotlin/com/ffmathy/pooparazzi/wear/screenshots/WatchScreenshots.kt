@@ -221,6 +221,24 @@ abstract class WatchScreenshots(private val lang: String) {
         )
     }
 
+    /** Start sleep tapped: "Asleep at 14:32" on a tonal pill (tap it, or turn the crown, to move it), and Undo. */
+    @Test
+    fun s09g_loggedSleepStarted() = capture("09g-logged-sleep-started", SampleData.NOW_1432, timeText = false) {
+        LoggedScreen(WearSamples.receiptSleepStarted(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
+    }
+
+    /** Woke up on Main: "Woke up at 14:32" / "Slept 42m" (checked by eye, not in the tour). */
+    @Test
+    fun s09i_loggedWokeUpSleep() = capture("09i-logged-woke-up-sleep", SampleData.NOW_1432, timeText = false) {
+        LoggedScreen(WearSamples.receiptWokeUp(), WearSamples.syncAt1431, onUndo = {}, onDismiss = {}, onTimeout = {})
+    }
+
+    /** The sleep's start moved back 10 minutes: "Asleep · −10m", 14:22, in the sleep colour. */
+    @Test
+    fun s09h_timeSleepStarted() = capture("09h-time-sleep-started", SampleData.NOW_1432) {
+        TimeScreen(WearSamples.timeDraftSleepStarted(), onShift = {}, onDone = {})
+    }
+
     // ---- Beyond the tour: states worth checking by eye -----------------------------------------
 
     /** A tap within 2 s of a toggle: "Already / asleep" on the EdgeButton, no state change (DESIGN_SPEC §3.5.2). */

@@ -251,6 +251,11 @@ private class TileContent(
         val undoHint = { said: String -> res.getString(R.string.tile_cd_logged, said) }
         val atTime = { said: String, time: String -> res.getString(CoreR.string.receipt_at_time, said, time) }
         return when (feedback.kind) {
+            TileFeedbackKind.SLEEP_STARTED -> {
+                val time = text.clock(feedback.atMillis)
+                val label = res.getString(R.string.logged_fell_asleep)
+                Confirmation(XDrawables.check, events.sleep.strong, label, time, undoHint(atTime(label, time)))
+            }
             TileFeedbackKind.WOKE_UP -> {
                 val time = text.clock(feedback.atMillis)
                 val label = res.getString(CoreR.string.action_woke_up)

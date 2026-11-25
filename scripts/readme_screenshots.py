@@ -112,6 +112,8 @@ WATCH = {
     "09-logged.png": "logged",
     "09e-logged-woke-up.png": "logged-woke-up",
     "09f-logged-diaper-woke-up.png": "logged-diaper-woke-up",
+    "09g-logged-sleep-started.png": "logged-sleep-started",
+    "09h-time-sleep-started.png": "time-sleep-started",
     "09b-time.png": "time",
     "15-undone.png": "undone",
     "12-tile.png": "tile",

@@ -85,6 +85,10 @@ class TileActionsTest {
         assertEquals(XHaptic.TOGGLE_ON, tap(TileAction.SLEEP_START))
         val sleep = sleeps().single()
         assertTrue(sleep.isRunning)
+        // Confirmed with Undo for 10 s; the background opens Logged, where its time can be moved.
+        assertEquals(TileFeedbackKind.SLEEP_STARTED, memory.feedback?.kind)
+        assertEquals(sleep.id, memory.feedback?.entryId)
+        assertEquals(sleep.startMillis, memory.feedback?.atMillis)
 
         // A second tap within 2 s: "Already asleep" for 2 s, nothing changes.
         clock.advanceBy(1_500)
