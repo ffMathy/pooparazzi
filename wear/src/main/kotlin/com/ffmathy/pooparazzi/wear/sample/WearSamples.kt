@@ -121,6 +121,22 @@ object WearSamples {
         return Receipt(ReceiptKind.FEED_LOGGED, entry, Undo.Delete(entry.id), zone)
     }
 
+    /** "Asleep at 14:32": Start sleep tapped on Main; the time can be moved, Undo removes the sleep. */
+    fun receiptSleepStarted(): Receipt {
+        val entry = Entry.sleep(SampleData.NOW_1432, id = "sample-sleep-1432")
+        return Receipt(ReceiptKind.SLEEP_STARTED, entry, Undo.Delete(entry.id), zone)
+    }
+
+    /** "Woke up at 14:32" / "Slept 42m": Woke up tapped on Main after a nap since 13:50. */
+    fun receiptWokeUp(): Receipt {
+        val entry = Entry.sleep(SampleData.at(13, 50), SampleData.NOW_1432, id = "sample-nap-1350")
+        return Receipt(ReceiptKind.WOKE_UP, entry, Undo.Restore(entry.copy(endMillis = null)), zone)
+    }
+
+    /** The time tapped on Logged for the 14:32 sleep start, the crown turned back 10 minutes: "Asleep · −10m". */
+    fun timeDraftSleepStarted(): TimeDraft =
+        TimeDraft(TimeTitle.SLEEP_STARTED, base = SampleData.NOW_1432, zone = zone, offsetMinutes = -10)
+
     /** "Pee + poop at 14:32". */
     fun receiptDiaper(): Receipt {
         val entry = Entry.diaper(SampleData.NOW_1432, pee = true, poop = true, PoopColor.YELLOW, PoopTexture.SEEDY, id = "sample-both-1432")
@@ -148,6 +164,14 @@ object WearSamples {
         val nap = Entry.sleep(SampleData.at(13, 50), SampleData.NOW_1432, id = "sample-nap-1350")
         val summary = summarize(SampleData.history() + nap, SampleData.NOW_1432, zone)
         val feedback = TileFeedback(TileFeedbackKind.WOKE_UP, nap.id, SampleData.NOW_1432, SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS)
+        return TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null)
+    }
+
+    /** Start sleep on the tile at 14:32: "Asleep 14:32 · Undo" for 10 s; the background opens Logged. */
+    fun tileSleepStarted(): TileUiState {
+        val sleep = Entry.sleep(SampleData.NOW_1432, id = "sample-sleep-1432")
+        val summary = summarize(SampleData.history() + sleep, SampleData.NOW_1432, zone)
+        val feedback = TileFeedback(TileFeedbackKind.SLEEP_STARTED, sleep.id, SampleData.NOW_1432, SampleData.NOW_1432 + TILE_FEEDBACK_MILLIS)
         return TileUiState.from(summary, SampleData.BABY_NAME, feedback, guard = null)
     }
 

@@ -92,9 +92,9 @@ Logs offline and syncs with the phone. A Tile, four complications and an Ongoing
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/watch-main-after-breast.png" width="170" alt="Watch main after a breast feed"> | <img src="docs/screenshots/en/watch-main-large-font.png" width="170" alt="Watch main at a large font size"> | <img src="docs/screenshots/en/watch-main-small.png" width="170" alt="Watch main on a small watch"> | <img src="docs/screenshots/en/watch-complications-asleep.png" width="170" alt="Watch complications while asleep: 1h 32m since the feed, 1h 20m since the pee, asleep 1h 07m, and Asleep 1h 07m · Fed 1h 32m ago"> |
 
-| Undone | Diaper while asleep |
-|:---:|:---:|
-| <img src="docs/screenshots/en/watch-undone.png" width="170" alt="Watch undone"> | <img src="docs/screenshots/en/watch-logged-diaper-woke-up.png" width="170" alt="Watch logged pee at 03:12 during a sleep: Woke up too, and Undo"> |
+| Undone | Diaper while asleep | Sleep started | Move the sleep's start |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/en/watch-undone.png" width="170" alt="Watch undone"> | <img src="docs/screenshots/en/watch-logged-diaper-woke-up.png" width="170" alt="Watch logged pee at 03:12 during a sleep: Woke up too, and Undo"> | <img src="docs/screenshots/en/watch-logged-sleep-started.png" width="170" alt="Watch Logged after Start sleep: Asleep at 14:32 on a tonal pill with a clock, and Undo"> | <img src="docs/screenshots/en/watch-time-sleep-started.png" width="170" alt="Watch Time screen for a sleep's start: Asleep · −10m over 14:22, −5m and +5m buttons and Done"> |
 
 ## Several babies
 

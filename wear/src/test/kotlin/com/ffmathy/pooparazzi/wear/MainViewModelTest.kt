@@ -292,6 +292,44 @@ class MainViewModelTest {
     }
 
     @Test
+    fun theTimeOnLoggedMovesASleepStartButNotOntoTheSleepBefore() = test {
+        // A nap that ended 20 minutes ago.
+        val nap = repo.startSleep(at(13, 0)).getOrThrow()
+        repo.endSleep(nap.id, SampleData.NOW_1432 - 20 * minute)
+        vm.toggleSleep(shownSleepId = null).join()
+        val started = present(vm.receipt.value)
+        assertEquals(ReceiptKind.SLEEP_STARTED, started.kind)
+        awaitMain { it.runningSleep != null }
+
+        assertTrue(vm.beginReceiptTime())
+        assertEquals(TimeTitle.SLEEP_STARTED, vm.timeDraft.value?.title)
+        assertEquals("not into the future", 0, vm.timeDraft.value?.maxOffset)
+        vm.shiftTime(-60)
+        assertEquals("back to the nap's end at the most", -20, vm.timeDraft.value?.offsetMinutes)
+        vm.shiftTime(5)
+        vm.saveTime().join()
+
+        val running = repo.get(started.entry.id)!!
+        assertEquals(SampleData.NOW_1432 - 15 * minute, running.startMillis)
+        assertNull("still running", running.endMillis)
+        assertEquals(running.startMillis, vm.receipt.value?.entry?.startMillis)
+
+        // Undo removes the sleep.
+        vm.undo().join()
+        assertTrue(repo.get(started.entry.id)!!.deleted)
+    }
+
+    @Test
+    fun theTileOpensLoggedForARunningSleep() = test {
+        val sleep = repo.startSleep(SampleData.NOW_1432).getOrThrow()
+        vm.openReceipt(sleep.id, fromTile = true).join()
+        val receipt = present(vm.receipt.value)
+        assertEquals(ReceiptKind.SLEEP_STARTED, receipt.kind)
+        assertEquals(Undo.Delete(sleep.id), receipt.undo)
+        assertTrue(vm.beginReceiptTime())
+    }
+
+    @Test
     fun aCancelledSleepHasNoTimeToChange() = test {
         vm.toggleSleep(shownSleepId = null).join()
         val sleep = present(awaitMain { it.runningSleep != null }.runningSleep)
@@ -702,6 +740,10 @@ class MainViewModelTest {
         val sleep = awaitMain { it.runningSleep != null }
         assertEquals(MainMode.ASLEEP, sleep.mode)
         assertEquals(listOf(XHaptic.TOGGLE_ON), haptics())
+        val started = present(vm.receipt.value)
+        assertEquals(ReceiptKind.SLEEP_STARTED, started.kind)
+        assertEquals(Undo.Delete(started.entry.id), started.undo)
+        awaitEvent(WearEvent.ShowLogged)
 
         clock.advanceBy(67 * minute)
         vm.toggleSleep(sleep.runningSleep?.id).join()
@@ -767,7 +809,8 @@ class MainViewModelTest {
         assertEquals(1, stored().size)
         assertNull(stored().single { it.id == sleep.id }.takeIf { it.isRunning })
         assertEquals(XHaptic.REJECT, haptics().last())
-        assertNull(vm.receipt.value)
+        // No Woke up receipt: the only one is still the watch's own "Asleep at …" from the start.
+        assertEquals(ReceiptKind.SLEEP_STARTED, vm.receipt.value?.kind)
     }
 
     @Test

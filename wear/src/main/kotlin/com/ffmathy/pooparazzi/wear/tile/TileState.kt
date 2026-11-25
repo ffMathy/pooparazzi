@@ -18,6 +18,9 @@ const val TILE_GUARD_MILLIS = 2_000L
 
 /** What a tile log confirms in the title for [TILE_FEEDBACK_MILLIS]. */
 enum class TileFeedbackKind {
+    /** A sleep started from the tile: "Asleep 14:32 · Undo"; the background opens Logged to move its time. */
+    SLEEP_STARTED,
+
     /** A sleep ended from the tile: "Woke up 14:40 · Undo". */
     WOKE_UP,
 
@@ -111,6 +114,7 @@ data class TileUiState(
                 // The discarded sleep is soft-deleted, so it is missing from the entries until Undo restores it.
                 TileFeedbackKind.SLEEP_CANCELLED -> entry == null
                 TileFeedbackKind.WOKE_UP -> entry?.endMillis != null
+                TileFeedbackKind.SLEEP_STARTED -> entry != null && entry.endMillis == null
             }
         }
 

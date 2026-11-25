@@ -268,7 +268,8 @@ private fun ReceiptCircle(receipt: Receipt, ambient: Boolean, size: Dp) {
     val kind = receipt.entry.diaperKind
     val (fill, split, iconColor) = when (receipt.kind) {
         ReceiptKind.FEED_LOGGED -> Triple(events.feed.container, null, events.feed.strong)
-        ReceiptKind.WOKE_UP, ReceiptKind.SLEEP_CANCELLED -> Triple(events.sleep.container, null, events.sleep.strong)
+        ReceiptKind.SLEEP_STARTED, ReceiptKind.WOKE_UP, ReceiptKind.SLEEP_CANCELLED ->
+            Triple(events.sleep.container, null, events.sleep.strong)
         ReceiptKind.DIAPER_LOGGED -> when (kind) {
             DiaperKind.POOP -> Triple(events.poop.container, null, events.poop.strong)
             DiaperKind.BOTH -> Triple(events.bothStartContainer, events.bothEndContainer, events.pee.strong)
@@ -317,6 +318,8 @@ private fun ReceiptTitle(
             withTime(feedTypeLabel(entry, compact = true), entry.startMillis, f, events.feed.strong, ambient)
         ReceiptKind.DIAPER_LOGGED ->
             withTime(stringResource(Labels.diaperKind(entry.diaperKind ?: DiaperKind.PLAIN)), entry.startMillis, f, events.diaper.text, ambient)
+        ReceiptKind.SLEEP_STARTED ->
+            withTime(stringResource(R.string.logged_fell_asleep), entry.startMillis, f, events.sleep.text, ambient)
         ReceiptKind.WOKE_UP ->
             withTime(stringResource(CoreR.string.action_woke_up), entry.endMillis ?: entry.startMillis, f, events.sleep.text, ambient)
         ReceiptKind.SLEEP_CANCELLED -> AnnotatedString(stringResource(CoreR.string.receipt_sleep_cancelled))
@@ -418,7 +421,7 @@ private fun receiptDetails(receipt: Receipt, f: Formatters): Line? {
         ReceiptKind.FEED_LOGGED -> entry.breastSide?.takeIf { entry.isBreastfeed }?.let { side ->
             Line(stringResource(Labels.side(side)).keepSidesTogether(), stringResource(SpokenLabels.side(side)))
         } ?: bottleLine(entry, f)
-        ReceiptKind.DIAPER_LOGGED -> null
+        ReceiptKind.DIAPER_LOGGED, ReceiptKind.SLEEP_STARTED -> null
     }
 }
 

@@ -96,12 +96,12 @@ data class MainUiState(
 }
 
 /** The Time screen's title, which also gives the time its event colour. */
-enum class TimeTitle { FEED, DIAPER, WOKE_UP }
+enum class TimeTitle { FEED, DIAPER, SLEEP_STARTED, WOKE_UP }
 
 /**
  * The Time screen (W4), opened from Logged only (tap its time, or turn the crown there): the logged entry's time, as
  * whole minutes from [base] (the time Logged shows), between [minOffset] and [maxOffset] (never in the future, never
- * past the sleep's start). The crown moves it by a minute per step, the buttons by 5; nothing is applied until Done.
+ * past the sleep's start or end, and never onto another sleep). The crown moves it by a minute per step, the buttons by 5; nothing is applied until Done.
  * It is the only way to move a watch log's time: the pickers log at the time of the Feed or Diaper tap.
  */
 @Immutable
@@ -183,7 +183,7 @@ data class DiaperDraft(
 )
 
 /** What a Logged confirmation is for (DESIGN_SPEC §3.5.6, V1_ADDITIONS §2.2, §3.2). */
-enum class ReceiptKind { FEED_LOGGED, DIAPER_LOGGED, WOKE_UP, SLEEP_CANCELLED }
+enum class ReceiptKind { FEED_LOGGED, DIAPER_LOGGED, SLEEP_STARTED, WOKE_UP, SLEEP_CANCELLED }
 
 /** How Undo reverts a receipt. */
 sealed interface Undo {

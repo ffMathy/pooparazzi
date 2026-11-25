@@ -21,6 +21,8 @@
     <!-- Logged -->
     <string name="logged_already_logged">Already logged</string>
     <!-- Logged after a feed or diaper during a sleep, which ended it at the same time (DESIGN_SPEC §4.4) -->
+    <!-- A sleep started on the watch: "Asleep at 14:32" (Logged), "Asleep 14:32 · Undo" (tile), the Time screen title -->
+    <string name="logged_fell_asleep">Asleep</string>
     <string name="logged_woke_up_too">Woke up too</string>
     <!-- As logged_woke_up_too, for a sleep under a minute old, which is discarded instead -->
     <string name="logged_sleep_cancelled_too">Sleep cancelled too</string>

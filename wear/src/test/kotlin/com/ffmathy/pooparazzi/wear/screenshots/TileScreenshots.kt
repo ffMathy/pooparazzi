@@ -97,6 +97,14 @@ abstract class TileScreenshots(private val lang: String) {
     @Test
     fun s12i_tileSmallJustLogged() = capture("12i-tile-small-just-logged", WearSamples.tileJustLogged(), sizeDp = 192)
 
+    /** Start sleep on the tile: "Asleep 14:32 · Undo"; the background opens Logged, where the time moves. */
+    @Test
+    fun s12l_tileSleepStarted() = capture("12l-tile-sleep-started", WearSamples.tileSleepStarted())
+
+    /** The same on a 192 dp watch: the confirmation takes the toggle's first line ("Asleep 14:32"). */
+    @Test
+    fun s12m_tileSmallSleepStarted() = capture("12m-tile-small-sleep-started", WearSamples.tileSleepStarted(), sizeDp = 192)
+
     /** Below 225 dp, the longest confirmation on the sleep toggle: "Sleep cancelled". */
     @Test
     fun s12k_tileSmallSleepCancelled() = capture("12k-tile-small-sleep-cancelled", WearSamples.tileSleepCancelled(), sizeDp = 192)

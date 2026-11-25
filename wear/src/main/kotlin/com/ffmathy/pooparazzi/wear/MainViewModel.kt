@@ -290,7 +290,9 @@ class MainViewModel(
                 error == null -> {
                     lastSleepToggleAt = now
                     clearGuard()
-                    haptic(XHaptic.TOGGLE_ON)
+                    // Logged "Asleep at 14:32", like a feed or diaper: its time can be moved, and Undo removes it.
+                    val sleep = started.getOrThrow()
+                    showReceipt(ReceiptKind.SLEEP_STARTED, sleep, Undo.Delete(sleep.id), haptic = XHaptic.TOGGLE_ON)
                 }
                 error is AlreadyRunningException -> showGuard(GuardKind.ALREADY_ASLEEP, GuardTarget.SLEEP_TOGGLE)
                 else -> throw error
@@ -356,8 +358,9 @@ class MainViewModel(
 
     /**
      * The time on Logged was tapped, or the crown turned: opens the Time screen at the logged time (a feed's or
-     * diaper's time, a sleep's wake time). It can move up to now, and a wake time no earlier than a minute after the
-     * sleep began. Returns false when the receipt has no time to change ("Sleep cancelled").
+     * diaper's time, a sleep's start or wake time). It can move up to now; a wake time no earlier than a minute after
+     * the sleep began; and a sleep's start or wake time never onto another sleep (sleeps never overlap). Returns false
+     * when the receipt has no time to change ("Sleep cancelled").
      */
     fun beginReceiptTime(): Boolean {
         val receipt = _receipt.value ?: return false
@@ -365,17 +368,33 @@ class MainViewModel(
         val (title, base) = when (receipt.kind) {
             ReceiptKind.FEED_LOGGED -> TimeTitle.FEED to entry.startMillis
             ReceiptKind.DIAPER_LOGGED -> TimeTitle.DIAPER to entry.startMillis
+            ReceiptKind.SLEEP_STARTED -> TimeTitle.SLEEP_STARTED to entry.startMillis
             ReceiptKind.WOKE_UP -> TimeTitle.WOKE_UP to (entry.endMillis ?: return false)
             ReceiptKind.SLEEP_CANCELLED -> return false
         }
         val now = clock.now()
-        val earliest = if (receipt.kind == ReceiptKind.WOKE_UP) entry.startMillis + MINUTE else base - MAX_SHIFT_MILLIS
+        val otherSleeps = log.value?.entries.orEmpty().filter { it.isSleep && !it.deleted && it.id != entry.id }
+        var earliest = base - MAX_SHIFT_MILLIS
+        var latest = now
+        when (receipt.kind) {
+            ReceiptKind.SLEEP_STARTED -> {
+                // Back to the end of the sleep before it at most; a running sleep's start stays before now.
+                otherSleeps.filter { it.startMillis < base }.mapNotNull { it.endMillis }.maxOrNull()?.let { earliest = maxOf(earliest, it) }
+                entry.endMillis?.let { latest = minOf(latest, it - MINUTE) }
+            }
+            ReceiptKind.WOKE_UP -> {
+                earliest = entry.startMillis + MINUTE
+                // Up to the start of the sleep after it at most.
+                otherSleeps.filter { it.startMillis >= entry.startMillis }.minOfOrNull { it.startMillis }?.let { latest = minOf(latest, it) }
+            }
+            else -> Unit
+        }
         _timeDraft.value = TimeDraft(
             title = title,
             base = base,
             zone = receipt.zone,
             minOffset = ceilMinutes(earliest - base).coerceIn(-MAX_SHIFT_MINUTES, 0),
-            maxOffset = Math.floorDiv(now - base, MINUTE).toInt().coerceIn(0, MAX_SHIFT_MINUTES),
+            maxOffset = Math.floorDiv(latest - base, MINUTE).toInt().coerceIn(0, MAX_SHIFT_MINUTES),
         )
         return true
     }
@@ -399,7 +418,8 @@ class MainViewModel(
         restoreOnFailure(_timeDraft, draft) {
             val receipt = _receipt.value ?: return@restoreOnFailure
             if (draft.offsetMinutes != 0) {
-                val entry = receipt.entry
+                // The stored version, so a change made meanwhile (e.g. the sleep ended on the phone) is kept.
+                val entry = repository.get(receipt.entry.id)?.takeUnless { it.deleted } ?: receipt.entry
                 val moved = if (draft.title == TimeTitle.WOKE_UP) entry.copy(endMillis = draft.at) else entry.copy(startMillis = draft.at)
                 val updated = repository.update(moved)
                 moveWake(receipt.woke, draft.at)
@@ -414,7 +434,8 @@ class MainViewModel(
 
     /**
      * Opens Logged for an existing entry, e.g. from the Tile's undo path ([fromTile]: Undo is active at once).
-     * Instants (feeds, breastfeeds included, and diapers) undo by deletion; an ended sleep by restoring it as running,
+     * Instants (feeds, breastfeeds included, and diapers) and a running sleep ("Asleep") undo by deletion; an
+     * ended sleep by restoring it as running,
      * and so does a sleep discarded as a mis-tap ("Sleep cancelled" on the tile, DESIGN_SPEC §4.4: with Undo on phone
      * and watch).
      */
@@ -428,6 +449,7 @@ class MainViewModel(
         val (kind, undo) = when {
             entry.kind == EntryKind.DIAPER -> ReceiptKind.DIAPER_LOGGED to Undo.Delete(entry.id)
             entry.isSleep && entry.endMillis != null -> ReceiptKind.WOKE_UP to Undo.Restore(entry.copy(endMillis = null))
+            entry.isSleep -> ReceiptKind.SLEEP_STARTED to Undo.Delete(entry.id)
             !entry.isInterval -> ReceiptKind.FEED_LOGGED to Undo.Delete(entry.id)
             else -> return@action
         }
