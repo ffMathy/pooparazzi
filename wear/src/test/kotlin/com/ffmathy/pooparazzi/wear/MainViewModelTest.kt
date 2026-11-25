@@ -809,7 +809,8 @@ class MainViewModelTest {
         assertEquals(1, stored().size)
         assertNull(stored().single { it.id == sleep.id }.takeIf { it.isRunning })
         assertEquals(XHaptic.REJECT, haptics().last())
-        assertNull(vm.receipt.value)
+        // No Woke up receipt: the only one is still the watch's own "Asleep at …" from the start.
+        assertEquals(ReceiptKind.SLEEP_STARTED, vm.receipt.value?.kind)
     }
 
     @Test
