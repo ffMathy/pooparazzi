@@ -97,8 +97,12 @@ enum class ForecastKind { FEED, POOP, SLEEP }
  *  - from [ForecastRules.BREASTFED_POOP_AGE_DAYS], a breastfed baby ([isBreastfed]) gets no estimate from the gaps
  *    between poops: days without one are normal then, and an estimate would only worry. The poop after a feed still
  *    shows while it holds.
+ *
+ * [keepStale] keeps an estimate whose stretch has already run far past every comparable one (step 3's last test): what
+ * the week expected is still the best guess at when a forgotten log happened, so Home offers it as a time ("Expected
+ * 11:30") on its sheets. The poop after a feed is dropped either way.
  */
-fun forecast(summary: Summary, birthDate: LocalDate? = null): Forecast {
+fun forecast(summary: Summary, birthDate: LocalDate? = null, keepStale: Boolean = false): Forecast {
     val now = summary.now
     val zone = summary.zone
     val since = now - ForecastRules.LOOKBACK_DAYS * DAY_MILLIS
@@ -113,15 +117,15 @@ fun forecast(summary: Summary, birthDate: LocalDate? = null): Forecast {
         ageDays != null && ageDays < ForecastRules.MIN_SLEEP_AGE_DAYS -> null
         running != null -> {
             val durations = sleeps.map { Stretch(it.startMillis, it.endMillis!! - it.startMillis) }
-            expect(durations, running.startMillis, now, zone, byTimeOfDay = true)
+            expect(durations, running.startMillis, now, zone, byTimeOfDay = true, keepStale)
         }
-        else -> summary.lastSleepEnd?.let { wokeAt -> expect(wakeWindows(sleeps), wokeAt, now, zone, byTimeOfDay = true) }
+        else -> summary.lastSleepEnd?.let { wokeAt -> expect(wakeWindows(sleeps), wokeAt, now, zone, byTimeOfDay = true, keepStale) }
     }
-    val feed = feeds.lastOrNull()?.let { expect(gaps(feeds), it.startMillis, now, zone, byTimeOfDay = true) }
+    val feed = feeds.lastOrNull()?.let { expect(gaps(feeds), it.startMillis, now, zone, byTimeOfDay = true, keepStale) }
     val byGaps = !(ageDays != null && ageDays >= ForecastRules.BREASTFED_POOP_AGE_DAYS && isBreastfed(feeds))
     val poop = (summary.entries.lastOrNull { it.kind == EntryKind.DIAPER && it.poop })
         ?.takeIf { byGaps }
-        ?.let { expect(gaps(poops), it.startMillis, now, zone, byTimeOfDay = false) }
+        ?.let { expect(gaps(poops), it.startMillis, now, zone, byTimeOfDay = false, keepStale) }
         ?: poopAfterFeed(feeds, poops, now, zone)
     return Forecast(sleep, feed, poop)
 }
@@ -201,7 +205,14 @@ private fun wakeWindows(sleeps: List<Entry>): List<Stretch> = sleeps.zipWithNext
 private fun gaps(instants: List<Entry>): List<Stretch> = instants.zipWithNext { a, b -> Stretch(a.startMillis, b.startMillis - a.startMillis) }
     .filter { it.lengthMillis >= ForecastRules.MIN_GAP_MILLIS && (instants.first().kind != EntryKind.FEED || it.lengthMillis <= ForecastRules.MAX_GAP_MILLIS) }
 
-private fun expect(stretches: List<Stretch>, startMillis: Long, now: Long, zone: ZoneId, byTimeOfDay: Boolean): Expected? {
+private fun expect(
+    stretches: List<Stretch>,
+    startMillis: Long,
+    now: Long,
+    zone: ZoneId,
+    byTimeOfDay: Boolean,
+    keepStale: Boolean = false,
+): Expected? {
     fun enough(candidates: List<Stretch>) = candidates.size >= ForecastRules.MIN_SAMPLES &&
         candidates.map { localDate(it.startMillis, zone) }.distinct().size >= ForecastRules.MIN_DAYS
     val comparable = if (byTimeOfDay) {
@@ -218,7 +229,7 @@ private fun expect(stretches: List<Stretch>, startMillis: Long, now: Long, zone:
     if (weightedQuantile(weighted, 0.75) - weightedQuantile(weighted, 0.25) > ForecastRules.MAX_SPREAD * median) return null
     // Far longer than any stretch of the week: logging has stopped (or this one was forgotten), so say nothing.
     val goneAt = startMillis + STALE_FACTOR * lengths.last()
-    if (now > goneAt) return null
+    if (now > goneAt && !keepStale) return null
     return Expected(startMillis + median.toLong(), goneAtMillis = goneAt, samples = lengths.size)
 }
 

@@ -56,6 +56,7 @@ internal class ReceiptSheetCallbacks(
     val onEndSleep: () -> Unit,
     val onEdit: (String) -> Unit,
     val onDone: () -> Unit,
+    val onExpected: () -> Unit = {},
 )
 
 /**
@@ -107,6 +108,7 @@ internal fun ReceiptSheetContent(sheet: HomeSheetUi.Receipt, zone: ZoneId, forma
         if (sheet.chips.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
             SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
+            sheet.expected?.let { ExpectedChip(it, zone, formatters, readiness, callbacks.onExpected) }
         }
         sheet.endSleep?.let { enabled ->
             Spacer(Modifier.height(8.dp))

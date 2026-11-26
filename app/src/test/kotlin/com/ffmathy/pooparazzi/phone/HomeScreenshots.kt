@@ -84,6 +84,10 @@ abstract class HomeScreenshots(private val language: String) {
 
     @Test fun feedSheet() = sheet("06-feed-sheet", night = true, HomeSamples.feedSheet())
 
+    @Test fun feedSheetExpected() = sheet("06b-feed-sheet-expected", night = false, HomeSamples.feedSheetExpected())
+
+    @Test fun sleepStartedLate() = sheet("05b-home-receipt-expected", night = false, HomeSamples.sleepStartedLate())
+
     @Test fun breastSheet() = sheet("07-breast-sheet", night = false, HomeSamples.breastSheet())
 
     @Test fun breastSheetTicked() = sheet("07-breast-sheet-ticked", night = true, HomeSamples.breastSheet(listOf(Breast.RIGHT, Breast.LEFT)))

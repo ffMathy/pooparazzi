@@ -38,6 +38,16 @@ class ForecastTest {
     }
 
     @Test
+    fun aForgottenStretchKeepsItsEstimateOnlyWhenAskedTo() {
+        // The last feed at 12:00 and nothing since: by 20:00 the gap is far past every 3 h one, so Home drops the
+        // estimate, but a sheet asking when the forgotten feed most likely was still gets 15:00.
+        val feeds = feedsEvery3h(at(6, 12))
+        val now = at(6, 20)
+        assertNull(forecastAt(feeds, now).feed)
+        assertEquals(at(6, 15), forecast(summarize(feeds, now, ZONE), keepStale = true).feed!!.atMillis)
+    }
+
+    @Test
     fun underFiveMinutesAwayIsSoon() {
         val now = at(6, 14, 57)
         val f = forecastAt(feedsEvery3h(at(6, 12)), now).feed!!

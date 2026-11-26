@@ -57,7 +57,9 @@ import com.ffmathy.pooparazzi.core.ui.type.PhoneType
 import com.ffmathy.pooparazzi.phone.R
 import com.ffmathy.pooparazzi.phone.ui.components.ConnectedChoiceGroup
 import com.ffmathy.pooparazzi.phone.ui.components.OffsetChipRow
+import com.ffmathy.pooparazzi.phone.ui.components.XChip
 import com.ffmathy.pooparazzi.phone.ui.history.spokenSideCapitalised
+import com.ffmathy.pooparazzi.phone.ui.home.ExpectedChipUi
 import com.ffmathy.pooparazzi.phone.ui.home.HomeSheetUi
 import com.ffmathy.pooparazzi.phone.ui.home.OffsetChipUi
 import com.ffmathy.pooparazzi.phone.ui.home.feedTypeLabel
@@ -76,6 +78,7 @@ internal class FeedSheetCallbacks(
     val onAmount: (Int?) -> Unit,
     val onLogBottle: () -> Unit,
     val onCancel: () -> Unit,
+    val onExpected: () -> Unit = {},
 )
 
 /**
@@ -108,6 +111,7 @@ internal fun FeedSheetContent(
         )
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
+        sheet.expected?.let { ExpectedChip(it, zone, formatters, readiness, callbacks.onExpected) }
         if (sheet.wakes) WakeNote()
         Spacer(Modifier.height(12.dp))
         if (sheet.breast) {
@@ -439,6 +443,27 @@ internal fun SheetChipRow(chips: List<OffsetChipUi>, formatters: Formatters, rea
         onOffset,
         modifier = Modifier.alpha(readiness.alpha),
         acceptsTaps = readiness.ready,
+    )
+}
+
+/**
+ * "Expected 11:30" under the nudge chips (V1_ADDITIONS §9): a hugging chip with `upcoming` 18 before the label; a tap
+ * moves the sheet's time to what the past week expected, for a log that was forgotten. Selected (the time is there) it
+ * shows the check, and a second tap returns to the base time.
+ */
+@Composable
+internal fun ExpectedChip(expected: ExpectedChipUi, zone: ZoneId, formatters: Formatters, readiness: PickerReadiness, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val time = formatters.clock.format(expected.atMillis, zone)
+    XChip(
+        selected = expected.selected,
+        onClick = onClick,
+        label = stringResource(R.string.sheet_expected, time),
+        role = Role.Checkbox,
+        acceptsTaps = readiness.ready,
+        modifier = Modifier.alpha(readiness.alpha),
+        // Selected, the check stands where the icon was.
+        leading = { if (!expected.selected) XIcon(XIcons.upcoming, contentDescription = null, tint = colors.onSurface, size = 18.dp) },
     )
 }
 

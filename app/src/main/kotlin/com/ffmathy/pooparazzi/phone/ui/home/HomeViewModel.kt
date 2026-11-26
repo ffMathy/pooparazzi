@@ -326,7 +326,22 @@ class HomeViewModel(
 
     // ---- Sheets -------------------------------------------------------------------------------
 
-    override fun onSheetOffset(minutes: Int) = act {
+    override fun onSheetOffset(minutes: Int) = act { applyOffset(minutes) }
+
+    /**
+     * "Expected 11:30" under a sheet's chips: its time moves to the estimate, as if the chips had been tapped there; a
+     * second tap (the chip selected) returns it to the base time.
+     */
+    override fun onSheetExpected() = act {
+        val current = sheet.value ?: return@act
+        val born = settings.current().selectedBaby.born
+        val at = HomeStateBuilder.expectedAt(current, repository.observeEntries().first(), zone, born) ?: return@act
+        val offset = HomeStateBuilder.offsetTo(current, at)
+        val target = if (current.offsetMinutes == offset) 0 else offset
+        if (target != current.offsetMinutes) applyOffset(target - current.offsetMinutes)
+    }
+
+    private suspend fun applyOffset(minutes: Int) {
         when (val current = sheet.value) {
             null -> Unit
             is SheetModel.Receipt -> receiptOffset(current, minutes)
@@ -336,7 +351,7 @@ class HomeViewModel(
                 val next = current.offsetMinutes + minutes
                 if (current.stamp + next * MINUTE_MILLIS > clock.now()) {
                     haptic(HomeHaptic.REJECT)
-                    return@act
+                    return
                 }
                 sheet.value = when (current) {
                     is SheetModel.Feed -> current.copy(offsetMinutes = next)

@@ -4,6 +4,7 @@
     <string name="cd_back">Tilbage</string>
     <string name="cd_close">Luk</string>
     <string name="cd_woke_up_end_sleep">Vågnede, afslut søvn</string>
+    <string name="sheet_expected">Forventet kl. %1$s</string>
     <string name="sheet_wakes_note">Vågnede bliver også registreret</string>
 
     <string name="lamp_no_feed">Ingen måltider endnu</string>
@@ -169,6 +170,8 @@
     <string name="notification_channel_timers">Søvn i gang</string>
     <string name="notification_channel_timers_description">Viser en igangværende søvn med Vågnede og lader dig bagefter rykke opvågningen</string>
     <string name="notification_asleep_title">%1$s sover</string>
+    <string name="notification_woke_by_feed">Måltidet afsluttede søvnen</string>
+    <string name="notification_woke_by_diaper">Bleskiftet afsluttede søvnen</string>
     <string name="notification_woke_up_title">%1$s vågnede kl. %2$s</string>
     <string name="notification_metric_asleep_for">Har sovet</string>
     <string name="notification_metric_since">Siden</string>
