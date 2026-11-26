@@ -53,6 +53,7 @@ internal fun HomeSheets(
                 onAmount = actions::onBottleAmount,
                 onLogBottle = actions::onLogBottle,
                 onCancel = actions::onSheetDismiss,
+                onExpected = actions::onSheetExpected,
             ),
         )
     }
@@ -81,6 +82,7 @@ internal fun HomeSheets(
             onEdit = actions::onSheetEdit,
             onSave = actions::onAdjustSave,
             onCancel = actions::onSheetDismiss,
+            onExpected = actions::onSheetExpected,
         )
     }
     XModalSheet(
@@ -98,6 +100,7 @@ internal fun HomeSheets(
             onEndSleep = actions::onEndSleep,
             onEdit = actions::onSheetEdit,
             onDone = actions::onReceiptDone,
+            onExpected = actions::onSheetExpected,
         )
     }
     XModalSheet(

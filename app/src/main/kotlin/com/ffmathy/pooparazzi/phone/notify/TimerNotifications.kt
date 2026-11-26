@@ -25,6 +25,7 @@ import com.ffmathy.pooparazzi.core.format.RelativePhrases
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.DiaperKind
 import com.ffmathy.pooparazzi.core.model.Entry
+import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
 import com.ffmathy.pooparazzi.core.model.diaperKind
 import com.ffmathy.pooparazzi.core.model.isBreastfeed
@@ -154,14 +155,15 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
 
     /**
      * The woke-up notification of [sleep], ended from the notification: its wake-up time moved [offsetMinutes] from
-     * [baseMillis] (the time "Woke up" was tapped), with the offsets that are still possible.
+     * [baseMillis] (the time "Woke up" was tapped), with the offsets that are still possible. [cause] is the feed or
+     * diaper whose log ended the sleep (DESIGN_SPEC §4.4), which the notification names; null for Woke up itself.
      */
-    fun renderWokeUp(state: TimerState, sleep: Entry, baseMillis: Long, offsetMinutes: Int) {
+    fun renderWokeUp(state: TimerState, sleep: Entry, baseMillis: Long, offsetMinutes: Int, cause: Entry? = null) {
         if (sleep.endMillis == null || sleep.deleted) {
             manager.cancel(tagFor(sleep.babyId), WOKE_UP_ID)
             return
         }
-        post(tagFor(sleep.babyId), WOKE_UP_ID, state) { buildWokeUp(state, sleep, baseMillis, offsetMinutes) }
+        post(tagFor(sleep.babyId), WOKE_UP_ID, state) { buildWokeUp(state, sleep, baseMillis, offsetMinutes, cause) }
     }
 
     private fun post(tag: String?, id: Int, state: TimerState, build: () -> Notification): Boolean {
@@ -259,7 +261,7 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
     }
 
     @VisibleForTesting
-    internal fun buildWokeUp(state: TimerState, sleep: Entry, baseMillis: Long, offsetMinutes: Int): Notification {
+    internal fun buildWokeUp(state: TimerState, sleep: Entry, baseMillis: Long, offsetMinutes: Int, cause: Entry? = null): Notification {
         val strings = context.inAppLanguage(state.language)
         val text = NotificationText(strings, state.zone)
         val end = requireNotNull(sleep.endMillis)
@@ -267,10 +269,13 @@ class TimerNotifications(context: Context, private val prefs: SurfacePrefs = Sur
             ?.let { strings.getString(R.string.notification_woke_up_title, it, text.time(end)) }
             ?: strings.getString(CoreR.string.receipt_at_time, strings.getString(CoreR.string.action_woke_up), text.time(end))
         val slept = text.slept(sleep.startMillis, end)
-        val builder = base(title, slept, smallIcon = XDrawables.wake)
+        // Ended by a feed or diaper log: "The feed ended the sleep" leads, so the parent sees why it stopped.
+        val reason = cause?.let { strings.getString(if (it.kind == EntryKind.FEED) R.string.notification_woke_by_feed else R.string.notification_woke_by_diaper) }
+        val lines = text.lines(slept, state.dayOf(sleep.babyId), state.now)
+        val builder = base(title, reason?.let { strings.getString(R.string.join_dot, it, text.sleptShort(sleep.startMillis, end)) } ?: slept, smallIcon = XDrawables.wake)
             .setCategory(Notification.CATEGORY_STATUS)
             .setTimeoutAfter(WOKE_UP_TIMEOUT_MILLIS)
-            .setStyle(Notification.BigTextStyle().bigText(text.lines(slept, state.dayOf(sleep.babyId), state.now)))
+            .setStyle(Notification.BigTextStyle().bigText(reason?.let { it + "\n" + lines } ?: lines))
         // The Earlier offsets of the undo card (DESIGN_SPEC §3.3.2): relative to the tap, never cumulative; the
         // selected one reads "✓ −10m" and a second tap returns to the tapped time. Impossible ones are left out.
         val now = state.now + MINUTE_MILLIS - 1
@@ -380,6 +385,9 @@ private class NotificationText(private val strings: Context, private val zone: Z
     /** "Slept 1h 07m · 02:05 – 03:12". */
     fun slept(start: Long, end: Long): String =
         dot(strings.getString(CoreR.string.receipt_slept, duration.between(start, end)), clock.range(start, end, zone))
+
+    /** "Slept 1h 07m". */
+    fun sleptShort(start: Long, end: Long): String = strings.getString(CoreR.string.receipt_slept, duration.between(start, end))
 
     /** "Last fed · L → R", for the Android 17 metric. */
     fun lastFedLabel(feed: Entry): String =

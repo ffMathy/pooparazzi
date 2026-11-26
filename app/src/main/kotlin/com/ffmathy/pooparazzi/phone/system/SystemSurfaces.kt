@@ -13,6 +13,7 @@ import com.ffmathy.pooparazzi.phone.BuildConfig
 import com.ffmathy.pooparazzi.phone.notify.NotificationLink
 import com.ffmathy.pooparazzi.phone.notify.TimerNotifications
 import com.ffmathy.pooparazzi.phone.notify.TimerState
+import com.ffmathy.pooparazzi.phone.notify.WokenByLogWatcher
 import com.ffmathy.pooparazzi.phone.widget.LogWidgetReceiver
 import com.ffmathy.pooparazzi.phone.widget.QuickWidgetReceiver
 import com.ffmathy.pooparazzi.phone.widget.WidgetUpdater
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 
@@ -53,6 +55,21 @@ object SystemSurfaces {
             // Equal states post nothing new, but a refresh (the permission was just granted) always renders again.
             combine(states, notificationRefreshes) { state, _ -> state }
                 .collect { state -> guard("notifications") { notifications.render(state) } }
+        }
+        graph.scope.launch {
+            // A feed or diaper that ended a sleep (here, on the watch, on another phone) says so: "Noa woke up at 03:12",
+            // "The feed ended the sleep", with the Earlier offsets (DESIGN_SPEC §4.4, §10.5).
+            val watcher = WokenByLogWatcher()
+            graph.repository.observeAllEntries().collect { entries ->
+                guard("woke-up notification") {
+                    val woken = watcher.next(entries, graph.clock.now())
+                    if (woken.isEmpty()) return@guard
+                    val state = TimerState.of(entries, graph.settings.settings.first(), graph.clock.now(), ZoneId.systemDefault())
+                    woken.forEach { (sleep, cause) ->
+                        notifications.renderWokeUp(state, sleep, baseMillis = sleep.endMillis ?: cause.startMillis, offsetMinutes = 0, cause = cause)
+                    }
+                }
+            }
         }
         graph.scope.launch {
             // Every baby's entries: under Auto the widgets dim while any baby is asleep, not only the current one.

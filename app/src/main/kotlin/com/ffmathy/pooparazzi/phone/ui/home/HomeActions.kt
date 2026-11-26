@@ -66,6 +66,9 @@ interface HomeActions {
      */
     fun onSheetOffset(minutes: Int) {}
 
+    /** "Expected 11:30" under a sheet's chips: to the estimate, or back to the base time when it is there. */
+    fun onSheetExpected() {}
+
     /** Adjust start, "Save": moves the start to the sheet's time and closes the sheet. */
     fun onAdjustSave() {}
 

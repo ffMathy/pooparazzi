@@ -25,6 +25,11 @@ import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.domain.Expected
 import com.ffmathy.pooparazzi.core.domain.ForecastKind
 import com.ffmathy.pooparazzi.core.model.Baby
+import com.ffmathy.pooparazzi.core.model.BreastSide
+import com.ffmathy.pooparazzi.core.model.Entry
+import com.ffmathy.pooparazzi.core.model.FeedType
+import com.ffmathy.pooparazzi.core.model.isRunning
+import com.ffmathy.pooparazzi.core.model.isSleep
 import com.ffmathy.pooparazzi.core.sample.SampleData
 import com.ffmathy.pooparazzi.core.settings.AppLanguage
 import com.ffmathy.pooparazzi.phone.notify.ForecastNotifications
@@ -85,6 +90,24 @@ abstract class NotificationScreenshots(private val language: AppLanguage) {
             }
         }
         compose.onNodeWithTag(TAG).captureRoboImage("screenshots/${language.tag}/20-notifications.png")
+    }
+
+    /**
+     * A feed logged at 03:12 while Noa slept since 02:05 ended the sleep: "Noa woke up at 03:12", "The feed ended the
+     * sleep", with the Earlier offsets. In `20b-notification-woke-by-feed.png`.
+     */
+    @Test
+    fun wokeUpByAFeed() {
+        val zone = SampleData.ZONE
+        val feed = Entry.feed(FeedType.BREAST, SampleData.NOW_0312, side = BreastSide.LEFT_THEN_RIGHT, id = "sample-feed-0312")
+        val ended = SampleData.scenarioAt0312(zone).map { if (it.isSleep && it.isRunning) it.copy(endMillis = SampleData.NOW_0312) else it } + feed
+        val sleep = ended.single { it.isSleep && it.endMillis == SampleData.NOW_0312 }
+        val state = TimerState.of(ended, SampleData.settings.copy(language = language), SampleData.NOW_0312, zone)
+        val view = expanded(TimerNotifications(context).buildWokeUp(state, sleep, baseMillis = SampleData.NOW_0312, offsetMinutes = 0, cause = feed))
+        compose.setContent {
+            Column(Modifier.testTag(TAG).background(Backdrop).padding(16.dp)) { Card(view) }
+        }
+        compose.onNodeWithTag(TAG).captureRoboImage("screenshots/${language.tag}/20b-notification-woke-by-feed.png")
     }
 
     @Test

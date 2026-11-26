@@ -89,6 +89,15 @@ sealed interface SinceRow {
 @Immutable
 data class OffsetChipUi(val minutes: Int, val enabled: Boolean = true)
 
+/**
+ * "Expected 11:30" under a sheet's nudge chips: the time the past week expected this log ([atMillis], to the nearest
+ * 5 minutes), offered when it is well before the sheet's base time, so a log the parent forgot can be put where it most
+ * likely happened. [offsetMinutes] is the offset that reaches it; [selected] once the sheet's time is there (a second tap
+ * returns to the base time).
+ */
+@Immutable
+data class ExpectedChipUi(val atMillis: Long, val offsetMinutes: Int, val selected: Boolean = false)
+
 /** The whisper slot's notice card (2 s, DESIGN_SPEC §3.3.1). [key] changes with each new notice (it fades in). */
 @Immutable
 data class NoticeCardUi(val key: Long, val variant: NoticeVariant)
@@ -145,6 +154,9 @@ sealed interface HomeSheetUi {
     val stamp: Long
     val offsetMinutes: Int
     val chips: List<OffsetChipUi>
+
+    /** "Expected 11:30" under the chips, for a feed and a sleep's start or end; null when there is no estimate to offer. */
+    val expected: ExpectedChipUi? get() = null
     val time: Long get() = stamp + offsetMinutes * MINUTE_MILLIS
 
     /** The time before the nudges ("was 14:32"), or null while there are none. */
@@ -168,6 +180,7 @@ sealed interface HomeSheetUi {
         val amountMl: Int? = null,
         val contents: BottleContents? = null,
         val wakes: Boolean = false,
+        override val expected: ExpectedChipUi? = null,
     ) : HomeSheetUi {
         val side: BreastSide? get() = BreastSide.fromOrder(ticks)
     }
@@ -196,6 +209,7 @@ sealed interface HomeSheetUi {
         override val offsetMinutes: Int,
         override val chips: List<OffsetChipUi>,
         val entryId: String,
+        override val expected: ExpectedChipUi? = null,
     ) : HomeSheetUi
 
     /**
@@ -212,6 +226,7 @@ sealed interface HomeSheetUi {
         val undoable: Boolean,
         val editEntryId: String?,
         val endSleep: Boolean? = null,
+        override val expected: ExpectedChipUi? = null,
     ) : HomeSheetUi
 }
 

@@ -32,6 +32,7 @@ internal class AdjustSheetCallbacks(
     val onEdit: (String) -> Unit,
     val onSave: () -> Unit,
     val onCancel: () -> Unit,
+    val onExpected: () -> Unit = {},
 )
 
 /**
@@ -53,6 +54,7 @@ internal fun AdjustSheetContent(sheet: HomeSheetUi.Adjust, zone: ZoneId, formatt
         )
         Spacer(Modifier.height(12.dp))
         SheetChipRow(sheet.chips, formatters, readiness, callbacks.onOffset)
+        sheet.expected?.let { ExpectedChip(it, zone, formatters, readiness, callbacks.onExpected) }
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             EditButton(enabled = readiness.ready, onClick = { callbacks.onEdit(sheet.entryId) })

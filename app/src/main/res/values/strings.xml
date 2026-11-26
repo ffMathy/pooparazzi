@@ -13,6 +13,8 @@
     <!-- Name of the checked sleep toggle: the visible label plus what a tap does -->
     <string name="cd_woke_up_end_sleep">Woke up, end sleep</string>
     <!-- Feed and Diaper sheets while a sleep runs: saving also ends the sleep at the sheet's time (DESIGN_SPEC §4.4) -->
+    <!-- Under a sheet's nudge chips: the time the past week expected this log, "Expected 11:30". %1$s is a clock time. -->
+    <string name="sheet_expected">Expected %1$s</string>
     <string name="sheet_wakes_note">Woke up will be logged too</string>
 
     <!-- Lamp before the first feed is logged -->
@@ -240,6 +242,9 @@
     <string name="notification_channel_timers">Sleep in progress</string>
     <string name="notification_channel_timers_description">Shows a running sleep with Woke up, then lets you move the wake-up time</string>
     <string name="notification_asleep_title">%1$s is asleep</string>
+    <!-- The woke-up notification after a feed or diaper logged during a sleep ended it. -->
+    <string name="notification_woke_by_feed">The feed ended the sleep</string>
+    <string name="notification_woke_by_diaper">The diaper change ended the sleep</string>
     <!-- After Woke up on the notification: "Noa woke up at 03:12". %1$s is the baby's name, %2$s a clock time. -->
     <string name="notification_woke_up_title">%1$s woke up at %2$s</string>
     <!-- The selected Earlier offset on the woke-up notification: "✓ −10m" -->

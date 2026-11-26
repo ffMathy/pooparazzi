@@ -28,6 +28,14 @@ Breast (with the order of the sides), Bottle (milk or formula, with an amount), 
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-feed-sheet.png" width="200" alt="Feed sheet: Breast, Bottle, Food, Just the time"> | <img src="docs/screenshots/en/phone-breast-sheet.png" width="200" alt="Feed sheet after Breast, with Right then Left ticked"> | <img src="docs/screenshots/en/phone-bottle-sheet.png" width="200" alt="Feed sheet after Bottle, with the optional Milk or Formula choice and amount slider at 120 ml (or 4 fl oz where ounces are used)"> | <img src="docs/screenshots/en/phone-home-breast-logged.png" width="200" alt="Home right after logging a breast feed backdated by 15 minutes: Last fed 18m ago · 14:32 · Left → Right, with no receipt sheet"> |
 
+## Forgot to log?
+
+When a feed or sleep is logged long after it happened, its sheet offers **Expected** — the time the last 7 days expected it — under the nudge chips. A second tap goes back.
+
+| Forgotten feed | Forgotten sleep |
+|:---:|:---:|
+| <img src="docs/screenshots/en/phone-feed-sheet-expected.png" width="200" alt="Feed sheet opened at 18:40 with Expected 15:25 picked: Feed, 15:25 · was 18:40"> | <img src="docs/screenshots/en/phone-home-receipt-expected.png" width="200" alt="Receipt after Start sleep at 18:20, offering Expected 15:15 under the offset chips"> |
+
 ## Diapers
 
 Pee and Poop, with an optional colour and texture. Red, black and pale poop shows a gentle hint.
@@ -64,9 +72,15 @@ Averages per day, a bar chart, and the typical day. Unusual days are greyed out 
 
 ## Widgets and notifications
 
+A feed or diaper logged during a sleep ends it, and the phone says so in a notification, wherever it was logged.
+
 | Widget 4×2 | Widget 3×1 | Samsung flip cover | Running sleep |
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/en/phone-widget-4x2.png" width="200" alt="4x2 log widget in its states"> | <img src="docs/screenshots/en/phone-widget-3x1.png" width="200" alt="3x1 quick widget in its sizes"> | <img src="docs/screenshots/en/phone-widget-cover.png" width="200" alt="The 4x2 widget on a Samsung flip's cover screen, idle and asleep"> | <img src="docs/screenshots/en/phone-notifications.png" width="200" alt="The running-sleep notification with its duration, last feed, last diaper and today's counts, and the woke-up notification with its earlier offsets"> |
+
+| Woken by a feed |
+|:---:|
+| <img src="docs/screenshots/en/phone-notification-woke-by-feed.png" width="200" alt="Notification: Noa woke up at 03:12, The feed ended the sleep, Slept 1h 07m · 02:05 – 03:12, with −5m, −10m and −15m"> |
 
 ## Watch
 

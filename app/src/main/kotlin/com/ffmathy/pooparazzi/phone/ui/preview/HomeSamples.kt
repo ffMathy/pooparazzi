@@ -147,6 +147,32 @@ object HomeSamples {
         )
     }
 
+    /**
+     * 18:40, nothing logged since the 12:22 bottle: the Feed sheet offers "Expected 15:25" (what the week expected), and
+     * it is picked, so the sheet reads "Feed · 15:25 · was 18:40" for a feed the parent forgot to log.
+     */
+    fun feedSheetExpected(): HomeUiState {
+        val stamp = SampleData.at(18, 40)
+        val entries = SampleData.history(zone = zone)
+        val sheet = SheetModel.Feed(stamp)
+        val at = requireNotNull(HomeStateBuilder.expectedAt(sheet, entries, zone, SampleData.settings.selectedBaby.born))
+        return build(entries, stamp, sheet = sheet.copy(offsetMinutes = HomeStateBuilder.offsetTo(sheet, at)))
+    }
+
+    /**
+     * 18:20, Start sleep tapped long after the baby fell asleep (awake since 13:27): the receipt "Sleep started · 18:20"
+     * offers "Expected 15:15", the next sleep the week expected, to put the forgotten start there.
+     */
+    fun sleepStartedLate(): HomeUiState {
+        val stamp = SampleData.at(18, 20)
+        val sleep = Entry.sleep(stamp, null, id = "sample-sleep-1820")
+        return build(
+            SampleData.history(zone = zone) + sleep,
+            stamp,
+            sheet = SheetModel.Receipt(stamp = stamp, key = 1, spec = ReceiptSpec.SleepStarted(sleep.id), undo = Undo.Delete(sleep.id)),
+        )
+    }
+
     /** The Feed sheet opened at 14:32. */
     fun feedSheet(): HomeUiState = build(SampleData.scenario(zone), SampleData.NOW_1432, sheet = SheetModel.Feed(SampleData.NOW_1432))
 

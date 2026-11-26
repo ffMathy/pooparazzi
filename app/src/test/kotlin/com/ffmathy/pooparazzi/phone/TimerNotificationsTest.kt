@@ -8,6 +8,7 @@ import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.core.data.EndResult
+import com.ffmathy.pooparazzi.core.data.wakeFor
 import com.ffmathy.pooparazzi.core.model.Baby
 import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.isRunning
@@ -292,6 +293,27 @@ class TimerNotificationsTest : CoreTestBase() {
         runCurrent()
         assertFalse(rig.entry(sleep.id)!!.isRunning)
         assertNull(posted(TimerNotifications.SLEEP_ID))
+    }
+
+    /** A feed logged during the sleep ends it, and the phone says so: "… woke up at 14:52", "The feed ended the sleep". */
+    @Test
+    fun aFeedThatEndsTheSleepPostsTheWokeUpNotification() = coreTest { rig ->
+        inReferenceZone {
+            SystemSurfaces.start(app, Core.graph)
+            rig.repository.startSleep(SampleData.NOW_1432).getOrThrow()
+            runCurrent()
+
+            rig.clock.advanceBy(20 * MINUTE)
+            val feed = rig.repository.logFeedChecked(null, rig.clock.now()).entry
+            rig.repository.wakeFor(feed)
+            runCurrent()
+
+            assertNull(postedFor(Baby.FIRST_ID))
+            val wokeUp = wokeUpFor(Baby.FIRST_ID)!!
+            assertTrue(wokeUp.title()!!.endsWith("14:52"))
+            assertEquals("The feed ended the sleep · Slept 20m", text(wokeUp))
+            assertEquals(listOf("−5m", "−10m", "−15m"), wokeUp.actions.map { it.title.toString() })
+        }
     }
 
     /**

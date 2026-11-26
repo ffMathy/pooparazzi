@@ -13,6 +13,7 @@ import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.clockDurationMillis
 import com.ffmathy.pooparazzi.core.model.diaperKind
 import com.ffmathy.pooparazzi.core.sync.SyncStatus
+import java.time.LocalDate
 import java.time.ZoneId
 
 /**
@@ -38,6 +39,7 @@ internal object HomeStateBuilder {
     ): HomeUiState {
         val summary = summarize(entries, now, zone)
         val lamp = lampState(summary)
+        val born = (babies.firstOrNull { it.id == babyId } ?: babies.firstOrNull())?.born
         return HomeUiState(
             now = now,
             zone = zone,
@@ -49,9 +51,9 @@ internal object HomeStateBuilder {
             row2 = row2(summary),
             today = summary.today,
             runningSleep = summary.runningSleep,
-            forecast = forecast(summary, (babies.firstOrNull { it.id == babyId } ?: babies.firstOrNull())?.born),
+            forecast = forecast(summary, born),
             card = card?.let { cardUi(it) },
-            sheet = sheet?.let { sheetUi(it, entries, summary) },
+            sheet = sheet?.let { sheetUi(it, entries, summary, expectedChip(it, entries, now, zone, born)) },
             babies = babies,
             babyId = babyId,
             switchingBaby = switchingBaby && babies.size > 1,
@@ -83,7 +85,54 @@ internal object HomeStateBuilder {
         },
     )
 
-    private fun receiptUi(model: SheetModel.Receipt, entries: List<Entry>, summary: Summary): HomeSheetUi.Receipt {
+    /** Estimates closer than this before a sheet's base time are not offered: the nudge chips reach them. */
+    const val EXPECTED_MIN_MILLIS = 5 * MINUTE_MILLIS
+
+    /**
+     * The time the past week expected the log on [sheet] (V1_ADDITIONS §9, to the nearest 5 minutes), for "Expected
+     * 11:30" under its chips: a feed's from the last feed, a sleep's start from the last wake-up (as if this sleep had
+     * not started), a wake-up's from the sleep's start, each seen from the sheet's base time and kept even once it is
+     * long past ([forecast]'s keepStale: a forgotten log is exactly when it is needed). Null without an estimate, for a
+     * diaper, and when it is under [EXPECTED_MIN_MILLIS] before the base time.
+     */
+    fun expectedAt(sheet: SheetModel, entries: List<Entry>, zone: ZoneId, born: LocalDate?): Long? {
+        fun estimate(log: List<Entry>) = forecast(summarize(log, sheet.stamp, zone), born, keepStale = true)
+        fun sleepStart(sleepId: String) = estimate(entries.filterNot { it.id == sleepId }).sleep
+        val expected = when (sheet) {
+            is SheetModel.Feed -> estimate(entries).feed
+            is SheetModel.Diaper -> null
+            is SheetModel.Adjust -> sleepStart(sheet.entryId)
+            is SheetModel.Receipt -> when (val spec = sheet.spec) {
+                is ReceiptSpec.SleepStarted -> sleepStart(spec.entryId)
+                // The sleep as it was before Woke up: running, so the estimate is its wake-up.
+                is ReceiptSpec.WokeUp -> estimate(entries.map { if (it.id == spec.entryId) it.copy(endMillis = null) else it }).sleep
+                else -> null
+            }
+        } ?: return null
+        return expected.roundedAtMillis.takeIf { it <= sheet.stamp - EXPECTED_MIN_MILLIS }
+    }
+
+    /** The offset from [sheet]'s base time that shows [at] (the base time's seconds kept, so the clock reads [at]). */
+    fun offsetTo(sheet: SheetModel, at: Long): Int = -Math.floorDiv(sheet.stamp - at, MINUTE_MILLIS).toInt()
+
+    /** "Expected 11:30" for [sheet], when its time can go there: never into the future, within the entry's bounds. */
+    private fun expectedChip(sheet: SheetModel, entries: List<Entry>, now: Long, zone: ZoneId, born: LocalDate?): ExpectedChipUi? {
+        val at = expectedAt(sheet, entries, zone, born) ?: return null
+        val offset = offsetTo(sheet, at)
+        if (sheet.stamp + offset * MINUTE_MILLIS > now) return null
+        val subject = when (sheet) {
+            is SheetModel.Adjust -> sheet.entryId to MoveField.START
+            is SheetModel.Receipt -> sheet.spec.subject
+            else -> null
+        }
+        if (subject != null) {
+            val entry = entries.firstOrNull { it.id == subject.first && !it.deleted } ?: return null
+            if (!offsetAllowed(entry, subject.second, sheet.stamp, offset, now)) return null
+        }
+        return ExpectedChipUi(at, offset, selected = sheet.offsetMinutes == offset)
+    }
+
+    private fun receiptUi(model: SheetModel.Receipt, entries: List<Entry>, summary: Summary, expected: ExpectedChipUi?): HomeSheetUi.Receipt {
         val now = summary.now
         val subject = model.spec.subject
         val entry = subject?.let { (id, _) -> entries.firstOrNull { it.id == id && !it.deleted } }
@@ -117,6 +166,7 @@ internal object HomeStateBuilder {
             undoable = model.undo != null,
             editEntryId = entry?.id,
             endSleep = endSleep,
+            expected = expected,
         )
     }
 
@@ -137,7 +187,7 @@ internal object HomeStateBuilder {
         }
     }
 
-    private fun sheetUi(sheet: SheetModel, entries: List<Entry>, summary: Summary): HomeSheetUi {
+    private fun sheetUi(sheet: SheetModel, entries: List<Entry>, summary: Summary, expected: ExpectedChipUi?): HomeSheetUi {
         val now = summary.now
         // A chip is enabled when one more tap is allowed: never into the future, and within the entry's own bounds.
         fun chips(allowed: (Int) -> Boolean = { m -> sheet.stamp + m * MINUTE_MILLIS <= now }) =
@@ -148,6 +198,7 @@ internal object HomeStateBuilder {
             is SheetModel.Feed -> HomeSheetUi.Feed(
                 sheet.stamp, sheet.offsetMinutes, chips(), sheet.breast, sheet.ticks, sheet.bottle, sheet.amountMl, sheet.contents,
                 wakes = wakes,
+                expected = expected,
             )
             is SheetModel.Diaper -> HomeSheetUi.Diaper(
                 stamp = sheet.stamp,
@@ -166,9 +217,10 @@ internal object HomeStateBuilder {
                     offsetMinutes = sheet.offsetMinutes,
                     chips = chips { m -> entry != null && offsetAllowed(entry, MoveField.START, sheet.stamp, m, now) },
                     entryId = sheet.entryId,
+                    expected = expected,
                 )
             }
-            is SheetModel.Receipt -> receiptUi(sheet, entries, summary)
+            is SheetModel.Receipt -> receiptUi(sheet, entries, summary, expected)
         }
     }
 }
