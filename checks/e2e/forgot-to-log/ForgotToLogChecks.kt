@@ -1,3 +1,4 @@
+// ail-derived-from: ForgotToLog@61d3093f20a7b8fa
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals
@@ -69,8 +70,8 @@ class ForgotToLogChecks : Phone() {
         val now = feedSheet()
         val offered = expectedOffer()!!
         tap("Expected $offered")
+        waitUntil("the sheet at $offered") { shows("$offered · was $now") }
         assertEquals("Feed · $offered", sheetTitle())
-        assertShows("$offered · was $now")
         assertTrue(isPicked("Expected $offered"))
         tap("Food")
         waitUntilGone("Just the time")
@@ -86,8 +87,9 @@ class ForgotToLogChecks : Phone() {
         val now = feedSheet()
         val offered = expectedOffer()!!
         tap("Expected $offered")
+        waitUntil("the sheet at $offered") { shows("$offered · was $now") }
         tap("Expected $offered")
-        assertEquals("Feed · $now", sheetTitle())
+        waitUntil("the sheet back at $now") { sheetTitle() == "Feed · $now" }
         assertTrue("no was:\n${screen()}", !showsPart("· was"))
         assertFalse(isPicked("Expected $offered"))
     }
@@ -131,7 +133,7 @@ class ForgotToLogChecks : Phone() {
         val offered = expectedOffer()
         assertOffered(offered, end, 15)
         tap("Expected $offered")
-        assertShows("$offered · was $now")
+        waitUntil("the start at $offered") { shows("$offered · was $now") }
         assertTrue(isPicked("Expected $offered"))
         waitUntil("the Lamp asleep since $offered") {
             shows("Asleep, ${spokenMinutes(clockMinutesBetween(offered!!, clock()))}, since $offered")
