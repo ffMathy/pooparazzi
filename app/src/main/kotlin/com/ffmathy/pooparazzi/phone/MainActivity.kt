@@ -117,6 +117,9 @@ class MainActivity : AppCompatActivity() {
         // The backup pulls what changed elsewhere (another phone on the account) at most once a minute (§4.4),
         // and every time while the last sync failed (offline or an error).
         Core.graph.cloud.requestSync()
+        // The watch's changes the sync listener was not woken for, and this phone's writes that have not reached the
+        // Data Layer yet (a push that failed, or a tap on a widget or notification while the process was frozen).
+        Core.graph.catchUp()
         // The language the app runs in is the platform's per-app choice (the parent may change it in system settings
         // on API 33+). Mirror it into the settings, which sync it to the watch (V1_ADDITIONS §5).
         val running = AppLocales.current()

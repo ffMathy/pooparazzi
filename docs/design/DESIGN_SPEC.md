@@ -1452,6 +1452,7 @@ Swipe-to-reveal Delete uses `AnchoredDraggable` (not `SwipeToDismissBox`). Custo
 
 - Logging never needs the phone. Offline copy per §3.5.
 - Never a dead-end "check connection" screen.
+- **Nothing waits for a restart.** A write that has not reached the Data Layer yet (its push failed, or never ran because the process was frozen right after a tap) is pushed again whenever either app comes to the foreground, whenever something arrives from the other device, and on the watch's tile and 15-minute catch-ups, not only when the process next starts. Taps that write outside the app (a tile, widget or notification action) hand the write to the Data Layer before they return. Both apps also merge what their Data Layer holds when they come to the foreground (at most once a minute), so a change the sync listener was not woken for no longer waits for the next process.
 
 ### 10.15 Optional accelerators (not v1 unless testing asks)
 

@@ -25,14 +25,19 @@ import com.ffmathy.pooparazzi.core.settings.SettingsRepository
 import com.ffmathy.pooparazzi.core.sync.DataLayerEntrySync
 import com.ffmathy.pooparazzi.core.sync.EntrySync
 import com.ffmathy.pooparazzi.core.sync.SyncSink
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * The object graph shared by the phone and watch apps.
@@ -90,6 +95,56 @@ class CoreGraph(
         }
     }
 
+    /** When [catchUpNow] last merged the Data Layer ([clock]). */
+    private val lastCatchUpPull = AtomicLong(Long.MIN_VALUE / 2)
+
+    /**
+     * Catches up with the other device in the background ([catchUpNow]): the app coming to the foreground.
+     */
+    fun catchUp() {
+        scope.launch { catchUpNow() }
+    }
+
+    /**
+     * Merges what the Data Layer holds from the other device and pushes this device's writes that have not reached it
+     * yet. [start] does this once per process, but a process can live for days: a change the sync listener was not
+     * woken for (or whose merge timed out), and a write whose push failed or never ran (the process frozen right after
+     * a tap on a tile, widget or notification), would otherwise wait for the next process. The merge runs at most once
+     * every [CATCH_UP_PULL_INTERVAL_MILLIS] unless [force]d; the pending pushes every time (cheap when there are none).
+     */
+    suspend fun catchUpNow(force: Boolean = false) {
+        val now = clock.now()
+        val last = lastCatchUpPull.get()
+        val due = force || now - last !in 0 until CATCH_UP_PULL_INTERVAL_MILLIS
+        if (due && lastCatchUpPull.compareAndSet(last, now)) sync.pullAll()
+        pushPendingWrites()
+    }
+
+    /**
+     * Waits (at most [timeoutMillis]) until this device's local writes have been handed to the Data Layer. For entry
+     * points whose process may be frozen or killed as soon as they return (a widget, notification or tile action): a
+     * push still left to the background would then wait for the next process. Stopping to wait does not stop the push.
+     * Returns true when everything was pushed in time.
+     */
+    suspend fun awaitPendingWrites(timeoutMillis: Long = PENDING_WRITES_TIMEOUT_MILLIS): Boolean {
+        val push = scope.async { pushPendingWrites() }
+        // Timed on a background dispatcher: the caller may be on the main thread, which must not hold the timer up.
+        return withContext(Dispatchers.Default) { withTimeoutOrNull(timeoutMillis) { push.await() } } ?: false
+    }
+
+    /** Pushes every local write the Data Layer has not accepted yet; true when all were. Never throws. */
+    private suspend fun pushPendingWrites(): Boolean {
+        val room = repository as? RoomEntryRepository ?: return true
+        return try {
+            room.pushPending()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Pending pushes failed", e)
+            false
+        }
+    }
+
     internal fun close() {
         scope.cancel()
         database?.close()
@@ -97,6 +152,12 @@ class CoreGraph(
 
     companion object {
         private const val TAG = "Core"
+
+        /** [catchUpNow] merges the Data Layer at most this often. */
+        const val CATCH_UP_PULL_INTERVAL_MILLIS = 60_000L
+
+        /** How long [awaitPendingWrites] waits by default. */
+        const val PENDING_WRITES_TIMEOUT_MILLIS = 5_000L
 
         /**
          * The production graph: Room database, DataStore settings and Wearable Data Layer sync, plus the backup when

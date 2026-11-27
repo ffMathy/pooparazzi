@@ -77,6 +77,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // The phone's changes the sync listener was not woken for, and this watch's writes that have not reached the
+        // Data Layer yet (a push that failed, or one left behind when the process was frozen).
+        Core.init(applicationContext).catchUp()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         deepLinkOf(intent)?.let { deepLinks.value = it }

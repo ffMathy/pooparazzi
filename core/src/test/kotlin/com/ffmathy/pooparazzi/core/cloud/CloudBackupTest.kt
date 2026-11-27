@@ -459,6 +459,28 @@ class CloudBackupTest {
         assertTrue(second.all().none { it.id == diaper.id })
     }
 
+    @Test
+    fun aDeletionThatIsBackedUpIsNotUploadedAgainOnEverySync() = runTest {
+        val phone = Phone(this, alice)
+        phone.backup.start()
+        val diaper = phone.repo.logDiaper(now - minute, pee = true, poop = true)
+        advanceUntilIdle()
+        phone.repo.delete(diaper.id)
+        advanceUntilIdle()
+        assertTrue(store.entries(alice.fid).getValue(diaper.id).deleted)
+        val uploads = store.uploadedCount
+
+        // The next syncs pull the phone's own tombstone back: it is what the backup should hold, nothing to send again.
+        repeat(3) {
+            phone.backup.syncNow()
+            advanceUntilIdle()
+        }
+        assertTrue(phone.pending().isEmpty())
+        assertEquals("no tombstone goes up again", uploads, store.uploadedCount)
+        clock.advanceBy(EntryRules.SOFT_DELETE_RETENTION_MILLIS + minute)
+        assertEquals(1, phone.repo.purgeDeleted())
+    }
+
     // ---- Failures ---------------------------------------------------------------------------------
 
     @Test

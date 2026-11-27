@@ -206,6 +206,8 @@ One at a time, never throwing, and always a pull before a push:
 
 - At app start, when an account signs in, when the phone app comes to the foreground (at most once a minute, but every time while the status is Offline or Error), and from "Back up now".
 - A sync about 2 s after any local write or watch merge leaves rows pending. It pulls first like every sync: one extra read per push when nothing else changed.
+- Whenever rows become pending, a one-time WorkManager job also syncs about 30 s later, once there is a network (and again with back-off while the backend cannot be reached). A log from the watch, a widget or a notification arrives while the app is closed, and its process is frozen soon after: without the job, the upload waited until the app was opened. When the in-app sync went first, the job's sync is a pull with nothing new.
+- A deleted entry goes up as its tombstone, and the backend holding that tombstone counts as holding the entry: the phone's own tombstone pulled back is not sent again.
 - No snapshot listener: Firestore bills a re-attached listener as a full re-read after 30 minutes away. A pull with nothing new costs one read per collection (babies, entries); each changed entry or baby costs one read; each uploaded entry or baby one write; and every request costs one more read for the rules' membership check.
 
 For a family logging about 40 entries a day this is roughly 40 writes and well under 300 reads a day, against Spark's free 20 000 writes and 50 000 reads a day. Fifty such families use about 10 % of the free quota. A first sign-in with a year of history (about 15 000 entries) uploads in one go and may hit that day's write quota; the rest then follows the next day, automatically.

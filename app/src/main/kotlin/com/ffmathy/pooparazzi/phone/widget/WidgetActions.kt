@@ -14,6 +14,7 @@ class ToggleSleepAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         WidgetCommands.from(context).toggleSleep(widgetBaby(context, glanceId))
         WidgetUpdater.refresh(context)
+        awaitPendingWrites(context)
     }
 }
 
@@ -39,12 +40,21 @@ private suspend fun widgetBaby(context: Context, glanceId: GlanceId): String {
     return WidgetBabies.babyOf(PrefsWidgetBabies.get(context).chosen.value, widgetId, settings).id
 }
 
+/**
+ * Hands a widget's write to the Data Layer before the action returns: the process may be frozen right after, and the
+ * watch would not get the write until the app runs again.
+ */
+private suspend fun awaitPendingWrites(context: Context) {
+    Core.ensureInitialized(context).awaitPendingWrites()
+}
+
 /** Undo in the receipt row, for that log's entry (no app launch). */
 class UndoWidgetLogAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val entryId = parameters[EntryId] ?: return
         WidgetCommands.from(context).undo(entryId)
         WidgetUpdater.refresh(context)
+        awaitPendingWrites(context)
     }
 
     companion object {
