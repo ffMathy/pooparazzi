@@ -15,6 +15,11 @@ home-status/           HomeStatus: the Lamp, the since-rows, Today, the forecast
 history-screen/        HistoryScreen: the day ribbon and list, Add past entry, the edit sheet, deleting
 statistics-screen/     StatisticsScreen: averages per day, the chart, unusual days, the typical day
 watch/                 Watch: the Wear OS app: Main, logging, Logged and Time, the Tile, complications, Ongoing Activity
+first-run/             FirstRun: Your baby (name, birth date) and the six-page introduction
+review-prompt/         ReviewPrompt: "Enjoying Pooparazzi?", when it is due and when it shows
+settings/              Settings: Appearance, Language (and a Danish phone), Watch, Notifications, About
+babies/                Babies: names and birth dates, Add a baby, Remove, the Switch baby sheet
+account/               Account: a build without a backup; the Welcome, sign-in, consent, family and joining
 ```
 
 ## Target
@@ -141,6 +146,8 @@ catalog
     type.heroNumeral=76sp/600  type.heroUnit=34sp/500  type.heroWord=48sp/500  type.displaySmall=48sp/500  type.dataSmall=14sp/500
     type.labelMedium=14sp/600  type.labelSmall=13sp/600  type.bodySmall=14sp/400
     type.bodyMedium=16sp/400
+    color.dialog=#26201A  day.row=#F0E6DA  day.dialog=#EADDCF  day.error=#9C3328
+    type.bodyLarge=18sp/400  type.titleSmall=16sp/600  radius.row=20dp  radius.row.inner=6dp  size.row=56dp
 ```
 
 ---
@@ -158,8 +165,13 @@ node Pooparazzi : system   level: product
     6. History shows one day at a time, newest first, and any entry can be added later, fixed by the minute or deleted, with Undo.   refined-by: HistoryScreen
     7. Statistics shows the average day over a range of whole days, with a chart, the unusual days left out, and the typical day.   refined-by: StatisticsScreen
     8. The watch logs a feed, a diaper or a sleep from the wrist in a tap or two, without the phone, and its Tile, complications and Ongoing Activity show at a glance how long since each.   refined-by: Watch
+    9. A new install asks for the baby's name and birth date and shows a short tour once, and both can be skipped.   refined-by: FirstRun
+    10. Once the app is in real use, it asks once or twice for a rating on Google Play, never at night or over a sheet.   refined-by: ReviewPrompt
+    11. Settings holds the babies, the look, the language, the watch, the notifications and what the app is.   refined-by: Settings
+    12. Twins and siblings each have their own log; the phone shows and logs for one baby at a time, switched on Home.   refined-by: Babies
+    13. No account is needed; an optional one backs the log up and shares it with a family.   refined-by: Account
   entry     Sleep
-  children  Sleep, Feeds, Diapers, ForgotToLog, HomeStatus, HistoryScreen, StatisticsScreen, Watch
+  children  Sleep, Feeds, Diapers, ForgotToLog, HomeStatus, HistoryScreen, StatisticsScreen, Watch, FirstRun, ReviewPrompt, Settings, Babies, Account
   sources
     README.md, "Pooparazzi", "Sleep" and "Watch"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for

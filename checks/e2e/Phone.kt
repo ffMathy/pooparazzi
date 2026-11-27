@@ -56,6 +56,22 @@ abstract class Phone {
     fun closeTheApp() {
         Core.reset()
         AppAccounts.reset()
+        forgetTheSettings()
+    }
+
+    /**
+     * The next test is a new install: Robolectric gives it new files, but the app keeps its settings (the babies, the
+     * appearance, the language) in a DataStore that lives as long as the process, which would carry a name or a birth
+     * date into the next test. So the harness lets go of it, and the next test's app opens its own new file.
+     */
+    private fun forgetTheSettings() {
+        runCatching {
+            val file = Class.forName("com.ffmathy.pooparazzi.core.CoreKt")
+            for (name in listOf("settingsDataStore\$delegate", "cloudDataStore\$delegate")) {
+                val delegate = file.getDeclaredField(name).apply { isAccessible = true }.get(null) ?: continue
+                delegate.javaClass.getDeclaredField("INSTANCE").apply { isAccessible = true }.set(delegate, null)
+            }
+        }
     }
 
     /** The first run of a new install, skipped: "Your baby" › Skip for now, the introduction › Skip, then Home. */
