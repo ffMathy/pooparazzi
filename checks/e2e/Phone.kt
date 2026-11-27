@@ -164,9 +164,11 @@ abstract class Phone {
      * check is told to (AIL_SHOTS_DIR, passed on by scripts/ail/check.sh). End-to-end checks don't call it.
      */
     fun saveScreen(name: String) {
-        val dir = (System.getProperty("ail.shots") ?: System.getenv("AIL_SHOTS_DIR"))?.takeIf { it.isNotBlank() } ?: return
+        val dir = listOf(System.getProperty("ail.shots"), System.getenv("AIL_SHOTS_DIR")).firstOrNull { !it.isNullOrBlank() } ?: return
         File(dir).mkdirs()
         compose.waitForIdle()
+        // Roborazzi writes images only while recording, which its Gradle plugin switches on for its own record tasks.
+        System.setProperty("roborazzi.test.record", "true")
         captureScreenRoboImage(File(dir, "$name.png").path)
     }
 

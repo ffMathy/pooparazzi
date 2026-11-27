@@ -60,8 +60,13 @@ target
                for the few seconds a scenario names (a guard, a cooldown, a notice that goes away), never for minutes.
                A time in the past ("a sleep that started 20 minutes ago") is made as a parent makes it, with the
                nudges, through the shared steps of each slice in checks/e2e/<its folder>/ (for sleep, checks/e2e/sleep/
-               Sleeps.kt: startSleepReceipt(), waitOutTheGuard(), sleepStarted20MinutesAgo(), wokeUpReceipt()); use
-               them rather than writing new ones.
+               Sleeps.kt: startSleepReceipt() and wokeUpReceipt() return the time the receipt shows, sleepStarted20Minutes
+               Ago() returns the start it shows, waitOutTheGuard()); use them rather than writing new ones.
+               Durations on screen are whole clock minutes between the two clock minutes, so a test never hard-codes
+               "20m": it computes clockMinutesBetween(shownStart, shownEnd) and, for spoken names, spokenMinutes(n)
+               ("less than a minute", "1 minute", "21 minutes"). The Lamp shows a duration's numbers and units as separate
+               texts ("20", "m"); assert its spoken name instead ("Asleep, 20 minutes, since 4:20 PM"). The machine may be
+               slow: wait for what a step changes with waitFor or waitUntil(what) { condition } before asserting it.
                It never calls the app's code. Each test ends with saveScreen("<its scenario's title in lower case, each run
                of other characters one ->"), which saves every window the phone shows (a sheet over Home included) into
                AIL_SHOTS_DIR as a PNG.
