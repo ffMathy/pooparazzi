@@ -1,3 +1,4 @@
+// ail-derived-from: WatchSettings@d6e0e1797e59ea49
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test

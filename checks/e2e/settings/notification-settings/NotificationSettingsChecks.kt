@@ -1,3 +1,4 @@
+// ail-derived-from: NotificationSettings@ed30d41936915461
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test
