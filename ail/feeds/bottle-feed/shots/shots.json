@@ -1,0 +1,29 @@
+{
+  "node": "BottleFeed",
+  "shots": [
+    {
+      "test": "the Bottle step",
+      "file": "01-the-bottle-step.png"
+    },
+    {
+      "test": "picking the contents and the amount",
+      "file": "02-picking-the-contents-and-the-amount.png"
+    },
+    {
+      "test": "tapping the picked contents again clears it",
+      "file": "03-tapping-the-picked-contents-again-clears-it.png"
+    },
+    {
+      "test": "logging a bottle with its contents and amount",
+      "file": "04-logging-a-bottle-with-its-contents-and-amount.png"
+    },
+    {
+      "test": "logging a bottle with nothing picked",
+      "file": "05-logging-a-bottle-with-nothing-picked.png"
+    },
+    {
+      "test": "a phone in the United States picks ounces",
+      "file": "06-a-phone-in-the-united-states-picks-ounces.png"
+    }
+  ]
+}

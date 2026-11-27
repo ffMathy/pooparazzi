@@ -1,0 +1,25 @@
+{
+  "node": "BreastFeed",
+  "shots": [
+    {
+      "test": "the Breast step",
+      "file": "01-the-breast-step.png"
+    },
+    {
+      "test": "ticking the sides in order",
+      "file": "02-ticking-the-sides-in-order.png"
+    },
+    {
+      "test": "unticking a side takes it out of the order",
+      "file": "03-unticking-a-side-takes-it-out-of-the-order.png"
+    },
+    {
+      "test": "logging a breast feed with its order",
+      "file": "04-logging-a-breast-feed-with-its-order.png"
+    },
+    {
+      "test": "logging a breast feed with no side",
+      "file": "05-logging-a-breast-feed-with-no-side.png"
+    }
+  ]
+}

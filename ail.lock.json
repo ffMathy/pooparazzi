@@ -3,6 +3,42 @@
   "nodes": {},
   "glue": {},
   "hand": {
+    "BottleFeed": {
+      "shots": "f376bdc8e9c401c3"
+    },
+    "BreastFeed": {
+      "shots": "e514089ef6ee8dbe"
+    },
+    "Diapers": {
+      "shots": "b4066a530b420465"
+    },
+    "DiaperWhileAsleep": {
+      "shots": "5b32630b3e4b4b00"
+    },
+    "Feeds": {
+      "shots": "944d5eee84053f9c"
+    },
+    "FeedWhileAsleep": {
+      "shots": "0d00cc3aa4385a34"
+    },
+    "ForgotToLog": {
+      "shots": "61d3093f20a7b8fa"
+    },
+    "HomeLamp": {
+      "shots": "18b6a1eff6db0be5"
+    },
+    "HomeStatus": {
+      "shots": "1194af6f177bace5"
+    },
+    "PoopDetails": {
+      "shots": "da93c391cf8825a3"
+    },
+    "RepeatDiaper": {
+      "shots": "5c022649db7e764f"
+    },
+    "RepeatFeed": {
+      "shots": "85c2aad195abb756"
+    },
     "Sleep": {
       "shots": "46c93df58d2296fc",
       "look": "f1194399cc80902953be08acb81a7d31d6e487e215b05ed85418f0b7627ec33c"

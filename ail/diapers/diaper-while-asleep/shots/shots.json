@@ -1,0 +1,17 @@
+{
+  "node": "DiaperWhileAsleep",
+  "shots": [
+    {
+      "test": "the Diaper sheet says the sleep will end",
+      "file": "01-the-diaper-sheet-says-the-sleep-will-end.png"
+    },
+    {
+      "test": "saving the diaper ends the sleep",
+      "file": "02-saving-the-diaper-ends-the-sleep.png"
+    },
+    {
+      "test": "a diaper before the sleep began leaves it running",
+      "file": "03-a-diaper-before-the-sleep-began-leaves-it-running.png"
+    }
+  ]
+}

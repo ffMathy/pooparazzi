@@ -1,0 +1,25 @@
+{
+  "node": "FeedWhileAsleep",
+  "shots": [
+    {
+      "test": "the sheet says the sleep will end",
+      "file": "01-the-sheet-says-the-sleep-will-end.png"
+    },
+    {
+      "test": "a nudge to before the sleep began hides the note",
+      "file": "02-a-nudge-to-before-the-sleep-began-hides-the-note.png"
+    },
+    {
+      "test": "a feed before the sleep began leaves it running",
+      "file": "03-a-feed-before-the-sleep-began-leaves-it-running.png"
+    },
+    {
+      "test": "saving the feed ends the sleep",
+      "file": "04-saving-the-feed-ends-the-sleep.png"
+    },
+    {
+      "test": "a feed seconds after the sleep began cancels it",
+      "file": "05-a-feed-seconds-after-the-sleep-began-cancels-it.png"
+    }
+  ]
+}
