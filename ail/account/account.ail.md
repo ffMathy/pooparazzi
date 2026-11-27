@@ -2,8 +2,9 @@
 
 No account is needed. An optional one, on the phone only, backs the log up to
 a small Firebase backend, restores it on a new phone and shares it with a
-family. Builds without a Firebase configuration (this one, and every test)
-have no accounts at all.
+family. Builds without a Firebase configuration (and every unit test) have no
+accounts at all; the account checks run a debug build on the local Firebase
+emulators instead.
 
 ```
 account.ail.md                         Account: Settings › Account, and a build without a backup
@@ -40,8 +41,10 @@ node Account : flow   level: experience
       because the phone is the hub (BABIES_AND_BACKUP §1)
     decide a sync runs at start, on sign-in, when the app comes to the front (at most once a minute, every time after a failure), about 2 s after a local write, from Back up now, and in the background about 30 s after rows become pending; always a pull before a push, one at a time; a call without an answer within 30 s counts as offline
       because the free plan's quota must last, and a newer version from another phone must win before this one is sent (BABIES_AND_BACKUP §4.3, §4.4)
-    decide the checks prove only the build without a backup: the checks turn accounts off, the app has no way to point Firebase at the local emulators, and Google sign-in needs Google Play services
-      because the checks run the real app on the JVM; see the open question in the report (docs/BACKEND.md; app/…/account/AppAccounts.kt)
+    decide this node's check is the build without a backup (accounts off, as in every unit test); the children's checks are the build with one: a debug build pointed at the local Firebase Authentication and Firestore emulators with a demo project, the emulators started for the checks; Google sign-in is never checked
+      because the checks run the real app on the JVM, where Google Play services are missing, and a demo project needs no credentials (docs/BACKEND.md › Running the app against the emulators; app/…/account/FirebaseEmulators.kt)
+    decide in the build with a backup, Your baby's hint reads "Names and birth dates are shared with your family and kept in your backup." once signed in, and "Names and birth dates stay on this phone and your watch." otherwise
+      because the parent must know where the names go (BABIES_AND_BACKUP §2.1, §3.6)
   look
     The Account row: a color.surface.container group with radius.row corners, holding the line in type.bodyMedium color.text.dim with
       16dp padding; signed in, a link row with the address in type.titleMedium color.text and the status in
@@ -62,7 +65,7 @@ node Account : flow   level: experience
     docs/design/BABIES_AND_BACKUP.md §1, §3 (account and family), §4 (sync)
     docs/BACKEND.md (the backend, Connect the app, What the app does)
     driven on Robolectric (accounts turned off, as in every test), 2026-11-27: no Welcome, Settings › Account reading
-      "Backup isn't set up in this build…", no Family section
+      "Backup isn't set up in this build…", no Family section; and against the Firebase emulators (the children)
     app/src/main/kotlin/com/ffmathy/pooparazzi/phone/account/AppAccounts.kt and FirebaseConfig.kt (when accounts are off)
     app/src/main/kotlin/com/ffmathy/pooparazzi/phone/ui/settings/SettingsScreen.kt, the Account row
     app/src/main/res/values/strings.xml, the account strings
