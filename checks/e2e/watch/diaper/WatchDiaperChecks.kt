@@ -118,8 +118,7 @@ class WatchDiaperChecks : Watch() {
         tap("Save")
         waitFor("Diaper at $stamp")
         closeLogged()
-        val since = clockMinutesBetween(stamp, clock())
-        assertShows("Diaper. Last diaper, diaper, ${if (since == 0L) "just now" else "${spokenWatchMinutes(since)} ago"}, at $stamp")
+        waitForSince(stamp, "the Diaper row") { listOf("Diaper. Last diaper, diaper, ${spokenSince(it)}, at $stamp") }
     }
 
     @Test

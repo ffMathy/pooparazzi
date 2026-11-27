@@ -28,9 +28,11 @@ class WatchTileChecks : Watch() {
         val peed = logPee()
         closeLogged()
         openTile()
-        val feedSince = clockMinutesBetween(fed, clock())
-        val peeSince = clockMinutesBetween(peed, clock())
-        assertTileShows("Pee ${if (peeSince == 0L) "just now" else "${peeSince}m ago"}")
+        // The Tile is drawn once, when opened: the minute may have turned since.
+        val drawn = clockMinutesBetween(peed, clock()).let { listOf(it, it - 1).filter { m -> m >= 0 } }
+        val peeSince = drawn.firstOrNull { tileShows("Pee ${if (it == 0L) "just now" else "${it}m ago"}") }
+            ?: throw AssertionError("no \"Pee …\" title for $drawn minutes on the Tile:\n${tileScreen()}")
+        val feedSince = peeSince + clockMinutesBetween(fed, peed)
         assertTileShows("Last diaper, pee, ${spokenAgo(peeSince)}")
         assertTileShows("Feed. Last feed ${spokenAgo(feedSince)}")
         assertTileShows("Diaper. Last diaper ${spokenAgo(peeSince)}")
@@ -47,11 +49,13 @@ class WatchTileChecks : Watch() {
         assertTileShows("Undo")
         assertTileShows("Woke up, end sleep, Asleep since $start")
         assertTileShows("Woke up")
+        // Drawn by the same answer that started the sleep: in its own minute.
         assertTileShows("just now")
         pass(10_500)
         openTile()
+        // Drawn once, when opened: the minute may have turned since.
         val minutes = clockMinutesBetween(start, clock())
-        assertTileShows(if (minutes == 0L) "Asleep <1m" else "Asleep ${minutes}m")
+        check(listOf(minutes, minutes - 1).any { it >= 0 && tileShows("Asleep ${asleepFor(it)}") }) { "no \"Asleep …\" title:\n${tileScreen()}" }
         check(!tileShowsPart("Tap the tile to undo")) { "the confirmation is still on the Tile:\n${tileScreen()}" }
     }
 
