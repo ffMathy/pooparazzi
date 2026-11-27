@@ -8,6 +8,9 @@ time.
 ```
 pooparazzi.ail.md      Pooparazzi (this file): target, glossary, tokens
 sleep/                 Sleep: Start sleep and Woke up on the phone's Home, the receipt, Undo and the guards
+feeds/                 Feeds: the Feed sheet (breast, bottle, food, just the time), repeats, a feed during a sleep
+diapers/               Diapers: the Diaper sheet, poop colour and texture, the doctor hint, a diaper during a sleep
+forgot-to-log/         ForgotToLog: the Expected chip for a feed or sleep logged long after it happened
 home-status/           HomeStatus: the Lamp, the since-rows, Today, the forecast lines and the top bar
 history-screen/        HistoryScreen: the day ribbon and list, Add past entry, the edit sheet, deleting
 statistics-screen/     StatisticsScreen: averages per day, the chart, unusual days, the typical day
@@ -64,6 +67,9 @@ target
                ("less than a minute", "1 minute", "21 minutes"). The Lamp shows a duration's numbers and units as separate
                texts ("20", "m"); assert its spoken name instead ("Asleep, 20 minutes, since 4:20 PM"). The machine may be
                slow: wait for what a step changes with waitFor or waitUntil(what) { condition } before asserting it.
+               The phone is en-US (12-hour clock, fluid ounces) unless a scenario's Given names a country: then its test
+               carries that region's qualifier, e.g. `@Config(qualifiers = "en-rGB-w390dp-h844dp-xxhdpi")` for a phone
+               in the UK (24-hour clock, millilitres), as checks/e2e/feeds/bottle-feed/BottleFeedChecks.kt does.
                It never calls the app's code. Each test ends with saveScreen("<its scenario's title in lower case, each run
                of other characters one ->"), which saves every window the phone shows (a sheet over Home included) into
                AIL_SHOTS_DIR as a PNG.
@@ -119,6 +125,9 @@ catalog
     sleep.container=#222844  sleep.on.container=#D6DBF6  sleep.strong=#7C88C4  sleep.lit=#2E3660  sleep.text=#AEB6E6
     feed.container=#3B2715  feed.on.container=#FFDCBB  feed.strong=#F2B577
     diaper.container=#13312C  diaper.on.container=#BFE9E0  diaper.strong=#62B3A5
+    feed.text=#F2B577
+    pee.container=#13312C  pee.on.container=#BFE9E0  poop.on.container=#A8DCD1
+    swatch.yellow=#E2B33C  swatch.green=#6F8F3A  swatch.brown=#8A5A2B  swatch.black=#2B2622  swatch.red=#B23A2E  swatch.pale=#ECE6D6
     radius.button=28dp  radius.sheet=28dp  radius.chip=20dp  radius.notice=28dp
     size.toggle=350x96dp  size.button=169x96dp  size.chip=40dp  size.target=48dp  gutter.phone=20dp  gutter.sheet=24dp
     type.headlineSmall=24sp/600  type.titleLarge=22sp/600  type.titleMedium=18sp/600  type.dataMedium=16sp/450  type.labelLarge=16sp/600
@@ -131,6 +140,7 @@ catalog
     day.background=#FBF6F0  day.text=#221A12  day.text.dim=#54473A  day.feed.disc=#FFE1C4  day.sleep.disc=#E1E4F8  day.sleep.track=#6A73B3
     type.heroNumeral=76sp/600  type.heroUnit=34sp/500  type.heroWord=48sp/500  type.displaySmall=48sp/500  type.dataSmall=14sp/500
     type.labelMedium=14sp/600  type.labelSmall=13sp/600  type.bodySmall=14sp/400
+    type.bodyMedium=16sp/400
 ```
 
 ---
@@ -141,12 +151,15 @@ node Pooparazzi : system   level: product
         and ate, with one hand and without waking up properly.
   what
     1. One button starts a sleep, the same button ends it, and every tap can be taken back at once.   refined-by: Sleep
-    2. Home shows at a glance the time since the last feed (or how long the baby has slept), since when the baby is awake, the last diaper, today's counts and what comes next, and each opens its entry to be fixed.   refined-by: HomeStatus
-    3. History shows one day at a time, newest first, and any entry can be added later, fixed by the minute or deleted, with Undo.   refined-by: HistoryScreen
-    4. Statistics shows the average day over a range of whole days, with a chart, the unusual days left out, and the typical day.   refined-by: StatisticsScreen
-    5. The watch logs a feed, a diaper or a sleep from the wrist in a tap or two, without the phone, and its Tile, complications and Ongoing Activity show at a glance how long since each.   refined-by: Watch
+    2. A feed is logged with one tap on what the baby had, at the time Feed was tapped or nudged back to; the side order, the bottle's contents and amount are optional.   refined-by: Feeds
+    3. A diaper change is logged with Pee, Poop, both or neither, at its time; a poop's colour and texture are optional, and worrying colours point to a doctor.   refined-by: Diapers
+    4. A feed or sleep logged long after it happened can be put where the baby's past week expected it, with one tap that a second tap takes back.   refined-by: ForgotToLog
+    5. Home shows at a glance the time since the last feed (or how long the baby has slept), since when the baby is awake, the last diaper, today's counts and what comes next, and each opens its entry to be fixed.   refined-by: HomeStatus
+    6. History shows one day at a time, newest first, and any entry can be added later, fixed by the minute or deleted, with Undo.   refined-by: HistoryScreen
+    7. Statistics shows the average day over a range of whole days, with a chart, the unusual days left out, and the typical day.   refined-by: StatisticsScreen
+    8. The watch logs a feed, a diaper or a sleep from the wrist in a tap or two, without the phone, and its Tile, complications and Ongoing Activity show at a glance how long since each.   refined-by: Watch
   entry     Sleep
-  children  Sleep, HomeStatus, HistoryScreen, StatisticsScreen, Watch
+  children  Sleep, Feeds, Diapers, ForgotToLog, HomeStatus, HistoryScreen, StatisticsScreen, Watch
   sources
     README.md, "Pooparazzi", "Sleep" and "Watch"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for
