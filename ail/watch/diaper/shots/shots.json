@@ -1,0 +1,29 @@
+{
+  "node": "WatchDiaper",
+  "shots": [
+    {
+      "test": "the diaper screen",
+      "file": "01-the-diaper-screen.png"
+    },
+    {
+      "test": "poop shows its colour and texture",
+      "file": "02-poop-shows-its-colour-and-texture.png"
+    },
+    {
+      "test": "logging pee and poop with a colour and texture",
+      "file": "03-logging-pee-and-poop-with-a-colour-and-texture.png"
+    },
+    {
+      "test": "unticking poop keeps its choices hidden",
+      "file": "04-unticking-poop-keeps-its-choices-hidden.png"
+    },
+    {
+      "test": "a plain change",
+      "file": "05-a-plain-change.png"
+    },
+    {
+      "test": "pee alone",
+      "file": "06-pee-alone.png"
+    }
+  ]
+}

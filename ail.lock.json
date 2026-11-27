@@ -71,6 +71,9 @@
       "shots": "bab811e3dbd588a1",
       "look": "30890d78036ffc485d505a392898ed8c18bd2936a17fb867084c3e2938514f4a"
     },
+    "StatisticsChart": {
+      "shots": "953bfa801efe867c"
+    },
     "StatisticsScreen": {
       "shots": "fa70f5dee13ca904"
     },
@@ -80,9 +83,36 @@
     "TopBar": {
       "shots": "b8921dc8f0c4bb0b"
     },
+    "TypicalDay": {
+      "shots": "c84699cd2e366efc"
+    },
     "WakeUp": {
       "shots": "5cdd526b04f464f7",
       "look": "78bbf2720f5f3069a0c8fb9d624f9765f0f8f923d50afc7637775eb2513aea3d"
+    },
+    "Watch": {
+      "shots": "9670abdc33e4b196"
+    },
+    "WatchBottle": {
+      "shots": "3f209c6a2ce8be88"
+    },
+    "WatchDiaper": {
+      "shots": "b5df2b10887a7228"
+    },
+    "WatchFeed": {
+      "shots": "0fb3c27ee5a80851"
+    },
+    "WatchLogged": {
+      "shots": "4c126603e5929359"
+    },
+    "WatchSide": {
+      "shots": "871c05d941a10ee7"
+    },
+    "WatchSleep": {
+      "shots": "3c5cb5b945a3827c"
+    },
+    "WatchTime": {
+      "shots": "02128b08594822a8"
     }
   }
 }

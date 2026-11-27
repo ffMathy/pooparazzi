@@ -1,0 +1,21 @@
+{
+  "node": "Watch",
+  "shots": [
+    {
+      "test": "a fresh watch has nothing logged",
+      "file": "01-a-fresh-watch-has-nothing-logged.png"
+    },
+    {
+      "test": "main shows how long since the last feed and diaper",
+      "file": "02-main-shows-how-long-since-the-last-feed-and-diaper.png"
+    },
+    {
+      "test": "main while the baby sleeps",
+      "file": "03-main-while-the-baby-sleeps.png"
+    },
+    {
+      "test": "main after waking up",
+      "file": "04-main-after-waking-up.png"
+    }
+  ]
+}

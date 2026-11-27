@@ -45,7 +45,8 @@ open class WatchTileChecks : Watch() {
         openTile()
         tapTile("Start sleep")
         val start = recentClocks().first { tileShows("Asleep at $it. Tap the tile to undo") }
-        assertTileShows("Asleep $start · ")
+        // The title's time is the renderer's dynamic time text, filled in once it has drawn a frame.
+        waitUntil("the Tile's title \"Asleep $start · \"") { tileShows("Asleep $start · ") }
         assertTileShows("Undo")
         assertTileShows("Woke up, end sleep, Asleep since $start")
         assertTileShows("Woke up")

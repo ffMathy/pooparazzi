@@ -1,0 +1,21 @@
+{
+  "node": "WatchSleep",
+  "shots": [
+    {
+      "test": "starting a sleep on the watch",
+      "file": "01-starting-a-sleep-on-the-watch.png"
+    },
+    {
+      "test": "a second tap within two seconds changes nothing on the watch",
+      "file": "02-a-second-tap-within-two-seconds-changes-nothing-on-the-watch.png"
+    },
+    {
+      "test": "waking up on the watch",
+      "file": "03-waking-up-on-the-watch.png"
+    },
+    {
+      "test": "waking up within a minute cancels the sleep on the watch",
+      "file": "04-waking-up-within-a-minute-cancels-the-sleep-on-the-watch.png"
+    }
+  ]
+}

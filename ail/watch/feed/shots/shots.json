@@ -1,0 +1,25 @@
+{
+  "node": "WatchFeed",
+  "shots": [
+    {
+      "test": "the feed type screen",
+      "file": "01-the-feed-type-screen.png"
+    },
+    {
+      "test": "logging food on the watch",
+      "file": "02-logging-food-on-the-watch.png"
+    },
+    {
+      "test": "logging just the time of a feed",
+      "file": "03-logging-just-the-time-of-a-feed.png"
+    },
+    {
+      "test": "the same feed twice within five seconds",
+      "file": "04-the-same-feed-twice-within-five-seconds.png"
+    },
+    {
+      "test": "swiping back from feed type logs nothing",
+      "file": "05-swiping-back-from-feed-type-logs-nothing.png"
+    }
+  ]
+}
