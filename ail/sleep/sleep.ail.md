@@ -34,6 +34,8 @@ node Sleep : flow   level: experience
       because a double tap must never toggle a sleep twice (DESIGN_SPEC §11); the notice makes the refusal visible, as no rule is silent (§4.4)
     decide right after a receipt closes, Home ignores taps on the sleep button for 600 ms, without a notice
       because a double tap must never land on a different target (DESIGN_SPEC §5.9, §11)
+    decide a sleep's length is counted in whole clock minutes, from its start's minute to its end's (or to now while it runs): 4:20 PM to 4:41 PM reads 21m whatever the seconds, and "less than a minute" or "just now" within the same minute
+      because a range such as "12:40 – 13:27" must always read 47m next to its own times (core/…/model/EntryExtensions.kt)
     decide the sleep button is one control whose label changes: "Start sleep", or "Woke up" while asleep, spoken "Woke up, end sleep"; it exposes no on/off state
       because the label already says what a tap does (DESIGN_SPEC §9.4)
   look
@@ -58,4 +60,6 @@ node Sleep : flow   level: experience
     app/src/main/kotlin/com/ffmathy/pooparazzi/phone/ui/home/HomeViewModel.kt, the sleep toggle and the Home cooldown
     app/src/main/kotlin/com/ffmathy/pooparazzi/phone/ui/home/HomeModels.kt, HomeTimings (2 s guard, 600 ms cooldown)
     app/src/main/kotlin/com/ffmathy/pooparazzi/phone/ui/home/HomeButtons.kt, the toggle
+    core/src/main/kotlin/com/ffmathy/pooparazzi/core/model/ClockMinutes.kt and EntryExtensions.kt, clock-minute durations;
+      seen driving the app: a sleep nudged 20 minutes back, woken a few seconds later in the next minute, read "Slept 21m"
 ```

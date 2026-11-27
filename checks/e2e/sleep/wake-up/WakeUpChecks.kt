@@ -1,4 +1,4 @@
-// ail-derived-from: WakeUp@af11900925aa29a3
+// ail-derived-from: WakeUp@5cdd526b04f464f7
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test
@@ -8,27 +8,27 @@ class WakeUpChecks : Phone() {
     @Test
     fun `waking up`() {
         freshInstall()
-        sleepStarted20MinutesAgo()
-        wokeUpReceipt()
+        val start = sleepStarted20MinutesAgo()
+        val end = wokeUpReceipt()
         assertShows("Woke up")
-        assertShowsAt("{time} · Slept 20m")
+        assertShows("$end · Slept ${clockMinutesBetween(start, end)}m")
         assertCanTap("Undo")
         for (nudge in listOf("−15m", "−10m", "−5m")) assertCanTap(nudge)
         assertCannotTap("+5m")
         assertShows("Start sleep")
         assertGone("Woke up, end sleep")
         assertShows("Awake")
-        assertShowsAt("Awake less than a minute, since {time}")
+        assertShows("Awake ${spokenMinutes(clockMinutesBetween(end, clock()))}, since $end")
     }
 
     @Test
     fun `undoing a wake-up`() {
         freshInstall()
-        sleepStarted20MinutesAgo()
+        val start = sleepStarted20MinutesAgo()
         wokeUpReceipt()
         tap("Undo")
         assertShows("Undone")
-        assertShowsAt("Asleep, 20 minutes, since {time}", -20)
+        assertShows("Asleep, ${spokenMinutes(clockMinutesBetween(start, clock()))}, since $start")
         assertShows("Woke up, end sleep")
     }
 
@@ -36,11 +36,11 @@ class WakeUpChecks : Phone() {
     fun `going back from the receipt keeps the log`() {
         freshInstall()
         sleepStarted20MinutesAgo()
-        wokeUpReceipt()
+        val end = wokeUpReceipt()
         goBack()
         assertGone("Undo")
         assertShows("Start sleep")
-        assertShowsAt("Awake less than a minute, since {time}")
+        assertShows("Awake ${spokenMinutes(clockMinutesBetween(end, clock()))}, since $end")
     }
 
     @Test
@@ -62,14 +62,13 @@ class WakeUpChecks : Phone() {
     @Test
     fun `undoing a cancelled sleep`() {
         freshInstall()
-        startSleepReceipt()
-        val start = recentClocks().first { shows(it) }
+        val start = startSleepReceipt()
         tap("Done")
         waitOutTheGuard()
         wokeUpReceipt()
         tap("Undo")
         assertShows("Undone")
-        assertShows("Asleep, less than a minute, since $start")
+        assertShows("Asleep, ${spokenMinutes(clockMinutesBetween(start, clock()))}, since $start")
         assertShows("Woke up, end sleep")
     }
 }

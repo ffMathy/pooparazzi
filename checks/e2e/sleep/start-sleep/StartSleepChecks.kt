@@ -1,6 +1,7 @@
-// ail-derived-from: StartSleep@429c94253680b6bf
+// ail-derived-from: StartSleep@bab811e3dbd588a1
 package com.ffmathy.pooparazzi.checks
 
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for StartSleep: Start sleep, its receipt, the nudges, Undo and Edit, on the real phone app. */
@@ -8,28 +9,28 @@ class StartSleepChecks : Phone() {
     @Test
     fun `starting a sleep`() {
         freshInstall()
-        startSleepReceipt()
+        val start = startSleepReceipt()
         assertShows("Sleep started")
-        assertShowsAt("{time}")
         assertCanTap("Undo")
         for (nudge in listOf("−15m", "−10m", "−5m")) assertCanTap(nudge)
         assertCannotTap("+5m")
         assertCanTap("Edit")
         assertCanTap("Done")
         assertShows("Woke up, end sleep")
-        assertShowsAt("Asleep, less than a minute, since {time}")
-        assertShows("just now")
+        assertShows("Asleep, ${spokenMinutes(clockMinutesBetween(start, clock()))}, since $start")
+        assertShows(if (clockMinutesBetween(start, clock()) == 0L) "just now" else "m")
     }
 
     @Test
     fun `nudging the start earlier`() {
         freshInstall()
-        startSleepReceipt()
+        val was = startSleepReceipt()
         tap("−15m")
         tap("−5m")
-        val was = recentClocks().first { showsPart("· was $it") }
-        assertShowsAt("{time} · was $was", -20)
-        assertShowsAt("Asleep, 20 minutes, since {time}", -20)
+        var start = ""
+        waitUntil("the start 20 minutes before $was") { recentClocks(-20).firstOrNull { showsPart("$it · was $was") }?.also { start = it } != null }
+        assertEquals(20, clockMinutesBetween(start, was))
+        assertShows("Asleep, ${spokenMinutes(clockMinutesBetween(start, clock()))}, since $start")
     }
 
     @Test

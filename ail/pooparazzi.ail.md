@@ -51,10 +51,17 @@ target
                that extends Phone (checks/e2e/Phone.kt: the real app, PooparazziApp and MainActivity, on a 390 × 844 dp
                phone under Robolectric with native graphics). Each scenario is one JUnit 4 test, `@Test fun \`<the scenario's
                title>\`()`, that starts with freshInstall() (a new install, its first run skipped, on Home) and acts only
-               through the screen: tap(text) taps what reads text or the button spoken as text; waitFor(text) and
-               waitUntilGone(text) wait; shows(text), showsPart(part), canTap(text) look; assertShows(text) and
-               assertGone(text) fail with every text on the screen; pass(millis) lets time go by (the wall clock and the
-               phone's uptime both move on); clock(minutesFromNow) is the phone's clock time as the app writes it ("14:32").
+               through the screen: tap(text) taps what reads text or the button spoken as text; goBack() goes back;
+               waitFor(text) and waitUntilGone(text) wait; shows(text), showsPart(part), canTap(text) look;
+               assertShows(text), assertGone(text), assertCanTap(text), assertCannotTap(text) fail with every text on
+               the screen; clock(minutesFromNow) is the phone's clock time as the app writes it ("14:32" or "2:32 PM"),
+               and assertShowsAt(text, minutesFromNow) checks a text with "{time}" in it, allowing for the minute
+               turning. pass(millis) really waits (the wall clock and the phone's uptime both move on): use it only
+               for the few seconds a scenario names (a guard, a cooldown, a notice that goes away), never for minutes.
+               A time in the past ("a sleep that started 20 minutes ago") is made as a parent makes it, with the
+               nudges, through the shared steps of each slice in checks/e2e/<its folder>/ (for sleep, checks/e2e/sleep/
+               Sleeps.kt: startSleepReceipt(), waitOutTheGuard(), sleepStarted20MinutesAgo(), wokeUpReceipt()); use
+               them rather than writing new ones.
                It never calls the app's code. Each test ends with saveScreen("<its scenario's title in lower case, each run
                of other characters one ->"), which saves every window the phone shows (a sheet over Home included) into
                AIL_SHOTS_DIR as a PNG.

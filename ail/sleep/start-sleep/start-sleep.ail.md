@@ -15,12 +15,12 @@ node StartSleep : flow   level: experience
       And it offers the nudges −15m, −10m, −5m and +5m, then Edit and Done
       And +5m can't be tapped, because the start would be in the future
       And the sleep button now reads "Woke up"
-      And the Lamp reads "Asleep" and "just now", since the time now
+      And the Lamp reads "Asleep" since the time now, "just now" while the minute hasn't turned
     Scenario: nudging the start earlier
       Given the receipt of a sleep started now
       When the parent taps −15m and then −5m
       Then the receipt's time reads 20 minutes ago, followed by "was" and the time now
-      And the Lamp reads "Asleep" for 20 minutes, since 20 minutes ago
+      And the Lamp reads "Asleep" since 20 minutes ago, for 20 minutes counted in clock minutes
     Scenario: done keeps the sleep running
       Given the receipt of a sleep started now
       When the parent taps Done
@@ -38,7 +38,7 @@ node StartSleep : flow   level: experience
       Then the receipt closes and "Edit sleep" opens, with Fell asleep at the time now and Woke up reading "Still asleep"
   how
     decide the receipt has no timeout: it stays until Done, Undo, Edit or going back, and the log stays as shown
-      because "unknown, confirm with the owner" (DESIGN_SPEC §3.3.1 says "no timeout" but not why)
+      because only the watch's Logged screen times out; on the phone the parent closes the receipt (owner, 2026-11-27)
     decide the receipt's title has no time; the effective time is the line under it and follows every nudge
       because the time must follow every chip tap, so it gets a line of its own (DESIGN_SPEC §11)
     decide nudges apply at once and add up from the logged time, shown as "was" once moved; one that would put the start in the future can't be tapped
@@ -73,6 +73,7 @@ node StartSleep : flow   level: experience
   sources
     docs/design/DESIGN_SPEC.md §3.3.1 (the receipt sheet and its rules), §4.4 (offsets, time limits), §11
     README.md, "Sleep" (Undo receipt, Adjust the start)
+    interview with the owner, 2026-11-27: the phone's receipt has no timeout; only the watch's does
     driven on Robolectric, 2026-11-27: Start sleep, −15m then −5m ("3:17 PM · was 3:37 PM"), +5m disabled, Done, Undo
       (the notice "Undone", gone after two seconds), Edit ("Edit sleep", Fell asleep, Still asleep), Back
     app/src/main/kotlin/com/ffmathy/pooparazzi/phone/ui/home/HomeViewModel.kt, starting a sleep, the receipt's offsets, Undo

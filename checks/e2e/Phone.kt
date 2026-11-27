@@ -65,6 +65,9 @@ abstract class Phone {
         waitFor("Skip")
         tap("Skip")
         waitFor("Start sleep")
+        // A new install has nothing logged: no sleep before, so no "Awake" row, and no feed yet.
+        assertShows("Last fed, No feeds yet")
+        assertGone("Awake")
         // Home ignores taps for a moment after a screen closes, as it does after a sheet.
         pass(1_000)
     }
@@ -72,6 +75,15 @@ abstract class Phone {
     /** Waits until something on the screen reads [text] (or is spoken as [text]). */
     fun waitFor(text: String, timeoutMillis: Long = 10_000) {
         compose.waitUntil(timeoutMillis) { all(text).isNotEmpty() }
+    }
+
+    /** Waits until [condition] holds for what is on the screen; fails with the screen after [timeoutMillis]. */
+    fun waitUntil(what: String, timeoutMillis: Long = 10_000, condition: () -> Boolean) {
+        try {
+            compose.waitUntil(timeoutMillis) { condition() }
+        } catch (e: Throwable) {
+            throw AssertionError("waited ${timeoutMillis / 1000} s for $what:\n${screen()}", e)
+        }
     }
 
     /** Waits until nothing on the screen reads [text]. */
@@ -82,9 +94,18 @@ abstract class Phone {
     /** Whether something on the screen reads [text] (or is spoken as [text]). */
     fun shows(text: String): Boolean = all(text).isNotEmpty()
 
-    /** Whether some text on the screen contains [part]. */
+    /** Whether some text on the screen, or something's spoken name, contains [part]. */
     fun showsPart(part: String): Boolean =
-        compose.onAllNodes(hasText(part, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        compose.onAllNodes(hasText(part, substring = true) or hasContentDescription(part, substring = true), useUnmergedTree = true)
+            .fetchSemanticsNodes().isNotEmpty()
+
+    fun assertShowsPart(part: String) = assertTrue("expected something containing \"$part\" on the screen:\n${screen()}", showsPart(part))
+
+    /** Whole clock minutes from one shown clock time to another ("4:20 PM" to "4:41 PM" is 21), as the app counts durations. */
+    fun clockMinutesBetween(from: String, to: String): Long {
+        val minutes = java.time.Duration.between(parse(from), parse(to)).toMinutes()
+        return if (minutes < 0) minutes + 24 * 60 else minutes
+    }
 
     /** Taps what reads [text], or the button spoken as [text], and gives the app a moment to answer. */
     fun tap(text: String) {
@@ -148,6 +169,9 @@ abstract class Phone {
         compose.waitForIdle()
         captureScreenRoboImage(File(dir, "$name.png").path)
     }
+
+    private fun parse(shown: String): LocalTime =
+        LocalTime.parse(shown, DateTimeFormatter.ofPattern(if (shown.endsWith("M")) "h:mm a" else "HH:mm", Locale.US))
 
     private fun format(time: LocalTime): String {
         val is24 = DateFormat.is24HourFormat(ApplicationProvider.getApplicationContext<Application>())

@@ -11,15 +11,15 @@ node WakeUp : flow   level: experience
     Scenario: waking up
       Given a sleep that started 20 minutes ago
       When the parent taps Woke up
-      Then the receipt reads "Woke up" over the time now and "Slept 20m", with Undo
+      Then the receipt reads "Woke up" over the time now and how long the baby slept in clock minutes ("Slept 20m" from 4:20 PM to 4:40 PM), with Undo
       And it offers the nudges −15m, −10m, −5m and +5m, of which +5m can't be tapped
       And the sleep button reads "Start sleep"
-      And Home reads "Awake", for less than a minute, since the time now
+      And Home reads "Awake" since the time now
     Scenario: undoing a wake-up
       Given a sleep that started 20 minutes ago has just been ended with Woke up
       When the parent taps Undo on its receipt
       Then the notice reads "Undone"
-      And the sleep runs again: the Lamp reads "Asleep" since 20 minutes ago, and the sleep button "Woke up"
+      And the sleep runs again: the Lamp reads "Asleep" since its start 20 minutes ago, and the sleep button "Woke up"
     Scenario: going back from the receipt keeps the log
       Given a sleep that started 20 minutes ago has just been ended with Woke up
       When the parent goes back
