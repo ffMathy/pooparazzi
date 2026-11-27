@@ -95,9 +95,13 @@ catalog
     sleep.container=#222844  sleep.on.container=#D6DBF6  sleep.strong=#7C88C4  sleep.lit=#2E3660  sleep.text=#AEB6E6
     feed.container=#3B2715  feed.on.container=#FFDCBB  feed.strong=#F2B577
     diaper.container=#13312C  diaper.on.container=#BFE9E0  diaper.strong=#62B3A5
+    feed.lit=#4F351C  feed.text=#F2B577  diaper.lit=#1A423B
+    pee.container=#13312C  pee.on.container=#BFE9E0  pee.strong=#8FD0C3  poop.container=#0E2622  poop.on.container=#A8DCD1  poop.strong=#358276
+    swatch.yellow=#E2B33C  swatch.green=#6F8F3A  swatch.brown=#8A5A2B  swatch.black=#2B2622  swatch.red=#B23A2E  swatch.pale=#ECE6D6
     radius.button=28dp  radius.sheet=28dp  radius.chip=20dp  radius.notice=28dp
     size.toggle=350x96dp  size.button=169x96dp  size.chip=40dp  size.target=48dp  gutter.phone=20dp  gutter.sheet=24dp
     type.headlineSmall=24sp/600  type.titleLarge=22sp/600  type.titleMedium=18sp/600  type.dataMedium=16sp/450  type.labelLarge=16sp/600
+    type.labelMedium=14sp/600  type.bodyMedium=16sp/400  type.bodySmall=14sp/400
 ```
 
 ---
@@ -108,8 +112,11 @@ node Pooparazzi : system   level: product
         and ate, with one hand and without waking up properly.
   what
     1. One button starts a sleep, the same button ends it, and every tap can be taken back at once.   refined-by: Sleep
+    2. A feed is logged with one tap on what the baby had, at the time Feed was tapped or nudged back to; the side order, the bottle's contents and amount are optional.   refined-by: Feeds
+    3. A diaper change is logged with Pee, Poop, both or neither, at its time; a poop's colour and texture are optional, and worrying colours point to a doctor.   refined-by: Diapers
+    4. A feed or sleep logged long after it happened can be put where the baby's past week expected it, with one tap that a second tap takes back.   refined-by: ForgotToLog
   entry     Sleep
-  children  Sleep
+  children  Sleep, Feeds, Diapers, ForgotToLog
   sources
     README.md, "Pooparazzi" and "Sleep"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for
