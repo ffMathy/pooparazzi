@@ -119,6 +119,8 @@ glossary
   term "the Tile"    plain "the Pooparazzi tile in the watch's tile carousel"  formal PooparazziTileService
   term "the edge button" plain "the wide button pinned to the bottom edge of a watch screen"  formal EdgeButton
   term "the crown"   plain "the watch's rotating crown or bezel"  formal rotary input
+  term widget        plain "a Pooparazzi panel on the phone's home screen"  formal a Glance app widget
+  term shade         plain "the list of notifications pulled down from the top of the phone"  formal the notification shade
   term "the Lamp"    plain "the big round display on Home: time since the last feed, or how long the baby has slept"  formal HomeLamp
 ```
 
