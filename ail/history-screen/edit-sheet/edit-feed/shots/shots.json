@@ -1,0 +1,21 @@
+{
+  "node": "EditFeed",
+  "shots": [
+    {
+      "test": "a bottle feed's sheet",
+      "file": "01-a-bottle-feed-s-sheet.png"
+    },
+    {
+      "test": "changing a feed's type to breast",
+      "file": "02-changing-a-feed-s-type-to-breast.png"
+    },
+    {
+      "test": "tapping the picked type clears it",
+      "file": "03-tapping-the-picked-type-clears-it.png"
+    },
+    {
+      "test": "moving a feed's time",
+      "file": "04-moving-a-feed-s-time.png"
+    }
+  ]
+}

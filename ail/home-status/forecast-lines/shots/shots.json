@@ -1,0 +1,29 @@
+{
+  "node": "ForecastLines",
+  "shots": [
+    {
+      "test": "no forecast without a week to go on",
+      "file": "01-no-forecast-without-a-week-to-go-on.png"
+    },
+    {
+      "test": "Feed says when the next feed is expected",
+      "file": "02-feed-says-when-the-next-feed-is-expected.png"
+    },
+    {
+      "test": "the feed forecast reads soon in its last minutes",
+      "file": "03-the-feed-forecast-reads-soon-in-its-last-minutes.png"
+    },
+    {
+      "test": "the feed forecast reads now once it is due",
+      "file": "04-the-feed-forecast-reads-now-once-it-is-due.png"
+    },
+    {
+      "test": "Diaper says when the next poop is expected",
+      "file": "05-diaper-says-when-the-next-poop-is-expected.png"
+    },
+    {
+      "test": "Woke up says when the baby is expected to wake",
+      "file": "06-woke-up-says-when-the-baby-is-expected-to-wake.png"
+    }
+  ]
+}

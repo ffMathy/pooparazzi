@@ -1,0 +1,17 @@
+{
+  "node": "EditDiaper",
+  "shots": [
+    {
+      "test": "a pee diaper's sheet",
+      "file": "01-a-pee-diaper-s-sheet.png"
+    },
+    {
+      "test": "ticking Poop shows its colour and texture",
+      "file": "02-ticking-poop-shows-its-colour-and-texture.png"
+    },
+    {
+      "test": "a diaper with nothing ticked is a plain change",
+      "file": "03-a-diaper-with-nothing-ticked-is-a-plain-change.png"
+    }
+  ]
+}

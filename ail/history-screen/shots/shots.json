@@ -1,0 +1,25 @@
+{
+  "node": "HistoryScreen",
+  "shots": [
+    {
+      "test": "History of a new install",
+      "file": "01-history-of-a-new-install.png"
+    },
+    {
+      "test": "today's entries, newest first",
+      "file": "02-today-s-entries-newest-first.png"
+    },
+    {
+      "test": "stepping back to yesterday",
+      "file": "03-stepping-back-to-yesterday.png"
+    },
+    {
+      "test": "a sleep across midnight is listed on both days",
+      "file": "04-a-sleep-across-midnight-is-listed-on-both-days.png"
+    },
+    {
+      "test": "History opens Statistics, and Back returns",
+      "file": "05-history-opens-statistics-and-back-returns.png"
+    }
+  ]
+}

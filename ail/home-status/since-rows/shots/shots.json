@@ -1,0 +1,25 @@
+{
+  "node": "SinceRows",
+  "shots": [
+    {
+      "test": "a diaper shows in the second row",
+      "file": "01-a-diaper-shows-in-the-second-row.png"
+    },
+    {
+      "test": "tapping the diaper row opens the diaper",
+      "file": "02-tapping-the-diaper-row-opens-the-diaper.png"
+    },
+    {
+      "test": "after waking the first row reads Awake",
+      "file": "03-after-waking-the-first-row-reads-awake.png"
+    },
+    {
+      "test": "tapping the Awake row opens the last sleep",
+      "file": "04-tapping-the-awake-row-opens-the-last-sleep.png"
+    },
+    {
+      "test": "while asleep the first row is the last feed",
+      "file": "05-while-asleep-the-first-row-is-the-last-feed.png"
+    }
+  ]
+}

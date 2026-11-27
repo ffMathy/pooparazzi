@@ -3,11 +3,17 @@
   "nodes": {},
   "glue": {},
   "hand": {
+    "AddPastEntry": {
+      "shots": "360221f1982558e9"
+    },
     "BottleFeed": {
       "shots": "f376bdc8e9c401c3"
     },
     "BreastFeed": {
       "shots": "e514089ef6ee8dbe"
+    },
+    "DeleteEntry": {
+      "shots": "6798d36525013bb4"
     },
     "Diapers": {
       "shots": "b4066a530b420465"
@@ -15,14 +21,29 @@
     "DiaperWhileAsleep": {
       "shots": "5b32630b3e4b4b00"
     },
+    "EditDiaper": {
+      "shots": "aea8898b9d6a2c32"
+    },
+    "EditFeed": {
+      "shots": "faad01f2b6b381a3"
+    },
+    "EditSheet": {
+      "shots": "2374a7a7995e9da5"
+    },
     "Feeds": {
       "shots": "944d5eee84053f9c"
     },
     "FeedWhileAsleep": {
       "shots": "0d00cc3aa4385a34"
     },
+    "ForecastLines": {
+      "shots": "b7b20072a7aa888f"
+    },
     "ForgotToLog": {
       "shots": "61d3093f20a7b8fa"
+    },
+    "HistoryScreen": {
+      "shots": "3d39a73da09ca63e"
     },
     "HomeLamp": {
       "shots": "18b6a1eff6db0be5"
@@ -39,6 +60,9 @@
     "RepeatFeed": {
       "shots": "85c2aad195abb756"
     },
+    "SinceRows": {
+      "shots": "ea47e612e15d3a63"
+    },
     "Sleep": {
       "shots": "46c93df58d2296fc",
       "look": "f1194399cc80902953be08acb81a7d31d6e487e215b05ed85418f0b7627ec33c"
@@ -46,6 +70,15 @@
     "StartSleep": {
       "shots": "bab811e3dbd588a1",
       "look": "30890d78036ffc485d505a392898ed8c18bd2936a17fb867084c3e2938514f4a"
+    },
+    "StatisticsScreen": {
+      "shots": "fa70f5dee13ca904"
+    },
+    "TodayGrid": {
+      "shots": "a6952c607a5db159"
+    },
+    "TopBar": {
+      "shots": "b8921dc8f0c4bb0b"
     },
     "WakeUp": {
       "shots": "5cdd526b04f464f7",

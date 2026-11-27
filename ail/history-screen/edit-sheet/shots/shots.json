@@ -1,0 +1,25 @@
+{
+  "node": "EditSheet",
+  "shots": [
+    {
+      "test": "a History row opens its entry",
+      "file": "01-a-history-row-opens-its-entry.png"
+    },
+    {
+      "test": "a nudge shows what the time was",
+      "file": "02-a-nudge-shows-what-the-time-was.png"
+    },
+    {
+      "test": "nudges add up and back",
+      "file": "03-nudges-add-up-and-back.png"
+    },
+    {
+      "test": "waking up before falling asleep can't be saved",
+      "file": "04-waking-up-before-falling-asleep-can-t-be-saved.png"
+    },
+    {
+      "test": "Cancel keeps the entry as it was",
+      "file": "05-cancel-keeps-the-entry-as-it-was.png"
+    }
+  ]
+}
