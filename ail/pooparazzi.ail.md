@@ -75,6 +75,10 @@ target
                The phone is en-US (12-hour clock, fluid ounces) unless a scenario's Given names a country: then its test
                carries that region's qualifier, e.g. `@Config(qualifiers = "en-rGB-w390dp-h844dp-xxhdpi")` for a phone
                in the UK (24-hour clock, millilitres), as checks/e2e/feeds/bottle-feed/BottleFeedChecks.kt does.
+               While a dialog window is open (Add a baby, Remove, a date picker, the Switch baby sheet), Robolectric never
+               lets Compose go idle, so plain tap and waitFor hang: use the dialog steps in checks/e2e/babies/Babies.kt
+               (settleDialogWindows(), tapInTopWindow(text), waitForInTopWindow(text), waitUntilGoneInTopWindow(text),
+               typeBabyName(name)). A Danish phone is the class qualifier "da-w390dp-h844dp-xxhdpi".
                It never calls the app's code. Each test ends with saveScreen("<its scenario's title in lower case, each run
                of other characters one ->"), which saves every window the phone shows (a sheet over Home included) into
                AIL_SHOTS_DIR as a PNG.
