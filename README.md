@@ -221,6 +221,8 @@ The backend's Firestore security rules and the retention job have their own test
 cd firebase && bun install && bun run test
 ```
 
+A debug build can also run against those emulators instead of a real Firebase project (sign-in, consent, families and invites, with no `google-services.json`): start them with `scripts/ail/firebase-emulators.sh` and build with `-Ppooparazzi.firebase.emulators=10.0.2.2` for an Android emulator ([docs/BACKEND.md › Running the app against the emulators](docs/BACKEND.md#running-the-app-against-the-emulators)). The AIL account checks (`checks/e2e/account/`) drive the app on Robolectric this way; `ail adopt` and `ail build` start the emulators themselves. Release builds never use them.
+
 Checks on the Android sources that no Gradle build catches (for example that both apps keep the Wear capabilities through release resource shrinking) are Bun tests in `tests/`:
 
 ```sh

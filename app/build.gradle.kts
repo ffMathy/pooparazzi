@@ -51,7 +51,15 @@ android {
         }
     }
     buildTypes {
+        // The local Firebase emulators instead of a real project (FirebaseEmulators, docs/BACKEND.md › Running the app
+        // against the emulators): debug builds only, from -Ppooparazzi.firebase.emulators=<host>; release builds never.
+        debug {
+            val emulators = providers.gradleProperty("pooparazzi.firebase.emulators").orElse("").get()
+            require(emulators.matches(Regex("[A-Za-z0-9.:-]*"))) { "pooparazzi.firebase.emulators: host or host:authPort:firestorePort" }
+            buildConfigField("String", "FIREBASE_EMULATORS", "\"$emulators\"")
+        }
         release {
+            buildConfigField("String", "FIREBASE_EMULATORS", "\"\"")
             // R8 and resource shrinking (the watch's fonts and unused Material resources stay out of the APK).
             isMinifyEnabled = true
             isShrinkResources = true

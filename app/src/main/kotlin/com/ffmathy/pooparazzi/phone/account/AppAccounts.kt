@@ -19,8 +19,9 @@ import kotlinx.coroutines.SupervisorJob
 
 /**
  * The phone's accounts, once per process: [FirebaseAccounts] when the build carries a Firebase configuration
- * ([FirebaseConfig]), else [NoAccounts]. Without a configuration no Firebase class is touched at all (the manifest
- * removes Firebase's own start-up provider; the app initialises Firebase here, and only with a configuration).
+ * ([FirebaseConfig]) or is a debug build told to use the local emulators ([FirebaseEmulators]), else [NoAccounts].
+ * Without a configuration no Firebase class is touched at all (the manifest removes Firebase's own start-up provider;
+ * the app initialises Firebase here, and only with a configuration).
  */
 object AppAccounts {
     private const val TAG = "AppAccounts"
@@ -42,6 +43,9 @@ object AppAccounts {
     @Volatile
     private var currentConsent: BackupConsent? = null
 
+    /** The emulators' Firebase app of the last [init] (debug builds, [FirebaseEmulators]). */
+    private var emulatorApp: FirebaseApp? = null
+
     /** The accounts: [NoAccounts] until [init] (and in builds without a configuration). */
     val accounts: Accounts get() = current ?: NoAccounts
 
@@ -61,29 +65,46 @@ object AppAccounts {
         // Once per process: Firestore's settings can be set only before its first use.
         if (current != null) return backend
         val app = context.applicationContext
-        if (System.getProperty(DISABLED_PROPERTY) == "true" || !FirebaseConfig.isPresent(app)) {
+        // Debug builds only: the local emulators instead of the configuration's project (FirebaseEmulators).
+        val emulators = FirebaseEmulators.configured()
+        val configured = emulators != null || FirebaseConfig.isPresent(app)
+        if (System.getProperty(DISABLED_PROPERTY) == "true" || !configured) {
             current = NoAccounts
             return null
         }
         val backend = try {
-            val firebase = FirebaseApp.getApps(app).firstOrNull() ?: FirebaseApp.initializeApp(app)
+            // A test's app that starts again after [reset]: the last one's account stops working on the emulators (signed
+            // out, so its backup and family stop; deleting the app would break Firebase Authentication in the process).
+            emulatorApp?.let { old -> runCatching { FirebaseAuth.getInstance(old).signOut() } }
+            val firebase = emulators?.newApp(app)?.also { emulatorApp = it }
+                ?: FirebaseApp.getApps(app).firstOrNull() ?: FirebaseApp.initializeApp(app)
             if (firebase == null) {
                 Log.w(TAG, "The Firebase configuration could not be read: accounts are off")
                 null
             } else {
                 val auth = FirebaseAuth.getInstance(firebase)
                 val firestore = FirebaseFirestore.getInstance(firebase)
+                // Before either is used.
+                emulators?.let {
+                    auth.useEmulator(it.host, it.authPort)
+                    firestore.useEmulator(it.host, it.firestorePort)
+                }
                 // No disk cache: the backup keeps its own state in Room and reads only from the server.
                 firestore.firestoreSettings = FirebaseFirestoreSettings.Builder()
                     .setLocalCacheSettings(MemoryCacheSettings.newBuilder().build())
                     .build()
                 val store = FirestoreCloudStore(firestore, auth)
                 val familyStore = FirebaseFamilyStore(firestore, store)
-                val domain = FirebaseConfig.hostingDomain(app)
+                val domain = if (emulators != null) {
+                    FirebaseConfig.hostingDomainOf(FirebaseEmulators.PROJECT_ID)
+                } else {
+                    FirebaseConfig.hostingDomain(app)
+                }
+                val webClientId = if (emulators != null) FirebaseEmulators.WEB_CLIENT_ID else FirebaseConfig.webClientId(app)
                 val consent = ConsentPrefs(app)
                 lateinit var families: FamilyService
                 val accounts = FirebaseAccounts(
-                    app, auth, FirebaseConfig.webClientId(app), domain, EmailLinkPrefs(app),
+                    app, auth, webClientId, domain, EmailLinkPrefs(app),
                     deleteUserData = { uid -> families.deleteAccountData(uid) },
                 )
                 families = FamilyService(familyStore, accounts.user, FamilyPrefs(app), scope, domain, consent = consent)
