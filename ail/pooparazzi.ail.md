@@ -2,20 +2,14 @@
 
 A baby tracker for an Android phone and a Wear OS watch, made for one hand at
 3am: sleep, feeds and diapers in one or two taps. This spec is being written in
-reverse from the existing app (`/ail:adopt`), one slice at a time.
+reverse from the existing app (`/ail:adopt`), the whole app, one slice at a
+time.
 
 ```
 pooparazzi.ail.md      Pooparazzi (this file): target, glossary, tokens
-sleep/sleep.ail.md     Sleep: Start sleep and Woke up on the phone's Home, the receipt, Undo and the guards
+sleep/                 Sleep: Start sleep and Woke up on the phone's Home, the receipt, Undo and the guards
+watch/                 Watch: the Wear OS app: Main, logging, Logged and Time, the Tile, complications, Ongoing Activity
 ```
-
-Not adopted yet, in the order they are planned: Feeds and Diapers on the phone
-(their sheets, the nudges, "Woke up will be logged too"), the forgotten-log
-"Expected" chip, Home's Lamp and since-rows, History and the edit sheet,
-Statistics, the widgets and notifications, several babies, the first run,
-Settings, the account and family backup, and the watch (Main, its logging
-screens, Tile, complications). Until a slice is adopted, `README.md` and
-`docs/design/` stay its description.
 
 ## Target
 
@@ -70,6 +64,23 @@ target
                It never calls the app's code. Each test ends with saveScreen("<its scenario's title in lower case, each run
                of other characters one ->"), which saves every window the phone shows (a sheet over Home included) into
                AIL_SHOTS_DIR as a PNG.
+               The watch's views and flows (the nodes under ail/watch/) are the existing watch app. Their checks are Kotlin
+               classes in the same package under checks/e2e/watch/ (derived: checks/derived/watch/), compiled in :wear's
+               tests, that extend Watch (checks/e2e/watch/Watch.kt: the real WearApp and MainActivity on a 227 dp round
+               watch, API 36, under Robolectric with native graphics, with no phone in reach). freshInstall() is Main with
+               nothing logged. The helpers keep the Phone names (tap, tapStarting(prefix) for Main's rows "Feed. …" and
+               "Diaper. …", waitFor, waitUntil, waitUntilGone, shows, showsPart (spoken states too), canTap, assert…,
+               clock, recentClocks, clockMinutesBetween, pass, screen, saveScreen) plus tapTheBackground(),
+               swipeToDismiss() (the system back the swipe becomes on Wear OS 6), turnCrown(steps) (one 18 dp detent,
+               clockwise later), scrollTo(text) and scrollBackTo(text) (the crown scrolls a list). The Tile:
+               openTile(), tileShows, tileScreen, tapTile(text, or null for its background). The face:
+               complication("Since last feed" | "Last diaper" | "Asleep or awake" | "Sleep and last feed") returns its
+               text, title and spoken name one per line; tapComplication(name); ongoingActivity() (its status, or
+               null); tapOngoingActivity(). pass() moves the wall clock, the uptime clock and the frame clock together,
+               so Logged's five seconds and inert second last as long as on a watch. Past times are made through
+               Logged's time with the shared steps in checks/e2e/watch/Watches.kt (logFood(), logPee(),
+               logPlainDiaper(), startSleepOnTheWatch(), sleepStartedMinutesAgo(n), closeLogged(),
+               waitOutLoggedInertStart()). Each test ends with saveScreen("…"), which saves the watch's screen.
 ```
 
 ## Glossary
@@ -83,6 +94,11 @@ glossary
   term nudge         plain "one of the −15m, −10m, −5m and +5m buttons, which move a time by that much"   formal an offset chip
   term notice        plain "a short message that takes the place of Today on Home for two seconds"          formal the whisper slot's notice card
   term guard         plain "the two seconds after a tap on the sleep button in which another tap changes nothing"  formal the double-toggle guard
+  term Main          plain "the watch app's main screen: the title line, the Feed and Diaper rows and the sleep edge button"  formal the wear MainScreen
+  term Logged        plain "the watch screen after every log: what was logged and when, Undo, and the time to move it"  formal LoggedScreen
+  term "the Tile"    plain "the Pooparazzi tile in the watch's tile carousel"  formal PooparazziTileService
+  term "the edge button" plain "the wide button pinned to the bottom edge of a watch screen"  formal EdgeButton
+  term "the crown"   plain "the watch's rotating crown or bezel"  formal rotary input
   term "the Lamp"    plain "the big round display on Home: time since the last feed, or how long the baby has slept"  formal HomeLamp
 ```
 
@@ -122,7 +138,7 @@ node Pooparazzi : system   level: product
   entry     Sleep
   children  Sleep, Watch
   sources
-    README.md, "Pooparazzi" and "Sleep"
+    README.md, "Pooparazzi", "Sleep" and "Watch"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for
       sleeping to track start and stop times, and trigger time for feeding and diapers (pooping/peeing)"
 ```
