@@ -92,6 +92,12 @@ target
                inviteSomeone() (returns the link the share sheet shares), openLink(url) (as tapping a link does),
                familyOfTwo() (parent@example.com invites, partner@example.com joins on the same phone: one phone runs
                the checks). Google sign-in is never tapped: it needs Google Play services.
+               A node's derived check plays the same scenarios as its end-to-end check, checks/e2e/<its folder>/
+               <Node>Checks.kt (checks/e2e/watch/… for the watch), which already passes against the app: read it first,
+               follow it step by step (its waits, its shared steps, the order of its taps), and add what the picture
+               needs; never invent a different way through the app. Home ignores taps on Feed, Diaper and the sleep
+               button for 600 ms after any sheet closes (the shared steps wait it out); a sheet ignores taps for its
+               first 500 ms.
                It never calls the app's code. Each test ends with saveScreen("<its scenario's title in lower case, each run
                of other characters one ->"), which saves every window the phone shows (a sheet over Home included) into
                AIL_SHOTS_DIR as a PNG.
