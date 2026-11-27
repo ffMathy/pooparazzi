@@ -8,6 +8,9 @@ time.
 ```
 pooparazzi.ail.md      Pooparazzi (this file): target, glossary, tokens
 sleep/                 Sleep: Start sleep and Woke up on the phone's Home, the receipt, Undo and the guards
+home-status/           HomeStatus: the Lamp, the since-rows, Today, the forecast lines and the top bar
+history-screen/        HistoryScreen: the day ribbon and list, Add past entry, the edit sheet, deleting
+statistics-screen/     StatisticsScreen: averages per day, the chart, unusual days, the typical day
 watch/                 Watch: the Wear OS app: Main, logging, Logged and Time, the Tile, complications, Ongoing Activity
 ```
 
@@ -124,6 +127,10 @@ catalog
     radius.watch.button=26dp  radius.watch.pill=16dp  radius.watch.chip=20dp  size.edge.medium=70dp  size.edge.small=56dp
     wear.titleLarge=20sp/600  wear.titleMedium=16sp/600  wear.titleSmall=14sp/600  wear.labelMedium=16sp/600
     wear.labelSmall=13sp/500  wear.bodyMedium=14sp/450
+    color.surface.container=#1C1713  color.time.field=#26201A  color.outline.variant=#3F352C  color.ribbon.night=#080706  color.error=#F2A497
+    day.background=#FBF6F0  day.text=#221A12  day.text.dim=#54473A  day.feed.disc=#FFE1C4  day.sleep.disc=#E1E4F8  day.sleep.track=#6A73B3
+    type.heroNumeral=76sp/600  type.heroUnit=34sp/500  type.heroWord=48sp/500  type.displaySmall=48sp/500  type.dataSmall=14sp/500
+    type.labelMedium=14sp/600  type.labelSmall=13sp/600  type.bodySmall=14sp/400
 ```
 
 ---
@@ -134,9 +141,12 @@ node Pooparazzi : system   level: product
         and ate, with one hand and without waking up properly.
   what
     1. One button starts a sleep, the same button ends it, and every tap can be taken back at once.   refined-by: Sleep
-    2. The watch logs a feed, a diaper or a sleep from the wrist in a tap or two, without the phone, and its Tile, complications and Ongoing Activity show at a glance how long since each.   refined-by: Watch
+    2. Home shows at a glance the time since the last feed (or how long the baby has slept), since when the baby is awake, the last diaper, today's counts and what comes next, and each opens its entry to be fixed.   refined-by: HomeStatus
+    3. History shows one day at a time, newest first, and any entry can be added later, fixed by the minute or deleted, with Undo.   refined-by: HistoryScreen
+    4. Statistics shows the average day over a range of whole days, with a chart, the unusual days left out, and the typical day.   refined-by: StatisticsScreen
+    5. The watch logs a feed, a diaper or a sleep from the wrist in a tap or two, without the phone, and its Tile, complications and Ongoing Activity show at a glance how long since each.   refined-by: Watch
   entry     Sleep
-  children  Sleep, Watch
+  children  Sleep, HomeStatus, HistoryScreen, StatisticsScreen, Watch
   sources
     README.md, "Pooparazzi", "Sleep" and "Watch"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for
