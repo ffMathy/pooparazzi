@@ -1,0 +1,30 @@
+{
+  "specRoot": "ail",
+  "checksDir": "checks",
+  "migrate": "node-by-node",
+  "run": {
+    "legacy": {
+      "start": "scripts/ail/run-legacy.sh",
+      "cwd": ".",
+      "ready": "test -f .ail/legacy/ready",
+      "timeout": 1200,
+      "env": {
+        "AIL_APP": "the phone app, on Robolectric in each check's own process (checks/e2e/Phone.kt)"
+      }
+    },
+    "app": {
+      "start": "scripts/ail/run-legacy.sh",
+      "cwd": ".",
+      "ready": "test -f .ail/legacy/ready",
+      "timeout": 1200,
+      "env": {
+        "AIL_APP": "the phone app, on Robolectric in each check's own process (checks/e2e/Phone.kt)"
+      }
+    }
+  },
+  "tests": {
+    "e2e": "checks/e2e/{dir}/{name}Checks.kt",
+    "prepare": "scripts/ail/check.sh build",
+    "command": "scripts/ail/check.sh e2e {name} {report}"
+  }
+}

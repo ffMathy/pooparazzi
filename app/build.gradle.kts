@@ -76,11 +76,18 @@ android {
     // The font licences shown in Settings › About › Font licences, packaged from the single copy in third_party/
     // (assets/fonts/*-OFL.txt).
     sourceSets.getByName("main").assets.directories.add(rootProject.file("third_party").path)
+    // The AIL checks (ail.config.json): the end-to-end checks (checks/e2e) and the derived checks that picture each node
+    // (checks/derived) drive the real app on Robolectric, like these tests.
+    sourceSets.getByName("test").kotlin.directories.add(rootProject.file("checks/e2e").path)
+    sourceSets.getByName("test").kotlin.directories.add(rootProject.file("checks/derived").path)
     testOptions {
         unitTests.isIncludeAndroidResources = true
         // Hermetic unit tests: Firebase never starts in them, even on a machine with app/google-services.json
         // (AppAccounts). Tests that need accounts install a fake.
         unitTests.all { it.systemProperty("pooparazzi.accounts.disabled", "true") }
+        // Where an AIL derived check saves each scenario's last screen (scripts/ail/check.sh); empty: nowhere.
+        val ailShots = providers.gradleProperty("ail.shots").orElse("").get()
+        unitTests.all { it.systemProperty("ail.shots", ailShots) }
     }
 }
 
