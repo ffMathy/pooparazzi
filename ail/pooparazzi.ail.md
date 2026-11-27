@@ -103,6 +103,10 @@ catalog
     radius.button=28dp  radius.sheet=28dp  radius.chip=20dp  radius.notice=28dp
     size.toggle=350x96dp  size.button=169x96dp  size.chip=40dp  size.target=48dp  gutter.phone=20dp  gutter.sheet=24dp
     type.headlineSmall=24sp/600  type.titleLarge=22sp/600  type.titleMedium=18sp/600  type.dataMedium=16sp/450  type.labelLarge=16sp/600
+    color.row=#1C1713  color.dialog=#26201A  color.error=#F2A497  color.outline.variant=#3F352C
+    day.background=#FBF6F0  day.row=#F0E6DA  day.dialog=#EADDCF  day.text=#221A12  day.text.dim=#54473A  day.error=#9C3328
+    type.bodyLarge=18sp/400  type.bodyMedium=16sp/400  type.bodySmall=14sp/400  type.labelMedium=14sp/600  type.titleSmall=16sp/600
+    radius.row=20dp  radius.row.inner=6dp  size.row=56dp
 ```
 
 ---
@@ -113,8 +117,13 @@ node Pooparazzi : system   level: product
         and ate, with one hand and without waking up properly.
   what
     1. One button starts a sleep, the same button ends it, and every tap can be taken back at once.   refined-by: Sleep
+    2. A new install asks for the baby's name and birth date and shows a short tour once, and both can be skipped.   refined-by: FirstRun
+    3. Once the app is in real use, it asks once or twice for a rating on Google Play, never at night or over a sheet.   refined-by: ReviewPrompt
+    4. Settings holds the babies, the look, the language, the watch, the notifications and what the app is.   refined-by: Settings
+    5. Twins and siblings each have their own log; the phone shows and logs for one baby at a time, switched on Home.   refined-by: Babies
+    6. No account is needed; an optional one backs the log up and shares it with a family.   refined-by: Account
   entry     Sleep
-  children  Sleep
+  children  Sleep, FirstRun, ReviewPrompt, Settings, Babies, Account
   sources
     README.md, "Pooparazzi" and "Sleep"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for
