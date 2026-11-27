@@ -17,7 +17,13 @@ node Welcome : flow   level: experience
     Scenario: continuing without an account
       Given the Welcome
       When the parent taps "Continue without an account"
-      Then Your baby follows, and the Welcome never shows again on this phone
+      Then Your baby follows, its hint reading "Names and birth dates stay on this phone and your watch."
+      And after the first run, Home, with Settings › Account reading "Not signed in"
+    Scenario: signing in on the welcome
+      Given the Welcome
+      When the parent types "parent@example.com", taps "Email me a sign-in link" and opens the link in the email
+      Then the second card reads "Check your email" until the link is opened, and then the consent asks "Back up to Google Firebase?"
+      And after "I agree", Your baby follows, its hint reading "Names and birth dates are shared with your family and kept in your backup."
   how
     decide the two choices are equal cards, the one without an account first
       because it must never be hidden below the sign-in form (BABIES_AND_BACKUP §3.1)
@@ -25,8 +31,8 @@ node Welcome : flow   level: experience
       because a new phone should ask again (BABIES_AND_BACKUP §3.1)
     decide a phone that is already signed in (an update) never shows it, nor does a build without a Firebase configuration
       because there is nothing to choose then (app/…/app/AppViewModel.kt)
-    decide it can't be checked here: it needs a build with a Firebase configuration, which the checks turn off
-      because the checks run with accounts turned off (app/build.gradle.kts)
+    decide the checks run the app on the local Firebase emulators (a debug build's switch); "Continue with Google" is shown but not tapped
+      because Google's account picker needs Google Play services, which the checks' phone (Robolectric) lacks (docs/BACKEND.md › Running the app against the emulators)
   look
     Full screen on color.background, inside gutter.phone: the title in type.headlineSmall color.text, the intro in
       type.bodyMedium color.text.dim, then two cards of color.surface.container with radius.row corners, each with its icon (the phone,
@@ -41,6 +47,8 @@ node Welcome : flow   level: experience
     continue     "Continue without an account"
     cloud.title  "Back up to the cloud"
     cloud.body   "Sign in to back up your log and share it with your family."
+    babyHint.local  "Names and birth dates stay on this phone and your watch."
+    babyHint.backup "Names and birth dates are shared with your family and kept in your backup."
   uses      SignIn
   sources
     docs/design/BABIES_AND_BACKUP.md §3.1 (First run)
@@ -48,5 +56,6 @@ node Welcome : flow   level: experience
     README.md, "Backup and families" (the Welcome screenshot)
     app/src/main/kotlin/com/ffmathy/pooparazzi/phone/ui/account/AccountScreen.kt, the Welcome
     app/src/main/kotlin/com/ffmathy/pooparazzi/phone/app/AppViewModel.kt, when it shows
-    not driven: accounts are off in every test and check (app/build.gradle.kts)
+    driven on Robolectric against the Firebase Authentication and Firestore emulators, 2026-11-27: the Welcome, Continue
+      without an account, and signing in by the emailed link (read from the emulator's sent emails)
 ```

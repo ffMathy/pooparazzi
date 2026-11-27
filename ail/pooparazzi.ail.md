@@ -79,6 +79,17 @@ target
                lets Compose go idle, so plain tap and waitFor hang: use the dialog steps in checks/e2e/babies/Babies.kt
                (settleDialogWindows(), tapInTopWindow(text), waitForInTopWindow(text), waitUntilGoneInTopWindow(text),
                typeBabyName(name)). A Danish phone is the class qualifier "da-w390dp-h844dp-xxhdpi".
+               Phone is a build without a backup (accounts off). The nodes under ail/account/ other than Account itself
+               are the build with one: their checks extend BackedUpPhone (checks/e2e/account/Accounts.kt), the same app
+               pointed at the Firebase Authentication and Firestore emulators (ail.config.json's service firebase,
+               demo project demo-pooparazzi, emptied before each test). There a new install opens on the Welcome, not
+               Your baby, so a test starts with newInstallSignedInAs(email) (signed in by email, agreed, first run
+               skipped: Home) or waits for "No account needed" itself, not freshInstall(). The steps: typeEmail(text),
+               signInByEmail(email) (sends the link, reads it from the emulator's sent emails and opens it, ending on
+               the consent), agreeToTheBackup(), skipTheFirstRun(), openTheAccountScreen(row), signOutFromSettings(email),
+               inviteSomeone() (returns the link the share sheet shares), openLink(url) (as tapping a link does),
+               familyOfTwo() (parent@example.com invites, partner@example.com joins on the same phone: one phone runs
+               the checks). Google sign-in is never tapped: it needs Google Play services.
                It never calls the app's code. Each test ends with saveScreen("<its scenario's title in lower case, each run
                of other characters one ->"), which saves every window the phone shows (a sheet over Home included) into
                AIL_SHOTS_DIR as a PNG.
