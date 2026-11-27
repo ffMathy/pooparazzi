@@ -17,6 +17,11 @@ statistics-screen/     StatisticsScreen: averages per day, the chart, unusual da
 widgets/               Widgets: the 4×2, 3×1 and cover-screen widgets, their receipt and Undo
 notifications/         Notifications: the running sleep, Woke up and its offsets, a log that ends a sleep, predictions
 watch/                 Watch: the Wear OS app: Main, logging, Logged and Time, the Tile, complications, Ongoing Activity
+first-run/             FirstRun: Your baby (name, birth date) and the six-page introduction
+review-prompt/         ReviewPrompt: "Enjoying Pooparazzi?", when it is due and when it shows
+settings/              Settings: Appearance, Language (and a Danish phone), Watch, Notifications, About
+babies/                Babies: names and birth dates, Add a baby, Remove, the Switch baby sheet
+account/               Account: a build without a backup; the Welcome, sign-in, consent, family and joining
 ```
 
 ## Target
@@ -72,6 +77,10 @@ target
                The phone is en-US (12-hour clock, fluid ounces) unless a scenario's Given names a country: then its test
                carries that region's qualifier, e.g. `@Config(qualifiers = "en-rGB-w390dp-h844dp-xxhdpi")` for a phone
                in the UK (24-hour clock, millilitres), as checks/e2e/feeds/bottle-feed/BottleFeedChecks.kt does.
+               While a dialog window is open (Add a baby, Remove, a date picker, the Switch baby sheet), Robolectric never
+               lets Compose go idle, so plain tap and waitFor hang: use the dialog steps in checks/e2e/babies/Babies.kt
+               (settleDialogWindows(), tapInTopWindow(text), waitForInTopWindow(text), waitUntilGoneInTopWindow(text),
+               typeBabyName(name)). A Danish phone is the class qualifier "da-w390dp-h844dp-xxhdpi".
                It never calls the app's code. Each test ends with saveScreen("<its scenario's title in lower case, each run
                of other characters one ->"), which saves every window the phone shows (a sheet over Home included) into
                AIL_SHOTS_DIR as a PNG.
@@ -143,6 +152,8 @@ catalog
     type.heroNumeral=76sp/600  type.heroUnit=34sp/500  type.heroWord=48sp/500  type.displaySmall=48sp/500  type.dataSmall=14sp/500
     type.labelMedium=14sp/600  type.labelSmall=13sp/600  type.bodySmall=14sp/400
     type.bodyMedium=16sp/400
+    color.dialog=#26201A  day.row=#F0E6DA  day.dialog=#EADDCF  day.error=#9C3328
+    type.bodyLarge=18sp/400  type.titleSmall=16sp/600  radius.row=20dp  radius.row.inner=6dp  size.row=56dp
 ```
 
 ---
@@ -160,10 +171,15 @@ node Pooparazzi : system   level: product
     6. History shows one day at a time, newest first, and any entry can be added later, fixed by the minute or deleted, with Undo.   refined-by: HistoryScreen
     7. Statistics shows the average day over a range of whole days, with a chart, the unusual days left out, and the typical day.   refined-by: StatisticsScreen
     8. The watch logs a feed, a diaper or a sleep from the wrist in a tap or two, without the phone, and its Tile, complications and Ongoing Activity show at a glance how long since each.   refined-by: Watch
-    9. Home-screen widgets start and end a sleep in place, with Undo, and open the app's Feed and Diaper sheets, showing how long since each.   refined-by: Widgets
-    10. A running sleep shows in a silent notification that ends it from the lock screen and then lets its end be moved; a feed or diaper that ends a sleep says so; and what comes next shows as notifications the parent can turn off.   refined-by: Notifications
+    9. A new install asks for the baby's name and birth date and shows a short tour once, and both can be skipped.   refined-by: FirstRun
+    10. Once the app is in real use, it asks once or twice for a rating on Google Play, never at night or over a sheet.   refined-by: ReviewPrompt
+    11. Settings holds the babies, the look, the language, the watch, the notifications and what the app is.   refined-by: Settings
+    12. Twins and siblings each have their own log; the phone shows and logs for one baby at a time, switched on Home.   refined-by: Babies
+    13. No account is needed; an optional one backs the log up and shares it with a family.   refined-by: Account
+    14. Home-screen widgets start and end a sleep in place, with Undo, and open the app's Feed and Diaper sheets, showing how long since each.   refined-by: Widgets
+    15. A running sleep shows in a silent notification that ends it from the lock screen and then lets its end be moved; a feed or diaper that ends a sleep says so; and what comes next shows as notifications the parent can turn off.   refined-by: Notifications
   entry     Sleep
-  children  Sleep, Feeds, Diapers, ForgotToLog, HomeStatus, HistoryScreen, StatisticsScreen, Watch, Widgets, Notifications
+  children  Sleep, Feeds, Diapers, ForgotToLog, HomeStatus, HistoryScreen, StatisticsScreen, Watch, FirstRun, ReviewPrompt, Settings, Babies, Account, Widgets, Notifications
   sources
     README.md, "Pooparazzi", "Sleep" and "Watch"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for

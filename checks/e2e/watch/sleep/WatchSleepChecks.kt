@@ -1,4 +1,4 @@
-// ail-derived-from: WatchSleep@96f4869599d1ea78
+// ail-derived-from: WatchSleep@3c5cb5b945a3827c
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test
@@ -54,14 +54,17 @@ class WatchSleepChecks : Watch() {
     @Test
     fun `waking up within a minute cancels the sleep on the watch`() {
         freshInstall()
-        startSleepOnTheWatch()
+        val start = startSleepOnTheWatch()
         closeLogged()
         // Past the two seconds of the guard.
         pass(1_500)
         tap("Woke up, end sleep")
         waitFor("Sleep cancelled")
-        assertShows("Slept <1m")
-        assertShows("Slept less than a minute")
+        // Under a minute, but counted in clock minutes: "Slept 1m" when the sleep crossed a minute's turn.
+        val slept = clockMinutesBetween(start, clock())
+        val read = listOf(slept, slept - 1).filter { it in 0L..1L }
+            .firstOrNull { shows("Slept ${asleepFor(it)}") && shows("Slept ${spokenWatchMinutes(it)}") }
+        org.junit.Assert.assertNotNull("expected \"Slept <1m\" (or \"Slept 1m\" across a minute's turn):\n${screen()}", read)
         assertShows("Undo")
         assertGonePart("Sleep cancelled at")
         waitOutLoggedInertStart()

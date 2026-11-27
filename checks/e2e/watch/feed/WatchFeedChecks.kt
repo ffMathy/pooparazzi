@@ -29,9 +29,7 @@ class WatchFeedChecks : Watch() {
         waitFor("Food at $stamp")
         assertShows("Undo")
         closeLogged()
-        val since = clockMinutesBetween(stamp, clock())
-        assertShows("Feed. Last feed, food, ${if (since == 0L) "just now" else "${spokenWatchMinutes(since)} ago"}, at $stamp")
-        assertShowsPart(shortSince(since))
+        waitForSince(stamp, "the Feed row") { listOf("Feed. Last feed, food, ${spokenSince(it)}, at $stamp", shortSince(it)) }
     }
 
     @Test

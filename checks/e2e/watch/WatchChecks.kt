@@ -26,14 +26,10 @@ class WatchChecks : Watch() {
         val peed = logPee()
         closeLogged()
         waitUntil("the Feed row") { showsPart("Feed. Last feed, food, ") }
-        val feedSince = clockMinutesBetween(fed, clock())
-        val peeSince = clockMinutesBetween(peed, clock())
-        val feedAgo = if (feedSince == 0L) "just now" else "${spokenWatchMinutes(feedSince)} ago"
-        val peeAgo = if (peeSince == 0L) "just now" else "${spokenWatchMinutes(peeSince)} ago"
-        assertShows("Feed. Last feed, food, $feedAgo, at $fed")
-        assertShows("Diaper. Last diaper, pee, $peeAgo, at $peed")
-        assertShowsPart(shortSince(peeSince))
-        assertShows("Last diaper, pee, $peeAgo")
+        waitForSince(fed, "the Feed row") { listOf("Feed. Last feed, food, ${spokenSince(it)}, at $fed") }
+        waitForSince(peed, "the Diaper row and the title") {
+            listOf("Diaper. Last diaper, pee, ${spokenSince(it)}, at $peed", shortSince(it), "Last diaper, pee, ${spokenSince(it)}")
+        }
     }
 
     @Test

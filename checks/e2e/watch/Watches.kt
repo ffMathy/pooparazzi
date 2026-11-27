@@ -16,6 +16,16 @@ fun spokenWatchMinutes(minutes: Long): String = when (minutes) {
 /** "<1m", "1m" or "12m": how a running sleep's length is written ("Asleep <1m"), in whole clock minutes. */
 fun asleepFor(minutes: Long): String = if (minutes == 0L) "<1m" else "${minutes}m"
 
+/** "just now" or "12 minutes ago", as Main and the Tile speak a time since in whole clock minutes. */
+fun spokenSince(minutes: Long): String = if (minutes == 0L) "just now" else "${spokenWatchMinutes(minutes)} ago"
+
+/**
+ * Waits until the screen shows what [expected] says for the whole clock minutes since [from], counted again on every
+ * look: the minute may turn between the log and the look, and Main re-words itself only on that minute.
+ */
+fun Watch.waitForSince(from: String, what: String, expected: (minutes: Long) -> List<String>) =
+    waitUntil(what) { expected(clockMinutesBetween(from, clock())).all { shows(it) || showsPart(it) } }
+
 /** "just now", "1m" or "12m": how Main and the Tile write the time since, in whole clock minutes. */
 fun shortSince(minutes: Long): String = if (minutes == 0L) "just now" else "${minutes}m"
 
