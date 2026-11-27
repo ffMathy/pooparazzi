@@ -55,7 +55,7 @@ class ForgotToLogChecks : Phone() {
         feedSheet()
         val offered = expectedOffer()
         assertOffered(offered, last, 30)
-        assertFalse(isPicked("Expected $offered"))
+        assertFalse(isChosen("Expected $offered"))
         tap("Cancel")
         pass(500)
         diaperSheet()
@@ -72,7 +72,7 @@ class ForgotToLogChecks : Phone() {
         tap("Expected $offered")
         waitUntil("the sheet at $offered") { shows("$offered · was $now") }
         assertEquals("Feed · $offered", sheetTitle())
-        assertTrue(isPicked("Expected $offered"))
+        assertTrue(isChosen("Expected $offered"))
         tap("Food")
         waitUntilGone("Just the time")
         waitForLastFeed("food", offered)
@@ -91,7 +91,7 @@ class ForgotToLogChecks : Phone() {
         tap("Expected $offered")
         waitUntil("the sheet back at $now") { sheetTitle() == "Feed · $now" }
         assertTrue("no was:\n${screen()}", !showsPart("· was"))
-        assertFalse(isPicked("Expected $offered"))
+        assertFalse(isChosen("Expected $offered"))
     }
 
     @Test
@@ -134,7 +134,7 @@ class ForgotToLogChecks : Phone() {
         assertOffered(offered, end, 15)
         tap("Expected $offered")
         waitUntil("the start at $offered") { shows("$offered · was $now") }
-        assertTrue(isPicked("Expected $offered"))
+        assertTrue(isChosen("Expected $offered"))
         waitUntil("the Lamp asleep since $offered") {
             shows("Asleep, ${spokenMinutes(clockMinutesBetween(offered!!, clock()))}, since $offered")
         }

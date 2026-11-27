@@ -80,7 +80,7 @@ fun Phone.isTicked(text: String): Boolean = compose.onAllNodes(
 ).fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.ToggleableState) == ToggleableState.On }
 
 /** Whether the choice (a chip, Milk or Formula) that reads [text] is picked. */
-fun Phone.isPicked(text: String): Boolean = compose.onAllNodes(hasText(text) and hasClickAction())
+fun Phone.isChosen(text: String): Boolean = compose.onAllNodes(hasText(text) and hasClickAction())
     .fetchSemanticsNodes().any {
         it.config.getOrNull(SemanticsProperties.Selected) == true ||
             it.config.getOrNull(SemanticsProperties.ToggleableState) == ToggleableState.On

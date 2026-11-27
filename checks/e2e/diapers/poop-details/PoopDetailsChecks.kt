@@ -27,7 +27,7 @@ class PoopDetailsChecks : Phone() {
         assertShows("Texture")
         for (option in COLOURS + TEXTURES) {
             assertCanTap(option)
-            assertFalse("$option picked", isPicked(option))
+            assertFalse("$option picked", isChosen(option))
         }
         assertGone(HINT)
     }
@@ -37,10 +37,10 @@ class PoopDetailsChecks : Phone() {
         freshInstall()
         poopTicked()
         tap("Red")
-        assertTrue(isPicked("Red"))
+        assertTrue(isChosen("Red"))
         assertShows(HINT)
         tap("Red")
-        assertFalse(isPicked("Red"))
+        assertFalse(isChosen("Red"))
         waitUntilGone(HINT)
     }
 
@@ -50,12 +50,12 @@ class PoopDetailsChecks : Phone() {
         poopTicked()
         for (colour in listOf("Black", "Pale")) {
             tap(colour)
-            assertTrue(isPicked(colour))
+            assertTrue(isChosen(colour))
             assertShows(HINT)
         }
         for (colour in listOf("Yellow", "Green", "Brown")) {
             tap(colour)
-            assertTrue(isPicked(colour))
+            assertTrue(isChosen(colour))
             waitUntilGone(HINT)
         }
     }
@@ -66,14 +66,14 @@ class PoopDetailsChecks : Phone() {
         poopTicked()
         tap("Pale")
         tap("Seedy")
-        assertTrue(isPicked("Pale") && isPicked("Seedy"))
+        assertTrue(isChosen("Pale") && isChosen("Seedy"))
         tap("Poop")
         waitUntilGone("Colour")
         assertGone("Texture")
         tap("Poop")
         waitFor("Colour")
-        assertFalse(isPicked("Pale"))
-        assertFalse(isPicked("Seedy"))
+        assertFalse(isChosen("Pale"))
+        assertFalse(isChosen("Seedy"))
     }
 
     @Test
