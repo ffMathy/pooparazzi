@@ -14,6 +14,8 @@ forgot-to-log/         ForgotToLog: the Expected chip for a feed or sleep logged
 home-status/           HomeStatus: the Lamp, the since-rows, Today, the forecast lines and the top bar
 history-screen/        HistoryScreen: the day ribbon and list, Add past entry, the edit sheet, deleting
 statistics-screen/     StatisticsScreen: averages per day, the chart, unusual days, the typical day
+widgets/               Widgets: the 4×2, 3×1 and cover-screen widgets, their receipt and Undo
+notifications/         Notifications: the running sleep, Woke up and its offsets, a log that ends a sleep, predictions
 watch/                 Watch: the Wear OS app: Main, logging, Logged and Time, the Tile, complications, Ongoing Activity
 ```
 
@@ -158,8 +160,10 @@ node Pooparazzi : system   level: product
     6. History shows one day at a time, newest first, and any entry can be added later, fixed by the minute or deleted, with Undo.   refined-by: HistoryScreen
     7. Statistics shows the average day over a range of whole days, with a chart, the unusual days left out, and the typical day.   refined-by: StatisticsScreen
     8. The watch logs a feed, a diaper or a sleep from the wrist in a tap or two, without the phone, and its Tile, complications and Ongoing Activity show at a glance how long since each.   refined-by: Watch
+    9. Home-screen widgets start and end a sleep in place, with Undo, and open the app's Feed and Diaper sheets, showing how long since each.   refined-by: Widgets
+    10. A running sleep shows in a silent notification that ends it from the lock screen and then lets its end be moved; a feed or diaper that ends a sleep says so; and what comes next shows as notifications the parent can turn off.   refined-by: Notifications
   entry     Sleep
-  children  Sleep, Feeds, Diapers, ForgotToLog, HomeStatus, HistoryScreen, StatisticsScreen, Watch
+  children  Sleep, Feeds, Diapers, ForgotToLog, HomeStatus, HistoryScreen, StatisticsScreen, Watch, Widgets, Notifications
   sources
     README.md, "Pooparazzi", "Sleep" and "Watch"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for
