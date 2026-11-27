@@ -10,7 +10,7 @@ class DanishChecks : Phone() {
     private val danish = Locale.forLanguageTag("da")
 
     private fun onDitBarn() {
-        waitFor("Spring over for nu")
+        waitForInDialog("Spring over for nu")
         pass(500)
     }
 
@@ -18,13 +18,13 @@ class DanishChecks : Phone() {
     private fun openIndstillinger() {
         onDitBarn()
         tap("Spring over for nu")
-        waitFor("Spring over")
+        waitForInDialog("Spring over")
         pass(500)
         tap("Spring over")
-        waitFor("Start søvn")
+        waitForInDialog("Start søvn")
         pass(1_000)
         tap("Indstillinger")
-        waitFor("Udseende")
+        waitForInDialog("Udseende")
         pass(500)
     }
 
@@ -38,22 +38,22 @@ class DanishChecks : Phone() {
         assertCanTap("Fortsæt")
         assertCanTap("Spring over for nu")
         tapInDialog("Tilføj fødselsdato")
-        waitFor("Fødselsdato")
+        waitForInDialog("Fødselsdato")
         pickTodayAsBirthDate()
-        waitFor(bornToday(danish))
+        waitForInDialog(bornToday(danish))
     }
 
     @Test
     fun `the introduction on a danish phone`() {
         onDitBarn()
         tap("Spring over for nu")
-        waitFor("Velkommen til Pooparazzi")
+        waitForInDialog("Velkommen til Pooparazzi")
         pass(500)
         val titles = listOf("Velkommen til Pooparazzi", "Søvn", "Måltider og bleskift", "Ret hvad som helst", "Hvad kommer nu", "Altid ved hånden")
         titles.forEachIndexed { index, title ->
             if (index > 0) {
                 tap("Næste")
-                waitFor(title)
+                waitForInDialog(title)
                 pass(500)
             }
             assertShows("Side ${index + 1} af 6")
@@ -75,15 +75,15 @@ class DanishChecks : Phone() {
     fun `adding and removing a baby in danish`() {
         openIndstillinger()
         tapInDialog("Tilføj et barn")
-        waitFor("Annuller")
+        waitForInDialog("Annuller")
         typeName("Ida")
         tapInDialog("Tilføj")
-        waitUntilGone("Annuller")
-        waitFor("Børn")
+        waitUntilGoneInDialog("Annuller")
+        waitForInDialog("Børn")
         assertShows("Fjern Baby 1")
         assertShows("Fjern Ida")
         tapInDialog("Fjern Ida")
-        waitFor("Fjern Ida?")
+        waitForInDialog("Fjern Ida?")
         assertShows("Barnets log bliver slettet fra telefonen og dit ur. Det kan ikke fortrydes.")
         assertCanTap("Annuller")
         assertCanTap("Fjern")

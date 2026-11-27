@@ -11,7 +11,7 @@ class RemoveBabyChecks : Phone() {
         openSettings()
         noaAndIdaInSettings()
         tapInDialog("Remove Ida")
-        waitFor("Remove Ida?")
+        waitForInDialog("Remove Ida?")
     }
 
     @Test
@@ -26,7 +26,7 @@ class RemoveBabyChecks : Phone() {
     fun `cancelling keeps the baby`() {
         askToRemoveIda()
         tapInDialog("Cancel")
-        waitUntilGone("Remove Ida?")
+        waitUntilGoneInDialog("Remove Ida?")
         assertShows("Babies")
         assertShows("Remove Noa")
         assertShows("Remove Ida")
@@ -36,14 +36,14 @@ class RemoveBabyChecks : Phone() {
     fun `removing a baby`() {
         askToRemoveIda()
         tapInDialog("Remove")
-        waitUntilGone("Remove Ida?")
-        waitUntilGone("Babies")
+        waitUntilGoneInDialog("Remove Ida?")
+        waitUntilGoneInDialog("Babies")
         assertShows("Baby")
         assertGone("Remove Noa")
         assertEquals(1, compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().size)
         goBack()
-        waitFor("Start sleep")
-        waitFor("Noa")
+        waitForInDialog("Start sleep")
+        waitForInDialog("Noa")
         assertGone("Noa. Switch baby")
     }
 
@@ -53,17 +53,17 @@ class RemoveBabyChecks : Phone() {
         openSettings()
         noaAndIdaInSettings()
         goBack()
-        waitFor("Noa. Switch baby")
+        waitForInDialog("Noa. Switch baby")
         switchTo("Ida")
         openSettings()
         tapInDialog("Remove Ida")
-        waitFor("Remove Ida?")
+        waitForInDialog("Remove Ida?")
         tapInDialog("Remove")
-        waitUntilGone("Remove Ida?")
-        waitUntilGone("Babies")
+        waitUntilGoneInDialog("Remove Ida?")
+        waitUntilGoneInDialog("Babies")
         goBack()
-        waitFor("Start sleep")
-        waitFor("Noa")
+        waitForInDialog("Start sleep")
+        waitForInDialog("Noa")
         assertGone("Ida. Switch baby")
         assertGone("Noa. Switch baby")
     }

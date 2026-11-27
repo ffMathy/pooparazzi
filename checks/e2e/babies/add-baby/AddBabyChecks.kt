@@ -14,7 +14,7 @@ class AddBabyChecks : Phone() {
         openSettings()
         nameFirstBaby("Noa")
         tapInDialog("Add a baby")
-        waitFor("Cancel")
+        waitForInDialog("Cancel")
         assertEquals(2, nameFields())
         assertShows("Add birth date")
         assertShows("The birth date is optional, but it improves the predictions and estimates: they then follow the baby's age.")
@@ -28,13 +28,13 @@ class AddBabyChecks : Phone() {
         freshInstall()
         openSettings()
         noaAndIdaInSettings()
-        waitFor("Babies")
+        waitForInDialog("Babies")
         assertShows("Remove Noa")
         assertShows("Remove Ida")
         assertShows("Noa")
         assertShows("Ida")
         goBack()
-        waitFor("Noa. Switch baby")
+        waitForInDialog("Noa. Switch baby")
     }
 
     @Test
@@ -42,14 +42,14 @@ class AddBabyChecks : Phone() {
         freshInstall()
         openSettings()
         tapInDialog("Add a baby")
-        waitFor("Cancel")
+        waitForInDialog("Cancel")
         tapInDialog("Add birth date")
-        waitFor("Birth date")
+        waitForInDialog("Birth date")
         pickTodayAsBirthDate()
-        waitFor(bornToday())
+        waitForInDialog(bornToday())
         tapInDialog("Add")
-        waitUntilGone("Cancel")
-        waitFor("Babies")
+        waitUntilGoneInDialog("Cancel")
+        waitForInDialog("Babies")
         assertShows(bornToday())
     }
 
@@ -58,10 +58,10 @@ class AddBabyChecks : Phone() {
         freshInstall()
         openSettings()
         tapInDialog("Add a baby")
-        waitFor("Cancel")
+        waitForInDialog("Cancel")
         typeName("Ida")
         tapInDialog("Cancel")
-        waitUntilGone("Cancel")
+        waitUntilGoneInDialog("Cancel")
         assertShows("Baby")
         assertGone("Babies")
         assertEquals(1, nameFields())
@@ -73,10 +73,10 @@ class AddBabyChecks : Phone() {
         freshInstall()
         openSettings()
         addBaby()
-        waitFor("Remove Baby 2")
+        waitForInDialog("Remove Baby 2")
         assertShows("Remove Baby 1")
         goBack()
-        waitFor("Baby 1. Switch baby")
+        waitForInDialog("Baby 1. Switch baby")
     }
 
     @Test
@@ -84,10 +84,10 @@ class AddBabyChecks : Phone() {
         freshInstall()
         openSettings()
         repeat(6) { addBaby() }
-        waitFor("Remove Baby 7")
+        waitForInDialog("Remove Baby 7")
         assertEquals(7, nameFields())
         addBaby()
-        waitFor("Remove Baby 8")
+        waitForInDialog("Remove Baby 8")
         assertGone("Add a baby")
         assertEquals(8, nameFields())
     }

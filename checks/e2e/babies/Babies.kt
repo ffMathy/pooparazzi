@@ -10,6 +10,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasContentDescription
@@ -37,7 +38,7 @@ fun Phone.settle() {
     compose.mainClock.autoAdvance = false
     var quiet = 0
     var frames = 0
-    while (quiet < 3 && frames < 300) {
+    while ((quiet < 5 || frames < 15) && frames < 300) {
         compose.mainClock.advanceTimeByFrame()
         ShadowLooper.idleMainLooper(16, TimeUnit.MILLISECONDS)
         val pending = composeWindows().filter { it.hasPendingMeasureOrLayout }
@@ -46,8 +47,31 @@ fun Phone.settle() {
         quiet = if (busy) 0 else quiet + 1
         frames++
     }
-    if (windows().size <= 1) compose.mainClock.autoAdvance = true
+    if (windows().size <= 1 && composeWindows().size <= 1) compose.mainClock.autoAdvance = true
 }
+
+/**
+ * Waits until [condition] holds while a dialog or a sheet may be open or closing, running its frames ([settle]) between
+ * looks; fails with the screen after [timeoutMillis].
+ */
+fun Phone.waitInDialog(what: String, timeoutMillis: Long = 10_000, condition: () -> Boolean) {
+    val end = System.currentTimeMillis() + timeoutMillis
+    while (true) {
+        settle()
+        val auto = compose.mainClock.autoAdvance
+        compose.mainClock.autoAdvance = false
+        val met = try { condition() } finally { compose.mainClock.autoAdvance = auto }
+        if (met) return
+        if (System.currentTimeMillis() > end) throw AssertionError("waited ${timeoutMillis / 1000} s for $what:\n${screen()}")
+        Thread.sleep(100)
+    }
+}
+
+/** Waits until something reads [text] (or is spoken as [text]) while a dialog or a sheet may be open. */
+fun Phone.waitForInDialog(text: String) = waitInDialog("\"$text\"") { shows(text) }
+
+/** Waits until nothing reads [text] while a dialog or a sheet may be open or closing. */
+fun Phone.waitUntilGoneInDialog(text: String) = waitInDialog("no \"$text\"") { !shows(text) }
 
 /** Lets [millis] go by while a dialog may be open: real time, and the frames of [settle]. */
 fun Phone.passInDialog(millis: Long) {
@@ -101,13 +125,18 @@ fun Phone.selected(): List<String> =
 /** Types [text] into the last text field on the screen (the one in a dialog, when one is open), replacing what it held. */
 fun Phone.typeName(text: String) {
     val fields = compose.onAllNodes(hasSetTextAction())
-    fields[fields.fetchSemanticsNodes().size - 1].performTextReplacement(text)
+    val field = fields[fields.fetchSemanticsNodes().size - 1]
+    field.performTextReplacement(text)
+    field.performImeAction()
     settle()
 }
 
 /** Types [text] into the name field [index] (0 is the first baby's), replacing what it held. */
 fun Phone.typeNameAt(index: Int, text: String) {
-    compose.onAllNodes(hasSetTextAction())[index].performTextReplacement(text)
+    val field = compose.onAllNodes(hasSetTextAction())[index]
+    field.performTextReplacement(text)
+    // Done on the keyboard: saves at once and lets go of the field, whose blinking cursor would keep the phone busy.
+    field.performImeAction()
     settle()
 }
 
@@ -128,7 +157,7 @@ fun Phone.nameFirstBaby(name: String) {
 fun Phone.noaAndIdaInSettings() {
     nameFirstBaby("Noa")
     addBaby("Ida")
-    waitFor("Remove Ida")
+    waitForInDialog("Remove Ida")
 }
 
 /**
@@ -141,19 +170,19 @@ fun Phone.switchTo(baby: String) {
     val current = compose.onAllNodes(hasContentDescription(". Switch baby", substring = true)).fetchSemanticsNodes()
         .firstNotNullOf { it.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull() }
     tapInDialog(current)
-    waitFor("Switch baby")
+    waitForInDialog("Switch baby")
     tapInDialog(baby)
-    waitFor("$baby. Switch baby")
-    waitUntilGone("Switch baby")
+    waitForInDialog("$baby. Switch baby")
+    waitUntilGoneInDialog("Switch baby")
 }
 
 /** Settings › Add a baby, named [name] (or left unnamed), then Add; ends on Settings. */
 fun Phone.addBaby(name: String? = null) {
     tapInDialog("Add a baby")
-    waitFor("Cancel")
+    waitForInDialog("Cancel")
     if (name != null) typeName(name)
     tapInDialog("Add")
-    waitUntilGone("Cancel")
+    waitUntilGoneInDialog("Cancel")
 }
 
 /** The phone's windows (their root views), the activity's first. */

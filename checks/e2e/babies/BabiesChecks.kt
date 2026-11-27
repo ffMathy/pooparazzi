@@ -12,8 +12,8 @@ class BabiesChecks : Phone() {
         openSettings()
         nameFirstBaby("Noa")
         goBack()
-        waitFor("Start sleep")
-        waitFor("Noa")
+        waitForInDialog("Start sleep")
+        waitForInDialog("Noa")
     }
 
     @Test
@@ -33,14 +33,14 @@ class BabiesChecks : Phone() {
         freshInstall()
         openSettings()
         tapInDialog("Add birth date")
-        waitFor("Birth date")
+        waitForInDialog("Birth date")
         pickTodayAsBirthDate()
-        waitFor(bornToday())
+        waitForInDialog(bornToday())
         assertGone("The birth date is optional, but it improves the predictions and estimates: they then follow the baby's age.")
         tapInDialog(bornToday())
-        waitFor("Birth date")
+        waitForInDialog("Birth date")
         tapInDialog("Remove")
-        waitFor("Add birth date")
+        waitForInDialog("Add birth date")
         assertGone(bornToday())
     }
 }

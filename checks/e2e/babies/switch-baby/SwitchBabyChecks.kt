@@ -11,13 +11,13 @@ class SwitchBabyChecks : Phone() {
         openSettings()
         noaAndIdaInSettings()
         goBack()
-        waitFor("Noa. Switch baby")
+        waitForInDialog("Noa. Switch baby")
         pass(1_000)
     }
 
     private fun openTheSheet() {
         tapInDialog("Noa. Switch baby")
-        waitFor("Switch baby")
+        waitForInDialog("Switch baby")
     }
 
     @Test
@@ -36,8 +36,8 @@ class SwitchBabyChecks : Phone() {
         noaAndIdaOnHome()
         openTheSheet()
         tapInDialog("Ida")
-        waitFor("Ida. Switch baby")
-        waitUntilGone("Switch baby")
+        waitForInDialog("Ida. Switch baby")
+        waitUntilGoneInDialog("Switch baby")
         assertGone("Noa. Switch baby")
     }
 
@@ -46,7 +46,7 @@ class SwitchBabyChecks : Phone() {
         noaAndIdaOnHome()
         openTheSheet()
         tapInDialog("Cancel")
-        waitUntilGone("Switch baby")
+        waitUntilGoneInDialog("Switch baby")
         assertShows("Noa. Switch baby")
     }
 
@@ -56,14 +56,14 @@ class SwitchBabyChecks : Phone() {
         switchTo("Ida")
         startSleepReceipt()
         tap("Done")
-        waitUntilGone("Sleep started")
+        waitUntilGoneInDialog("Sleep started")
         waitOutTheGuard()
         assertShows("Woke up, end sleep")
         switchTo("Noa")
-        waitFor("Start sleep")
+        waitForInDialog("Start sleep")
         assertGone("Woke up, end sleep")
         switchTo("Ida")
-        waitFor("Woke up, end sleep")
+        waitForInDialog("Woke up, end sleep")
         assertGone("Start sleep")
     }
 
@@ -72,7 +72,7 @@ class SwitchBabyChecks : Phone() {
         noaAndIdaOnHome()
         switchTo("Ida")
         tap("History")
-        waitFor("Add entry")
+        waitForInDialog("Add entry")
         assertShowsInOrder("History", "Ida")
         assertGone("Noa")
     }
