@@ -69,8 +69,8 @@ class BreastFeedChecks : Phone() {
         tap("Log feed")
         waitUntilGone("Log feed")
         assertGone("Undo")
-        assertShows("$at · Left → Right")
         waitForLastFeed("breast, left then right", at)
+        assertShows("$at · Left → Right")
     }
 
     @Test
@@ -80,7 +80,7 @@ class BreastFeedChecks : Phone() {
         breastStep()
         tap("Log feed")
         waitUntilGone("Log feed")
-        assertShows("$at · Breast")
         waitForLastFeed("breast", at)
+        assertShows("$at · Breast")
     }
 }

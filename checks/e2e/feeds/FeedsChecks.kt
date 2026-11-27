@@ -47,8 +47,8 @@ class FeedsChecks : Phone() {
         waitUntilGone("Just the time")
         assertGone("Undo")
         assertShows("Last fed")
-        assertShows("$at · Food")
         waitForLastFeed("food", at)
+        assertShows("$at · Food")
         assertTrue(todayCounts(), todayCounts().startsWith("Today: 1 feed,"))
     }
 

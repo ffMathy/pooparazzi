@@ -69,8 +69,8 @@ class BottleFeedChecks : Phone() {
         tap("Log feed")
         waitUntilGone("Log feed")
         assertGone("Undo")
-        assertShows("$at · Bottle")
         waitForLastFeed("bottle, formula", at)
+        assertShows("$at · Bottle")
         tap("History")
         waitFor("Add entry")
         assertShows("Bottle · Formula")
@@ -84,8 +84,8 @@ class BottleFeedChecks : Phone() {
         val at = bottleStep()
         tap("Log feed")
         waitUntilGone("Log feed")
-        assertShows("$at · Bottle")
         waitForLastFeed("bottle", at)
+        assertShows("$at · Bottle")
     }
 
     @Test

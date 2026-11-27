@@ -30,8 +30,8 @@ class DiapersChecks : Phone() {
         freshInstall()
         val at = peeSaved()
         assertGone("Undo")
-        assertShows("just now · $at")
         waitForLastDiaper("pee", at)
+        assertShows("Pee")
         assertTrue(todayCounts(), todayCounts().contains(", 1 pee, 0 poop,"))
     }
 
@@ -47,8 +47,8 @@ class DiapersChecks : Phone() {
         assertEquals(10, clockMinutesBetween(at, now))
         assertShows("$at · was $now")
         saveTheDiaper()
-        assertShows("Both")
         waitForLastDiaper("pee and poop", at)
+        assertShows("Both")
         assertTrue(todayCounts(), todayCounts().contains(", 1 pee, 1 poop,"))
     }
 
@@ -57,8 +57,8 @@ class DiapersChecks : Phone() {
         freshInstall()
         val at = diaperSheet()
         saveTheDiaper()
-        assertShows("just now · $at")
         waitForLastDiaper("", at)
+        assertShows("Diaper")
         assertTrue(todayCounts(), todayCounts().contains(", 0 pee, 0 poop,"))
     }
 

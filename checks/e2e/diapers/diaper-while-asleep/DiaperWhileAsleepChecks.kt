@@ -27,8 +27,8 @@ class DiaperWhileAsleepChecks : Phone() {
         assertGone("Woke up, end sleep")
         assertShows("Awake")
         waitUntil("Awake since $at") { shows("Awake ${spokenMinutes(clockMinutesBetween(at, clock()))}, since $at") }
-        assertShows("Pee")
         waitForLastDiaper("pee", at)
+        assertShows("Pee")
         val slept = clockMinutesBetween(start, at)
         assertTrue(todayCounts(), todayCounts().endsWith(", $slept minutes sleep"))
     }

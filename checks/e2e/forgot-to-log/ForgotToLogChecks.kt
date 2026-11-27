@@ -75,8 +75,8 @@ class ForgotToLogChecks : Phone() {
         assertTrue(isPicked("Expected $offered"))
         tap("Food")
         waitUntilGone("Just the time")
-        assertShows("$offered · Food")
         waitForLastFeed("food", offered)
+        assertShows("$offered · Food")
     }
 
     @Test
