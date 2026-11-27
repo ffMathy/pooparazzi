@@ -98,6 +98,11 @@ catalog
     radius.button=28dp  radius.sheet=28dp  radius.chip=20dp  radius.notice=28dp
     size.toggle=350x96dp  size.button=169x96dp  size.chip=40dp  size.target=48dp  gutter.phone=20dp  gutter.sheet=24dp
     type.headlineSmall=24sp/600  type.titleLarge=22sp/600  type.titleMedium=18sp/600  type.dataMedium=16sp/450  type.labelLarge=16sp/600
+    color.surface.container=#1C1713  color.time.field=#26201A  color.outline.variant=#3F352C  color.ribbon.night=#080706  color.error=#F2A497
+    pee.strong=#8FD0C3  poop.strong=#358276
+    day.background=#FBF6F0  day.text=#221A12  day.text.dim=#54473A  day.feed.disc=#FFE1C4  day.sleep.disc=#E1E4F8  day.sleep.track=#6A73B3
+    type.heroNumeral=76sp/600  type.heroUnit=34sp/500  type.heroWord=48sp/500  type.displaySmall=48sp/500  type.dataSmall=14sp/500
+    type.labelMedium=14sp/600  type.labelSmall=13sp/600  type.bodySmall=14sp/400
 ```
 
 ---
@@ -108,8 +113,11 @@ node Pooparazzi : system   level: product
         and ate, with one hand and without waking up properly.
   what
     1. One button starts a sleep, the same button ends it, and every tap can be taken back at once.   refined-by: Sleep
+    2. Home shows at a glance the time since the last feed (or how long the baby has slept), since when the baby is awake, the last diaper, today's counts and what comes next, and each opens its entry to be fixed.   refined-by: HomeStatus
+    3. History shows one day at a time, newest first, and any entry can be added later, fixed by the minute or deleted, with Undo.   refined-by: HistoryScreen
+    4. Statistics shows the average day over a range of whole days, with a chart, the unusual days left out, and the typical day.   refined-by: StatisticsScreen
   entry     Sleep
-  children  Sleep
+  children  Sleep, HomeStatus, HistoryScreen, StatisticsScreen
   sources
     README.md, "Pooparazzi" and "Sleep"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for
