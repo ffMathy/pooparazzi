@@ -1,3 +1,4 @@
+// ail-derived-from: StatisticsChart@953bfa801efe867c
 package com.ffmathy.pooparazzi.checks
 
 import androidx.compose.ui.geometry.Offset

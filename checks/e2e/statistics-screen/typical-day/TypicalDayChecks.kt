@@ -1,3 +1,4 @@
+// ail-derived-from: TypicalDay@c84699cd2e366efc
 package com.ffmathy.pooparazzi.checks
 
 import java.time.LocalTime

@@ -1,3 +1,4 @@
+// ail-derived-from: HomeStatus@1194af6f177bace5
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertFalse

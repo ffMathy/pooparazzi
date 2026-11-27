@@ -1,3 +1,4 @@
+// ail-derived-from: TodayGrid@a6952c607a5db159
 package com.ffmathy.pooparazzi.checks
 
 import java.time.LocalDate

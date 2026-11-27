@@ -1,3 +1,4 @@
+// ail-derived-from: DeleteEntry@6798d36525013bb4
 package com.ffmathy.pooparazzi.checks
 
 import java.time.LocalTime

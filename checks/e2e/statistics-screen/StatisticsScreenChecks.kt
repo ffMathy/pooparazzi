@@ -1,3 +1,4 @@
+// ail-derived-from: StatisticsScreen@fa70f5dee13ca904
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertFalse
