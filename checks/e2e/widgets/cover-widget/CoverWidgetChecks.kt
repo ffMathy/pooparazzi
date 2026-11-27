@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for CoverWidget: the 4×2 widget on a Samsung flip's cover screen, on the real phone app. */
-class CoverWidgetChecks : Phone() {
+open class CoverWidgetChecks : Phone() {
     @Test
     fun `the cover widget shows the three buttons`() {
         freshInstall()

@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for WokenByLog: a feed or diaper that ends a sleep says so in the shade. */
-class WokenByLogChecks : Phone() {
+open class WokenByLogChecks : Phone() {
     @Test
     fun `a diaper ends the sleep`() {
         freshInstall()

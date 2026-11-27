@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for Language: System default, English and Dansk in Settings, on the real phone app. */
-class LanguageChecks : Phone() {
+open class LanguageChecks : Phone() {
     @Test
     fun `a new install follows the phone's language`() {
         freshInstall()

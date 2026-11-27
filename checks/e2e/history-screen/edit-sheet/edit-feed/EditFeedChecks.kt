@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for EditFeed: a feed's type, side, contents and time, on the real phone app. */
-class EditFeedChecks : Phone() {
+open class EditFeedChecks : Phone() {
     private val eleven = LocalTime.of(11, 0)
 
     /** A Bottle feed yesterday at 11:00 AM, its edit sheet open from History. */

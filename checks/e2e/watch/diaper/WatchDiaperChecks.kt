@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for WatchDiaper: Pee and Poop, colour and texture and the cooldowns, on the real watch app. */
-class WatchDiaperChecks : Watch() {
+open class WatchDiaperChecks : Watch() {
     private val colours = listOf("Yellow", "Green", "Brown", "Black", "Red", "Pale")
     private val textures = listOf("Watery", "Seedy", "Mushy", "Formed", "Hard")
 

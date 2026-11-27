@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for Account: a build without a backup (no Firebase configuration), on the real phone app. */
-class AccountChecks : Phone() {
+open class AccountChecks : Phone() {
     @Test
     fun `a build without a backup`() {
         onYourBaby()

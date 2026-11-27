@@ -5,7 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /** End-to-end check for HomeStatus: what Home shows on a new install, on the real phone app. */
-class HomeStatusChecks : Phone() {
+open class HomeStatusChecks : Phone() {
     @Test
     fun `a new install has nothing to show yet`() {
         freshInstall()

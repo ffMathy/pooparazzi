@@ -6,7 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for RemoveBaby: the remove button and its confirmation, on the real phone app. */
-class RemoveBabyChecks : Phone() {
+open class RemoveBabyChecks : Phone() {
     private fun askToRemoveIda() {
         freshInstall()
         openSettingsFromHome()

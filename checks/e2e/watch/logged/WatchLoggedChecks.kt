@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for WatchLogged: Logged, Undo, its window and inert start, Woke up too, Undone, on the real watch app. */
-class WatchLoggedChecks : Watch() {
+open class WatchLoggedChecks : Watch() {
     @Test
     fun `logged closes after five seconds`() {
         freshInstall()

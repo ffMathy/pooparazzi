@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for SleepNotification: the running sleep in the shade, and its Woke up. */
-class SleepNotificationChecks : Phone() {
+open class SleepNotificationChecks : Phone() {
     @Test
     fun `the notification of a running sleep`() {
         freshInstall()

@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for Appearance: Auto, Night and Day in Settings, on the real phone app. */
-class AppearanceChecks : Phone() {
+open class AppearanceChecks : Phone() {
     private fun assertChosen(chosen: String, vararg notChosen: String) = waitUntil("$chosen chosen, not ${notChosen.toList()}") {
         val now = chosenOnScreen()
         chosen in now && notChosen.none { it in now }

@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for TopBar: the baby's name, the watch icon and the three buttons, on the real phone app. */
-class TopBarChecks : Phone() {
+open class TopBarChecks : Phone() {
     @Test
     fun `the top bar of a new install`() {
         freshInstall()

@@ -4,7 +4,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.performTextInput
 import org.junit.Test
 
-class ExploreWidgetsChecks : Phone() {
+open class ExploreWidgetsChecks : Phone() {
     private fun show(label: String, w: HomeScreenWidget) = println("EXPLORE [$label]\n" + widgetScreen(w) + "\n---")
     private fun run(body: () -> Unit) = try { body() } catch (e: Throwable) { println("EXPLORE FAIL: $e\n${screen()}") }
 

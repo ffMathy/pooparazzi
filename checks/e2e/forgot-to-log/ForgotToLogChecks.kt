@@ -9,7 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for ForgotToLog: "Expected" under the Feed sheet's and the sleep receipt's nudges. */
-class ForgotToLogChecks : Phone() {
+open class ForgotToLogChecks : Phone() {
     /**
      * The week the scenarios' Given describe, made in History › Add entry: feeds 30 minutes apart at about this time of
      * day, three a day on the two days before today and two on the third. Ends on Home.

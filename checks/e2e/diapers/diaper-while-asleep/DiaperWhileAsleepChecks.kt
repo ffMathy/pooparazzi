@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for DiaperWhileAsleep: a diaper saved during a sleep, and the sleep it ends, on the real phone app. */
-class DiaperWhileAsleepChecks : Phone() {
+open class DiaperWhileAsleepChecks : Phone() {
     @Test
     fun `the Diaper sheet says the sleep will end`() {
         freshInstall()

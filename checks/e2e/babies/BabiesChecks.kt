@@ -6,7 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for Babies: the name and birth date fields of Settings › Baby, on the real phone app. */
-class BabiesChecks : Phone() {
+open class BabiesChecks : Phone() {
     @Test
     fun `naming the baby in settings`() {
         freshInstall()

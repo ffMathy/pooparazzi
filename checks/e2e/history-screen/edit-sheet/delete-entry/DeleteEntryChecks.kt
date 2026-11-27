@@ -5,7 +5,7 @@ import java.time.LocalTime
 import org.junit.Test
 
 /** End-to-end check for DeleteEntry: Delete, the "… deleted" receipt and Undo, on History and on Home, on the real phone app. */
-class DeleteEntryChecks : Phone() {
+open class DeleteEntryChecks : Phone() {
     @Test
     fun `deleting from History, and Undo`() {
         freshInstall()

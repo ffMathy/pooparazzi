@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for Feeds: the Feed sheet, its nudges, Food and Just the time. */
-class FeedsChecks : Phone() {
+open class FeedsChecks : Phone() {
     @Test
     fun `opening the Feed sheet`() {
         freshInstall()

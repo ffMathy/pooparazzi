@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for LogWidget: the 4×2 widget's buttons and their lines, on the real phone app. */
-class LogWidgetChecks : Phone() {
+open class LogWidgetChecks : Phone() {
     @Test
     fun `a new widget has nothing to show yet`() {
         freshInstall()

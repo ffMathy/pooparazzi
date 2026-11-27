@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for Sleep: the sleep button and its guard, on the real phone app. */
-class SleepChecks : Phone() {
+open class SleepChecks : Phone() {
     @Test
     fun `a second tap within two seconds changes nothing`() {
         freshInstall()

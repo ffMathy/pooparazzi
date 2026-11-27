@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for NotificationSettings: Settings › Notifications on a new install, on the real phone app. */
-class NotificationSettingsChecks : Phone() {
+open class NotificationSettingsChecks : Phone() {
     @Test
     fun `notifications not allowed yet`() {
         freshInstall()

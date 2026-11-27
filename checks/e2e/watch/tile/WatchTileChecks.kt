@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for WatchTile: the Tile, as the tile carousel shows it, on the real watch app. */
-class WatchTileChecks : Watch() {
+open class WatchTileChecks : Watch() {
     /** "just now" or "1 minute ago", as the Tile speaks a time since. */
     private fun spokenAgo(minutes: Long) = if (minutes == 0L) "just now" else "${spokenWatchMinutes(minutes)} ago"
 

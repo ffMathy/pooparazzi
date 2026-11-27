@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for WakeUp: Woke up, its receipt, a cancelled sleep and Undo, on the real phone app. */
-class WakeUpChecks : Phone() {
+open class WakeUpChecks : Phone() {
     @Test
     fun `waking up`() {
         freshInstall()

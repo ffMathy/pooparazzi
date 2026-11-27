@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for QuickWidget: the 3×1 widget at its sizes, on the real phone app. */
-class QuickWidgetChecks : Phone() {
+open class QuickWidgetChecks : Phone() {
     @Test
     fun `the quick widget shows three labelled buttons`() {
         freshInstall()

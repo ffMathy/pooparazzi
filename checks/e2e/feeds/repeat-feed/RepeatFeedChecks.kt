@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for RepeatFeed: the same feed twice within five seconds, on the real phone app. */
-class RepeatFeedChecks : Phone() {
+open class RepeatFeedChecks : Phone() {
     /** The Feed sheet as soon as Home takes taps again after the last log, so the next feed comes within 5 s of it. */
     private fun feedSheetAgain() {
         pass(700)

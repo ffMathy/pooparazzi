@@ -9,7 +9,7 @@ import java.time.LocalTime
 import org.junit.Test
 
 /** End-to-end check for StatisticsChart: the open row's chart, a pressed bar and an unusual day, on the real phone app. */
-class StatisticsChartChecks : Phone() {
+open class StatisticsChartChecks : Phone() {
     private val yesterday = daysAgo(1)
     private val from = rangeStart(30)
 

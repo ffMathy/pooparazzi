@@ -5,7 +5,7 @@ import java.time.LocalDate
 import org.junit.Test
 
 /** End-to-end check for TodayGrid: today's counts and the link to History, on the real phone app. */
-class TodayGridChecks : Phone() {
+open class TodayGridChecks : Phone() {
     @Test
     fun `Today before anything is logged`() {
         freshInstall()

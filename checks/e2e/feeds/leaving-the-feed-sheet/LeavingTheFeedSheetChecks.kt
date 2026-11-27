@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for LeavingTheFeedSheet: Cancel, back, a tap outside, and Home's cooldown after a feed. */
-class LeavingTheFeedSheetChecks : Phone() {
+open class LeavingTheFeedSheetChecks : Phone() {
     @Test
     fun `cancel logs nothing`() {
         freshInstall()

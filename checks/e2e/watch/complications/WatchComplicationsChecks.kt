@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for WatchComplications: the four complications, as a watch face asks for them, on the real watch app. */
-class WatchComplicationsChecks : Watch() {
+open class WatchComplicationsChecks : Watch() {
     /** "<1m" or "1m": a complication's time since, in whole clock minutes. */
     private fun short(minutes: Long) = if (minutes == 0L) "<1m" else "${minutes}m"
 

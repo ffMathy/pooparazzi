@@ -10,7 +10,7 @@ private val COLOURS = listOf("Yellow", "Green", "Brown", "Black", "Red", "Pale")
 private val TEXTURES = listOf("Watery", "Seedy", "Mushy", "Formed", "Hard")
 
 /** End-to-end check for PoopDetails: the poop's colour, texture and the doctor hint, on the real phone app. */
-class PoopDetailsChecks : Phone() {
+open class PoopDetailsChecks : Phone() {
     private fun poopTicked() {
         diaperSheet()
         tap("Poop")

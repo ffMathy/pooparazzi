@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for RepeatDiaper: the same diaper twice within five seconds, on the real phone app. */
-class RepeatDiaperChecks : Phone() {
+open class RepeatDiaperChecks : Phone() {
     @Test
     fun `the same diaper again within five seconds`() {
         freshInstall()

@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for SinceRows: Awake or Last fed, the last diaper, and their taps, on the real phone app. */
-class SinceRowsChecks : Phone() {
+open class SinceRowsChecks : Phone() {
     @Test
     fun `a diaper shows in the second row`() {
         freshInstall()

@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for WatchBottle: contents, the amount with − / + and its chips, on the real watch app (US English). */
-class WatchBottleChecks : Watch() {
+open class WatchBottleChecks : Watch() {
     /** Feed, Bottle: Bottle, once it takes taps. Returns the time of the Feed tap. */
     private fun openBottle(): String {
         tapStarting("Feed. ")

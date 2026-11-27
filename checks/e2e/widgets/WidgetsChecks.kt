@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for Widgets: the 4×2 widget's Feed, Diaper and background open the app, on the real phone app. */
-class WidgetsChecks : Phone() {
+open class WidgetsChecks : Phone() {
     @Test
     fun `Feed on a widget opens the Feed sheet`() {
         freshInstall()

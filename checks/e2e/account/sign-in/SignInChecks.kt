@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for SignIn: the Account screen signed out and the email link, on the real phone app and the Firebase emulators. */
-class SignInChecks : BackedUpPhone() {
+open class SignInChecks : BackedUpPhone() {
     /** The Welcome answered without an account, the first run skipped, then Settings › Account: signed out. */
     private fun accountScreenSignedOut() {
         waitFor("No account needed", 20_000)

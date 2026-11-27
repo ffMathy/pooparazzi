@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for HistoryScreen: the day, its counts and list, day prefixes, Statistics and Back, on the real phone app. */
-class HistoryScreenChecks : Phone() {
+open class HistoryScreenChecks : Phone() {
     private val one = LocalTime.of(13, 0)
     private val two = LocalTime.of(14, 0)
 

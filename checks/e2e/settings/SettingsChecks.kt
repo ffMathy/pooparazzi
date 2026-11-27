@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for Settings: its sections in order, the footer and Back, on the real phone app. */
-class SettingsChecks : Phone() {
+open class SettingsChecks : Phone() {
     @Test
     fun `the sections of settings`() {
         freshInstall()

@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for StartSleep: Start sleep, its receipt, the nudges, Undo and Edit, on the real phone app. */
-class StartSleepChecks : Phone() {
+open class StartSleepChecks : Phone() {
     @Test
     fun `starting a sleep`() {
         freshInstall()

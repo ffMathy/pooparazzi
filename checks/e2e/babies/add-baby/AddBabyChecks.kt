@@ -6,7 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for AddBaby: the Add a baby dialog, labels and the limit of eight, on the real phone app. */
-class AddBabyChecks : Phone() {
+open class AddBabyChecks : Phone() {
     private fun nameFields() = compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().size
 
     @Test

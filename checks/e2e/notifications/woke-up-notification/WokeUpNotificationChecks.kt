@@ -6,7 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /** End-to-end check for WokeUpNotification: "Woke up at …" and its Earlier offsets, from the shade. */
-class WokeUpNotificationChecks : Phone() {
+open class WokeUpNotificationChecks : Phone() {
     @Test
     fun `the woke-up notification`() {
         freshInstall()

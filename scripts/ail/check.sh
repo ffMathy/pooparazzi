@@ -26,7 +26,8 @@ case "$1" in
     results=$module/build/test-results/testDebugUnitTest
     rm -f "$results/TEST-$class.xml"
     status=0
-    "${gradle[@]}" ":$module:testDebugUnitTest" --tests "$class" --rerun -Pail.shots="${AIL_SHOTS_DIR:-}" || status=$?
+    derived=(); [[ $kind == derived ]] && derived=(-Pail.derived=true)
+    "${gradle[@]}" ":$module:testDebugUnitTest" --tests "$class" --rerun -Pail.shots="${AIL_SHOTS_DIR:-}" "${derived[@]}" || status=$?
     if [[ $kind == e2e ]]; then
       if [[ -f "$results/TEST-$class.xml" ]]; then cp "$results/TEST-$class.xml" "$3"; fi
     fi

@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for SignedIn: the Account screen signed in, signing out and deleting, on the real phone app and the Firebase emulators. */
-class SignedInChecks : BackedUpPhone() {
+open class SignedInChecks : BackedUpPhone() {
     /** A new install signed in as parent@example.com, on its Account screen once the first backup is done. */
     private fun accountScreenSignedIn() {
         newInstallSignedInAs("parent@example.com")

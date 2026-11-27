@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for FeedWhileAsleep: a feed logged during a sleep, and the sleep it ends, on the real phone app. */
-class FeedWhileAsleepChecks : Phone() {
+open class FeedWhileAsleepChecks : Phone() {
     @Test
     fun `the sheet says the sleep will end`() {
         freshInstall()

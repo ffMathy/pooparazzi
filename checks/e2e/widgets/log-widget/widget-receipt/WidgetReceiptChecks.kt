@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for WidgetReceipt: the 4×2 widget's receipt row, Undo, the guard and its ten seconds. */
-class WidgetReceiptChecks : Phone() {
+open class WidgetReceiptChecks : Phone() {
     @Test
     fun `Start sleep on the widget logs at once`() {
         freshInstall()

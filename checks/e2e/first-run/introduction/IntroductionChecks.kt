@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for Introduction: the six pages, Next, Back, Skip and Get started, on the real phone app. */
-class IntroductionChecks : Phone() {
+open class IntroductionChecks : Phone() {
     private val pages = listOf(
         "Welcome to Pooparazzi" to "Log sleep, feeds and diapers with one or two taps, made for one hand at 3am. Here is how it works; it takes a minute.",
         "Sleep" to "Tap Start sleep when the baby falls asleep, and the same button, now Woke up, when they wake. While the baby sleeps, Home shows how long; tap the ring to change when the sleep started.",

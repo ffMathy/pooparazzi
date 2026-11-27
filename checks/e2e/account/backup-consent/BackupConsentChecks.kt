@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** End-to-end check for BackupConsent: the consent before anything is uploaded, on the real phone app and the Firebase emulators. */
-class BackupConsentChecks : BackedUpPhone() {
+open class BackupConsentChecks : BackedUpPhone() {
     private fun consentOnANewInstall() {
         waitFor("No account needed", 20_000)
         signInByEmail("parent@example.com")

@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for WatchTime: Time from Logged, −5m and +5m, the crown, Done, on the real watch app. */
-class WatchTimeChecks : Watch() {
+open class WatchTimeChecks : Watch() {
     /** A food feed, then its time on Logged: Time, once it takes taps. Returns the feed's time. */
     private fun openTimeForFood(): String {
         val fed = logFood()

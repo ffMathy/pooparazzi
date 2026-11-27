@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for About: Settings › About and the font licences, on the real phone app. */
-class AboutChecks : Phone() {
+open class AboutChecks : Phone() {
     @Test
     fun `what about offers`() {
         freshInstall()

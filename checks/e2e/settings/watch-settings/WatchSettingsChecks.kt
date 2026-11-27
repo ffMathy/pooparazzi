@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for WatchSettings: the watch's line, Sync now and On the watch face, on the real phone app. */
-class WatchSettingsChecks : Phone() {
+open class WatchSettingsChecks : Phone() {
     @Test
     fun `a phone that can't reach the watch service`() {
         freshInstall()

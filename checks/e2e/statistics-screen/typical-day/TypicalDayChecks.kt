@@ -5,7 +5,7 @@ import java.time.LocalTime
 import org.junit.Test
 
 /** End-to-end check for TypicalDay: when things usually happen and the usual time between them, on the real phone app. */
-class TypicalDayChecks : Phone() {
+open class TypicalDayChecks : Phone() {
     @Test
     fun `a typical day needs three logged days`() {
         freshInstall()

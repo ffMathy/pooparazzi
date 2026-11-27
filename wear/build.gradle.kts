@@ -54,6 +54,11 @@ android {
         // Where an AIL derived check saves each scenario's last screen (scripts/ail/check.sh); empty: nowhere.
         val ailShots = providers.gradleProperty("ail.shots").orElse("").get()
         unitTests.all { it.systemProperty("ail.shots", ailShots) }
+        // A derived check (checks/derived, class <Node>Shots) plays its node's scenarios again to picture them: only
+        // ail runs it (scripts/ail/check.sh derived passes ail.derived), never the plain test task, so CI plays each
+        // scenario once.
+        val ailDerived = providers.gradleProperty("ail.derived").isPresent
+        unitTests.all { if (!ailDerived) it.exclude("**/*Shots.class", "**/*Shots$*.class") }
     }
 }
 

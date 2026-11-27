@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for Welcome: the first run of a build with a backup (on the Firebase emulators), on the real phone app. */
-class WelcomeChecks : BackedUpPhone() {
+open class WelcomeChecks : BackedUpPhone() {
     @Test
     fun `the welcome on a first run with backup`() {
         waitFor("No account needed", 20_000)

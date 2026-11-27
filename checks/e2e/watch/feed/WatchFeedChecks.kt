@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for WatchFeed: Feed type, Food, Just the time and Already logged, on the real watch app. */
-class WatchFeedChecks : Watch() {
+open class WatchFeedChecks : Watch() {
     @Test
     fun `the feed type screen`() {
         freshInstall()

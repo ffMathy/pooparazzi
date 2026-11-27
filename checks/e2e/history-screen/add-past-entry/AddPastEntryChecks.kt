@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for AddPastEntry: History's Add entry, every kind, and its rules, on the real phone app. */
-class AddPastEntryChecks : Phone() {
+open class AddPastEntryChecks : Phone() {
     @Test
     fun `Add entry opens a feed 15 minutes ago`() {
         freshInstall()

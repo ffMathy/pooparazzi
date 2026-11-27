@@ -11,7 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 
 /** End-to-end check for ForecastNotifications: what comes next in the shade, and which kinds are on. */
-class ForecastNotificationsChecks : Phone() {
+open class ForecastNotificationsChecks : Phone() {
     @Test
     fun `the next feed in a notification`() {
         freshInstall()

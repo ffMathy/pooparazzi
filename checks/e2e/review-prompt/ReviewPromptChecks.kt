@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for ReviewPrompt: a new install is never asked for a rating, on the real phone app. */
-class ReviewPromptChecks : Phone() {
+open class ReviewPromptChecks : Phone() {
     @Test
     fun `a new install is not asked`() {
         freshInstall()

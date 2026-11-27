@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for SignInLink: the emailed sign-in link opened in the app, on the real phone app and the Firebase emulators. */
-class SignInLinkChecks : BackedUpPhone() {
+open class SignInLinkChecks : BackedUpPhone() {
     /** The Welcome answered without an account, the first run skipped, then Settings › Account: signed out. */
     private fun accountScreenSignedOut() {
         waitFor("No account needed", 20_000)

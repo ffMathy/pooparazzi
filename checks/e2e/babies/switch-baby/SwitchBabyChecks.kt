@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for SwitchBaby: Home's switcher, the Switch baby sheet and each baby's own log, on the real phone app. */
-class SwitchBabyChecks : Phone() {
+open class SwitchBabyChecks : Phone() {
     /** Two babies, Noa (current) and Ida, made in Settings; ends on Home. */
     private fun noaAndIdaOnHome() {
         freshInstall()

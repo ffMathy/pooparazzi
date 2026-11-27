@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for Diapers: the Diaper sheet, Pee and Poop, Save, the nudges and closing it. */
-class DiapersChecks : Phone() {
+open class DiapersChecks : Phone() {
     private fun assertNoDiaperRow() = assertTrue("no diaper row:\n${screen()}", !showsPart("Last diaper"))
 
     @Test

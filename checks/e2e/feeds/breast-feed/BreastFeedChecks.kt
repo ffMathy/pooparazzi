@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for BreastFeed: the Breast step, the side order and Log feed, on the real phone app. */
-class BreastFeedChecks : Phone() {
+open class BreastFeedChecks : Phone() {
     private fun breastStep() {
         tap("Breast")
         waitFor("Log feed")

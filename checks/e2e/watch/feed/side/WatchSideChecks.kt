@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for WatchSide: Side after Breast, Left and Right in tick order, on the real watch app. */
-class WatchSideChecks : Watch() {
+open class WatchSideChecks : Watch() {
     /** Feed, Breast: Side, once it takes taps. Returns the time of the Feed tap. */
     private fun openSide(): String {
         tapStarting("Feed. ")

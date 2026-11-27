@@ -11,7 +11,7 @@ import org.robolectric.annotation.Config
 private const val UK_PHONE = "en-rGB-w390dp-h844dp-xxhdpi"
 
 /** End-to-end check for BottleFeed: the Bottle step, Milk or Formula, the amount and its unit, on the real phone app. */
-class BottleFeedChecks : Phone() {
+open class BottleFeedChecks : Phone() {
     private fun bottleStep(): String {
         val at = feedSheet()
         tap("Bottle")

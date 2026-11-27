@@ -6,7 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /** End-to-end check for WatchOngoing: the Ongoing Activity on the watch face, on the real watch app. */
-class WatchOngoingChecks : Watch() {
+open class WatchOngoingChecks : Watch() {
     @Test
     fun `a running sleep shows on the watch face`() {
         freshInstall()

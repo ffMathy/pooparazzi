@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for Family: Settings › Family with one and two members, on the real phone app and the Firebase emulators. */
-class FamilyChecks : BackedUpPhone() {
+open class FamilyChecks : BackedUpPhone() {
     @Test
     fun `a family of one`() {
         newInstallSignedInAs("parent@example.com")

@@ -6,7 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /** End-to-end check for ForecastLines: "what comes next" under Feed, Diaper and the sleep button, on the real phone app. */
-class ForecastLinesChecks : Phone() {
+open class ForecastLinesChecks : Phone() {
     @Test
     fun `no forecast without a week to go on`() {
         freshInstall()

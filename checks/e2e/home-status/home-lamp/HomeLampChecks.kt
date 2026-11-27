@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for HomeLamp: the Lamp's states and taps, on the real phone app. */
-class HomeLampChecks : Phone() {
+open class HomeLampChecks : Phone() {
     @Test
     fun `the Lamp before the first feed`() {
         freshInstall()

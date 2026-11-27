@@ -5,7 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /** End-to-end check for StatisticsScreen: the empty state, the range, the four averages and the footnote, on the real phone app. */
-class StatisticsScreenChecks : Phone() {
+open class StatisticsScreenChecks : Phone() {
     private val yesterday = daysAgo(1)
 
     @Test

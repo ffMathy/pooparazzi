@@ -5,7 +5,7 @@ import java.time.LocalTime
 import org.junit.Test
 
 /** End-to-end check for EditSheet: a sleep's blocks, nudges, "was", validation, Cancel and Save, on the real phone app. */
-class EditSheetChecks : Phone() {
+open class EditSheetChecks : Phone() {
     private val one = LocalTime.of(13, 0)
     private val two = LocalTime.of(14, 0)
 

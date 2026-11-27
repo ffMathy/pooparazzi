@@ -5,7 +5,7 @@ import java.time.LocalTime
 import org.junit.Test
 
 /** End-to-end check for EditDiaper: a diaper's Pee, Poop, colour, texture and time, on the real phone app. */
-class EditDiaperChecks : Phone() {
+open class EditDiaperChecks : Phone() {
     private val nine = LocalTime.of(9, 0)
 
     /** A pee diaper yesterday at 9:00 AM, its edit sheet open from History. */

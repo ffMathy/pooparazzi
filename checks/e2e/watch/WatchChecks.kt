@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for Watch: Main, idle and asleep, on the real watch app. */
-class WatchChecks : Watch() {
+open class WatchChecks : Watch() {
     @Test
     fun `a fresh watch has nothing logged`() {
         freshInstall()

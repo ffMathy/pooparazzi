@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for WatchSleep: the sleep edge button, its guard, Start sleep and Woke up, on the real watch app. */
-class WatchSleepChecks : Watch() {
+open class WatchSleepChecks : Watch() {
     @Test
     fun `starting a sleep on the watch`() {
         freshInstall()

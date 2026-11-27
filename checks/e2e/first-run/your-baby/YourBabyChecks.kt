@@ -7,7 +7,7 @@ import java.util.Locale
 import org.junit.Test
 
 /** End-to-end check for YourBaby: the first run's name and birth date, on the real phone app. */
-class YourBabyChecks : Phone() {
+open class YourBabyChecks : Phone() {
     @Test
     fun `what your baby asks`() {
         onYourBaby()

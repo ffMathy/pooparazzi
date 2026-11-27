@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for Notifications: the permission on the first sleep, and a tap on a notification. */
-class NotificationsChecks : Phone() {
+open class NotificationsChecks : Phone() {
     @Test
     fun `the first sleep asks for notifications`() {
         freshInstall()

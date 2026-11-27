@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for FirstRun: what a new install shows before Home, on the real phone app. */
-class FirstRunChecks : Phone() {
+open class FirstRunChecks : Phone() {
     @Test
     fun `a new install starts with your baby`() {
         waitFor("Your baby")

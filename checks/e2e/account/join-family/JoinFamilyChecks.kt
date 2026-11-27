@@ -4,7 +4,7 @@ package com.ffmathy.pooparazzi.checks
 import org.junit.Test
 
 /** End-to-end check for JoinFamily: invite links opened in the app, on the real phone app and the Firebase emulators. */
-class JoinFamilyChecks : BackedUpPhone() {
+open class JoinFamilyChecks : BackedUpPhone() {
     /**
      * parent@example.com signs in on a new install and invites someone; then partner@example.com signs in on the phone
      * (the checks run one phone) and agrees: Home. Returns the invite link, not opened yet.
