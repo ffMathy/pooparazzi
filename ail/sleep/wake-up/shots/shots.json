@@ -1,0 +1,25 @@
+{
+  "node": "WakeUp",
+  "shots": [
+    {
+      "test": "waking up",
+      "file": "01-waking-up.png"
+    },
+    {
+      "test": "undoing a wake-up",
+      "file": "02-undoing-a-wake-up.png"
+    },
+    {
+      "test": "going back from the receipt keeps the log",
+      "file": "03-going-back-from-the-receipt-keeps-the-log.png"
+    },
+    {
+      "test": "a sleep ended within a minute is cancelled",
+      "file": "04-a-sleep-ended-within-a-minute-is-cancelled.png"
+    },
+    {
+      "test": "undoing a cancelled sleep",
+      "file": "05-undoing-a-cancelled-sleep.png"
+    }
+  ]
+}

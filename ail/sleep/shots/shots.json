@@ -1,0 +1,9 @@
+{
+  "node": "Sleep",
+  "shots": [
+    {
+      "test": "a second tap within two seconds changes nothing",
+      "file": "01-a-second-tap-within-two-seconds-changes-nothing.png"
+    }
+  ]
+}

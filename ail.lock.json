@@ -4,7 +4,16 @@
   "glue": {},
   "hand": {
     "Sleep": {
-      "shots": "46c93df58d2296fc"
+      "shots": "46c93df58d2296fc",
+      "look": "f1194399cc80902953be08acb81a7d31d6e487e215b05ed85418f0b7627ec33c"
+    },
+    "StartSleep": {
+      "shots": "bab811e3dbd588a1",
+      "look": "30890d78036ffc485d505a392898ed8c18bd2936a17fb867084c3e2938514f4a"
+    },
+    "WakeUp": {
+      "shots": "5cdd526b04f464f7",
+      "look": "78bbf2720f5f3069a0c8fb9d624f9765f0f8f923d50afc7637775eb2513aea3d"
     }
   }
 }
