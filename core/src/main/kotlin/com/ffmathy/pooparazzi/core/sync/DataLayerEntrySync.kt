@@ -65,6 +65,10 @@ class DataLayerEntrySync internal constructor(
         val remote = items.filter { localId == null || it.sourceNodeId != localId }
         if (remote.isEmpty()) return 0
         val applied = merge(remote, sink)
+        // Before the listener lets the process go: this device's own writes still waiting for the Data Layer (a push
+        // that failed, or never ran because the process was frozen after a tap), and the conflict losers this merge
+        // deleted, whose deletion the other device must get. Without this they waited for the next process start.
+        safe { sink.pushPendingEntries() }
         // Something just arrived from the other device, so it is connected.
         state.value = SyncStatus.Synced(clock.now())
         return applied

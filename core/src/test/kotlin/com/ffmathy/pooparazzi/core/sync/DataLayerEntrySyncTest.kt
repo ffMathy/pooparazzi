@@ -170,6 +170,17 @@ class DataLayerEntrySyncTest {
     }
 
     @Test
+    fun receivePushesTheWritesStillWaitingForTheDataLayer() = runBlocking {
+        val remote = Entry.feed(FeedType.FOOD, 950_000L, id = "w1")
+        sync.receive(listOf(RemoteItem("/entries/w1", EntryJson.encode(remote).encodeToByteArray(), "watch")))
+        assertEquals("a push that failed (or never ran) goes before the listener returns", 1, sink.pendingPushed)
+
+        // Only this device's own echo: nothing merged, nothing pushed.
+        sync.receive(listOf(RemoteItem("/entries/f1", EntryJson.encode(feed).encodeToByteArray(), LOCAL_NODE)))
+        assertEquals(1, sink.pendingPushed)
+    }
+
+    @Test
     fun aDeliveryIsMergedAsOneBatchOldestWriteFirst() = runBlocking {
         val newer = feed.copy(startMillis = 800_000L, updatedAtMillis = 2_000)
         val older = feed.copy(updatedAtMillis = 1_000)

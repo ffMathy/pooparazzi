@@ -26,7 +26,9 @@ import java.util.concurrent.atomic.AtomicLong
  * - every [PERIODIC_MINUTES] minutes from WorkManager ([schedule]), also when the process has died, which then brings the
  *   tile, complications and Ongoing Activities up to date too.
  *
- * A pull reads the watch's own copy of the Data Layer (no radio) and stores only what is newer.
+ * A pull reads the watch's own copy of the Data Layer (no radio) and stores only what is newer. Each catch-up also
+ * pushes the watch's own writes that have not reached the Data Layer yet (a push that failed, or never ran because the
+ * process was frozen right after a tap), which otherwise waited for the next process start.
  */
 object WatchCatchUp {
     private const val TAG = "WatchCatchUp"
@@ -56,15 +58,16 @@ object WatchCatchUp {
         val last = lastTilePull.get()
         if (now - last in 0 until TILE_PULL_INTERVAL_MILLIS) return false
         if (!lastTilePull.compareAndSet(last, now)) return false
-        // A merge changes the entries, and the SurfaceUpdater asks for a new tile.
-        graph.scope.launch { graph.sync.pullAll() }
+        // A merge changes the entries, and the SurfaceUpdater asks for a new tile. Writes still waiting for the Data
+        // Layer go too.
+        graph.scope.launch { graph.catchUpNow(force = true) }
         return true
     }
 
-    /** Merges the Data Layer and brings the surfaces up to date; returns when both are done. */
+    /** Merges the Data Layer, pushes pending writes and brings the surfaces up to date; returns when all are done. */
     suspend fun now(context: Context) {
         val graph = Core.init(context.applicationContext)
-        graph.sync.pullAll()
+        graph.catchUpNow(force = true)
         (context.applicationContext as? WearApp)?.updateSurfacesNow()
     }
 

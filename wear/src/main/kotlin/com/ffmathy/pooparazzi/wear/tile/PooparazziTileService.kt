@@ -42,6 +42,8 @@ class PooparazziTileService : Material3TileService(allowDynamicTheme = false, de
         val clicked = requestParams.currentState.lastClickableId
         val haptic = TileActions(graph.repository, memory, zone).handle(clicked, graph.clock.now())
         haptic?.let { SurfaceHaptics.play(applicationContext, it) }
+        // A tap wrote something: hand it to the Data Layer while the system still holds the process for this request.
+        if (haptic != null) graph.awaitPendingWrites(TILE_PUSH_TIMEOUT_MILLIS)
 
         val now = graph.clock.now()
         val summary = summarize(graph.repository.observeEntries().first(), now, zone)
@@ -54,6 +56,9 @@ class PooparazziTileService : Material3TileService(allowDynamicTheme = false, de
 
     companion object {
         private const val TAG = "PooparazziTile"
+
+        /** How long a tap's tile waits for its write to reach the Data Layer (the push goes on in the background). */
+        private const val TILE_PUSH_TIMEOUT_MILLIS = 2_000L
 
         /** Asks the system for a fresh tile (after every write, sync merge or settings change). */
         fun requestUpdate(context: Context) {

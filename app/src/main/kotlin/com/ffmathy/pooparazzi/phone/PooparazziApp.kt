@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.res.Configuration
 import com.ffmathy.pooparazzi.core.Core
 import com.ffmathy.pooparazzi.phone.account.AppAccounts
+import com.ffmathy.pooparazzi.phone.account.BackupWork
 import com.ffmathy.pooparazzi.phone.system.SystemSurfaces
 
 /**
@@ -19,6 +20,8 @@ class PooparazziApp : Application() {
         val graph = Core.init(this, cloud = backend)
         // The account's family (created on the first sign-in) and the move of the backup from before families.
         AppAccounts.start(graph)
+        // Entries waiting for the backup go up even when the app is not opened (a log from the watch or a widget).
+        if (backend != null) BackupWork.follow(this, graph)
         // The phone keeps a baby for every baby id among its entries (BABIES_AND_BACKUP §2.1); the watch never adopts.
         graph.adoptBabiesFromEntries()
         SystemSurfaces.start(this, graph)

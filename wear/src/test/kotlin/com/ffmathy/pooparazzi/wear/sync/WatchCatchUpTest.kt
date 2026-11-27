@@ -38,8 +38,11 @@ import java.util.concurrent.atomic.AtomicInteger
 @Config(sdk = [36])
 class WatchCatchUpTest {
     private val pulls = AtomicInteger(0)
+    @Volatile private var accept = true
+    private val pushed = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val sync = object : EntrySync by NoopEntrySync {
         override suspend fun pullAll(): Int = 0.also { pulls.incrementAndGet() }
+        override suspend fun push(entry: com.ffmathy.pooparazzi.core.model.Entry): Boolean = accept.also { if (it) pushed += entry.id }
     }
     private val clock = FixedClock(SampleData.NOW_1432)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -50,7 +53,7 @@ class WatchCatchUpTest {
     fun setUp() {
         WatchCatchUp.resetForTest()
         db = PooparazziDatabase.inMemory(ApplicationProvider.getApplicationContext())
-        graph = CoreGraph(clock, RoomEntryRepository(db, clock), FakeSettingsRepository(), sync, scope)
+        graph = CoreGraph(clock, RoomEntryRepository(db, clock, sync), FakeSettingsRepository(), sync, scope)
     }
 
     @After
@@ -76,6 +79,17 @@ class WatchCatchUpTest {
         assertTrue(WatchCatchUp.onTileRequest(graph, now + WatchCatchUp.TILE_PULL_INTERVAL_MILLIS))
         awaitPulls(2)
         assertEquals(2, pulls.get())
+    }
+
+    @Test
+    fun `a tile catch-up also pushes the writes still waiting for the Data Layer`() {
+        accept = false
+        val feed = runBlocking { graph.repository.logFeed(com.ffmathy.pooparazzi.core.model.FeedType.BOTTLE, SampleData.NOW_1432) }
+        assertFalse(feed.id in pushed)
+        accept = true
+        assertTrue(WatchCatchUp.onTileRequest(graph, SampleData.NOW_1432))
+        runBlocking { withTimeout(5_000) { while (feed.id !in pushed) delay(10) } }
+        assertEquals(1, pulls.get())
     }
 
     @Test

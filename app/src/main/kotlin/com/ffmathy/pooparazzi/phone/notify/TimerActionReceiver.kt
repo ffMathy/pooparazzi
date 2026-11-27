@@ -53,9 +53,12 @@ class TimerActionReceiver : BroadcastReceiver() {
 
     private fun async(context: Context, block: suspend () -> Unit) {
         val pending = goAsync()
-        Core.ensureInitialized(context).scope.launch {
+        val graph = Core.ensureInitialized(context)
+        graph.scope.launch {
             try {
                 block()
+                // The process may be frozen as soon as the broadcast is finished: hand the write to the Data Layer first.
+                graph.awaitPendingWrites()
             } finally {
                 pending.finish()
             }

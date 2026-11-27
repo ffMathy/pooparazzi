@@ -12,6 +12,7 @@ import com.ffmathy.pooparazzi.core.model.Entry
 import com.ffmathy.pooparazzi.core.model.EntryKind
 import com.ffmathy.pooparazzi.core.model.EntryViolation
 import com.ffmathy.pooparazzi.core.model.FeedType
+import com.ffmathy.pooparazzi.core.model.forCloud
 import com.ffmathy.pooparazzi.core.model.InvalidEntryException
 import com.ffmathy.pooparazzi.core.model.PoopColor
 import com.ffmathy.pooparazzi.core.model.PoopTexture
@@ -410,8 +411,10 @@ class RoomEntryRepository(
                 if (fromCloud && stored != null) {
                     // The backend holds exactly this row's version: nothing is left to upload. Otherwise the stored row
                     // beats the backend's version (an older one, or a tie it loses), so the backend must get it again,
-                    // or the backup and the other phones keep the losing version for good.
-                    val cloudPending = stored.toEntry() != kept && cloudBackup()
+                    // or the backup and the other phones keep the losing version for good. A deleted row goes up as its
+                    // tombstone (forCloud), so the backend holding that tombstone holds this row's version: comparing
+                    // the full row would send the tombstone again on every sync, for as long as the row is kept.
+                    val cloudPending = stored.toEntry().forCloud() != kept && cloudBackup()
                     if (stored.cloudPending != cloudPending) dao.write(stored.copy(cloudPending = cloudPending))
                 }
                 Merge.SKIPPED
