@@ -79,6 +79,8 @@ class AddPastEntryChecks : Phone() {
         assertGone("${clockOf(later)} hasn't happened yet. Log it for yesterday?")
         tapTop("Save")
         waitUntilGone("Add past entry")
+        // History offers an earlier day only once the new entry is saved there.
+        waitUntil("Previous day to take taps") { canTap("Previous day") }
         tap("Previous day")
         waitFor(historyDay(daysAgo(1)))
         assertShowsPart(clockOf(later))
