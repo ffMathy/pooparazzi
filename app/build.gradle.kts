@@ -91,6 +91,12 @@ android {
     }
 }
 
+// The watch's AIL checks (checks/e2e/watch, checks/derived/watch) drive the watch app: they are :wear's tests
+// (wear/build.gradle.kts), never :app's.
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    if (name.contains("UnitTest")) exclude("watch/**")
+}
+
 // The invite and email sign-in App Links exist only with a Firebase configuration: without one there is no site to
 // open, and no intent filter is declared at all.
 if (firebaseProjectId != null) {

@@ -103,6 +103,11 @@ catalog
     radius.button=28dp  radius.sheet=28dp  radius.chip=20dp  radius.notice=28dp
     size.toggle=350x96dp  size.button=169x96dp  size.chip=40dp  size.target=48dp  gutter.phone=20dp  gutter.sheet=24dp
     type.headlineSmall=24sp/600  type.titleLarge=22sp/600  type.titleMedium=18sp/600  type.dataMedium=16sp/450  type.labelLarge=16sp/600
+    watch.background=#000000  watch.surface.container=#1E1914  feed.lit=#4F351C  diaper.lit=#1A423B  diaper.text=#8FD0C3
+    pee.strong=#8FD0C3  poop.container=#0E2622  poop.strong=#358276
+    radius.watch.button=26dp  radius.watch.pill=16dp  radius.watch.chip=20dp  size.edge.medium=70dp  size.edge.small=56dp
+    wear.titleLarge=20sp/600  wear.titleMedium=16sp/600  wear.titleSmall=14sp/600  wear.labelMedium=16sp/600
+    wear.labelSmall=13sp/500  wear.bodyMedium=14sp/450
 ```
 
 ---
@@ -113,8 +118,9 @@ node Pooparazzi : system   level: product
         and ate, with one hand and without waking up properly.
   what
     1. One button starts a sleep, the same button ends it, and every tap can be taken back at once.   refined-by: Sleep
+    2. The watch logs a feed, a diaper or a sleep from the wrist in a tap or two, without the phone, and its Tile, complications and Ongoing Activity show at a glance how long since each.   refined-by: Watch
   entry     Sleep
-  children  Sleep
+  children  Sleep, Watch
   sources
     README.md, "Pooparazzi" and "Sleep"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for
