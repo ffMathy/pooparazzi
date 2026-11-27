@@ -41,8 +41,8 @@ node WatchTime : flow   level: experience
     Scenario: a wake-up stays a minute after the sleep's start
       Given a sleep that started 10 minutes ago, just ended with Woke up
       When the parent opens Time from its Logged and taps −5m twice
-      Then Time reads "Woke up · −9m", and −5m can't be tapped any more
-      And Done shows Logged "Woke up at" that time over "Slept 1m"
+      Then the time stops at the first whole minute at least a minute after the start, to the second: from a start at 5:42:50, a wake-up at 5:53:05 goes back to 5:44:05, "Woke up · −9m", and −5m can't be tapped any more
+      And Done shows Logged "Woke up at" that time over how long the baby slept in clock minutes ("Slept 2m" there, "Slept 1m" when the seconds allow)
   how
     decide the time moves up to now and back up to 12 hours; a wake-up no earlier than a minute after its sleep's start; a sleep's start or wake-up never onto another sleep (a start back to the previous sleep's end at most, a wake-up up to the next sleep's start)
       because a log is never in the future, and sleeps never overlap (DESIGN_SPEC §3.5.4; commits be99c60, c043766)

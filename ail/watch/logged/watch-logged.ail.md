@@ -50,15 +50,15 @@ node WatchLogged : flow   level: experience
     decide Logged closes after five seconds (stretched by the parent's accessibility timeout), its bezel arc draining over them; ambient keeps the window running
       because the confirmation must not need a tap (DESIGN_SPEC §3.5.6, §5.12)
     decide Undo, the time and the dismiss target ignore taps for the first 1000 ms, and again for a second on returning from Time; opened from the Tile's background they are live at once
-      because a double tap on Save or Start sleep must not land on Undo; a tap on the Tile is already deliberate (DESIGN_SPEC §3.5.6, §5.9, §10.7)
-    decide the whole screen but Undo and the time dismisses to Main
-      because closing must be the easiest tap (DESIGN_SPEC §3.5.6)
+      because a double tap on Save or Start sleep must not land on Undo; a tap on the Tile is already deliberate; after that the whole screen but Undo and the time dismisses (DESIGN_SPEC §3.5.6, §5.9, §10.7)
     decide Undo deletes a new feed, diaper or sleep, or makes an ended or cancelled sleep run again; then Undone shows for 1.5 s, and the double-toggle guard is reset
       because every log can be taken back at once (DESIGN_SPEC §1, §3.5.7)
     decide a feed or diaper during a sleep first ends the sleep at the log's time ("Woke up too"; under a minute old, "Sleep cancelled too"), and Undo resumes that sleep too
       because a baby being fed or changed is awake (DESIGN_SPEC §4.4; commit 4633353)
     decide the sync icon says where the log is: "Synced with phone · 14:32", "Saved on watch · will sync" while no phone is in reach; nothing before the watch has tried to sync
       because logging never needs the phone, and the watch never shows a dead-end "check connection" (DESIGN_SPEC §3.5.11)
+    decide the first log after a new install has no sync icon on its Logged; the icon appears from a later log, once the watch has tried to reach the phone
+      because "unknown, confirm with the owner"
     decide if Undo would resume a sleep another sleep now overlaps, nothing changes and Main is back
       because sleeps never overlap (wear/…/MainViewModel.kt; commit c043766)
   look

@@ -1,3 +1,4 @@
+// ail-derived-from: WatchTime@02128b08594822a8
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test
@@ -103,12 +104,14 @@ class WatchTimeChecks : Watch() {
         pass(600)
         tap("5 minutes earlier")
         tap("5 minutes earlier")
-        val offset = clockMinutesBetween(start, woke) - 1
-        waitFor("Woke up · −${offset}m")
-        assertCannotTap("5 minutes earlier")
+        // The earliest wake-up is a minute after the start to the second, so the offset depends on the seconds.
+        waitUntil("−5m at its limit") { !canTap("5 minutes earlier") }
+        val offset = (8L..10L).firstOrNull { shows("Woke up · −${it}m") } ?: throw AssertionError("no offset of 8 to 10 minutes:\n${screen()}")
+        val earliest = shownTime("Woke up, ", ", $offset minutes earlier", minutesFromNow = -offset)
+        val slept = clockMinutesBetween(start, earliest)
+        org.junit.Assert.assertTrue("the wake-up $earliest is a minute or two after $start", slept in 1L..2L)
         tap("Done")
-        waitFor("Slept 1m")
-        val earliest = shownTime("Woke up at ", minutesFromNow = -offset)
-        assertShows("Woke up at $earliest")
+        waitFor("Woke up at $earliest")
+        assertShows("Slept ${slept}m")
     }
 }

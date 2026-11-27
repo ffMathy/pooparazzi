@@ -62,6 +62,8 @@ node Watch : flow   level: experience
       because the icon already says it, and the content description names it for TalkBack (commit bd5b809)
     decide the times read whole clock minutes since the last one ("just now" within the minute), and after them the expected next one when the past week allows one ("55m", "soon", "now")
       because the estimates follow the phone's rules (V1_ADDITIONS §9), shown as the time alone after the upcoming icon (DESIGN_SPEC §3.5.1)
+    decide Main speaks a row with the type and the clock time ("Feed. Last feed, food, 1 minute ago, at 5:14 PM"), the Tile the same row without them ("Feed. Last feed 1 minute ago")
+      because "unknown, confirm with the owner"
     decide no history, editing or sync state on Main; Main never scrolls
       because they are on the phone, and Main mirrors the Tile (DESIGN_SPEC §3.5.1, §3.5.8, §3.5.9)
     decide with two or more babies the title line is a baby button that opens the baby picker, and every screen's time text names the baby ("Noa · 14:32")
