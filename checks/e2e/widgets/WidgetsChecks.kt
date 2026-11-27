@@ -31,18 +31,22 @@ class WidgetsChecks : Phone() {
         tapWidget(widget, "Log feed")
         waitFor("Food")
         pass(600)
+        val fed = windowTitleStartingWith("Feed · ")!!.removePrefix("Feed · ")
         tap("Food")
         waitUntilGone("Just the time")
         waitOutTheCooldown()
         tapWidget(widget, "Log diaper")
         waitFor("Save")
         pass(600)
+        val changed = windowTitleStartingWith("Diaper · ")!!.removePrefix("Diaper · ")
         tap("Poop")
         tap("Save")
         waitUntilGone("Save")
-        waitForWidget(widget, "Log feed, Last feed just now")
-        waitForWidget(widget, "Log diaper, Last diaper just now")
-        assertWidgetShows(widget, "just now")
+        // "just now" within the minute; the minute may have turned since (and the widget is redrawn at each minute).
+        fun since(at: String) = clockMinutesBetween(at, clock()).let { listOf(it, it - 1) }.filter { it >= 0 }
+            .map { if (it == 0L) "just now" else "${spokenMinutes(it)} ago" }
+        waitUntilWidget(widget, "Feed's time since") { since(fed).any { widgetShows(widget, "Log feed, Last feed $it") } }
+        waitUntilWidget(widget, "Diaper's time since") { since(changed).any { widgetShows(widget, "Log diaper, Last diaper $it") } }
     }
 
     @Test

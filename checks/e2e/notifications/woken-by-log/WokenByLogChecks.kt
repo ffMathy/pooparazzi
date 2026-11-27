@@ -1,3 +1,4 @@
+// ail-derived-from: WokenByLog@9b48ece64cdf024f
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals
@@ -17,7 +18,8 @@ class WokenByLogChecks : Phone() {
         assertEquals("The diaper change ended the sleep · $slept", shown.text)
         assertEquals("The diaper change ended the sleep", shown.expanded[0])
         assertEquals("$slept · $start – $end", shown.expanded[1])
-        assertEquals("Pee ${shownDuration(clockMinutesBetween(end, clock())).let { if (it == "<1m") "just now" else "$it ago" }} · $end", shown.expanded[2])
+        // "just now" when drawn, the pee being the wake-up itself.
+        assertEquals("Pee just now · $end", shown.expanded[2])
         assertEquals(true, shown.expanded[3].startsWith("Today · "))
         assertEquals(listOf("−5m", "−10m", "−15m"), shown.buttons)
     }

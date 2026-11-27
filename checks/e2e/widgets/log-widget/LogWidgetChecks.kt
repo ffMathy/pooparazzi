@@ -1,6 +1,8 @@
+// ail-derived-from: LogWidget@d4300fe7ef4e4e48
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** End-to-end check for LogWidget: the 4×2 widget's buttons and their lines, on the real phone app. */
@@ -20,10 +22,10 @@ class LogWidgetChecks : Phone() {
         freshInstall()
         val start = sleepStarted15MinutesAgo()
         val widget = placeLogWidget()
-        waitUntilWidget(widget, "how long asleep") {
-            widgetShows(widget, "Woke up") && widgetShows(widget, shownDuration(clockMinutesBetween(start, clock())))
-        }
-        assertWidgetShows(widget, "Woke up, end sleep, Asleep ${shownDuration(clockMinutesBetween(start, clock()))}")
+        // Redrawn at each minute: the minute may have turned since it was drawn.
+        fun shownNow() = clockMinutesBetween(start, clock()).let { listOf(it, it - 1) }.map(::shownDuration).firstOrNull { widgetShows(widget, it) }
+        waitUntilWidget(widget, "how long asleep") { widgetShows(widget, "Woke up") && shownNow() != null }
+        assertWidgetShows(widget, "Woke up, end sleep, Asleep ${shownNow()}")
     }
 
     @Test
@@ -32,9 +34,10 @@ class LogWidgetChecks : Phone() {
         sleepStarted15MinutesAgo()
         val widget = placeLogWidget()
         tapWidget(widget, "Woke up, end sleep")
-        widgetTimeAfter(widget, "Woke up at ")
-        waitForWidget(widget, "Start sleep, Awake <1m")
-        assertWidgetShows(widget, "<1m")
+        val woke = widgetTimeAfter(widget, "Woke up at ")
+        // "<1m" within the wake-up's minute ("1m" once it turns: the widget is redrawn at each minute).
+        val awake = if (clockMinutesBetween(woke, clock()) == 0L) listOf("<1m") else listOf("<1m", "1m")
+        waitUntilWidget(widget, "how long awake") { awake.any { widgetShows(widget, "Start sleep, Awake $it") && widgetShows(widget, it) } }
     }
 
     @Test
@@ -44,9 +47,13 @@ class LogWidgetChecks : Phone() {
         feedJustTheTime()
         val widget = placeLogWidget()
         waitForWidget(widget, "3h 00m")
-        assertWidgetShows(widget, "just now")
-        val spoken = recentClocks(180).map { "Log feed, Last feed just now, next feed expected around $it" }
-        waitUntilWidget(widget, "the spoken forecast") { spoken.any { widgetShows(widget, it) } }
+        // "just now", or "1m" if the minute has turned since the feed (the widget is redrawn at each minute).
+        assertTrue(widgetScreen(widget), widgetShows(widget, "just now") || widgetShows(widget, "1m"))
+        val spoken = widgetReads(widget).firstOrNull { it.startsWith("Log feed, Last feed ") && it.contains(", next feed expected around ") }
+            ?: throw AssertionError("no spoken forecast:\n${widgetScreen(widget)}")
+        // The expected time, rounded to five minutes.
+        val around = spoken.substringAfter(", next feed expected around ")
+        assertTrue(spoken, clockMinutesBetween(clock(), around) in 175L..185L && around.substringAfter(":").take(2).toInt() % 5 == 0)
     }
 
     @Test

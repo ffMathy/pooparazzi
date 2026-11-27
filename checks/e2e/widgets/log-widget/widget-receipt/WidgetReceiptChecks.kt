@@ -1,3 +1,4 @@
+// ail-derived-from: WidgetReceipt@6edabdca3083f437
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test
@@ -102,7 +103,7 @@ class WidgetReceiptChecks : Phone() {
         pass(600)
         tap("Food")
         waitUntilGone("Just the time")
-        waitForWidget(widget, "Log feed, Last feed just now")
+        waitUntilWidget(widget, "the feed") { widgetShowsPart(widget, "Log feed, Last feed ") }
         assertWidgetShows(widget, "Woke up at $end")
         assertWidgetShows(widget, "Undo woke up")
     }

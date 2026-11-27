@@ -1,3 +1,4 @@
+// ail-derived-from: SleepNotification@c17f05441902f2ec
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals
@@ -14,7 +15,9 @@ class SleepNotificationChecks : Phone() {
         var shown = asleepNotification()
         waitUntilShade("the duration") {
             shown = asleepNotification()
-            shown.text == "${shownDuration(clockMinutesBetween(start, clock()))} · since $start"
+            // Redrawn at each minute by the app's alarm: the minute may have turned since.
+            val minutes = clockMinutesBetween(start, clock())
+            shown.text in listOf(minutes, minutes - 1).map { "${shownDuration(it)} · since $start" }
         }
         val slept = shown.text.substringBefore(" · ")
         assertEquals(listOf(shown.text, "Today · 0 feeds · 0 pee · 0 poop · $slept sleep"), shown.expanded)
@@ -32,7 +35,9 @@ class SleepNotificationChecks : Phone() {
         val fed = foodLogged(15)
         waitUntilShade("the feed line") { asleepNotification().expanded.any { it.startsWith("Fed ") } }
         val shown = asleepNotification()
-        assertTrue(shown.toString(), shown.expanded.contains("Fed ${shownDuration(clockMinutesBetween(fed, clock()))} ago · $fed · Food"))
+        // Drawn when the feed was logged, and again at each minute: the minute may have turned since.
+        val minutes = clockMinutesBetween(fed, clock())
+        assertTrue(shown.toString(), listOf(minutes, minutes - 1).any { shown.expanded.contains("Fed ${shownDuration(it)} ago · $fed · Food") })
         assertTrue(shown.toString(), shown.expanded.last().startsWith("Today · 1 feed · 0 pee · 0 poop · "))
     }
 

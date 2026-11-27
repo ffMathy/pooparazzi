@@ -36,8 +36,8 @@ node Widgets : flow   level: experience
     Scenario: what the sheets log shows on the widget
       Given a 4×2 widget on the home screen
       When the parent logs Food from its Feed button and a poop from its Diaper button
-      Then the widget's Feed reads "just now", spoken "Log feed, Last feed just now"
-      And its Diaper reads "just now", spoken "Log diaper, Last diaper just now"
+      Then the widget's Feed reads how long since the feed in clock minutes ("just now" within its minute), spoken "Log feed, Last feed just now" ("Last feed 1 minute ago" once the minute turns)
+      And its Diaper reads how long since the poop the same way, spoken "Log diaper, Last diaper just now"
     Scenario: the widget's background opens Home
       Given a 4×2 widget on the home screen, with nothing just logged on it
       When the parent taps the widget outside its buttons

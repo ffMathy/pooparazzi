@@ -1,3 +1,4 @@
+// ail-derived-from: CoverWidget@2d050f91b023c431
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals

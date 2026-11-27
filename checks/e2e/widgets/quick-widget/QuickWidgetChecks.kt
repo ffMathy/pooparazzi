@@ -1,3 +1,4 @@
+// ail-derived-from: QuickWidget@c4591efc6c4aa4f7
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals

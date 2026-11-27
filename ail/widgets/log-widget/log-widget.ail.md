@@ -24,7 +24,7 @@ node LogWidget : flow   level: experience
       Given feeds at 8:00 AM and 11:00 AM four days ago, and at 8:00 AM, 11:00 AM and 2:00 PM three and two days ago
       And a feed logged now with Just the time, and a 4×2 widget
       Then the widget's Feed reads "just now" over "3h 00m"
-      And it is spoken "Log feed, Last feed just now, next feed expected around" the time 3 hours from now
+      And it is spoken "Log feed, Last feed just now, next feed expected around" the time 3 hours from now, rounded to 5 minutes
     Scenario: a small log widget keeps only the icons
       Given a 4×2 widget resized to 120 × 100
       Then its buttons show their icons only, spoken "Log feed", "Log diaper" and "Start sleep"
