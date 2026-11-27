@@ -7,11 +7,11 @@ class SettingsChecks : Phone() {
     @Test
     fun `the sections of settings`() {
         freshInstall()
-        openSettings()
+        openSettingsFromHome()
         assertShows("Settings")
         assertCanTap("Back")
-        assertShowsInOrder("Account", "Baby", "Appearance", "Language", "Watch", "Notifications", "About")
-        assertShowsInOrder("Made with ❤️ by a father in Aarhus, Denmark", "Pooparazzi is open source")
+        assertShowsTextsInOrder("Account", "Baby", "Appearance", "Language", "Watch", "Notifications", "About")
+        assertShowsTextsInOrder("Made with ❤️ by a father in Aarhus, Denmark", "Pooparazzi is open source")
         assertCanTap("Source code on GitHub")
         assertCanTap("The maker on LinkedIn")
     }
@@ -19,7 +19,7 @@ class SettingsChecks : Phone() {
     @Test
     fun `back returns to home`() {
         freshInstall()
-        openSettings()
+        openSettingsFromHome()
         tap("Back")
         waitFor("Start sleep")
         assertGone("Appearance")

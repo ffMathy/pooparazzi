@@ -11,10 +11,10 @@ class AddBabyChecks : Phone() {
     @Test
     fun `what add a baby asks`() {
         freshInstall()
-        openSettings()
+        openSettingsFromHome()
         nameFirstBaby("Noa")
-        tapInDialog("Add a baby")
-        waitForInDialog("Cancel")
+        tapInTopWindow("Add a baby")
+        waitForInTopWindow("Cancel")
         assertEquals(2, nameFields())
         assertShows("Add birth date")
         assertShows("The birth date is optional, but it improves the predictions and estimates: they then follow the baby's age.")
@@ -26,42 +26,42 @@ class AddBabyChecks : Phone() {
     @Test
     fun `adding a second baby`() {
         freshInstall()
-        openSettings()
+        openSettingsFromHome()
         noaAndIdaInSettings()
-        waitForInDialog("Babies")
+        waitForInTopWindow("Babies")
         assertShows("Remove Noa")
         assertShows("Remove Ida")
         assertShows("Noa")
         assertShows("Ida")
         goBack()
-        waitForInDialog("Noa. Switch baby")
+        waitForInTopWindow("Noa. Switch baby")
     }
 
     @Test
     fun `adding a baby with a birth date`() {
         freshInstall()
-        openSettings()
-        tapInDialog("Add a baby")
-        waitForInDialog("Cancel")
-        tapInDialog("Add birth date")
-        waitForInDialog("Birth date")
+        openSettingsFromHome()
+        tapInTopWindow("Add a baby")
+        waitForInTopWindow("Cancel")
+        tapInTopWindow("Add birth date")
+        waitForInTopWindow("Birth date")
         pickTodayAsBirthDate()
-        waitForInDialog(bornToday())
-        tapInDialog("Add")
-        waitUntilGoneInDialog("Cancel")
-        waitForInDialog("Babies")
-        assertShows(bornToday())
+        waitForInTopWindow(birthDatePillToday())
+        tapInTopWindow("Add")
+        waitUntilGoneInTopWindow("Cancel")
+        waitForInTopWindow("Babies")
+        assertShows(birthDatePillToday())
     }
 
     @Test
     fun `cancelling adds nothing`() {
         freshInstall()
-        openSettings()
-        tapInDialog("Add a baby")
-        waitForInDialog("Cancel")
-        typeName("Ida")
-        tapInDialog("Cancel")
-        waitUntilGoneInDialog("Cancel")
+        openSettingsFromHome()
+        tapInTopWindow("Add a baby")
+        waitForInTopWindow("Cancel")
+        typeBabyName("Ida")
+        tapInTopWindow("Cancel")
+        waitUntilGoneInTopWindow("Cancel")
         assertShows("Baby")
         assertGone("Babies")
         assertEquals(1, nameFields())
@@ -71,23 +71,23 @@ class AddBabyChecks : Phone() {
     @Test
     fun `an unnamed second baby`() {
         freshInstall()
-        openSettings()
-        addBaby()
-        waitForInDialog("Remove Baby 2")
+        openSettingsFromHome()
+        addBabyInSettings()
+        waitForInTopWindow("Remove Baby 2")
         assertShows("Remove Baby 1")
         goBack()
-        waitForInDialog("Baby 1. Switch baby")
+        waitForInTopWindow("Baby 1. Switch baby")
     }
 
     @Test
     fun `at most eight babies`() {
         freshInstall()
-        openSettings()
-        repeat(6) { addBaby() }
-        waitForInDialog("Remove Baby 7")
+        openSettingsFromHome()
+        repeat(6) { addBabyInSettings() }
+        waitForInTopWindow("Remove Baby 7")
         assertEquals(7, nameFields())
-        addBaby()
-        waitForInDialog("Remove Baby 8")
+        addBabyInSettings()
+        waitForInTopWindow("Remove Baby 8")
         assertGone("Add a baby")
         assertEquals(8, nameFields())
     }

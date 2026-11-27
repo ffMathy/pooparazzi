@@ -23,32 +23,32 @@ class YourBabyChecks : Phone() {
     @Test
     fun `naming the baby and giving a birth date`() {
         onYourBaby()
-        typeName("Noa")
-        tapInDialog("Add birth date")
-        waitForInDialog("Birth date")
+        typeBabyName("Noa")
+        tapInTopWindow("Add birth date")
+        waitForInTopWindow("Birth date")
         pickTodayAsBirthDate()
-        waitForInDialog(bornToday())
+        waitForInTopWindow(birthDatePillToday())
         tap("Continue")
-        waitForInDialog("Welcome to Pooparazzi")
+        waitForInTopWindow("Welcome to Pooparazzi")
         pass(500)
         skipIntroduction()
         assertShows("Noa")
-        openSettings()
+        openSettingsFromHome()
         assertShows("Noa")
-        assertShows(bornToday())
+        assertShows(birthDatePillToday())
     }
 
     @Test
     fun `a birth date can't be in the future`() {
         onYourBaby()
-        tapInDialog("Add birth date")
-        waitForInDialog("Birth date")
+        tapInTopWindow("Add birth date")
+        waitForInTopWindow("Birth date")
         val today = LocalDate.now()
         assertShows(today.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.US)))
         val tomorrow = today.plusDays(1)
         if (tomorrow.month == today.month) assertCannotTap(tomorrow.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.US)))
-        tapInDialog("Cancel")
-        waitUntilGoneInDialog("Birth date")
+        tapInTopWindow("Cancel")
+        waitUntilGoneInTopWindow("Birth date")
         assertShows("Add birth date")
     }
 
@@ -56,7 +56,7 @@ class YourBabyChecks : Phone() {
     fun `continuing with nothing given`() {
         onYourBaby()
         tap("Continue")
-        waitForInDialog("Welcome to Pooparazzi")
+        waitForInTopWindow("Welcome to Pooparazzi")
         pass(500)
         skipIntroduction()
         assertShows("Baby")
@@ -65,9 +65,9 @@ class YourBabyChecks : Phone() {
     @Test
     fun `going back skips your baby`() {
         onYourBaby()
-        typeName("Noa")
+        typeBabyName("Noa")
         goBack()
-        waitForInDialog("Welcome to Pooparazzi")
+        waitForInTopWindow("Welcome to Pooparazzi")
         pass(500)
         skipIntroduction()
         assertShows("Baby")

@@ -21,18 +21,18 @@ node Language : flow   level: experience
       because both apps declare English and Danish, and the watch follows the phone (V1_ADDITIONS §5)
     decide the language names are written in their own language, "English" and "Dansk", in both languages
       because a parent who can't read the current language must still find their own (core/…/values/strings.xml)
-    decide the checks show the choice, not the recreated screen: under Robolectric choosing Dansk is stored and shown chosen, but the screen is not recreated in Danish; the Danish copy is shown on a phone set to Danish instead (Danish)
+    decide the checks show the choice, not the recreated screen: under Robolectric choosing Dansk is stored and shown chosen, but the screen is not recreated in Danish; the Danish copy is shown on a phone set to Danish instead (DanishPhone)
       because the per-app language goes through the system's locale manager, which the JVM phone does not run (driven 2026-11-27)
     decide clock times are 24-hour in Danish, and in English as the phone is set
       because Danish always writes 24-hour time (V1_ADDITIONS §5)
   look
-    Three radio rows, each size.row tall in color.row, the language's name in type.titleMedium color.text and a radio
+    Three radio rows, each size.row tall in color.surface.container, the language's name in type.titleMedium color.text and a radio
       button at the end, the chosen one filled color.primary
   copy
     system   "System default"   ; da "Systemstandard"
     english  "English"
     danish   "Dansk"
-  children  Danish
+  children  DanishPhone
   sources
     docs/design/V1_ADDITIONS.md §5 (Internationalisation: the language setting, formatting)
     docs/design/DESIGN_SPEC.md §3.3.5

@@ -37,7 +37,7 @@ node Family : flow   level: experience
     decide it can't be checked here: it needs signed-in accounts in a family
       because the checks run with accounts turned off
   look
-    A section headed "Family" under the account row: one color.row row per member (address in type.titleMedium
+    A section headed "Family" under the account row: one color.surface.container row per member (address in type.titleMedium
       color.text, the role in type.bodySmall color.text.dim, Remove as a text button in color.error for the creator),
       then "Invite someone" as an outlined pill with the plus icon and "Leave family" as a text button
   copy

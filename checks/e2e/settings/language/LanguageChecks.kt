@@ -7,16 +7,16 @@ class LanguageChecks : Phone() {
     @Test
     fun `a new install follows the phone's language`() {
         freshInstall()
-        openSettings()
-        assertShowsInOrder("Language", "System default", "English", "Dansk")
-        waitUntil("System default chosen") { selected().let { "System default" in it && "English" !in it && "Dansk" !in it } }
+        openSettingsFromHome()
+        assertShowsTextsInOrder("Language", "System default", "English", "Dansk")
+        waitUntil("System default chosen") { chosenOnScreen().let { "System default" in it && "English" !in it && "Dansk" !in it } }
     }
 
     @Test
     fun `choosing dansk`() {
         freshInstall()
-        openSettings()
-        scrollAndTap("Dansk")
-        waitUntil("Dansk chosen") { selected().let { "Dansk" in it && "System default" !in it } }
+        openSettingsFromHome()
+        scrollDownAndTap("Dansk")
+        waitUntil("Dansk chosen") { chosenOnScreen().let { "Dansk" in it && "System default" !in it } }
     }
 }

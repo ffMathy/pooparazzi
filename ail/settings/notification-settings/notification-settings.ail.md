@@ -23,7 +23,7 @@ node NotificationSettings : flow   level: experience
     decide while the app may not notify, every prediction reads "Off"
       because nothing can show then, whatever its channel says (app/…/notify/ForecastNotifications.kt)
   look
-    The first row as a link row in color.row with radius.row corners: its title in type.titleMedium color.text and its
+    The first row as a link row in color.surface.container with radius.row corners: its title in type.titleMedium color.text and its
       summary in type.bodySmall color.text.dim, a chevron at the end. "What comes next" in type.titleSmall color.text,
       then three link rows of size.row, each with its label and "On" or "Off" in type.bodyMedium color.text.dim, the hint
       under them in type.bodySmall color.text.dim

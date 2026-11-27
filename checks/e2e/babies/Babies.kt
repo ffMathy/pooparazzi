@@ -34,7 +34,7 @@ import org.robolectric.shadows.ShadowLooper
  * open the checks drive the frames themselves, as a phone would: the Compose clock, the main looper and a layout pass
  * of each window that asks for one. Once no dialog is open, the clock runs on its own again.
  */
-fun Phone.settle() {
+fun Phone.settleDialogWindows() {
     compose.mainClock.autoAdvance = false
     var quiet = 0
     var frames = 0
@@ -51,13 +51,13 @@ fun Phone.settle() {
 }
 
 /**
- * Waits until [condition] holds while a dialog or a sheet may be open or closing, running its frames ([settle]) between
+ * Waits until [condition] holds while a dialog or a sheet may be open or closing, running its frames ([settleDialogWindows]) between
  * looks; fails with the screen after [timeoutMillis].
  */
-fun Phone.waitInDialog(what: String, timeoutMillis: Long = 10_000, condition: () -> Boolean) {
+fun Phone.waitInTopWindow(what: String, timeoutMillis: Long = 10_000, condition: () -> Boolean) {
     val end = System.currentTimeMillis() + timeoutMillis
     while (true) {
-        settle()
+        settleDialogWindows()
         val auto = compose.mainClock.autoAdvance
         compose.mainClock.autoAdvance = false
         val met = try { condition() } finally { compose.mainClock.autoAdvance = auto }
@@ -68,38 +68,38 @@ fun Phone.waitInDialog(what: String, timeoutMillis: Long = 10_000, condition: ()
 }
 
 /** Waits until something reads [text] (or is spoken as [text]) while a dialog or a sheet may be open. */
-fun Phone.waitForInDialog(text: String) = waitInDialog("\"$text\"") { shows(text) }
+fun Phone.waitForInTopWindow(text: String) = waitInTopWindow("\"$text\"") { shows(text) }
 
 /** Waits until nothing reads [text] while a dialog or a sheet may be open or closing. */
-fun Phone.waitUntilGoneInDialog(text: String) = waitInDialog("no \"$text\"") { !shows(text) }
+fun Phone.waitUntilGoneInTopWindow(text: String) = waitInTopWindow("no \"$text\"") { !shows(text) }
 
-/** Lets [millis] go by while a dialog may be open: real time, and the frames of [settle]. */
-fun Phone.passInDialog(millis: Long) {
+/** Lets [millis] go by while a dialog may be open: real time, and the frames of [settleDialogWindows]. */
+fun Phone.passInTopWindow(millis: Long) {
     Thread.sleep(millis)
-    settle()
+    settleDialogWindows()
 }
 
 /**
  * Taps what reads [text] (or the button spoken as [text]) in the topmost window that has it: a dialog over Settings
- * before Settings itself, as a finger would. Then lets the dialog catch up ([settle]).
+ * before Settings itself, as a finger would. Then lets the dialog catch up ([settleDialogWindows]).
  */
-fun Phone.tapInDialog(text: String) {
+fun Phone.tapInTopWindow(text: String) {
     val clickable = compose.onAllNodes((hasText(text) or hasContentDescription(text)) and hasClickAction())
     val count = clickable.fetchSemanticsNodes().size
     val node = if (count > 0) clickable[count - 1]
     else compose.onAllNodes(hasText(text) or hasContentDescription(text), useUnmergedTree = true).let { all -> all[all.fetchSemanticsNodes().size - 1] }
     // Below the fold (Settings scrolls): scrolled to first, as a parent would. Not everything is in a scrolling list.
     runCatching { node.performScrollTo() }
-    settle()
+    settleDialogWindows()
     node.performClick()
-    settle()
+    settleDialogWindows()
 }
 
 /**
  * Scrolls to what reads [text] (or the button spoken as [text]) and taps it, as a parent scrolls down Settings to a
  * row below the fold; then gives the app a moment, as tap does.
  */
-fun Phone.scrollAndTap(text: String) {
+fun Phone.scrollDownAndTap(text: String) {
     val clickable = compose.onAllNodes((hasText(text) or hasContentDescription(text)) and hasClickAction())
     val node = if (clickable.fetchSemanticsNodes().isNotEmpty()) clickable[0]
     else compose.onAllNodes(hasText(text) or hasContentDescription(text), useUnmergedTree = true)[0]
@@ -110,79 +110,79 @@ fun Phone.scrollAndTap(text: String) {
 }
 
 /** Scrolls the list on the screen until something reading [text] is in it, as a parent scrolls down a long page. */
-fun Phone.scrollUntilShown(text: String) {
+fun Phone.scrollListUntilShown(text: String) {
     compose.onAllNodes(hasScrollToNodeAction())[0].performScrollToNode(hasText(text))
     pass(300)
 }
 
 /** The texts of what is selected or ticked on the screen (a radio row, a segment, a checkbox), in order. */
-fun Phone.selected(): List<String> =
+fun Phone.chosenOnScreen(): List<String> =
     compose.onAllNodes(isSelected() or isOn()).fetchSemanticsNodes().map { node ->
         node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ") { it.text }
             ?: node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString(" ").orEmpty()
     }
 
 /** Types [text] into the last text field on the screen (the one in a dialog, when one is open), replacing what it held. */
-fun Phone.typeName(text: String) {
+fun Phone.typeBabyName(text: String) {
     val fields = compose.onAllNodes(hasSetTextAction())
     val field = fields[fields.fetchSemanticsNodes().size - 1]
     field.performTextReplacement(text)
     field.performImeAction()
-    settle()
+    settleDialogWindows()
 }
 
 /** Types [text] into the name field [index] (0 is the first baby's), replacing what it held. */
-fun Phone.typeNameAt(index: Int, text: String) {
+fun Phone.typeBabyNameAt(index: Int, text: String) {
     val field = compose.onAllNodes(hasSetTextAction())[index]
     field.performTextReplacement(text)
     // Done on the keyboard: saves at once and lets go of the field, whose blinking cursor would keep the phone busy.
     field.performImeAction()
-    settle()
+    settleDialogWindows()
 }
 
 /** In the open date picker, taps today (the picker reads it "Today, Friday, November 27, 2026") and OK. */
 fun Phone.pickTodayAsBirthDate() {
     compose.onAllNodes(hasText("Today, ", substring = true) or hasText("I dag, ", substring = true), useUnmergedTree = true)[0].performClick()
-    settle()
-    tapInDialog("OK")
+    settleDialogWindows()
+    tapInTopWindow("OK")
 }
 
 /** In Settings, types [name] into the first baby's Name field and waits out the save (500 ms after the last keystroke). */
 fun Phone.nameFirstBaby(name: String) {
-    typeNameAt(0, name)
+    typeBabyNameAt(0, name)
     pass(1_000)
 }
 
 /** Settings with two babies, "Noa" (the first, current one) and "Ida": names the first and adds the second. */
 fun Phone.noaAndIdaInSettings() {
     nameFirstBaby("Noa")
-    addBaby("Ida")
-    waitForInDialog("Remove Ida")
+    addBabyInSettings("Ida")
+    waitForInTopWindow("Remove Ida")
 }
 
 /**
  * On Home with two or more babies: opens the Switch baby sheet from the top bar's switcher (spoken "<current>. Switch
  * baby") and taps [baby]; ends on Home with [baby] current.
  */
-fun Phone.switchTo(baby: String) {
+fun Phone.switchBabyTo(baby: String) {
     // Home ignores taps for a moment after a screen or a sheet closes.
     pass(1_000)
     val current = compose.onAllNodes(hasContentDescription(". Switch baby", substring = true)).fetchSemanticsNodes()
         .firstNotNullOf { it.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull() }
-    tapInDialog(current)
-    waitForInDialog("Switch baby")
-    tapInDialog(baby)
-    waitForInDialog("$baby. Switch baby")
-    waitUntilGoneInDialog("Switch baby")
+    tapInTopWindow(current)
+    waitForInTopWindow("Switch baby")
+    tapInTopWindow(baby)
+    waitForInTopWindow("$baby. Switch baby")
+    waitUntilGoneInTopWindow("Switch baby")
 }
 
 /** Settings › Add a baby, named [name] (or left unnamed), then Add; ends on Settings. */
-fun Phone.addBaby(name: String? = null) {
-    tapInDialog("Add a baby")
-    waitForInDialog("Cancel")
-    if (name != null) typeName(name)
-    tapInDialog("Add")
-    waitUntilGoneInDialog("Cancel")
+fun Phone.addBabyInSettings(name: String? = null) {
+    tapInTopWindow("Add a baby")
+    waitForInTopWindow("Cancel")
+    if (name != null) typeBabyName(name)
+    tapInTopWindow("Add")
+    waitUntilGoneInTopWindow("Cancel")
 }
 
 /** The phone's windows (their root views), the activity's first. */

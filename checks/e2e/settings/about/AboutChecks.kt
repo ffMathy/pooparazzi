@@ -7,9 +7,9 @@ class AboutChecks : Phone() {
     @Test
     fun `what about offers`() {
         freshInstall()
-        openSettings()
-        assertShowsInOrder("About", "Pooparazzi", "Version 0.1.0")
-        assertShowsInOrder(
+        openSettingsFromHome()
+        assertShowsTextsInOrder("About", "Pooparazzi", "Version 0.1.0")
+        assertShowsTextsInOrder(
             "Introduction", "How to use Pooparazzi, step by step",
             "Privacy policy", "What is stored, where, and your rights",
             "Download my data", "The whole log and the babies' names as a ZIP file",
@@ -22,12 +22,12 @@ class AboutChecks : Phone() {
     @Test
     fun `the font licences`() {
         freshInstall()
-        openSettings()
-        scrollAndTap("Font licences")
+        openSettingsFromHome()
+        scrollDownAndTap("Font licences")
         waitFor("Google Sans Flex")
         assertShows("Font licences")
         assertShowsPart("Copyright 2015 The Google Sans Flex Authors")
-        scrollUntilShown("Atkinson Hyperlegible Next")
+        scrollListUntilShown("Atkinson Hyperlegible Next")
         assertShows("Atkinson Hyperlegible Next")
         assertGone("Appearance")
         tap("Back")

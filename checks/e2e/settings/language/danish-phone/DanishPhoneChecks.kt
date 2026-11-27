@@ -4,13 +4,13 @@ import java.util.Locale
 import org.junit.Test
 import org.robolectric.annotation.Config
 
-/** End-to-end check for Danish: the setup and Settings on a phone set to Danish, on the real phone app. */
+/** End-to-end check for DanishPhone: the setup and Settings on a phone set to Danish, on the real phone app. */
 @Config(qualifiers = "da-w390dp-h844dp-xxhdpi")
-class DanishChecks : Phone() {
+class DanishPhoneChecks : Phone() {
     private val danish = Locale.forLanguageTag("da")
 
     private fun onDitBarn() {
-        waitForInDialog("Spring over for nu")
+        waitForInTopWindow("Spring over for nu")
         pass(500)
     }
 
@@ -18,13 +18,13 @@ class DanishChecks : Phone() {
     private fun openIndstillinger() {
         onDitBarn()
         tap("Spring over for nu")
-        waitForInDialog("Spring over")
+        waitForInTopWindow("Spring over")
         pass(500)
         tap("Spring over")
-        waitForInDialog("Start søvn")
+        waitForInTopWindow("Start søvn")
         pass(1_000)
         tap("Indstillinger")
-        waitForInDialog("Udseende")
+        waitForInTopWindow("Udseende")
         pass(500)
     }
 
@@ -37,23 +37,23 @@ class DanishChecks : Phone() {
         assertCanTap("Tilføj fødselsdato")
         assertCanTap("Fortsæt")
         assertCanTap("Spring over for nu")
-        tapInDialog("Tilføj fødselsdato")
-        waitForInDialog("Fødselsdato")
+        tapInTopWindow("Tilføj fødselsdato")
+        waitForInTopWindow("Fødselsdato")
         pickTodayAsBirthDate()
-        waitForInDialog(bornToday(danish))
+        waitForInTopWindow(birthDatePillToday(danish))
     }
 
     @Test
     fun `the introduction on a danish phone`() {
         onDitBarn()
         tap("Spring over for nu")
-        waitForInDialog("Velkommen til Pooparazzi")
+        waitForInTopWindow("Velkommen til Pooparazzi")
         pass(500)
         val titles = listOf("Velkommen til Pooparazzi", "Søvn", "Måltider og bleskift", "Ret hvad som helst", "Hvad kommer nu", "Altid ved hånden")
         titles.forEachIndexed { index, title ->
             if (index > 0) {
                 tap("Næste")
-                waitForInDialog(title)
+                waitForInTopWindow(title)
                 pass(500)
             }
             assertShows("Side ${index + 1} af 6")
@@ -66,24 +66,24 @@ class DanishChecks : Phone() {
     @Test
     fun `settings on a danish phone`() {
         openIndstillinger()
-        assertShowsInOrder("Konto", "Barn", "Udseende", "Sprog", "Ur", "Notifikationer", "Om")
+        assertShowsTextsInOrder("Konto", "Barn", "Udseende", "Sprog", "Ur", "Notifikationer", "Om")
         assertShows("Backup er ikke sat op i denne version. Alt gemmes på denne telefon.")
-        assertShowsInOrder("Lavet med ❤️ af en far i Aarhus", "Pooparazzi er open source")
+        assertShowsTextsInOrder("Lavet med ❤️ af en far i Aarhus", "Pooparazzi er open source")
     }
 
     @Test
     fun `adding and removing a baby in danish`() {
         openIndstillinger()
-        tapInDialog("Tilføj et barn")
-        waitForInDialog("Annuller")
-        typeName("Ida")
-        tapInDialog("Tilføj")
-        waitUntilGoneInDialog("Annuller")
-        waitForInDialog("Børn")
+        tapInTopWindow("Tilføj et barn")
+        waitForInTopWindow("Annuller")
+        typeBabyName("Ida")
+        tapInTopWindow("Tilføj")
+        waitUntilGoneInTopWindow("Annuller")
+        waitForInTopWindow("Børn")
         assertShows("Fjern Baby 1")
         assertShows("Fjern Ida")
-        tapInDialog("Fjern Ida")
-        waitForInDialog("Fjern Ida?")
+        tapInTopWindow("Fjern Ida")
+        waitForInTopWindow("Fjern Ida?")
         assertShows("Barnets log bliver slettet fra telefonen og dit ur. Det kan ikke fortrydes.")
         assertCanTap("Annuller")
         assertCanTap("Fjern")

@@ -30,10 +30,10 @@ node WatchSettings : flow   level: experience
     decide every estimate is ticked until the parent unticks some; the choice is synced to the watch, whose face shows the earliest of those ticked
       because they choose what the watch's ongoing activity shows (DESIGN_SPEC §3.3.5, §3.8)
   look
-    The sync line in a color.row group with radius.row corners: the watch icon (with a tick, "…", a slash or "!") and
+    The sync line in a color.surface.container group with radius.row corners: the watch icon (with a tick, "…", a slash or "!") and
       the line in type.dataMedium color.text.dim (color.error for "Couldn't save"), "Sync now" as an outlined pill at
       the end under it. "On the watch face" in type.titleSmall color.text, then three checkbox rows of size.row in
-      color.row, the label in type.titleMedium color.text, the hint in type.bodySmall color.text.dim
+      color.surface.container, the label in type.titleMedium color.text, the hint in type.bodySmall color.text.dim
   copy
     synced      "Synced with watch · {time}"
     syncing     "Syncing with watch…"         ; da "Synkroniserer med ur…"

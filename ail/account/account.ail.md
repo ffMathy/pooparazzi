@@ -43,7 +43,7 @@ node Account : flow   level: experience
     decide the checks prove only the build without a backup: the checks turn accounts off, the app has no way to point Firebase at the local emulators, and Google sign-in needs Google Play services
       because the checks run the real app on the JVM; see the open question in the report (docs/BACKEND.md; app/…/account/AppAccounts.kt)
   look
-    The Account row: a color.row group with radius.row corners, holding the line in type.bodyMedium color.text.dim with
+    The Account row: a color.surface.container group with radius.row corners, holding the line in type.bodyMedium color.text.dim with
       16dp padding; signed in, a link row with the address in type.titleMedium color.text and the status in
       type.dataMedium color.text.dim, color.error for an error or a deleted backup
   copy

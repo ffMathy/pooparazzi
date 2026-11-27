@@ -72,15 +72,15 @@ class IntroductionChecks : Phone() {
     @Test
     fun `the introduction from settings`() {
         freshInstall()
-        openSettings()
-        scrollAndTap("Introduction")
+        openSettingsFromHome()
+        scrollDownAndTap("Introduction")
         waitFor("Welcome to Pooparazzi")
         pass(500)
         goBack()
         waitFor("Appearance")
         assertGone("Welcome to Pooparazzi")
         pass(500)
-        scrollAndTap("Introduction")
+        scrollDownAndTap("Introduction")
         waitFor("Welcome to Pooparazzi")
         pass(500)
         next("Sleep")

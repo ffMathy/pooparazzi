@@ -33,20 +33,20 @@ fun Phone.skipIntroduction() {
 }
 
 /** Home › Settings, once it has loaded. */
-fun Phone.openSettings() {
+fun Phone.openSettingsFromHome() {
     tap("Settings")
     waitFor("Appearance")
     pass(500)
 }
 
 /** Today as a birth date pill reads it: "Born Nov 27, 2026" (English), "Født 27. nov. 2026" (Danish). */
-fun bornToday(locale: Locale = Locale.US): String {
+fun birthDatePillToday(locale: Locale = Locale.US): String {
     val date = LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
     return if (locale.language == "da") "Født $date" else "Born $date"
 }
 
 /** Whether the texts appear on the screen in this order, top to bottom (each one exactly, as a text of its own). */
-fun Phone.showsInOrder(vararg texts: String): Boolean {
+fun Phone.showsTextsInOrder(vararg texts: String): Boolean {
     val lines = screen().lines()
     var from = 0
     for (text in texts) {
@@ -56,5 +56,5 @@ fun Phone.showsInOrder(vararg texts: String): Boolean {
     return true
 }
 
-fun Phone.assertShowsInOrder(vararg texts: String) =
-    assertTrue("expected ${texts.toList()} in this order on the screen:\n${screen()}", showsInOrder(*texts))
+fun Phone.assertShowsTextsInOrder(vararg texts: String) =
+    assertTrue("expected ${texts.toList()} in this order on the screen:\n${screen()}", showsTextsInOrder(*texts))

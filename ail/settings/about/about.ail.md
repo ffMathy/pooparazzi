@@ -32,7 +32,7 @@ node About : flow   level: experience
     decide the checks show the rows but not what the browser, the file picker or a toast does: those are the system's, outside the app
       because the checks see only the app's own screen (checks/e2e/Phone.kt)
   look
-    In color.row groups: "Pooparazzi" in type.titleMedium color.text over the version in type.dataMedium color.text.dim;
+    In color.surface.container groups: "Pooparazzi" in type.titleMedium color.text over the version in type.dataMedium color.text.dim;
       then each link row with its title in type.titleMedium color.text, its summary in type.bodySmall color.text.dim and a
       chevron, 2dp apart, radius.row at the group's ends. The font licences screen: a top bar with Back and "Font
       licences", then each font's name in type.titleMedium color.text over its licence in type.bodySmall color.text.dim

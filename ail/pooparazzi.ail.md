@@ -2,20 +2,25 @@
 
 A baby tracker for an Android phone and a Wear OS watch, made for one hand at
 3am: sleep, feeds and diapers in one or two taps. This spec is being written in
-reverse from the existing app (`/ail:adopt`), one slice at a time.
+reverse from the existing app (`/ail:adopt`), the whole app, one slice at a
+time.
 
 ```
 pooparazzi.ail.md      Pooparazzi (this file): target, glossary, tokens
-sleep/sleep.ail.md     Sleep: Start sleep and Woke up on the phone's Home, the receipt, Undo and the guards
+sleep/                 Sleep: Start sleep and Woke up on the phone's Home, the receipt, Undo and the guards
+feeds/                 Feeds: the Feed sheet (breast, bottle, food, just the time), repeats, a feed during a sleep
+diapers/               Diapers: the Diaper sheet, poop colour and texture, the doctor hint, a diaper during a sleep
+forgot-to-log/         ForgotToLog: the Expected chip for a feed or sleep logged long after it happened
+home-status/           HomeStatus: the Lamp, the since-rows, Today, the forecast lines and the top bar
+history-screen/        HistoryScreen: the day ribbon and list, Add past entry, the edit sheet, deleting
+statistics-screen/     StatisticsScreen: averages per day, the chart, unusual days, the typical day
+watch/                 Watch: the Wear OS app: Main, logging, Logged and Time, the Tile, complications, Ongoing Activity
+first-run/             FirstRun: Your baby (name, birth date) and the six-page introduction
+review-prompt/         ReviewPrompt: "Enjoying Pooparazzi?", when it is due and when it shows
+settings/              Settings: Appearance, Language (and a Danish phone), Watch, Notifications, About
+babies/                Babies: names and birth dates, Add a baby, Remove, the Switch baby sheet
+account/               Account: a build without a backup; the Welcome, sign-in, consent, family and joining
 ```
-
-Not adopted yet, in the order they are planned: Feeds and Diapers on the phone
-(their sheets, the nudges, "Woke up will be logged too"), the forgotten-log
-"Expected" chip, Home's Lamp and since-rows, History and the edit sheet,
-Statistics, the widgets and notifications, several babies, the first run,
-Settings, the account and family backup, and the watch (Main, its logging
-screens, Tile, complications). Until a slice is adopted, `README.md` and
-`docs/design/` stay its description.
 
 ## Target
 
@@ -67,9 +72,29 @@ target
                ("less than a minute", "1 minute", "21 minutes"). The Lamp shows a duration's numbers and units as separate
                texts ("20", "m"); assert its spoken name instead ("Asleep, 20 minutes, since 4:20 PM"). The machine may be
                slow: wait for what a step changes with waitFor or waitUntil(what) { condition } before asserting it.
+               The phone is en-US (12-hour clock, fluid ounces) unless a scenario's Given names a country: then its test
+               carries that region's qualifier, e.g. `@Config(qualifiers = "en-rGB-w390dp-h844dp-xxhdpi")` for a phone
+               in the UK (24-hour clock, millilitres), as checks/e2e/feeds/bottle-feed/BottleFeedChecks.kt does.
                It never calls the app's code. Each test ends with saveScreen("<its scenario's title in lower case, each run
                of other characters one ->"), which saves every window the phone shows (a sheet over Home included) into
                AIL_SHOTS_DIR as a PNG.
+               The watch's views and flows (the nodes under ail/watch/) are the existing watch app. Their checks are Kotlin
+               classes in the same package under checks/e2e/watch/ (derived: checks/derived/watch/), compiled in :wear's
+               tests, that extend Watch (checks/e2e/watch/Watch.kt: the real WearApp and MainActivity on a 227 dp round
+               watch, API 36, under Robolectric with native graphics, with no phone in reach). freshInstall() is Main with
+               nothing logged. The helpers keep the Phone names (tap, tapStarting(prefix) for Main's rows "Feed. …" and
+               "Diaper. …", waitFor, waitUntil, waitUntilGone, shows, showsPart (spoken states too), canTap, assert…,
+               clock, recentClocks, clockMinutesBetween, pass, screen, saveScreen) plus tapTheBackground(),
+               swipeToDismiss() (the system back the swipe becomes on Wear OS 6), turnCrown(steps) (one 18 dp detent,
+               clockwise later), scrollTo(text) and scrollBackTo(text) (the crown scrolls a list). The Tile:
+               openTile(), tileShows, tileScreen, tapTile(text, or null for its background). The face:
+               complication("Since last feed" | "Last diaper" | "Asleep or awake" | "Sleep and last feed") returns its
+               text, title and spoken name one per line; tapComplication(name); ongoingActivity() (its status, or
+               null); tapOngoingActivity(). pass() moves the wall clock, the uptime clock and the frame clock together,
+               so Logged's five seconds and inert second last as long as on a watch. Past times are made through
+               Logged's time with the shared steps in checks/e2e/watch/Watches.kt (logFood(), logPee(),
+               logPlainDiaper(), startSleepOnTheWatch(), sleepStartedMinutesAgo(n), closeLogged(),
+               waitOutLoggedInertStart()). Each test ends with saveScreen("…"), which saves the watch's screen.
 ```
 
 ## Glossary
@@ -83,6 +108,11 @@ glossary
   term nudge         plain "one of the −15m, −10m, −5m and +5m buttons, which move a time by that much"   formal an offset chip
   term notice        plain "a short message that takes the place of Today on Home for two seconds"          formal the whisper slot's notice card
   term guard         plain "the two seconds after a tap on the sleep button in which another tap changes nothing"  formal the double-toggle guard
+  term Main          plain "the watch app's main screen: the title line, the Feed and Diaper rows and the sleep edge button"  formal the wear MainScreen
+  term Logged        plain "the watch screen after every log: what was logged and when, Undo, and the time to move it"  formal LoggedScreen
+  term "the Tile"    plain "the Pooparazzi tile in the watch's tile carousel"  formal PooparazziTileService
+  term "the edge button" plain "the wide button pinned to the bottom edge of a watch screen"  formal EdgeButton
+  term "the crown"   plain "the watch's rotating crown or bezel"  formal rotary input
   term "the Lamp"    plain "the big round display on Home: time since the last feed, or how long the baby has slept"  formal HomeLamp
 ```
 
@@ -100,13 +130,24 @@ catalog
     sleep.container=#222844  sleep.on.container=#D6DBF6  sleep.strong=#7C88C4  sleep.lit=#2E3660  sleep.text=#AEB6E6
     feed.container=#3B2715  feed.on.container=#FFDCBB  feed.strong=#F2B577
     diaper.container=#13312C  diaper.on.container=#BFE9E0  diaper.strong=#62B3A5
+    feed.text=#F2B577
+    pee.container=#13312C  pee.on.container=#BFE9E0  poop.on.container=#A8DCD1
+    swatch.yellow=#E2B33C  swatch.green=#6F8F3A  swatch.brown=#8A5A2B  swatch.black=#2B2622  swatch.red=#B23A2E  swatch.pale=#ECE6D6
     radius.button=28dp  radius.sheet=28dp  radius.chip=20dp  radius.notice=28dp
     size.toggle=350x96dp  size.button=169x96dp  size.chip=40dp  size.target=48dp  gutter.phone=20dp  gutter.sheet=24dp
     type.headlineSmall=24sp/600  type.titleLarge=22sp/600  type.titleMedium=18sp/600  type.dataMedium=16sp/450  type.labelLarge=16sp/600
-    color.row=#1C1713  color.dialog=#26201A  color.error=#F2A497  color.outline.variant=#3F352C
-    day.background=#FBF6F0  day.row=#F0E6DA  day.dialog=#EADDCF  day.text=#221A12  day.text.dim=#54473A  day.error=#9C3328
-    type.bodyLarge=18sp/400  type.bodyMedium=16sp/400  type.bodySmall=14sp/400  type.labelMedium=14sp/600  type.titleSmall=16sp/600
-    radius.row=20dp  radius.row.inner=6dp  size.row=56dp
+    watch.background=#000000  watch.surface.container=#1E1914  feed.lit=#4F351C  diaper.lit=#1A423B  diaper.text=#8FD0C3
+    pee.strong=#8FD0C3  poop.container=#0E2622  poop.strong=#358276
+    radius.watch.button=26dp  radius.watch.pill=16dp  radius.watch.chip=20dp  size.edge.medium=70dp  size.edge.small=56dp
+    wear.titleLarge=20sp/600  wear.titleMedium=16sp/600  wear.titleSmall=14sp/600  wear.labelMedium=16sp/600
+    wear.labelSmall=13sp/500  wear.bodyMedium=14sp/450
+    color.surface.container=#1C1713  color.time.field=#26201A  color.outline.variant=#3F352C  color.ribbon.night=#080706  color.error=#F2A497
+    day.background=#FBF6F0  day.text=#221A12  day.text.dim=#54473A  day.feed.disc=#FFE1C4  day.sleep.disc=#E1E4F8  day.sleep.track=#6A73B3
+    type.heroNumeral=76sp/600  type.heroUnit=34sp/500  type.heroWord=48sp/500  type.displaySmall=48sp/500  type.dataSmall=14sp/500
+    type.labelMedium=14sp/600  type.labelSmall=13sp/600  type.bodySmall=14sp/400
+    type.bodyMedium=16sp/400
+    color.dialog=#26201A  day.row=#F0E6DA  day.dialog=#EADDCF  day.error=#9C3328
+    type.bodyLarge=18sp/400  type.titleSmall=16sp/600  radius.row=20dp  radius.row.inner=6dp  size.row=56dp
 ```
 
 ---
@@ -117,15 +158,22 @@ node Pooparazzi : system   level: product
         and ate, with one hand and without waking up properly.
   what
     1. One button starts a sleep, the same button ends it, and every tap can be taken back at once.   refined-by: Sleep
-    2. A new install asks for the baby's name and birth date and shows a short tour once, and both can be skipped.   refined-by: FirstRun
-    3. Once the app is in real use, it asks once or twice for a rating on Google Play, never at night or over a sheet.   refined-by: ReviewPrompt
-    4. Settings holds the babies, the look, the language, the watch, the notifications and what the app is.   refined-by: Settings
-    5. Twins and siblings each have their own log; the phone shows and logs for one baby at a time, switched on Home.   refined-by: Babies
-    6. No account is needed; an optional one backs the log up and shares it with a family.   refined-by: Account
+    2. A feed is logged with one tap on what the baby had, at the time Feed was tapped or nudged back to; the side order, the bottle's contents and amount are optional.   refined-by: Feeds
+    3. A diaper change is logged with Pee, Poop, both or neither, at its time; a poop's colour and texture are optional, and worrying colours point to a doctor.   refined-by: Diapers
+    4. A feed or sleep logged long after it happened can be put where the baby's past week expected it, with one tap that a second tap takes back.   refined-by: ForgotToLog
+    5. Home shows at a glance the time since the last feed (or how long the baby has slept), since when the baby is awake, the last diaper, today's counts and what comes next, and each opens its entry to be fixed.   refined-by: HomeStatus
+    6. History shows one day at a time, newest first, and any entry can be added later, fixed by the minute or deleted, with Undo.   refined-by: HistoryScreen
+    7. Statistics shows the average day over a range of whole days, with a chart, the unusual days left out, and the typical day.   refined-by: StatisticsScreen
+    8. The watch logs a feed, a diaper or a sleep from the wrist in a tap or two, without the phone, and its Tile, complications and Ongoing Activity show at a glance how long since each.   refined-by: Watch
+    9. A new install asks for the baby's name and birth date and shows a short tour once, and both can be skipped.   refined-by: FirstRun
+    10. Once the app is in real use, it asks once or twice for a rating on Google Play, never at night or over a sheet.   refined-by: ReviewPrompt
+    11. Settings holds the babies, the look, the language, the watch, the notifications and what the app is.   refined-by: Settings
+    12. Twins and siblings each have their own log; the phone shows and logs for one baby at a time, switched on Home.   refined-by: Babies
+    13. No account is needed; an optional one backs the log up and shares it with a family.   refined-by: Account
   entry     Sleep
-  children  Sleep, FirstRun, ReviewPrompt, Settings, Babies, Account
+  children  Sleep, Feeds, Diapers, ForgotToLog, HomeStatus, HistoryScreen, StatisticsScreen, Watch, FirstRun, ReviewPrompt, Settings, Babies, Account
   sources
-    README.md, "Pooparazzi" and "Sleep"
+    README.md, "Pooparazzi", "Sleep" and "Watch"
     docs/design/DESIGN_SPEC.md §1, the core requirement in the owner's words: "register start and stop actions for
       sleeping to track start and stop times, and trigger time for feeding and diapers (pooping/peeing)"
 ```

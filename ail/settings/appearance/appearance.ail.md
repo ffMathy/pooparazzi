@@ -31,7 +31,7 @@ node Appearance : flow   level: experience
       because "unknown, confirm with the owner"
   look
     A connected choice group of three equal segments, Auto, Night and Day, in type.labelLarge; the chosen one filled
-      color.primary.container with color.on.primary.container text, the others color.row with color.text; the hint
+      color.primary.container with color.on.primary.container text, the others color.surface.container with color.text; the hint
       under it in type.bodySmall color.text.dim, 8dp below. In Day the screen turns day.background with day.text and
       day.text.dim
   copy

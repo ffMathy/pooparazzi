@@ -1,10 +1,10 @@
-# Danish
+# On a Danish phone
 
 The setup and Settings as they read on a phone set to Danish: where the copy
 matters most, because a Danish parent reads it once and must understand it.
 
 ```ail
-node Danish : flow   level: experience
+node DanishPhone : flow   level: experience
   why   Danish parents should meet the app in Danish from its first screen, with
         the same meaning as in English, not a word-for-word translation.   <- Language
   what

@@ -8,10 +8,10 @@ import org.junit.Test
 class RemoveBabyChecks : Phone() {
     private fun askToRemoveIda() {
         freshInstall()
-        openSettings()
+        openSettingsFromHome()
         noaAndIdaInSettings()
-        tapInDialog("Remove Ida")
-        waitForInDialog("Remove Ida?")
+        tapInTopWindow("Remove Ida")
+        waitForInTopWindow("Remove Ida?")
     }
 
     @Test
@@ -25,8 +25,8 @@ class RemoveBabyChecks : Phone() {
     @Test
     fun `cancelling keeps the baby`() {
         askToRemoveIda()
-        tapInDialog("Cancel")
-        waitUntilGoneInDialog("Remove Ida?")
+        tapInTopWindow("Cancel")
+        waitUntilGoneInTopWindow("Remove Ida?")
         assertShows("Babies")
         assertShows("Remove Noa")
         assertShows("Remove Ida")
@@ -35,35 +35,35 @@ class RemoveBabyChecks : Phone() {
     @Test
     fun `removing a baby`() {
         askToRemoveIda()
-        tapInDialog("Remove")
-        waitUntilGoneInDialog("Remove Ida?")
-        waitUntilGoneInDialog("Babies")
+        tapInTopWindow("Remove")
+        waitUntilGoneInTopWindow("Remove Ida?")
+        waitUntilGoneInTopWindow("Babies")
         assertShows("Baby")
         assertGone("Remove Noa")
         assertEquals(1, compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().size)
         goBack()
-        waitForInDialog("Start sleep")
-        waitForInDialog("Noa")
+        waitForInTopWindow("Start sleep")
+        waitForInTopWindow("Noa")
         assertGone("Noa. Switch baby")
     }
 
     @Test
     fun `removing the current baby`() {
         freshInstall()
-        openSettings()
+        openSettingsFromHome()
         noaAndIdaInSettings()
         goBack()
-        waitForInDialog("Noa. Switch baby")
-        switchTo("Ida")
-        openSettings()
-        tapInDialog("Remove Ida")
-        waitForInDialog("Remove Ida?")
-        tapInDialog("Remove")
-        waitUntilGoneInDialog("Remove Ida?")
-        waitUntilGoneInDialog("Babies")
+        waitForInTopWindow("Noa. Switch baby")
+        switchBabyTo("Ida")
+        openSettingsFromHome()
+        tapInTopWindow("Remove Ida")
+        waitForInTopWindow("Remove Ida?")
+        tapInTopWindow("Remove")
+        waitUntilGoneInTopWindow("Remove Ida?")
+        waitUntilGoneInTopWindow("Babies")
         goBack()
-        waitForInDialog("Start sleep")
-        waitForInDialog("Noa")
+        waitForInTopWindow("Start sleep")
+        waitForInTopWindow("Noa")
         assertGone("Ida. Switch baby")
         assertGone("Noa. Switch baby")
     }

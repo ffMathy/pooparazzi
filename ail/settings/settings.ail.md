@@ -8,7 +8,7 @@ is, with a footer at the very bottom.
 settings.ail.md                                      Settings: the screen and its sections, in order
 appearance/appearance.ail.md                         Appearance: Auto, Night, Day
 language/language.ail.md                             Language: System default, English, Dansk
-language/danish/danish.ail.md                        Danish: the setup and Settings on a phone set to Danish
+language/danish-phone/danish-phone.ail.md            DanishPhone: the setup and Settings on a phone set to Danish
 watch-settings/watch-settings.ail.md                 WatchSettings: the watch's line, Sync now, On the watch face
 notification-settings/notification-settings.ail.md   NotificationSettings: the notifications link, What comes next
 about/about.ail.md                                   About: version, Introduction, privacy, data, licences, footer
@@ -41,7 +41,7 @@ node Settings : flow   level: experience
   look
     On color.background: a top bar with the back icon (size.target) and "Settings" in type.titleLarge color.text; under it
       the sections scroll inside gutter.phone. Each section heading is type.labelMedium color.text.dim, 24dp above and 8dp
-      under it. Grouped rows are color.row, the first and last with radius.row corners and radius.row.inner between them,
+      under it. Grouped rows are color.surface.container, the first and last with radius.row corners and radius.row.inner between them,
       2dp apart. The footer is centred: the two lines in type.bodySmall color.text.dim, then the GitHub and LinkedIn
       logos as size.target buttons tinted color.text.dim
   copy

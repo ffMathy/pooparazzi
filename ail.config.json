@@ -9,7 +9,7 @@
       "ready": "test -f .ail/legacy/ready",
       "timeout": 1200,
       "env": {
-        "AIL_APP": "the phone app, on Robolectric in each check's own process (checks/e2e/Phone.kt)"
+        "AIL_APP": "the phone and watch apps, on Robolectric in each check's own process (checks/e2e/Phone.kt, checks/e2e/watch/Watch.kt)"
       }
     },
     "app": {
@@ -18,7 +18,7 @@
       "ready": "test -f .ail/legacy/ready",
       "timeout": 1200,
       "env": {
-        "AIL_APP": "the phone app, on Robolectric in each check's own process (checks/e2e/Phone.kt)"
+        "AIL_APP": "the phone and watch apps, on Robolectric in each check's own process (checks/e2e/Phone.kt, checks/e2e/watch/Watch.kt)"
       }
     }
   },

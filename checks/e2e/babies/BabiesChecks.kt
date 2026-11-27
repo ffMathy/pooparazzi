@@ -9,18 +9,18 @@ class BabiesChecks : Phone() {
     @Test
     fun `naming the baby in settings`() {
         freshInstall()
-        openSettings()
+        openSettingsFromHome()
         nameFirstBaby("Noa")
         goBack()
-        waitForInDialog("Start sleep")
-        waitForInDialog("Noa")
+        waitForInTopWindow("Start sleep")
+        waitForInTopWindow("Noa")
     }
 
     @Test
     fun `one baby has no remove button`() {
         freshInstall()
-        openSettings()
-        assertShowsInOrder("Baby", "Name", "Add birth date", "Add a baby")
+        openSettingsFromHome()
+        assertShowsTextsInOrder("Baby", "Name", "Add birth date", "Add a baby")
         assertEquals(1, compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().size)
         assertGone("Babies")
         assertGone("Remove Baby")
@@ -31,16 +31,16 @@ class BabiesChecks : Phone() {
     @Test
     fun `giving and removing a birth date in settings`() {
         freshInstall()
-        openSettings()
-        tapInDialog("Add birth date")
-        waitForInDialog("Birth date")
+        openSettingsFromHome()
+        tapInTopWindow("Add birth date")
+        waitForInTopWindow("Birth date")
         pickTodayAsBirthDate()
-        waitForInDialog(bornToday())
+        waitForInTopWindow(birthDatePillToday())
         assertGone("The birth date is optional, but it improves the predictions and estimates: they then follow the baby's age.")
-        tapInDialog(bornToday())
-        waitForInDialog("Birth date")
-        tapInDialog("Remove")
-        waitForInDialog("Add birth date")
-        assertGone(bornToday())
+        tapInTopWindow(birthDatePillToday())
+        waitForInTopWindow("Birth date")
+        tapInTopWindow("Remove")
+        waitForInTopWindow("Add birth date")
+        assertGone(birthDatePillToday())
     }
 }

@@ -8,16 +8,16 @@ class SwitchBabyChecks : Phone() {
     /** Two babies, Noa (current) and Ida, made in Settings; ends on Home. */
     private fun noaAndIdaOnHome() {
         freshInstall()
-        openSettings()
+        openSettingsFromHome()
         noaAndIdaInSettings()
         goBack()
-        waitForInDialog("Noa. Switch baby")
+        waitForInTopWindow("Noa. Switch baby")
         pass(1_000)
     }
 
     private fun openTheSheet() {
-        tapInDialog("Noa. Switch baby")
-        waitForInDialog("Switch baby")
+        tapInTopWindow("Noa. Switch baby")
+        waitForInTopWindow("Switch baby")
     }
 
     @Test
@@ -27,7 +27,7 @@ class SwitchBabyChecks : Phone() {
         assertShows("Noa")
         assertShows("Ida")
         assertCanTap("Cancel")
-        val chosen = selected()
+        val chosen = chosenOnScreen()
         assertTrue("Noa chosen, Ida not: $chosen", "Noa" in chosen && "Ida" !in chosen)
     }
 
@@ -35,9 +35,9 @@ class SwitchBabyChecks : Phone() {
     fun `switching to the other baby`() {
         noaAndIdaOnHome()
         openTheSheet()
-        tapInDialog("Ida")
-        waitForInDialog("Ida. Switch baby")
-        waitUntilGoneInDialog("Switch baby")
+        tapInTopWindow("Ida")
+        waitForInTopWindow("Ida. Switch baby")
+        waitUntilGoneInTopWindow("Switch baby")
         assertGone("Noa. Switch baby")
     }
 
@@ -45,35 +45,35 @@ class SwitchBabyChecks : Phone() {
     fun `cancelling keeps the baby`() {
         noaAndIdaOnHome()
         openTheSheet()
-        tapInDialog("Cancel")
-        waitUntilGoneInDialog("Switch baby")
+        tapInTopWindow("Cancel")
+        waitUntilGoneInTopWindow("Switch baby")
         assertShows("Noa. Switch baby")
     }
 
     @Test
     fun `each baby has its own sleep`() {
         noaAndIdaOnHome()
-        switchTo("Ida")
+        switchBabyTo("Ida")
         startSleepReceipt()
         tap("Done")
-        waitUntilGoneInDialog("Sleep started")
+        waitUntilGoneInTopWindow("Sleep started")
         waitOutTheGuard()
         assertShows("Woke up, end sleep")
-        switchTo("Noa")
-        waitForInDialog("Start sleep")
+        switchBabyTo("Noa")
+        waitForInTopWindow("Start sleep")
         assertGone("Woke up, end sleep")
-        switchTo("Ida")
-        waitForInDialog("Woke up, end sleep")
+        switchBabyTo("Ida")
+        waitForInTopWindow("Woke up, end sleep")
         assertGone("Start sleep")
     }
 
     @Test
     fun `history names the current baby`() {
         noaAndIdaOnHome()
-        switchTo("Ida")
+        switchBabyTo("Ida")
         tap("History")
-        waitForInDialog("Add entry")
-        assertShowsInOrder("History", "Ida")
+        waitForInTopWindow("Add entry")
+        assertShowsTextsInOrder("History", "Ida")
         assertGone("Noa")
     }
 }

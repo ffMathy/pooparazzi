@@ -29,7 +29,7 @@ node Welcome : flow   level: experience
       because the checks run with accounts turned off (app/build.gradle.kts)
   look
     Full screen on color.background, inside gutter.phone: the title in type.headlineSmall color.text, the intro in
-      type.bodyMedium color.text.dim, then two cards of color.row with radius.row corners, each with its icon (the phone,
+      type.bodyMedium color.text.dim, then two cards of color.surface.container with radius.row corners, each with its icon (the phone,
       the cloud), its title in type.titleMedium color.text and its body in type.bodyMedium color.text.dim; the first ends
       with the filled "Continue without an account" (color.primary.container), the second with the sign-in choices
   copy
