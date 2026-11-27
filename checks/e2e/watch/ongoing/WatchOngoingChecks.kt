@@ -10,9 +10,9 @@ class WatchOngoingChecks : Watch() {
     @Test
     fun `a running sleep shows on the watch face`() {
         freshInstall()
-        startSleepOnTheWatch()
+        val start = startSleepOnTheWatch()
         waitUntil("the Ongoing Activity") { ongoingActivity() != null }
-        assertEquals("Asleep <1m", ongoingActivity())
+        assertEquals("Asleep ${asleepFor(clockMinutesBetween(start, clock()))}", ongoingActivity())
         closeLogged()
         // Past the two seconds of the guard.
         pass(1_500)

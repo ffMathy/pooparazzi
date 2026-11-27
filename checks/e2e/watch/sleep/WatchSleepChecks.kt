@@ -12,7 +12,7 @@ class WatchSleepChecks : Watch() {
         val start = shownTime("Asleep at ")
         assertShows("Undo")
         closeLogged()
-        waitFor("Asleep <1m")
+        waitUntil("Asleep for the minutes since $start") { shows("Asleep ${asleepFor(clockMinutesBetween(start, clock()))}") }
         assertShows("Woke up, end sleep")
         assertShowsPart("Asleep since $start")
     }

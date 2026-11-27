@@ -13,6 +13,9 @@ fun spokenWatchMinutes(minutes: Long): String = when (minutes) {
     else -> "$minutes minutes"
 }
 
+/** "<1m", "1m" or "12m": how a running sleep's length is written ("Asleep <1m"), in whole clock minutes. */
+fun asleepFor(minutes: Long): String = if (minutes == 0L) "<1m" else "${minutes}m"
+
 /** "just now", "1m" or "12m": how Main and the Tile write the time since, in whole clock minutes. */
 fun shortSince(minutes: Long): String = if (minutes == 0L) "just now" else "${minutes}m"
 

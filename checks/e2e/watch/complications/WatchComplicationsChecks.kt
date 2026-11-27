@@ -38,8 +38,9 @@ class WatchComplicationsChecks : Watch() {
         freshInstall()
         val start = startSleepOnTheWatch()
         closeLogged()
-        assertEquals("<1m\nAsleep\nAsleep less than a minute, since $start", complication("Asleep or awake"))
-        assertEquals("Asleep <1m\nAsleep less than a minute, since $start", complication("Sleep and last feed"))
+        val asleep = clockMinutesBetween(start, clock())
+        assertEquals("${asleepFor(asleep)}\nAsleep\nAsleep ${spokenWatchMinutes(asleep)}, since $start", complication("Asleep or awake"))
+        assertEquals("Asleep ${asleepFor(asleep)}\nAsleep ${spokenWatchMinutes(asleep)}, since $start", complication("Sleep and last feed"))
     }
 
     @Test
