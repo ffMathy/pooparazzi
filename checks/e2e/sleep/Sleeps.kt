@@ -31,6 +31,9 @@ fun Phone.sleepStarted20MinutesAgo(): String {
     return start
 }
 
+/** [spokenMinutes], for minutes counted as an Int. */
+fun spokenMinutes(minutes: Int): String = spokenMinutes(minutes.toLong())
+
 /** "1 minute" or "21 minutes", as the app speaks a duration of whole minutes (none: "less than a minute"). */
 fun spokenMinutes(minutes: Long): String = when (minutes) {
     0L -> "less than a minute"

@@ -150,6 +150,12 @@ abstract class Phone {
     /** The phone's clock time as the app writes it, [minutesFromNow] from now: "14:32", or "2:32 PM" on a 12-hour phone. */
     fun clock(minutesFromNow: Long = 0): String = format(LocalTime.now().plusMinutes(minutesFromNow))
 
+    /** [clock], for minutes counted as an Int. */
+    fun clock(minutesFromNow: Int): String = clock(minutesFromNow.toLong())
+
+    /** [recentClocks], for minutes counted as an Int. */
+    fun recentClocks(minutesFromNow: Int): List<String> = recentClocks(minutesFromNow.toLong())
+
     /** The clock times [minutesFromNow] from now and a minute before: what the app wrote a moment ago, if the minute has turned since. */
     fun recentClocks(minutesFromNow: Long = 0): List<String> =
         listOf(0L, -1L).map { format(LocalTime.now().plusMinutes(minutesFromNow + it)) }.distinct()
