@@ -39,7 +39,7 @@ import org.robolectric.shadows.ShadowLooper
 
 /**
  * The checks' phone: the real app (PooparazziApp and MainActivity, with its Room database, settings and every screen)
- * on a 390 × 844 dp phone, run on the JVM by Robolectric, as the app's own tests run. A check sees and does only what a
+ * on a 390 × 844 dp phone in dark theme (so Auto shows Night, as the spec's tokens do, whatever the hour), run on the JVM by Robolectric, as the app's own tests run. A check sees and does only what a
  * user can: it finds what is on the screen by its text or its spoken name, taps it, goes back, and lets time pass. It
  * never reaches into the app's code, so it works the same against a rebuilt app.
  *
@@ -49,7 +49,7 @@ import org.robolectric.shadows.ShadowLooper
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [36], qualifiers = "w390dp-h844dp-xxhdpi")
+@Config(sdk = [36], qualifiers = "w390dp-h844dp-night-xxhdpi")
 abstract class Phone {
     @get:Rule
     val compose = createAndroidComposeRule<MainActivity>()

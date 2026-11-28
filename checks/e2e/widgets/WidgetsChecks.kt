@@ -5,6 +5,9 @@ import org.junit.Test
 
 /** End-to-end check for Widgets: the 4×2 widget's Feed, Diaper and background open the app, on the real phone app. */
 open class WidgetsChecks : Phone() {
+    /** Its scenarios end on the phone's home screen or in the app a widget opened: a derived check pictures that. */
+    override fun pictureTheScreen(name: String) = pictureTheHomeScreen(name)
+
     @Test
     fun `Feed on a widget opens the Feed sheet`() {
         freshInstall()

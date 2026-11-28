@@ -56,7 +56,8 @@ target
   test harness views and flows are the existing, hand-written phone app, so their derived checks drive it the same way the
                end-to-end checks do: a check is a Kotlin class in package com.ffmathy.pooparazzi.checks, named after its file,
                that extends Phone (checks/e2e/Phone.kt: the real app, PooparazziApp and MainActivity, on a 390 × 844 dp
-               phone under Robolectric with native graphics). Each scenario is one JUnit 4 test, `@Test fun \`<the scenario's
+               phone in dark theme, so Auto shows the Night theme whatever the hour, under Robolectric with native
+               graphics; a qualifier a test carries keeps "night"). Each scenario is one JUnit 4 test, `@Test fun \`<the scenario's
                title>\`()`, that starts with freshInstall() (a new install, its first run skipped, on Home) and acts only
                through the screen: tap(text) taps what reads text or the button spoken as text; goBack() goes back;
                waitFor(text) and waitUntilGone(text) wait; shows(text), showsPart(part), canTap(text) look;
@@ -75,12 +76,12 @@ target
                texts ("20", "m"); assert its spoken name instead ("Asleep, 20 minutes, since 4:20 PM"). The machine may be
                slow: wait for what a step changes with waitFor or waitUntil(what) { condition } before asserting it.
                The phone is en-US (12-hour clock, fluid ounces) unless a scenario's Given names a country: then its test
-               carries that region's qualifier, e.g. `@Config(qualifiers = "en-rGB-w390dp-h844dp-xxhdpi")` for a phone
+               carries that region's qualifier, e.g. `@Config(qualifiers = "en-rGB-w390dp-h844dp-night-xxhdpi")` for a phone
                in the UK (24-hour clock, millilitres), as checks/e2e/feeds/bottle-feed/BottleFeedChecks.kt does.
                While a dialog window is open (Add a baby, Remove, a date picker, the Switch baby sheet), Robolectric never
                lets Compose go idle, so plain tap and waitFor hang: use the dialog steps in checks/e2e/babies/Babies.kt
                (settleDialogWindows(), tapInTopWindow(text), waitForInTopWindow(text), waitUntilGoneInTopWindow(text),
-               typeBabyName(name)). A Danish phone is the class qualifier "da-w390dp-h844dp-xxhdpi".
+               typeBabyName(name)). A Danish phone is the class qualifier "da-w390dp-h844dp-night-xxhdpi".
                Phone is a build without a backup (accounts off). The nodes under ail/account/ other than Account itself
                are the build with one: their checks extend BackedUpPhone (checks/e2e/account/Accounts.kt), the same app
                pointed at the Firebase Authentication and Firestore emulators (ail.config.json's service firebase,
@@ -103,8 +104,8 @@ target
                settle (nothing moving for two looks 100 ms apart, at most 1.5 s) and saves every window the phone shows (a
                sheet over Home included). An end-to-end check whose scenarios end outside the app's window overrides it:
                the widget checks with pictureTheHomeScreen(name) (checks/e2e/widgets/HomeScreen.kt: the widget last
-               placed or tapped, drawn at its size from what the app last sent, alone on a plain wallpaper; the app's
-               screen when a tap on the widget opened the app), the notification checks with pictureTheShade(name)
+               placed, tapped or waited on, drawn at its size from what the app last sent, alone on a plain wallpaper;
+               the app's screen when a tap on the widget opened the app and the check has not looked at the widget since), the notification checks with pictureTheShade(name)
                (checks/e2e/notifications/Shade.kt: the shade over the top of the app, each notification newest first as
                the system's template draws it expanded, or "No notifications").
                The watch's views and flows (the nodes under ail/watch/) are the existing watch app. Their checks are Kotlin
@@ -124,8 +125,10 @@ target
                Logged's time with the shared steps in checks/e2e/watch/Watches.kt (logFood(), logPee(),
                logPlainDiaper(), startSleepOnTheWatch(), sleepStartedMinutesAgo(n), closeLogged(),
                waitOutLoggedInertStart()). A derived check's pictureTheScreen(name) is saveScreen(name), which lets the
-               screen settle (the same pixels for two looks 100 ms apart, at most 1.5 s, the clocks moving as in pass)
-               and saves the watch's screen.
+               screen settle (the same pixels for two looks 100 ms apart, each after pass(100) and one drawn frame, at
+               most 1.5 s) and saves the watch's screen; WatchTile's checks override it with pictureTheTileOrScreen(name):
+               the Tile as the carousel last drew it while the parent is looking at it (opened or tapped since the app
+               last came to the front), else the screen.
 ```
 
 ## Glossary

@@ -6,7 +6,7 @@ import org.junit.Test
 import org.robolectric.annotation.Config
 
 /** End-to-end check for DanishPhone: the setup and Settings on a phone set to Danish, on the real phone app. */
-@Config(qualifiers = "da-w390dp-h844dp-xxhdpi")
+@Config(qualifiers = "da-w390dp-h844dp-night-xxhdpi")
 open class DanishPhoneChecks : Phone() {
     private val danish = Locale.forLanguageTag("da")
 

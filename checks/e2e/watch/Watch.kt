@@ -169,6 +169,7 @@ abstract class Watch {
 
     /** Taps what reads [text], or the button spoken as [text], and gives the app a moment to answer. */
     fun tap(text: String) {
+        tileInFront = false
         button(text).performClick()
         pass(300)
     }
@@ -182,12 +183,14 @@ abstract class Watch {
             (node.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty() + node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text })
                 .any { it.startsWith(start) }
         } and hasClickAction()
+        tileInFront = false
         compose.onAllNodes(matcher)[0].performClick()
         pass(300)
     }
 
     /** Taps the screen near its top edge, where nothing else is: on Logged, its dismiss target ("Dismiss"). */
     fun tapTheBackground() {
+        tileInFront = false
         compose.onRoot().performTouchInput { click(Offset(centerX, height * 0.08f)) }
         pass(300)
     }
@@ -197,6 +200,7 @@ abstract class Watch {
      * into back (predictive back), so this sends the system's back, as the gesture does on a watch.
      */
     fun swipeToDismiss() {
+        tileInFront = false
         Espresso.pressBack()
         pass(800)
     }
@@ -340,6 +344,10 @@ abstract class Watch {
         val until = System.currentTimeMillis() + maxMillis
         while (still < 2 && System.currentTimeMillis() < until) {
             pass(100)
+            // A whole frame too: pass moves the frame clock without drawing each frame, and a screen's transition
+            // can wait for a drawn one.
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
             val now = look()
             still = if (now != null && last != null && now.sameAs(last)) still + 1 else 0
             last = now
@@ -451,6 +459,40 @@ abstract class Watch {
     private var tileRoot: FrameLayout? = null
     private var pendingTileClick: String? = null
 
+    /** Whether the parent is looking at the Tile: it was opened or tapped since the app last came to the front. */
+    private var tileInFront = false
+
+    /**
+     * What the Tile checks picture when a scenario ends, as [name].png: the Tile, as the carousel last drew it, while
+     * the parent is looking at it ([saveTile]); else the app's screen ([saveScreen]).
+     */
+    fun pictureTheTileOrScreen(name: String) = if (tileInFront) saveTile(name) else saveScreen(name)
+
+    /** Saves the Tile as the carousel last drew it, filling the round screen on black, as [name].png. */
+    fun saveTile(name: String) {
+        val dir = listOf(System.getProperty("ail.shots"), System.getenv("AIL_SHOTS_DIR")).firstOrNull { !it.isNullOrBlank() } ?: return
+        File(dir).mkdirs()
+        val tile = tileRoot ?: return saveScreen(name)
+        val activity = compose.activity
+        val carousel = FrameLayout(activity).apply {
+            setBackgroundColor(android.graphics.Color.BLACK)
+            isClickable = true
+        }
+        val window = activity.window.decorView as ViewGroup
+        compose.runOnUiThread {
+            (tile.parent as? ViewGroup)?.removeView(tile)
+            carousel.addView(tile, FrameLayout.LayoutParams(tile.layoutParams.width, tile.layoutParams.height, android.view.Gravity.CENTER))
+            window.addView(carousel, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+        try {
+            ShadowLooper.idleMainLooper()
+            System.setProperty("roborazzi.test.record", "true")
+            captureScreenRoboImage(File(dir, "$name.png").path)
+        } finally {
+            compose.runOnUiThread { window.removeView(carousel); carousel.removeView(tile) }
+        }
+    }
+
     private fun requestTile(clickId: String?) {
         val provider = tileProvider ?: run {
             val intent = Intent(TileService.ACTION_BIND_TILE_PROVIDER).setPackage(app.packageName)
@@ -491,6 +533,7 @@ abstract class Watch {
         root.layout(0, 0, sizePx, sizePx)
         ShadowLooper.idleMainLooper()
         tileRoot = root
+        tileInFront = true
     }
 
     private fun requestTileResources(provider: TileProvider, version: String): ResourceBuilders.Resources {
@@ -580,6 +623,7 @@ abstract class Watch {
     /** An activity the Tile, a complication or the Ongoing Activity started: the system brings the app up with it. */
     private fun launchWhatWasStarted() {
         val started = shadowOf(compose.activity).nextStartedActivity ?: shadowOf(app).nextStartedActivity ?: return
+        tileInFront = false
         compose.runOnUiThread { InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(compose.activity, started) }
         pass(500)
     }

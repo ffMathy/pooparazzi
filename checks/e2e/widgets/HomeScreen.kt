@@ -71,8 +71,8 @@ fun Phone.placeWidget(name: String, widthDp: Int, heightDp: Int): HomeScreenWidg
 }
 
 /**
- * Where the parent is looking: the widget they last placed or tapped on the home screen, or nothing once a tap on it
- * opened the app (the app is in front then).
+ * Where the parent is looking: the widget they last placed, tapped or waited on on the home screen, or nothing once a
+ * tap on it opened the app (the app is in front then, until the parent looks at the widget again).
  */
 private val lookingAt = WeakHashMap<Phone, HomeScreenWidget?>()
 
@@ -175,11 +175,15 @@ fun Phone.widgetShows(widget: HomeScreenWidget, text: String): Boolean = widgetR
 /** Whether a text or a spoken name on [widget] contains [part]. */
 fun Phone.widgetShowsPart(widget: HomeScreenWidget, part: String): Boolean = widgetReads(widget).any { it.contains(part) }
 
-fun Phone.assertWidgetShows(widget: HomeScreenWidget, text: String) =
+fun Phone.assertWidgetShows(widget: HomeScreenWidget, text: String) {
+    lookingAt[this] = widget
     assertTrue("expected \"$text\" on the widget:\n${widgetScreen(widget)}", widgetShows(widget, text))
+}
 
-fun Phone.assertWidgetGone(widget: HomeScreenWidget, text: String) =
+fun Phone.assertWidgetGone(widget: HomeScreenWidget, text: String) {
+    lookingAt[this] = widget
     assertTrue("expected no \"$text\" on the widget:\n${widgetScreen(widget)}", !widgetShows(widget, text))
+}
 
 /** Waits until [widget] shows [text] (a text, or a button spoken as it). */
 fun Phone.waitForWidget(widget: HomeScreenWidget, text: String, timeoutMillis: Long = 10_000) =
@@ -187,6 +191,8 @@ fun Phone.waitForWidget(widget: HomeScreenWidget, text: String, timeoutMillis: L
 
 /** Waits until [condition] holds for [widget]; fails with what it shows after [timeoutMillis]. */
 fun Phone.waitUntilWidget(widget: HomeScreenWidget, what: String, timeoutMillis: Long = 10_000, condition: () -> Boolean) {
+    // Waiting for the widget to show something is looking at it: back on the home screen after the app.
+    lookingAt[this] = widget
     val until = System.currentTimeMillis() + timeoutMillis
     while (!condition()) {
         if (System.currentTimeMillis() > until) throw AssertionError("waited ${timeoutMillis / 1000} s for $what on the widget:\n${widgetScreen(widget)}")

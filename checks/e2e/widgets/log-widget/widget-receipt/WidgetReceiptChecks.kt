@@ -1,10 +1,13 @@
-// ail-derived-from: WidgetReceipt@6edabdca3083f437
+// ail-derived-from: WidgetReceipt@0a8221ca0dca6fcd
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test
 
 /** End-to-end check for WidgetReceipt: the 4×2 widget's receipt row, Undo, the guard and its ten seconds. */
 open class WidgetReceiptChecks : Phone() {
+    /** Its scenarios end on the phone's home screen or in the app a widget opened: a derived check pictures that. */
+    override fun pictureTheScreen(name: String) = pictureTheHomeScreen(name)
+
     @Test
     fun `Start sleep on the widget logs at once`() {
         freshInstall()

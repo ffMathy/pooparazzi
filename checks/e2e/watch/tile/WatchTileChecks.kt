@@ -1,10 +1,13 @@
-// ail-derived-from: WatchTile@fb79e9e3616ab921
+// ail-derived-from: WatchTile@2227ad95024421a5
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test
 
 /** End-to-end check for WatchTile: the Tile, as the tile carousel shows it, on the real watch app. */
 open class WatchTileChecks : Watch() {
+    /** Its scenarios end on the Tile or in the app the Tile opened, so a derived check pictures whichever is in front. */
+    override fun pictureTheScreen(name: String) = pictureTheTileOrScreen(name)
+
     /** "just now" or "1 minute ago", as the Tile speaks a time since. */
     private fun spokenAgo(minutes: Long) = if (minutes == 0L) "just now" else "${spokenWatchMinutes(minutes)} ago"
 

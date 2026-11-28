@@ -1,4 +1,4 @@
-// ail-derived-from: BottleFeed@f376bdc8e9c401c3
+// ail-derived-from: BottleFeed@31e7d86caf588259
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals
@@ -8,7 +8,7 @@ import org.junit.Test
 import org.robolectric.annotation.Config
 
 /** A phone in the United Kingdom: English, 24-hour clock, millilitres. The checks' phone is otherwise a US one. */
-private const val UK_PHONE = "en-rGB-w390dp-h844dp-xxhdpi"
+private const val UK_PHONE = "en-rGB-w390dp-h844dp-night-xxhdpi"
 
 /** End-to-end check for BottleFeed: the Bottle step, Milk or Formula, the amount and its unit, on the real phone app. */
 open class BottleFeedChecks : Phone() {
