@@ -7,25 +7,31 @@
       "shots": "cc7db2512ba220dc"
     },
     "Account": {
-      "shots": "7d40752b854fc584"
+      "shots": "7d40752b854fc584",
+      "look": "e0f3676f3b5bc4fdd10f6abc28d572583f4cd581758e3062bb91dcac0f2cbfb6"
     },
     "AddBaby": {
-      "shots": "38f78232edc2652a"
+      "shots": "38f78232edc2652a",
+      "look": "006ca9367892920467d5bb5962fb1b98590313ae28e476bd8b1e5d428bd05c49"
     },
     "AddPastEntry": {
-      "shots": "360221f1982558e9"
+      "shots": "360221f1982558e9",
+      "look": "8aecc9f20a384a0e7b9e48c2356089254d8aa56c8d14e17794d960e1722efcd6"
     },
     "Appearance": {
       "shots": "56de240bdf219c84"
     },
     "Babies": {
-      "shots": "a34821f055855184"
+      "shots": "a34821f055855184",
+      "look": "d2595ff2717788501e226784d5198c81d5ac4c4e0dd7503550a4f04e345ac6e6"
     },
     "BackupConsent": {
-      "shots": "e9f22a7792eefad9"
+      "shots": "e9f22a7792eefad9",
+      "look": "c54f97922d888ec8849067317af76fb6e8ef4456ee7fcb8bcce09d2ec3efef2c"
     },
     "BottleFeed": {
-      "shots": "f376bdc8e9c401c3"
+      "shots": "f376bdc8e9c401c3",
+      "look": "c31a49c939c42a941708ed09d420dd9723f98f9e405e7730611797ada3f15025"
     },
     "BreastFeed": {
       "shots": "e514089ef6ee8dbe",
@@ -35,22 +41,28 @@
       "shots": "2d050f91b023c431"
     },
     "DanishPhone": {
-      "shots": "eb890abe94cb3789"
+      "shots": "eb890abe94cb3789",
+      "look": "7542e554c3300576bc9f89a45a33044284bccbab6855dee9cf0d9e0426c2550c"
     },
     "DeleteEntry": {
-      "shots": "6798d36525013bb4"
+      "shots": "6798d36525013bb4",
+      "look": "0bbf8854ee5db12f4952d56e13a46998664c7d3c46a5425de71d069eb86ef1c4"
     },
     "Diapers": {
-      "shots": "b4066a530b420465"
+      "shots": "b4066a530b420465",
+      "look": "dc11ab5995d3d5d958894391516f6d0ccec9caa744cc2559f77ec377c0d85a7c"
     },
     "DiaperWhileAsleep": {
-      "shots": "5b32630b3e4b4b00"
+      "shots": "5b32630b3e4b4b00",
+      "look": "0dc8d87c03e35b9a0d51e3f2cc88f48950ae9fe3f4613f123e45ef17afffec9e"
     },
     "EditDiaper": {
-      "shots": "aea8898b9d6a2c32"
+      "shots": "aea8898b9d6a2c32",
+      "look": "ae969ab6d1fb33c1b7df071d21fc16840431a254a4df5ef7b7095f580aee54a7"
     },
     "EditFeed": {
-      "shots": "faad01f2b6b381a3"
+      "shots": "faad01f2b6b381a3",
+      "look": "1fe13925ade9f59cb1d32a636d701c6b71877809ecf96b4c220ffd24e823e1f7"
     },
     "EditSheet": {
       "shots": "2374a7a7995e9da5"
@@ -63,34 +75,42 @@
       "shots": "0d00cc3aa4385a34"
     },
     "ForecastLines": {
-      "shots": "b7b20072a7aa888f"
+      "shots": "b7b20072a7aa888f",
+      "look": "69bfe830c9e6acf3168211d48c1ee45111b58adc0486d7454832d1212a4b3e35"
     },
     "ForgotToLog": {
-      "shots": "61d3093f20a7b8fa"
+      "shots": "61d3093f20a7b8fa",
+      "look": "e1385668d9249ea96dc0babda9ff755b2c583d50a92ffc922e44b2236b39e867"
     },
     "HistoryScreen": {
       "shots": "3d39a73da09ca63e"
     },
     "HomeLamp": {
-      "shots": "18b6a1eff6db0be5"
+      "shots": "18b6a1eff6db0be5",
+      "look": "5756e8fa65aac24dae12a0c3855234b3ddbe8b5e1a23f6e2078285b2ff93f703"
     },
     "HomeStatus": {
-      "shots": "1194af6f177bace5"
+      "shots": "1194af6f177bace5",
+      "look": "01f13a32558d38fd0e6f73fe7e8c1d4fe9ae2fa8e44cfa4333e13a3806fc14b8"
     },
     "Introduction": {
-      "shots": "f0951ec754b8a35e"
+      "shots": "f0951ec754b8a35e",
+      "look": "1ee1116411cc8ef30a62d387c7e182290f2a4c5c19df6bc33bb3a845cbfbd338"
     },
     "JoinFamily": {
-      "shots": "9e572cd59712a146"
+      "shots": "9e572cd59712a146",
+      "look": "e8894e0a175287ffe030ba7d4b0903ce52d9e5d5ee1648ec9faeb5317bc67961"
     },
     "Language": {
-      "shots": "3bb2f08a2d932a51"
+      "shots": "3bb2f08a2d932a51",
+      "look": "9455fb8fb52a181e80a2aea6242387ba0fce0690d73ef3869d60b75b974b85bc"
     },
     "LogWidget": {
       "shots": "d4300fe7ef4e4e48"
     },
     "NotificationSettings": {
-      "shots": "ed30d41936915461"
+      "shots": "ed30d41936915461",
+      "look": "50aa913cb6512a2c0e589b003b803a97f4263987f7502bb70b834427a4464732"
     },
     "PoopDetails": {
       "shots": "da93c391cf8825a3"
@@ -99,25 +119,31 @@
       "shots": "c4591efc6c4aa4f7"
     },
     "RemoveBaby": {
-      "shots": "12be13386295a5f5"
+      "shots": "12be13386295a5f5",
+      "look": "658700f1fd5d949335cd447c5b209491b8a268a9694f051c8a03efe3298ca579"
     },
     "RepeatDiaper": {
-      "shots": "5c022649db7e764f"
+      "shots": "5c022649db7e764f",
+      "look": "db668c5a186bb9994be5e1262265e9ec865bcc5df720ea53822d5d5db88b338e"
     },
     "RepeatFeed": {
-      "shots": "85c2aad195abb756"
+      "shots": "85c2aad195abb756",
+      "look": "3daa36830334b7edbad2824bb42ddd6d7297597506126f84b8b0cea04750479e"
     },
     "ReviewPrompt": {
-      "shots": "5cdadf317452b1ab"
+      "shots": "5cdadf317452b1ab",
+      "look": "2b9149901e0f8dee6f4e6e2df24237a6dfadf5154a886931c5cf563325574872"
     },
     "Settings": {
-      "shots": "3394b5a9903e7871"
+      "shots": "3394b5a9903e7871",
+      "look": "64b6717b6e2817a5d7cf07ec3402f6eccde4ca5cf60d37526605601d23f3aa18"
     },
     "SignInLink": {
       "shots": "7bb2152c54a69556"
     },
     "SinceRows": {
-      "shots": "ea47e612e15d3a63"
+      "shots": "ea47e612e15d3a63",
+      "look": "86c6f83b70b7f23bb639ea32e911556bc93cf810c4f37f297ae52ba788e3fd44"
     },
     "Sleep": {
       "shots": "46c93df58d2296fc",
@@ -128,35 +154,44 @@
       "look": "2d36a9d16438ea3fb26798d511b4c7f7552c5f18b14245d002b99cbc2a603b7f"
     },
     "StatisticsChart": {
-      "shots": "953bfa801efe867c"
+      "shots": "953bfa801efe867c",
+      "look": "ec634010fb15293b71605ebcad2e13c65cb03fc2de8820bd40f1b6cb8099384e"
     },
     "StatisticsScreen": {
-      "shots": "fa70f5dee13ca904"
+      "shots": "fa70f5dee13ca904",
+      "look": "3688db897f25144f282ac1659506d3fefdc008ec0e6120c9570d97bca18f8c43"
     },
     "SwitchBaby": {
-      "shots": "f4b1e2cdc51f3e2d"
+      "shots": "f4b1e2cdc51f3e2d",
+      "look": "c76d4a617c01a5a007a063827244636847411e257b3e2c3cafba52e51571de06"
     },
     "TodayGrid": {
-      "shots": "a6952c607a5db159"
+      "shots": "a6952c607a5db159",
+      "look": "3164345967fc1824435869c37240264bbb2561afc32a5e33e37558488c1c48e5"
     },
     "TopBar": {
-      "shots": "b8921dc8f0c4bb0b"
+      "shots": "b8921dc8f0c4bb0b",
+      "look": "9cf835e02644d002df51553dda7c0cb3a103fab9057796ad816195c83985e1ab"
     },
     "TypicalDay": {
-      "shots": "c84699cd2e366efc"
+      "shots": "c84699cd2e366efc",
+      "look": "2407a761f697cc38f93b042de28548756b4be7c086d30aa87ce41e48309a90a2"
     },
     "WakeUp": {
       "shots": "5cdd526b04f464f7",
       "look": "c64abb6f0e66b9194f6f732ced3ab6291c7ca0de7441a7ab40370d8cc033bf96"
     },
     "Watch": {
-      "shots": "9670abdc33e4b196"
+      "shots": "9670abdc33e4b196",
+      "look": "2cf1833836f7e8fbfc52c14a3dba62ed5f9c87f18abb2b16d8a4e5e94fec002a"
     },
     "WatchBottle": {
-      "shots": "3f209c6a2ce8be88"
+      "shots": "3f209c6a2ce8be88",
+      "look": "14c4703c3bc1d6c6a2c3d4571e7336e05c995018c28abfd5cd0b819f0af568f6"
     },
     "WatchDiaper": {
-      "shots": "b5df2b10887a7228"
+      "shots": "b5df2b10887a7228",
+      "look": "f929c83a881b8b7f1d1a62b752e40a079bb2dc7aefa5dc67752259d542ac2115"
     },
     "WatchFeed": {
       "shots": "0fb3c27ee5a80851"
@@ -165,7 +200,8 @@
       "shots": "4c126603e5929359"
     },
     "WatchSettings": {
-      "shots": "d6e0e1797e59ea49"
+      "shots": "d6e0e1797e59ea49",
+      "look": "313b444d6f0bb5a5b5282eb0773c3059c21498da4a708261e9a26d2e93d38739"
     },
     "WatchSide": {
       "shots": "871c05d941a10ee7"
@@ -174,13 +210,15 @@
       "shots": "3c5cb5b945a3827c"
     },
     "WatchTime": {
-      "shots": "02128b08594822a8"
+      "shots": "02128b08594822a8",
+      "look": "69d5d8b117590e868bace714487a43aa7242a36e0a5caf2a081b3ea990415ecf"
     },
     "WidgetReceipt": {
       "shots": "6edabdca3083f437"
     },
     "Widgets": {
-      "shots": "6c6ed1df869bfbbf"
+      "shots": "6c6ed1df869bfbbf",
+      "look": "424afbfad1920a012473d4aff9601938b6f13dabd6aafdec2edabf116db86280"
     },
     "WokeUpNotification": {
       "shots": "fd4a829a02c340b9"
