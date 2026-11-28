@@ -119,7 +119,7 @@
     },
     "Sleep": {
       "shots": "46c93df58d2296fc",
-      "look": "f1194399cc80902953be08acb81a7d31d6e487e215b05ed85418f0b7627ec33c"
+      "look": "5aa1e9fc6ada791f797008cf2f9ae8283a277ac53d877d2ad71455e493ef4b00"
     },
     "StartSleep": {
       "shots": "bab811e3dbd588a1",
@@ -179,6 +179,9 @@
     },
     "Widgets": {
       "shots": "6c6ed1df869bfbbf"
+    },
+    "WokeUpNotification": {
+      "shots": "fd4a829a02c340b9"
     },
     "YourBaby": {
       "shots": "8358da4e5f0febf6"
