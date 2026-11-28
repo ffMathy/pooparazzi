@@ -20,7 +20,7 @@ node WatchTime : flow   level: experience
       When the parent taps −5m twice and Done
       Then Time read "Feed · −10m" over the time 10 minutes ago, spoken "Feed," that time ", 10 minutes earlier"
       And Logged is back reading "Food at" the time 10 minutes ago
-      And once Logged has closed, the Feed row reads "10m"
+      And once Logged has closed, the Feed row reads the clock minutes since the moved time ("10m" right then, "11m" once the minute turns)
     Scenario: the crown moves the time a minute a step
       Given Time for a food feed logged just now
       When the parent turns the crown three steps anticlockwise, then one step clockwise
@@ -37,7 +37,7 @@ node WatchTime : flow   level: experience
       Given Logged for a sleep started just now, after its first second
       When the parent taps its time, taps −5m twice and Done
       Then Logged reads "Asleep at" the time 10 minutes ago
-      And once Logged has closed, Main's title reads "Asleep 10m"
+      And once Logged has closed, Main's title reads "Asleep" and the clock minutes since the moved start ("Asleep 10m" right then)
     Scenario: a wake-up stays a minute after the sleep's start
       Given a sleep that started 10 minutes ago, just ended with Woke up
       When the parent opens Time from its Logged and taps −5m twice

@@ -19,7 +19,7 @@ node SinceRows : flow   level: experience
       Then "Edit diaper" opens with its Time, Pee, Poop, Colour and Texture
     Scenario: after waking the first row reads Awake
       Given a sleep that started 20 minutes ago, ended with Woke up and Done
-      Then the first row reads "Awake" over "<1m ·" and the wake-up's time
+      Then the first row reads "Awake" over the clock minutes since the wake-up ("<1m" within its minute), " · " and the wake-up's time
       And it is spoken "Awake less than a minute, since" the wake-up's time
     Scenario: tapping the Awake row opens the last sleep
       Given a sleep that started 20 minutes ago, ended with Woke up and Done
@@ -27,7 +27,7 @@ node SinceRows : flow   level: experience
       Then "Edit sleep" opens with Fell asleep at the sleep's start and Woke up at its end
     Scenario: while asleep the first row is the last feed
       Given a feed logged 15 minutes ago with Just the time, then a sleep started now
-      Then the first row reads "Last fed" over "15m ·" and the feed's time
+      Then the first row reads "Last fed" over the clock minutes since the feed ("15m" right then, "16m" once the minute turns), " · " and the feed's time
       And tapping it opens "Edit feed" at the feed's time
   how
     decide row 1 is "Awake" since the end of the last sleep while none runs, and "Last fed" while one runs (the Lamp then shows the sleep); with no sleep ended yet there is no row 1, and with no diaper no row 2

@@ -13,7 +13,7 @@ node WatchSleep : flow   level: experience
       Given the baby is awake on Main
       When the parent taps Start sleep
       Then Logged reads "Asleep at" the time now, with Undo
-      And once Logged has closed, Main's title reads "Asleep <1m" and the sleep edge button "Woke up", in the state "Asleep since" the time now
+      And once Logged has closed, Main's title reads "Asleep" and how long in clock minutes ("Asleep <1m" within the start's minute) and the sleep edge button "Woke up", in the state "Asleep since" the time now
     Scenario: a second tap within two seconds changes nothing on the watch
       Given a sleep started a second ago, its Logged closed with a tap on the background
       When the parent taps Woke up

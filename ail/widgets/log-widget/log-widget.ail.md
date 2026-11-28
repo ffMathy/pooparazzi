@@ -19,11 +19,11 @@ node LogWidget : flow   level: experience
       And it is spoken "Woke up, end sleep, Asleep" and that duration
     Scenario: after waking the sleep button says how long the baby is awake
       Given a 4×2 widget, and a sleep that has just ended on the widget
-      Then the sleep button reads "Start sleep" over "<1m", spoken "Start sleep, Awake <1m"
+      Then the sleep button reads "Start sleep" over the clock minutes since the wake-up ("<1m" within its minute), spoken "Start sleep, Awake" and that duration
     Scenario: Feed says when the next feed is expected
       Given feeds at 8:00 AM and 11:00 AM four days ago, and at 8:00 AM, 11:00 AM and 2:00 PM three and two days ago
       And a feed logged now with Just the time, and a 4×2 widget
-      Then the widget's Feed reads "just now" over "3h 00m"
+      Then the widget's Feed reads the clock minutes since the feed ("just now" within its minute) over "3h 00m"
       And it is spoken "Log feed, Last feed just now, next feed expected around" the time 3 hours from now, rounded to 5 minutes
     Scenario: a small log widget keeps only the icons
       Given a 4×2 widget resized to 120 × 100
@@ -43,6 +43,8 @@ node LogWidget : flow   level: experience
       because every surface states the estimates by the same rules (V1_ADDITIONS §9)
     decide from 180dp of height the status row shows; from 240 × 130dp the labels; below that the buttons are icons only; a label that needs two lines turns all three to the compact face
       because those are the breakpoints of DESIGN_SPEC §10.11
+    decide at 240 × 130 a sleep button reading "Woke up" wraps its label onto two lines and Feed and Diaper do not follow, so their icons and labels are not level
+      because "unknown, confirm with the owner": the code means a label needing two lines to turn all three to the compact face (LogWidget.kt), but at this size it does not; should all three switch, or is this fine?
     decide a 2×2 or smaller is the same widget without the status row, so its taps log without a receipt
       because "a 2×2 falls back to the 4×2 content without the status row" (DESIGN_SPEC §10.11)
   look
@@ -54,8 +56,9 @@ node LogWidget : flow   level: experience
       buttons; a button with fewer lines gets blank ones, so the three keep the same number of lines and their icons and labels
       stay level; asleep, the sleep
       button is sleep.lit with a 2dp sleep.strong border and the wake icon
-    Lower than 180dp (240 × 130) the same buttons fill the panel with no status row, a label that needs two lines ("Woke up")
-      wrapping; at 120 × 100 the three buttons are narrow, each its 24dp icon alone
+    Lower than 180dp (240 × 130) the same buttons fill the panel with no status row; there "Woke up" wraps onto two lines
+      ("Woke" over "up") while Feed and Diaper keep one, so the sleep button's icon and label sit higher than theirs and the
+      three are not level; at 120 × 100 the three buttons are narrow, each its 24dp icon alone
   copy
     label.feed          "Feed"
     label.diaper        "Diaper"

@@ -43,7 +43,7 @@ node Feeds : flow   level: experience
     Scenario: logging just the time
       Given the Feed sheet opened now
       When the parent taps Just the time
-      Then the sheet closes, and the Lamp reads "Last fed" "just now" with the feed's time and no type
+      Then the sheet closes, and the Lamp reads "Last fed" over the clock minutes since the feed ("just now" within its minute) with the feed's time and no type
   how
     decide the time is stamped when Feed is tapped, shown on a line of its own under the title, and the pane is called "Feed · <time>"
       because the time is the one fact every log needs, and a long title must never hide it (DESIGN_SPEC §3.3.2, V1_ADDITIONS §2.1)

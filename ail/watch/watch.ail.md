@@ -40,18 +40,18 @@ node Watch : flow   level: experience
     Scenario: main shows how long since the last feed and diaper
       Given a food feed and then a pee logged on the watch a moment ago
       When the parent is back on Main
-      Then the Feed row reads "just now" after the history icon, spoken "Feed. Last feed, food, just now, at" the feed's time
-      And the Diaper row reads "just now", spoken "Diaper. Last diaper, pee, just now, at" the pee's time
+      Then the Feed row reads how long since the feed in clock minutes ("just now" within its minute) after the history icon, spoken "Feed. Last feed, food," that duration ", at" the feed's time
+      And the Diaper row reads how long since the pee the same way, spoken "Diaper. Last diaper, pee," that duration ", at" the pee's time
       And the title line is the last diaper, spoken "Last diaper, pee, just now"
     Scenario: main while the baby sleeps
       Given a sleep that started 10 minutes ago
       When the parent is on Main
-      Then the title line reads "Asleep 10m", spoken "Asleep, 10 minutes, since" the sleep's start
-      And the sleep edge button reads "Woke up" over "10m" after the history icon, spoken "Woke up, end sleep", in the state "Asleep since" the sleep's start
+      Then the title line reads "Asleep" and how long in clock minutes since the start ("Asleep 10m" right then, "Asleep 11m" once the minute turns), spoken "Asleep," that duration ", since" the sleep's start
+      And the sleep edge button reads "Woke up" over that duration after the history icon, spoken "Woke up, end sleep", in the state "Asleep since" the sleep's start
     Scenario: main after waking up
       Given a sleep that started 10 minutes ago and has just ended with Woke up
       When the parent is back on Main
-      Then the sleep edge button reads "Start sleep" over "just now", in the state "Awake since" the wake-up's time
+      Then the sleep edge button reads "Start sleep" over how long awake in clock minutes ("just now" within the wake-up's minute), in the state "Awake since" the wake-up's time
       And the title line says nothing
   how
     decide Main and the Tile are built from one model and say the same: the title, the time since the last feed and diaper, the expected next ones, and the sleep button

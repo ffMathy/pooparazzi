@@ -1,4 +1,4 @@
-// ail-derived-from: HomeLamp@18b6a1eff6db0be5
+// ail-derived-from: HomeLamp@74724a38a2505ca2
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test

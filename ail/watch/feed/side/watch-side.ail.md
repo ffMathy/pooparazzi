@@ -31,6 +31,7 @@ node WatchSide : flow   level: experience
       Given Side, opened just now
       When the parent swipes right
       Then Feed type is back, and nothing is logged
+      And a second swipe right returns to Main, its Feed row still reading "No feeds yet"
   how
     decide Left and Right are checkboxes whose tick order is the order recorded; re-ticking a side puts it last; a ticked box shows its place, 1 or 2, where its icon was
       because the order is what the next feed needs (V1_ADDITIONS §2.2)

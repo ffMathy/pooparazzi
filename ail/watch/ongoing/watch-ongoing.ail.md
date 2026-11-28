@@ -11,7 +11,7 @@ node WatchOngoing : flow   level: experience
     Scenario: a running sleep shows on the watch face
       Given the notification permission allowed, and no week of logs to predict from
       When the parent starts a sleep on the watch
-      Then the watch face's Ongoing Activity reads "Asleep <1m"
+      Then the watch face's Ongoing Activity reads "Asleep" and how long in clock minutes ("Asleep <1m" within the start's minute)
       And once the parent taps Woke up, the Ongoing Activity is gone
     Scenario: no ongoing activity while awake with nothing predicted
       Given a new install, with nothing logged

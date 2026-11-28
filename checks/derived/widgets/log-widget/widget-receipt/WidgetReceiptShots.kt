@@ -1,4 +1,4 @@
-// ail-derived-from: WidgetReceipt@6edabdca3083f437
+// ail-derived-from: WidgetReceipt@0a8221ca0dca6fcd
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After

@@ -22,8 +22,8 @@ node WatchComplications : flow   level: experience
     Scenario: complications while asleep
       Given a sleep started on the watch a moment ago
       When the parent looks at the face
-      Then "Asleep or awake" reads "<1m" with the title "Asleep", spoken "Asleep less than a minute, since" the sleep's start
-      And "Sleep and last feed" reads "Asleep <1m"
+      Then "Asleep or awake" reads how long in clock minutes ("<1m" within the start's minute) with the title "Asleep", spoken "Asleep" that duration ", since" the sleep's start ("Asleep less than a minute, since")
+      And "Sleep and last feed" reads "Asleep" and that duration ("Asleep <1m")
     Scenario: tapping a complication opens the app
       Given a sleep started on the watch a moment ago, and the app left on Feed type
       When the parent taps "Asleep or awake"

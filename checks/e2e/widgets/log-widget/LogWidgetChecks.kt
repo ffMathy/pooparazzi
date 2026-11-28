@@ -1,4 +1,4 @@
-// ail-derived-from: LogWidget@b9b2c88bf4276232
+// ail-derived-from: LogWidget@f44ac579878b21e2
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals

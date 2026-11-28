@@ -32,7 +32,7 @@ node WatchDiaper : flow   level: experience
       Given Diaper, opened just now
       When the parent taps Save with nothing ticked
       Then Logged reads "Diaper at" the time of the Diaper tap
-      And once Logged has closed, the Diaper row reads "just now", spoken "Diaper. Last diaper, diaper, just now, at" that time
+      And once Logged has closed, the Diaper row reads how long since the change in clock minutes ("just now" within its minute), spoken "Diaper. Last diaper, diaper," that duration ", at" that time
     Scenario: pee alone
       Given Diaper, opened just now
       When the parent ticks Pee and taps Save

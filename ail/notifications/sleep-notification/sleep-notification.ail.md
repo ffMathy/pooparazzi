@@ -15,7 +15,7 @@ node SleepNotification : flow   level: experience
       And it has one button, Woke up, and cannot be swiped away
     Scenario: the last feed shows in the expanded notification
       Given notifications allowed, a sleep running, and Food logged 15 minutes ago, before the sleep began
-      Then the expanded notification adds "Fed 15m ago ·" the feed's time "· Food", and Today counts 1 feed
+      Then the expanded notification adds "Fed", the clock minutes since the feed, "ago ·" the feed's time "· Food" ("Fed 15m ago · 4:27 AM · Food" right then), and Today counts 1 feed
     Scenario: Woke up on the notification ends the sleep
       Given notifications allowed, and a sleep started 20 minutes ago
       When the parent taps Woke up on its notification

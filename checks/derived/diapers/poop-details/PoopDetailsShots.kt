@@ -1,4 +1,4 @@
-// ail-derived-from: PoopDetails@da93c391cf8825a3
+// ail-derived-from: PoopDetails@a1fd3f6bf25f05a0
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After

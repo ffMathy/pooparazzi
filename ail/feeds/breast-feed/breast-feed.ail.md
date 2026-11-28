@@ -31,7 +31,7 @@ node BreastFeed : flow   level: experience
     Scenario: logging a breast feed with no side
       Given the Breast step with nothing ticked
       When the parent taps Log feed
-      Then the Lamp reads "Last fed" "just now" with the feed's time and "Breast"
+      Then the Lamp reads "Last fed" over the clock minutes since the feed ("just now" within its minute) with the feed's time and "Breast"
   how
     decide Breast logs nothing yet: the same sheet moves to its Breast step, keeping the stamp and the nudges
       because the side order is optional detail on top of the time already picked (V1_ADDITIONS §2.1)

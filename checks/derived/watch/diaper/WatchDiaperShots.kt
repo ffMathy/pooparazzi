@@ -1,4 +1,4 @@
-// ail-derived-from: WatchDiaper@6c54b6b06ceaa9ad
+// ail-derived-from: WatchDiaper@3652073d703b260f
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After

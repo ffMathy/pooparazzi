@@ -1,4 +1,4 @@
-// ail-derived-from: ForgotToLog@61d3093f20a7b8fa
+// ail-derived-from: ForgotToLog@bcaac3c4e452f68f
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals

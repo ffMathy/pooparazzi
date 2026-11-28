@@ -1,4 +1,4 @@
-// ail-derived-from: DiaperWhileAsleep@bc28c83959248426
+// ail-derived-from: DiaperWhileAsleep@37c516d16f30477a
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After

@@ -18,7 +18,7 @@ node WatchFeed : flow   level: experience
       Given Feed type, opened just now
       When the parent taps Food
       Then Logged reads "Food at" the time of the Feed tap, with Undo
-      And once Logged has closed, the Feed row reads "just now", spoken "Feed. Last feed, food, just now, at" that time
+      And once Logged has closed, the Feed row reads how long since the feed in clock minutes ("just now" within its minute), spoken "Feed. Last feed, food," that duration ", at" that time
     Scenario: logging just the time of a feed
       Given Feed type, opened just now
       When the parent taps Just the time
@@ -27,7 +27,7 @@ node WatchFeed : flow   level: experience
       Given a food feed logged on the watch two seconds ago
       When the parent taps the Feed row and Food again
       Then Logged reads "Food at" the first feed's time over "Already logged", and no second feed is logged
-      And once Logged has closed, Main's Feed row still reads the first feed, "just now"
+      And once Logged has closed, Main's Feed row still reads the first feed, how long since it in clock minutes ("just now" within its minute, "1m" once the minute turns)
     Scenario: swiping back from feed type logs nothing
       Given Feed type, opened just now
       When the parent swipes right

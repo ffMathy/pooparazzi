@@ -22,12 +22,13 @@ node WatchTile : flow   level: experience
       Given the Tile, with the baby awake
       When the parent taps Start sleep on it
       Then the Tile's title reads "Asleep" and the time now, then "Undo", spoken "Asleep at" the time now ". Tap the tile to undo"
-      And its sleep button reads "Woke up" over "just now", spoken "Woke up, end sleep, Asleep since" the time now
-      And ten seconds later the title is "Asleep" and how long, and the confirmation is gone
+      And its sleep button reads "Woke up" over how long asleep in clock minutes ("just now" within the start's minute), spoken "Woke up, end sleep, Asleep since" the time now
+      And ten seconds later the title is "Asleep" and how long in clock minutes ("Asleep <1m" within the start's minute), and the confirmation is gone
     Scenario: the tile's background opens logged with undo at once
       Given a sleep just started from the Tile
       When the parent taps the Tile's background
       Then the app opens on Logged "Asleep at" the sleep's start, where Undo can be tapped at once
+      And a tap on Undo there takes the sleep back: "Undone", then Main with "Start sleep" and nothing running
     Scenario: the tile's rows open the app
       Given the Tile
       When the parent taps its Feed row, or its Diaper row
@@ -46,7 +47,8 @@ node WatchTile : flow   level: experience
     decide the Tile's times tick by themselves (dynamic expressions); a renderer without them gets a static Tile refreshed every minute
       because the Tile must never be stale (DESIGN_SPEC §10.9)
   look
-    The Tile: fixed neutral chrome on watch.background, no time text; the title in wear.titleSmall color.text; the Feed
+    The Tile: fixed neutral chrome on watch.background, no time text; the title in wear.titleSmall: the last diaper in color.text ("Pee just now"),
+      a running sleep in sleep.text after the 14dp sleepRunning icon in sleep.strong ("Asleep <1m"); the Feed
       row in feed.container with the feed icon in feed.strong and the Diaper row in diaper.container with the diaper icon in
       diaper.strong, radius.watch.button; the sleep button 70dp tall on the bottom edge, sleep.container (asleep: sleep.lit
       with a 1.5dp sleep.strong border), "Start sleep" in wear.labelMedium sleep.on.container

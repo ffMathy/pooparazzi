@@ -28,7 +28,7 @@ node BottleFeed : flow   level: experience
       Given a phone in the United Kingdom, and the Bottle step with Formula and 120 ml
       When the parent taps Log feed
       Then the sheet closes and no receipt follows
-      And the Lamp reads "Last fed" "just now" with the feed's time and "Bottle", spoken with "bottle, formula"
+      And the Lamp reads "Last fed" over the clock minutes since the feed ("just now" within its minute) with the feed's time and "Bottle", spoken with "bottle, formula"
       And History lists it as "Bottle · Formula" over the feed's time and "120 ml"
     Scenario: logging a bottle with nothing picked
       Given a phone in the United Kingdom, and the Bottle step

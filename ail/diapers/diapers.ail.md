@@ -26,7 +26,7 @@ node Diapers : flow   level: experience
       Given the Diaper sheet opened now
       When the parent ticks Pee and taps Save
       Then the sheet closes and no receipt follows
-      And Home's diaper row reads "Pee" over "just now" and the change's time
+      And Home's diaper row reads "Pee" over the clock minutes since the change ("just now" within its minute) and the change's time
       And Today counts 1 pee and 0 poop
     Scenario: saving pee and poop, nudged earlier
       Given the Diaper sheet opened now
@@ -37,7 +37,7 @@ node Diapers : flow   level: experience
     Scenario: saving with nothing ticked logs a plain change
       Given the Diaper sheet opened now
       When the parent taps Save
-      Then Home's diaper row reads "Diaper" over "just now" and the change's time
+      Then Home's diaper row reads "Diaper" over the clock minutes since the change ("just now" within its minute) and the change's time
       And Today counts 0 pee and 0 poop
     Scenario: cancel logs nothing
       Given the Diaper sheet opened now, Pee ticked

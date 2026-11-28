@@ -13,7 +13,7 @@ node WatchLogged : flow   level: experience
       Given a food feed logged on the watch just now
       When the parent does nothing
       Then Logged still reads "Food at" its time four seconds later
-      And after five seconds Main is back, the Feed row reading "just now"
+      And after five seconds Main is back, the Feed row reading how long since the feed in clock minutes ("just now" within its minute)
     Scenario: logged ignores taps for its first second
       Given a food feed logged on the watch just now
       When the parent taps the background and Undo at once
@@ -22,7 +22,7 @@ node WatchLogged : flow   level: experience
     Scenario: tapping the background closes logged
       Given Logged for a food feed, after its first second
       When the parent taps the background
-      Then Main is back, the Feed row reading "just now"
+      Then Main is back, the Feed row reading how long since the feed in clock minutes ("just now" within its minute)
     Scenario: undo takes a watch log back
       Given Logged for a food feed, after its first second
       When the parent taps Undo
@@ -31,12 +31,12 @@ node WatchLogged : flow   level: experience
     Scenario: undoing a wake-up resumes the sleep
       Given a sleep that started 10 minutes ago, just ended with Woke up
       When the parent taps Undo on its Logged
-      Then Main shows the sleep running again: the title reads "Asleep 10m" and the sleep edge button "Woke up"
+      Then Main shows the sleep running again: the title reads "Asleep" and how long since its start in clock minutes ("Asleep 10m" right then) and the sleep edge button "Woke up"
     Scenario: a feed during a sleep wakes the baby too
       Given a sleep that started 5 minutes ago
       When the parent logs a food feed
       Then Logged reads "Food at" the time now over "Woke up too"
-      And Undo takes both back: Main's title reads "Asleep 5m" again and the Feed row "No feeds yet"
+      And Undo takes both back: Main's title reads "Asleep" and how long since its start again ("Asleep 5m" right then) and the Feed row "No feeds yet"
     Scenario: a log within a minute of falling asleep cancels the sleep
       Given a sleep started a few seconds ago, its Logged closed
       When the parent logs a plain diaper change

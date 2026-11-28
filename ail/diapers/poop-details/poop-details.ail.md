@@ -46,7 +46,8 @@ node PoopDetails : flow   level: experience
       because colour is never the only cue (V1_ADDITIONS §3.1, DESIGN_SPEC §9.2)
   look
     Under the tiles, expanding into view: "Colour" in type.labelMedium color.text.dim over six chips in a wrapping row,
-      each 48dp tall with a 20dp swatch dot (swatch.yellow, swatch.green, swatch.brown, swatch.black, swatch.red,
+      each a 40dp pill (size.chip, radius.chip, a 1dp color.outline border) centred in a 48dp tap target, with a 20dp
+      swatch dot (swatch.yellow, swatch.green, swatch.brown, swatch.black, swatch.red,
       swatch.pale, each ringed 1dp color.outline) and its name; a picked chip is filled color.primary.container with a
       check on its swatch. Then "Texture" over five chips that keep room for a check, the check showing when picked
     The hint: the info icon 20dp in color.text.dim and the text in type.bodySmall color.text.dim, 12dp under the chips

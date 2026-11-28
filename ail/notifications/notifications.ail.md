@@ -26,7 +26,7 @@ node Notifications : flow   level: experience
       Given a new install, where notifications have never been allowed
       When the parent taps Start sleep
       Then the system asks whether to allow the app's notifications
-      And when the parent allows them, the shade shows "Asleep" over "<1m · since" the sleep's start, with Woke up
+      And when the parent allows them, the shade shows "Asleep" over how long in clock minutes ("<1m" within the start's minute) "· since" the sleep's start, with Woke up
     Scenario: notifications not allowed show nothing
       Given a new install, and a sleep started on Home
       When the parent answers the system's question with Don't allow

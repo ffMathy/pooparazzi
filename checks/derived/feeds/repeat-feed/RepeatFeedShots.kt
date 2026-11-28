@@ -1,4 +1,4 @@
-// ail-derived-from: RepeatFeed@85c2aad195abb756
+// ail-derived-from: RepeatFeed@0bbd1bf1fa853f78
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After

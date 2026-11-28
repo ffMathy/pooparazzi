@@ -38,12 +38,15 @@ node SignIn : flow   level: experience
       because joining needs an account (BABIES_AND_BACKUP §3.5)
     decide the checks sign in by email on the local Firebase emulators: the email is the Authentication emulator's list of sent links, opened as an App Link after the browser follows its redirect; Google sign-in, the quota, rate, offline and timeout errors are not checked (the link itself: SignInLink)
       because Google's account picker needs Google Play services, which the checks' phone (Robolectric) lacks, and the emulators don't enforce the free plan's limits (docs/BACKEND.md › Running the app against the emulators)
+    decide "Continue with Google" is a plain filled button with its label alone, without the Google logo
+      because "unknown, confirm with the owner": Google's sign-in branding asks for the logo on the button; add it, or keep the app's own button?
   look
     Full screen with a top bar ("Account", Back) on color.background, inside gutter.phone: the two explaining paragraphs
-      in type.bodyMedium color.text.dim, "Continue with Google" filled color.primary.container with the Google logo,
+      in type.bodyMedium color.text.dim, "Continue with Google" a 56dp full-width button filled color.primary.container, its label alone in type.labelLarge
+      color.on.primary.container (no logo),
       "or use email" in type.labelMedium color.text.dim, the outlined Email field and "Email me a sign-in link" as an
       outlined button; the consent line in type.bodySmall color.text.dim with "privacy policy" underlined in color.text;
-      errors in type.bodySmall color.error under the field
+      errors in type.bodyMedium color.error under the field, above the email button
   copy
     body.local   "Without an account, everything you log is saved only on this phone and your watch. If the phone is lost or reset, the log is lost with it."
     body.later   "You can create an account at any time in Settings. Everything logged until then is backed up as soon as you do, and you can share it with your family."

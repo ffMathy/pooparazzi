@@ -1,4 +1,4 @@
-// ail-derived-from: ForecastNotifications@9d6126861a682256
+// ail-derived-from: ForecastNotifications@606c1ed27365489b
 package com.ffmathy.pooparazzi.checks
 
 import java.time.LocalDateTime

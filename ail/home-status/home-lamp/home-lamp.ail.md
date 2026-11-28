@@ -15,12 +15,12 @@ node HomeLamp : flow   level: experience
       And tapping it opens nothing
     Scenario: the Lamp just after a feed
       Given a feed logged now with Just the time
-      Then the Lamp reads "Last fed" over "just now" and the feed's time
+      Then the Lamp reads "Last fed" over the clock minutes since the feed ("just now" within its minute) and the feed's time
       And it is spoken "Last feed, just now, at" the feed's time
     Scenario: the Lamp counts the time since the last feed
       Given a breast feed logged 75 minutes ago, Left then Right
-      Then the Lamp reads "1h 15m" in clock minutes, over the feed's time and "Left → Right"
-      And it is spoken "Last feed, breast, left then right, 1 hour 15 minutes ago, at" the feed's time
+      Then the Lamp reads the clock minutes since the feed ("1h 15m" right after it was logged, "1h 16m" once the minute turns), over the feed's time and "Left → Right"
+      And it is spoken "Last feed, breast, left then right," that duration "ago, at" the feed's time ("1 hour 15 minutes ago")
     Scenario: tapping the Lamp opens the last feed
       Given a feed logged 15 minutes ago with Just the time
       When the parent taps the Lamp

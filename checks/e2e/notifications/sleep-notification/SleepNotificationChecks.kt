@@ -1,4 +1,4 @@
-// ail-derived-from: SleepNotification@f0f2100550ff40f9
+// ail-derived-from: SleepNotification@c50f1a5ed1186255
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals

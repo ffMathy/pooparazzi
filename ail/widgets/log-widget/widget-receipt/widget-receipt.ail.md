@@ -43,7 +43,7 @@ node WidgetReceipt : flow   level: experience
     Scenario: a feed logged from the widget's sheet leaves the receipt
       Given a sleep started 15 minutes ago, just ended with the widget's Woke up
       When the parent logs Food from the widget's Feed button
-      Then the widget's Feed reads "just now", and the status row still reads "Woke up at" the wake-up's time, with Undo
+      Then the widget's Feed reads the clock minutes since the feed ("just now" within its minute), and the status row still reads "Woke up at" the wake-up's time, with Undo
   how
     decide the receipt keeps the log's clock time ("Sleep started at 7:21 PM"), stays until the next widget log or for 10 seconds, and Undo never sits where a log button is
       because a widget cannot hold a sheet; the row is the receipt, and Undo must not catch a tap meant for a button (DESIGN_SPEC §3.3.6, §10.11)
@@ -59,7 +59,8 @@ node WidgetReceipt : flow   level: experience
       because "unknown, confirm with the owner"
   look
     The status row: a 16dp check icon in color.text.dim, 6dp, the receipt in 15sp color.text, and at the end Undo: the undo
-      icon and "Undo" in 15sp color.primary, a 48dp target; the notice: the moon (or undo) icon and its line in sleep.text
+      icon and "Undo" in 15sp color.primary, a 48dp target; the notice in 15sp: "Already asleep since …" and "Already awake since …" after the sleep or awake icon in sleep.strong, their line
+      in sleep.text; "Undone" after the undo icon in color.text.dim, its line in color.text
   copy
     receipt.started     "Sleep started at {time}"
     receipt.woke        "Woke up at {time}"
