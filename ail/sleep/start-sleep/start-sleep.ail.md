@@ -20,7 +20,7 @@ node StartSleep : flow   level: experience
       Given the receipt of a sleep started now
       When the parent taps −15m and then −5m
       Then the receipt's time reads 20 minutes ago, followed by "was" and the time now
-      And the Lamp reads "Asleep" since 20 minutes ago, for 20 minutes counted in clock minutes
+      And the Lamp reads "Asleep" since 20 minutes ago, for how long in clock minutes from that start to the time now ("20m" right then, "21m" once the minute turns)
     Scenario: done keeps the sleep running
       Given the receipt of a sleep started now
       When the parent taps Done

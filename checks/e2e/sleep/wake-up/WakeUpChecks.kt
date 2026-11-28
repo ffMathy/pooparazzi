@@ -1,4 +1,4 @@
-// ail-derived-from: WakeUp@ed92e347798f21fe
+// ail-derived-from: WakeUp@335bcb00ed3530f5
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test
