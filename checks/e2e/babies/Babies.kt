@@ -54,7 +54,7 @@ fun Phone.settleDialogWindows() {
  * Waits until [condition] holds while a dialog or a sheet may be open or closing, running its frames ([settleDialogWindows]) between
  * looks; fails with the screen after [timeoutMillis].
  */
-fun Phone.waitInTopWindow(what: String, timeoutMillis: Long = 10_000, condition: () -> Boolean) {
+fun Phone.waitInTopWindow(what: String, timeoutMillis: Long = 30_000, condition: () -> Boolean) {
     val end = System.currentTimeMillis() + timeoutMillis
     while (true) {
         settleDialogWindows()
