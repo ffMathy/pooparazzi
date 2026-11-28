@@ -1,0 +1,29 @@
+{
+  "node": "AddBaby",
+  "shots": [
+    {
+      "test": "what add a baby asks",
+      "file": "01-what-add-a-baby-asks.png"
+    },
+    {
+      "test": "adding a second baby",
+      "file": "02-adding-a-second-baby.png"
+    },
+    {
+      "test": "adding a baby with a birth date",
+      "file": "03-adding-a-baby-with-a-birth-date.png"
+    },
+    {
+      "test": "cancelling adds nothing",
+      "file": "04-cancelling-adds-nothing.png"
+    },
+    {
+      "test": "an unnamed second baby",
+      "file": "05-an-unnamed-second-baby.png"
+    },
+    {
+      "test": "at most eight babies",
+      "file": "06-at-most-eight-babies.png"
+    }
+  ]
+}

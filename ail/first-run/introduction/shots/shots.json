@@ -1,0 +1,29 @@
+{
+  "node": "Introduction",
+  "shots": [
+    {
+      "test": "the six pages",
+      "file": "01-the-six-pages.png"
+    },
+    {
+      "test": "back on the first page can't be tapped",
+      "file": "02-back-on-the-first-page-can-t-be-tapped.png"
+    },
+    {
+      "test": "back turns to the page before",
+      "file": "03-back-turns-to-the-page-before.png"
+    },
+    {
+      "test": "skipping the introduction",
+      "file": "04-skipping-the-introduction.png"
+    },
+    {
+      "test": "getting started",
+      "file": "05-getting-started.png"
+    },
+    {
+      "test": "the introduction from settings",
+      "file": "06-the-introduction-from-settings.png"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "node": "ReviewPrompt",
+  "shots": [
+    {
+      "test": "a new install is not asked",
+      "file": "01-a-new-install-is-not-asked.png"
+    }
+  ]
+}

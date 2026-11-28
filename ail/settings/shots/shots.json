@@ -1,0 +1,13 @@
+{
+  "node": "Settings",
+  "shots": [
+    {
+      "test": "the sections of settings",
+      "file": "01-the-sections-of-settings.png"
+    },
+    {
+      "test": "back returns to home",
+      "file": "02-back-returns-to-home.png"
+    }
+  ]
+}

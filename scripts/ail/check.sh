@@ -27,6 +27,21 @@ case "$1" in
     rm -f "$results/TEST-$class.xml"
     status=0
     derived=(); [[ $kind == derived ]] && derived=(-Pail.derived=true)
+    # A check under account/ (other than Account's own) runs the app against the Firebase emulators. ail starts them
+    # for the end-to-end checks (ail.config.json's service "firebase"), but not when it pictures a node: start them
+    # here when nothing answers on their ports, and stop them afterwards.
+    emulators=""
+    if find "$dir/account" -mindepth 2 -name "${node}${suffix}.kt" 2>/dev/null | grep -q . && ! curl -sf http://127.0.0.1:9099/ >/dev/null; then
+      log="$(mktemp)"
+      setsid scripts/ail/firebase-emulators.sh >"$log" 2>&1 &
+      emulators=$!
+      trap 'kill -TERM -- "-$emulators" 2>/dev/null || true' EXIT
+      for _ in $(seq 1 150); do
+        curl -sf http://127.0.0.1:9099/ >/dev/null && curl -sf http://127.0.0.1:8080/ >/dev/null && break
+        sleep 2
+      done
+      curl -sf http://127.0.0.1:8080/ >/dev/null || { tail -20 "$log" >&2; exit 1; }
+    fi
     "${gradle[@]}" ":$module:testDebugUnitTest" --tests "$class" --rerun -Pail.shots="${AIL_SHOTS_DIR:-}" "${derived[@]}" || status=$?
     if [[ $kind == e2e ]]; then
       if [[ -f "$results/TEST-$class.xml" ]]; then cp "$results/TEST-$class.xml" "$3"; fi

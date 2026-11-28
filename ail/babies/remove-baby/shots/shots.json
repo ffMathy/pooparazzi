@@ -1,0 +1,21 @@
+{
+  "node": "RemoveBaby",
+  "shots": [
+    {
+      "test": "removing asks first",
+      "file": "01-removing-asks-first.png"
+    },
+    {
+      "test": "cancelling keeps the baby",
+      "file": "02-cancelling-keeps-the-baby.png"
+    },
+    {
+      "test": "removing a baby",
+      "file": "03-removing-a-baby.png"
+    },
+    {
+      "test": "removing the current baby",
+      "file": "04-removing-the-current-baby.png"
+    }
+  ]
+}

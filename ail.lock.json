@@ -3,14 +3,32 @@
   "nodes": {},
   "glue": {},
   "hand": {
+    "About": {
+      "shots": "cc7db2512ba220dc"
+    },
+    "Account": {
+      "shots": "7d40752b854fc584"
+    },
+    "AddBaby": {
+      "shots": "38f78232edc2652a"
+    },
     "AddPastEntry": {
       "shots": "360221f1982558e9"
+    },
+    "Appearance": {
+      "shots": "56de240bdf219c84"
+    },
+    "Babies": {
+      "shots": "a34821f055855184"
     },
     "BottleFeed": {
       "shots": "f376bdc8e9c401c3"
     },
     "BreastFeed": {
       "shots": "e514089ef6ee8dbe"
+    },
+    "DanishPhone": {
+      "shots": "eb890abe94cb3789"
     },
     "DeleteEntry": {
       "shots": "6798d36525013bb4"
@@ -51,14 +69,32 @@
     "HomeStatus": {
       "shots": "1194af6f177bace5"
     },
+    "Introduction": {
+      "shots": "f0951ec754b8a35e"
+    },
+    "Language": {
+      "shots": "3bb2f08a2d932a51"
+    },
+    "NotificationSettings": {
+      "shots": "ed30d41936915461"
+    },
     "PoopDetails": {
       "shots": "da93c391cf8825a3"
+    },
+    "RemoveBaby": {
+      "shots": "12be13386295a5f5"
     },
     "RepeatDiaper": {
       "shots": "5c022649db7e764f"
     },
     "RepeatFeed": {
       "shots": "85c2aad195abb756"
+    },
+    "ReviewPrompt": {
+      "shots": "5cdadf317452b1ab"
+    },
+    "Settings": {
+      "shots": "3394b5a9903e7871"
     },
     "SinceRows": {
       "shots": "ea47e612e15d3a63"
@@ -76,6 +112,9 @@
     },
     "StatisticsScreen": {
       "shots": "fa70f5dee13ca904"
+    },
+    "SwitchBaby": {
+      "shots": "f4b1e2cdc51f3e2d"
     },
     "TodayGrid": {
       "shots": "a6952c607a5db159"
@@ -105,6 +144,9 @@
     "WatchLogged": {
       "shots": "4c126603e5929359"
     },
+    "WatchSettings": {
+      "shots": "d6e0e1797e59ea49"
+    },
     "WatchSide": {
       "shots": "871c05d941a10ee7"
     },
@@ -113,6 +155,9 @@
     },
     "WatchTime": {
       "shots": "02128b08594822a8"
+    },
+    "YourBaby": {
+      "shots": "8358da4e5f0febf6"
     }
   }
 }

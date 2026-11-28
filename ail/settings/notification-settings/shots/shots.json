@@ -1,0 +1,9 @@
+{
+  "node": "NotificationSettings",
+  "shots": [
+    {
+      "test": "notifications not allowed yet",
+      "file": "01-notifications-not-allowed-yet.png"
+    }
+  ]
+}

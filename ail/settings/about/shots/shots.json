@@ -1,0 +1,13 @@
+{
+  "node": "About",
+  "shots": [
+    {
+      "test": "what about offers",
+      "file": "01-what-about-offers.png"
+    },
+    {
+      "test": "the font licences",
+      "file": "02-the-font-licences.png"
+    }
+  ]
+}

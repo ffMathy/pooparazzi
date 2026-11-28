@@ -1,0 +1,17 @@
+{
+  "node": "Babies",
+  "shots": [
+    {
+      "test": "naming the baby in settings",
+      "file": "01-naming-the-baby-in-settings.png"
+    },
+    {
+      "test": "one baby has no remove button",
+      "file": "02-one-baby-has-no-remove-button.png"
+    },
+    {
+      "test": "giving and removing a birth date in settings",
+      "file": "03-giving-and-removing-a-birth-date-in-settings.png"
+    }
+  ]
+}

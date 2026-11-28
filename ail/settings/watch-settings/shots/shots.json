@@ -1,0 +1,13 @@
+{
+  "node": "WatchSettings",
+  "shots": [
+    {
+      "test": "a phone that can't reach the watch service",
+      "file": "01-a-phone-that-can-t-reach-the-watch-service.png"
+    },
+    {
+      "test": "what the watch face shows",
+      "file": "02-what-the-watch-face-shows.png"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "node": "Appearance",
+  "shots": [
+    {
+      "test": "a new install follows auto",
+      "file": "01-a-new-install-follows-auto.png"
+    },
+    {
+      "test": "choosing night",
+      "file": "02-choosing-night.png"
+    },
+    {
+      "test": "choosing day",
+      "file": "03-choosing-day.png"
+    }
+  ]
+}
