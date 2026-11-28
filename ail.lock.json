@@ -31,11 +31,11 @@
     },
     "BottleFeed": {
       "shots": "f376bdc8e9c401c3",
-      "look": "c31a49c939c42a941708ed09d420dd9723f98f9e405e7730611797ada3f15025"
+      "look": "144361a92c521247faed07fa19750cdb2bdaf6e03359bffdacd4943260850676"
     },
     "BreastFeed": {
       "shots": "e514089ef6ee8dbe",
-      "look": "6ff6bc5910ca203ac7daeb2331a49e4281b9451875f5c934dc5be99714b42ae9"
+      "look": "46da8af50d7f2bfb60b7689e045f7074d598b03509285f858587e2883f399d9e"
     },
     "CoverWidget": {
       "shots": "2d050f91b023c431"
@@ -50,11 +50,11 @@
     },
     "Diapers": {
       "shots": "b4066a530b420465",
-      "look": "dc11ab5995d3d5d958894391516f6d0ccec9caa744cc2559f77ec377c0d85a7c"
+      "look": "0bfaeda1cf46a56ca0aaa4e2166bad7abe3fc23756b5fbd866d5e1322fa967b0"
     },
     "DiaperWhileAsleep": {
       "shots": "5b32630b3e4b4b00",
-      "look": "0dc8d87c03e35b9a0d51e3f2cc88f48950ae9fe3f4613f123e45ef17afffec9e"
+      "look": "5e001f0e6b8f7393af39dfa9f30ad9535564e9bcb706fae3de38c24a4f995817"
     },
     "EditDiaper": {
       "shots": "aea8898b9d6a2c32",
@@ -69,25 +69,25 @@
     },
     "Feeds": {
       "shots": "944d5eee84053f9c",
-      "look": "012b7af9148795120457e59010069e4533f3936c57972b444954a141a20e691c"
+      "look": "e9403a96024c4fb1ae13787fa56fbc34c1653b6bb42953159a10019903962877"
     },
     "FeedWhileAsleep": {
       "shots": "0d00cc3aa4385a34"
     },
     "ForecastLines": {
       "shots": "b7b20072a7aa888f",
-      "look": "69bfe830c9e6acf3168211d48c1ee45111b58adc0486d7454832d1212a4b3e35"
+      "look": "9be40a294da4bcae0ebc6dbb1d0b396e68d7059f3f5e465876277ebc66b74de7"
     },
     "ForgotToLog": {
       "shots": "61d3093f20a7b8fa",
-      "look": "e1385668d9249ea96dc0babda9ff755b2c583d50a92ffc922e44b2236b39e867"
+      "look": "82158f1f919f1a3c1448ad7ea8abbf1bbd5014c13bf0de9f9307da7693bb3df9"
     },
     "HistoryScreen": {
       "shots": "3d39a73da09ca63e"
     },
     "HomeLamp": {
       "shots": "18b6a1eff6db0be5",
-      "look": "5756e8fa65aac24dae12a0c3855234b3ddbe8b5e1a23f6e2078285b2ff93f703"
+      "look": "e57702d65d3ee5f21981efa197de1099ea8cef19ef53e2665f34662ec8372a13"
     },
     "HomeStatus": {
       "shots": "1194af6f177bace5",
@@ -113,7 +113,8 @@
       "look": "50aa913cb6512a2c0e589b003b803a97f4263987f7502bb70b834427a4464732"
     },
     "PoopDetails": {
-      "shots": "da93c391cf8825a3"
+      "shots": "da93c391cf8825a3",
+      "look": "9520b5b97800486e0da57d3ecaf8fca7a4ac0397d43c54708de5aa0eda70a6a6"
     },
     "QuickWidget": {
       "shots": "c4591efc6c4aa4f7"
@@ -128,7 +129,7 @@
     },
     "RepeatFeed": {
       "shots": "85c2aad195abb756",
-      "look": "3daa36830334b7edbad2824bb42ddd6d7297597506126f84b8b0cea04750479e"
+      "look": "3e880a2ab2821228471d5de13727f3e6cdb3f3d26a215077df21ed011f267669"
     },
     "ReviewPrompt": {
       "shots": "5cdadf317452b1ab",
@@ -146,18 +147,18 @@
     },
     "SinceRows": {
       "shots": "ea47e612e15d3a63",
-      "look": "86c6f83b70b7f23bb639ea32e911556bc93cf810c4f37f297ae52ba788e3fd44"
+      "look": "825b7324798130bf95b42ddd8804ce20c20fceba12bf5716e2e2c8ef3a997ae9"
     },
     "Sleep": {
       "shots": "46c93df58d2296fc",
-      "look": "5aa1e9fc6ada791f797008cf2f9ae8283a277ac53d877d2ad71455e493ef4b00"
+      "look": "f25f24f776b4957353f46f466cb5d93892d92d33e4df9534427f963daddbd857"
     },
     "SleepNotification": {
       "shots": "c17f05441902f2ec"
     },
     "StartSleep": {
       "shots": "bab811e3dbd588a1",
-      "look": "2d36a9d16438ea3fb26798d511b4c7f7552c5f18b14245d002b99cbc2a603b7f"
+      "look": "088e0e0f4e459a869773a75de91f30f0a1707f95add3bbd562fa60cdec0a6e6e"
     },
     "StatisticsChart": {
       "shots": "953bfa801efe867c",
@@ -173,7 +174,7 @@
     },
     "TodayGrid": {
       "shots": "a6952c607a5db159",
-      "look": "3164345967fc1824435869c37240264bbb2561afc32a5e33e37558488c1c48e5"
+      "look": "8a6a3a0052778fd1cb4487abe98079ea0d5b48b80337cb060fd39b592e6de55b"
     },
     "TopBar": {
       "shots": "b8921dc8f0c4bb0b",
