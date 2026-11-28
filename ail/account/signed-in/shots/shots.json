@@ -1,0 +1,21 @@
+{
+  "node": "SignedIn",
+  "shots": [
+    {
+      "test": "the account screen signed in",
+      "file": "01-the-account-screen-signed-in.png"
+    },
+    {
+      "test": "signing out",
+      "file": "02-signing-out.png"
+    },
+    {
+      "test": "deleting the account asks first",
+      "file": "03-deleting-the-account-asks-first.png"
+    },
+    {
+      "test": "deleting the account with the emailed link",
+      "file": "04-deleting-the-account-with-the-emailed-link.png"
+    }
+  ]
+}

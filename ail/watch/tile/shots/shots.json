@@ -1,0 +1,25 @@
+{
+  "node": "WatchTile",
+  "shots": [
+    {
+      "test": "a fresh tile",
+      "file": "01-a-fresh-tile.png"
+    },
+    {
+      "test": "the tile shows the last feed and diaper",
+      "file": "02-the-tile-shows-the-last-feed-and-diaper.png"
+    },
+    {
+      "test": "starting a sleep from the tile",
+      "file": "03-starting-a-sleep-from-the-tile.png"
+    },
+    {
+      "test": "the tile's background opens logged with undo at once",
+      "file": "04-the-tile-s-background-opens-logged-with-undo-at-once.png"
+    },
+    {
+      "test": "the tile's rows open the app",
+      "file": "05-the-tile-s-rows-open-the-app.png"
+    }
+  ]
+}

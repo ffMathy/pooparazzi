@@ -26,7 +26,9 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import androidx.test.espresso.IdlingPolicies
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.runner.RunWith
@@ -51,6 +53,16 @@ import org.robolectric.shadows.ShadowLooper
 abstract class Phone {
     @get:Rule
     val compose = createAndroidComposeRule<MainActivity>()
+
+    /**
+     * Espresso (Back, and the compose rule's waits) gives up after 60 s of waiting for the app to be idle. Settings
+     * with its dialogs gets there quickly here, but can take longer on a slower machine such as a CI runner.
+     */
+    @Before
+    fun bePatientWithASlowMachine() {
+        IdlingPolicies.setMasterPolicyTimeout(4, TimeUnit.MINUTES)
+        IdlingPolicies.setIdlingResourceTimeout(4, TimeUnit.MINUTES)
+    }
 
     @After
     fun closeTheApp() {

@@ -35,7 +35,9 @@ case "$1" in
       log="$(mktemp)"
       setsid scripts/ail/firebase-emulators.sh >"$log" 2>&1 &
       emulators=$!
-      trap 'kill -TERM -- "-$emulators" 2>/dev/null || true' EXIT
+      # Stop them, and wait until they are gone, so the next check doesn't take a stopping emulator for a running one.
+      trap 'kill -TERM -- "-$emulators" 2>/dev/null || true
+            for _ in $(seq 1 60); do curl -sf http://127.0.0.1:9099/ >/dev/null || curl -sf http://127.0.0.1:8080/ >/dev/null || break; sleep 1; done' EXIT
       for _ in $(seq 1 150); do
         curl -sf http://127.0.0.1:9099/ >/dev/null && curl -sf http://127.0.0.1:8080/ >/dev/null && break
         sleep 2
