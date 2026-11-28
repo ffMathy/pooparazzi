@@ -1,0 +1,17 @@
+{
+  "node": "SignInLink",
+  "shots": [
+    {
+      "test": "the link in the email signs in",
+      "file": "01-the-link-in-the-email-signs-in.png"
+    },
+    {
+      "test": "a link opened on a phone that didn't ask for it",
+      "file": "02-a-link-opened-on-a-phone-that-didn-t-ask-for-it.png"
+    },
+    {
+      "test": "a link that was used",
+      "file": "03-a-link-that-was-used.png"
+    }
+  ]
+}
