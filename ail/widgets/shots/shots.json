@@ -1,0 +1,21 @@
+{
+  "node": "Widgets",
+  "shots": [
+    {
+      "test": "Feed on a widget opens the Feed sheet",
+      "file": "01-feed-on-a-widget-opens-the-feed-sheet.png"
+    },
+    {
+      "test": "Diaper on a widget opens the Diaper sheet",
+      "file": "02-diaper-on-a-widget-opens-the-diaper-sheet.png"
+    },
+    {
+      "test": "what the sheets log shows on the widget",
+      "file": "03-what-the-sheets-log-shows-on-the-widget.png"
+    },
+    {
+      "test": "the widget's background opens Home",
+      "file": "04-the-widget-s-background-opens-home.png"
+    }
+  ]
+}

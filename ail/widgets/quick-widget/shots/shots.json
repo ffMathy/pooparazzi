@@ -1,0 +1,21 @@
+{
+  "node": "QuickWidget",
+  "shots": [
+    {
+      "test": "the quick widget shows three labelled buttons",
+      "file": "01-the-quick-widget-shows-three-labelled-buttons.png"
+    },
+    {
+      "test": "the sleep button logs in place",
+      "file": "02-the-sleep-button-logs-in-place.png"
+    },
+    {
+      "test": "a narrow quick widget shows icons only",
+      "file": "03-a-narrow-quick-widget-shows-icons-only.png"
+    },
+    {
+      "test": "Feed on the quick widget opens the Feed sheet",
+      "file": "04-feed-on-the-quick-widget-opens-the-feed-sheet.png"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "node": "CoverWidget",
+  "shots": [
+    {
+      "test": "the cover widget shows the three buttons",
+      "file": "01-the-cover-widget-shows-the-three-buttons.png"
+    },
+    {
+      "test": "Start sleep on the cover widget logs at once",
+      "file": "02-start-sleep-on-the-cover-widget-logs-at-once.png"
+    }
+  ]
+}

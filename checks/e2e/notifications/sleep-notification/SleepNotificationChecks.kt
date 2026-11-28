@@ -20,7 +20,12 @@ open class SleepNotificationChecks : Phone() {
             shown.text in listOf(minutes, minutes - 1).map { "${shownDuration(it)} · since $start" }
         }
         val slept = shown.text.substringBefore(" · ")
-        assertEquals(listOf(shown.text, "Today · 0 feeds · 0 pee · 0 poop · $slept sleep"), shown.expanded)
+        // Today counts the sleep's minutes since midnight only: a sleep that began yesterday counts from 00:00.
+        val sinceMidnight = java.time.LocalTime.now().toSecondOfDay() / 60L
+        val today = if (clockMinutesBetween(start, clock()) <= sinceMidnight) listOf(slept)
+        else listOf(sinceMidnight, sinceMidnight - 1).filter { it >= 0 }.map { shownDuration(it) }
+        assertEquals(shown.text, shown.expanded.first())
+        assertTrue(shown.toString(), today.any { shown.expanded == listOf(shown.text, "Today · 0 feeds · 0 pee · 0 poop · $it sleep") })
         assertEquals(listOf("Woke up"), shown.buttons)
         assertTrue("ongoing: $shown", shown.ongoing)
     }
@@ -38,7 +43,9 @@ open class SleepNotificationChecks : Phone() {
         // Drawn when the feed was logged, and again at each minute: the minute may have turned since.
         val minutes = clockMinutesBetween(fed, clock())
         assertTrue(shown.toString(), listOf(minutes, minutes - 1).any { shown.expanded.contains("Fed ${shownDuration(it)} ago · $fed · Food") })
-        assertTrue(shown.toString(), shown.expanded.last().startsWith("Today · 1 feed · 0 pee · 0 poop · "))
+        // A feed before midnight is yesterday's: Today counts it only when it was logged today.
+        val feeds = if (minutes <= java.time.LocalTime.now().toSecondOfDay() / 60L) "1 feed" else "0 feeds"
+        assertTrue(shown.toString(), shown.expanded.last().startsWith("Today · $feeds · 0 pee · 0 poop · "))
     }
 
     @Test

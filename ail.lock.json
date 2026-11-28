@@ -30,6 +30,9 @@
     "BreastFeed": {
       "shots": "e514089ef6ee8dbe"
     },
+    "CoverWidget": {
+      "shots": "2d050f91b023c431"
+    },
     "DanishPhone": {
       "shots": "eb890abe94cb3789"
     },
@@ -75,14 +78,23 @@
     "Introduction": {
       "shots": "f0951ec754b8a35e"
     },
+    "JoinFamily": {
+      "shots": "9e572cd59712a146"
+    },
     "Language": {
       "shots": "3bb2f08a2d932a51"
+    },
+    "LogWidget": {
+      "shots": "d4300fe7ef4e4e48"
     },
     "NotificationSettings": {
       "shots": "ed30d41936915461"
     },
     "PoopDetails": {
       "shots": "da93c391cf8825a3"
+    },
+    "QuickWidget": {
+      "shots": "c4591efc6c4aa4f7"
     },
     "RemoveBaby": {
       "shots": "12be13386295a5f5"
@@ -161,6 +173,12 @@
     },
     "WatchTime": {
       "shots": "02128b08594822a8"
+    },
+    "WidgetReceipt": {
+      "shots": "6edabdca3083f437"
+    },
+    "Widgets": {
+      "shots": "6c6ed1df869bfbbf"
     },
     "YourBaby": {
       "shots": "8358da4e5f0febf6"
