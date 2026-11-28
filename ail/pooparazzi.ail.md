@@ -94,13 +94,19 @@ target
                the checks). Google sign-in is never tapped: it needs Google Play services.
                A node's derived check is a subclass of its end-to-end check, checks/e2e/<its folder>/<Node>Checks.kt
                (an open class that already plays every scenario against the app): `class <Node>Shots : <Node>Checks()`
-               with a TestName rule and one @After that calls saveScreen(<the scenario's title in lower case, each run
-               of other characters one "-">), as checks/derived/feeds/FeedsShots.kt does. It adds nothing else.
+               with a TestName rule and one @After that calls pictureTheScreen(<the scenario's title in lower case, each
+               run of other characters one "-">), as checks/derived/feeds/FeedsShots.kt does. It adds nothing else.
                Home ignores taps on Feed, Diaper and the sleep button for 600 ms after any sheet closes (the shared
                steps wait it out); a sheet ignores taps for its first 500 ms.
-               It never calls the app's code. Each test ends with saveScreen("<its scenario's title in lower case, each run
-               of other characters one ->"), which saves every window the phone shows (a sheet over Home included) into
-               AIL_SHOTS_DIR as a PNG.
+               It never calls the app's code. pictureTheScreen(name) pictures what the parent is looking at when the
+               scenario ends, into AIL_SHOTS_DIR as name.png; by default it is saveScreen(name), which lets the screen
+               settle (nothing moving for two looks 100 ms apart, at most 1.5 s) and saves every window the phone shows (a
+               sheet over Home included). An end-to-end check whose scenarios end outside the app's window overrides it:
+               the widget checks with pictureTheHomeScreen(name) (checks/e2e/widgets/HomeScreen.kt: the widget last
+               placed or tapped, drawn at its size from what the app last sent, alone on a plain wallpaper; the app's
+               screen when a tap on the widget opened the app), the notification checks with pictureTheShade(name)
+               (checks/e2e/notifications/Shade.kt: the shade over the top of the app, each notification newest first as
+               the system's template draws it expanded, or "No notifications").
                The watch's views and flows (the nodes under ail/watch/) are the existing watch app. Their checks are Kotlin
                classes in the same package under checks/e2e/watch/ (derived: checks/derived/watch/), compiled in :wear's
                tests, that extend Watch (checks/e2e/watch/Watch.kt: the real WearApp and MainActivity on a 227 dp round
@@ -117,7 +123,9 @@ target
                so Logged's five seconds and inert second last as long as on a watch. Past times are made through
                Logged's time with the shared steps in checks/e2e/watch/Watches.kt (logFood(), logPee(),
                logPlainDiaper(), startSleepOnTheWatch(), sleepStartedMinutesAgo(n), closeLogged(),
-               waitOutLoggedInertStart()). Each test ends with saveScreen("…"), which saves the watch's screen.
+               waitOutLoggedInertStart()). A derived check's pictureTheScreen(name) is saveScreen(name), which lets the
+               screen settle (the same pixels for two looks 100 ms apart, at most 1.5 s, the clocks moving as in pass)
+               and saves the watch's screen.
 ```
 
 ## Glossary

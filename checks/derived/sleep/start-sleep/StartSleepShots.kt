@@ -70,7 +70,7 @@ class StartSleepShots : Phone() {
             }
         }
 
-        saveScreen("starting-a-sleep")
+        pictureTheScreen("starting-a-sleep")
     }
 
     @Test
@@ -92,7 +92,7 @@ class StartSleepShots : Phone() {
             showsPart("Asleep, ${spokenMinutes(minutes)}, since $earlier")
         }
 
-        saveScreen("nudging-the-start-earlier")
+        pictureTheScreen("nudging-the-start-earlier")
     }
 
     @Test
@@ -110,7 +110,7 @@ class StartSleepShots : Phone() {
         assertShows("Woke up")
         assertGone("Start sleep")
 
-        saveScreen("done-keeps-the-sleep-running")
+        pictureTheScreen("done-keeps-the-sleep-running")
     }
 
     @Test
@@ -132,7 +132,7 @@ class StartSleepShots : Phone() {
         waitUntilGone("Undone")
         assertGone("Undone")
 
-        saveScreen("undoing-a-sleep-start")
+        pictureTheScreen("undoing-a-sleep-start")
     }
 
     @Test
@@ -150,6 +150,6 @@ class StartSleepShots : Phone() {
         waitUntil("Fell asleep reads $started") { showsPart(started) }
         assertShows("Still asleep")
 
-        saveScreen("edit-opens-the-sleep")
+        pictureTheScreen("edit-opens-the-sleep")
     }
 }

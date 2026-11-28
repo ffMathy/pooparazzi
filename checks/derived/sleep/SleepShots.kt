@@ -39,6 +39,6 @@ class SleepShots : Phone() {
         assertShows("Woke up")
         assertGone("Start sleep")
 
-        saveScreen("a-second-tap-within-two-seconds-changes-nothing")
+        pictureTheScreen("a-second-tap-within-two-seconds-changes-nothing")
     }
 }

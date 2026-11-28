@@ -53,6 +53,8 @@ import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performRotaryScrollInput
 import androidx.compose.ui.test.performTouchInput
@@ -309,18 +311,43 @@ abstract class Watch {
         }
         .joinToString("\n")
 
+    /** What a derived check pictures when its scenario ends, as [name].png: the watch's screen ([saveScreen]). */
+    open fun pictureTheScreen(name: String) = saveScreen(name)
+
     /**
      * Saves what the watch shows now as [name].png where an AIL derived check is told to (AIL_SHOTS_DIR, passed on by
-     * scripts/ail/check.sh). End-to-end checks don't call it.
+     * scripts/ail/check.sh), once the screen has settled: a screen still sliding in or out (a swipe to dismiss, a
+     * screen opening or closing) is let finish first ([settle]). End-to-end checks don't call it.
      */
     fun saveScreen(name: String) {
         val dir = listOf(System.getProperty("ail.shots"), System.getenv("AIL_SHOTS_DIR")).firstOrNull { !it.isNullOrBlank() } ?: return
         File(dir).mkdirs()
-        compose.waitForIdle()
+        settle()
         // Roborazzi writes images only while recording, which its Gradle plugin switches on for its own record tasks.
         System.setProperty("roborazzi.test.record", "true")
         captureScreenRoboImage(File(dir, "$name.png").path)
     }
+
+    /**
+     * Lets what is moving on the screen come to rest, without waiting for anything a scenario names: until the screen
+     * has looked the same, pixel for pixel, for two looks in a row, 100 ms apart (the clocks move on as in [pass]), or
+     * [maxMillis] has gone by (Logged's bezel arc drains all the time, so its screen is never still).
+     */
+    fun settle(maxMillis: Long = 1_500) {
+        compose.waitForIdle()
+        var last = look()
+        var still = 0
+        val until = System.currentTimeMillis() + maxMillis
+        while (still < 2 && System.currentTimeMillis() < until) {
+            pass(100)
+            val now = look()
+            still = if (now != null && last != null && now.sameAs(last)) still + 1 else 0
+            last = now
+        }
+    }
+
+    /** The watch's screen as it is drawn now, or nothing when it can't be drawn. */
+    private fun look(): android.graphics.Bitmap? = runCatching { compose.onRoot().captureToImage().asAndroidBitmap() }.getOrNull()
 
     // ---- The watch face and the tile carousel: the Tile, the complications and the Ongoing Activity ------------------
 

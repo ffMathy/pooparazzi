@@ -194,17 +194,52 @@ abstract class Phone {
         .joinToString("\n")
 
     /**
+     * What a derived check pictures when its scenario ends, as [name].png: what the parent is looking at. By default
+     * the app's screen ([saveScreen]); the checks whose scenarios end outside the app's window override it (a widget
+     * on the home screen draws that widget, the shade draws its notifications: checks/e2e/widgets/HomeScreen.kt,
+     * checks/e2e/notifications/Shade.kt). End-to-end checks don't call it.
+     */
+    open fun pictureTheScreen(name: String) = saveScreen(name)
+
+    /** Where a derived check saves its pictures (AIL_SHOTS_DIR, passed on by scripts/ail/check.sh), or nothing. */
+    fun shotsDir(): File? =
+        listOf(System.getProperty("ail.shots"), System.getenv("AIL_SHOTS_DIR")).firstOrNull { !it.isNullOrBlank() }?.let { File(it).apply { mkdirs() } }
+
+    /**
      * Saves what the phone shows now, every window (a sheet over Home included), as [name].png where an AIL derived
-     * check is told to (AIL_SHOTS_DIR, passed on by scripts/ail/check.sh). End-to-end checks don't call it.
+     * check is told to (AIL_SHOTS_DIR, passed on by scripts/ail/check.sh), once the screen has settled: a sheet or
+     * screen still sliding in or out is let finish first ([settle]). End-to-end checks don't call it.
      */
     fun saveScreen(name: String) {
-        val dir = listOf(System.getProperty("ail.shots"), System.getenv("AIL_SHOTS_DIR")).firstOrNull { !it.isNullOrBlank() } ?: return
-        File(dir).mkdirs()
-        compose.waitForIdle()
+        val dir = shotsDir() ?: return
+        settle()
         // Roborazzi writes images only while recording, which its Gradle plugin switches on for its own record tasks.
         System.setProperty("roborazzi.test.record", "true")
         captureScreenRoboImage(File(dir, "$name.png").path)
     }
+
+    /**
+     * Lets what is moving on the screen come to rest, without waiting for anything a scenario names: until everything
+     * on it (every window) has kept its place and its text for two looks in a row, 100 ms apart, or [maxMillis] has
+     * gone by.
+     */
+    fun settle(maxMillis: Long = 1_500) {
+        compose.waitForIdle()
+        var last = layout()
+        var still = 0
+        val until = System.currentTimeMillis() + maxMillis
+        while (still < 2 && System.currentTimeMillis() < until) {
+            pass(100)
+            val now = layout()
+            still = if (now == last) still + 1 else 0
+            last = now
+        }
+    }
+
+    /** Where each thing on the screen is, and what it reads. */
+    private fun layout(): List<String> =
+        compose.onAllNodes(SemanticsMatcher("anything") { true }, useUnmergedTree = true).fetchSemanticsNodes(atLeastOneRootRequired = false)
+            .map { "${it.boundsInWindow} ${it.config.getOrNull(SemanticsProperties.Text)} ${it.config.getOrNull(SemanticsProperties.ContentDescription)}" }
 
     private fun parse(shown: String): LocalTime =
         LocalTime.parse(shown, DateTimeFormatter.ofPattern(if (shown.endsWith("M")) "h:mm a" else "HH:mm", Locale.US))

@@ -9,14 +9,18 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.SizeF
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.RemoteViews
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import org.junit.Assert.assertTrue
 import org.robolectric.Shadows.shadowOf
+import java.io.File
+import java.util.WeakHashMap
 
 /*
  * The phone's home screen, as a launcher runs it, for the widget checks: the widget picker lists the app's widgets by
@@ -62,8 +66,49 @@ fun Phone.placeWidget(name: String, widthDp: Int, heightDp: Int): HomeScreenWidg
     deliverTo(receiver, Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).setComponent(receiver).putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(id)))
     val widget = HomeScreenWidget(id, widthDp, heightDp)
     waitUntilWidget(widget, "the widget \"$name\" to be drawn", 30_000) { widgetTexts(widget).isNotEmpty() }
+    lookingAt[this] = widget
     return widget
 }
+
+/**
+ * Where the parent is looking: the widget they last placed or tapped on the home screen, or nothing once a tap on it
+ * opened the app (the app is in front then).
+ */
+private val lookingAt = WeakHashMap<Phone, HomeScreenWidget?>()
+
+/**
+ * What a widget check pictures when its scenario ends, as [name].png: the home screen with the widget the parent
+ * last placed or tapped, drawn at its size from what the app last sent, alone on a plain wallpaper ([saveWidget]); or
+ * the app's screen ([Phone.saveScreen]) when a tap on the widget opened the app.
+ */
+fun Phone.pictureTheHomeScreen(name: String) = lookingAt[this]?.let { saveWidget(it, name) } ?: saveScreen(name)
+
+/** Saves [widget] as the home screen shows it now, at its size in the middle of a plain wallpaper, as [name].png. */
+fun Phone.saveWidget(widget: HomeScreenWidget, name: String) {
+    val dir = shotsDir() ?: return
+    settle()
+    val density = app.resources.displayMetrics.density
+    val view = widgetView(widget)
+    val activity = compose.activity
+    val homeScreen = FrameLayout(activity).apply {
+        setBackgroundColor(WALLPAPER)
+        isClickable = true
+        addView(view, FrameLayout.LayoutParams((widget.widthDp * density).toInt(), (widget.heightDp * density).toInt(), Gravity.CENTER))
+    }
+    val window = activity.window.decorView as ViewGroup
+    compose.runOnUiThread { window.addView(homeScreen, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)) }
+    try {
+        pass(300)
+        // Roborazzi writes images only while recording, which its Gradle plugin switches on for its own record tasks.
+        System.setProperty("roborazzi.test.record", "true")
+        captureScreenRoboImage(File(dir, "$name.png").path)
+    } finally {
+        compose.runOnUiThread { window.removeView(homeScreen) }
+    }
+}
+
+/** The home screen's wallpaper behind a pictured widget: a plain mid grey, neither the Night nor the Day surface. */
+private const val WALLPAPER = 0xFF6B635B.toInt()
 
 private var nextWidgetId = 100
 
@@ -155,6 +200,7 @@ fun Phone.waitUntilWidget(widget: HomeScreenWidget, what: String, timeoutMillis:
  * the app brought forward on a screen.
  */
 fun Phone.tapWidget(widget: HomeScreenWidget, text: String) {
+    lookingAt[this] = widget
     val root = widgetView(widget)
     val target = find(root) { (it as? TextView)?.text?.toString()?.replace(' ', ' ') == text || it.contentDescription?.toString() == text }
         ?: find(root) { it.contentDescription?.toString()?.startsWith(text) == true }
@@ -163,8 +209,10 @@ fun Phone.tapWidget(widget: HomeScreenWidget, text: String) {
 }
 
 /** Taps [widget] outside its buttons (its background). */
-fun Phone.tapWidgetBackground(widget: HomeScreenWidget) =
+fun Phone.tapWidgetBackground(widget: HomeScreenWidget) {
+    lookingAt[this] = widget
     click(find(widgetView(widget)) { it.hasOnClickListeners() } ?: throw AssertionError("the widget has no background to tap"))
+}
 
 private fun Phone.click(view: View) {
     var clickable: View? = view
@@ -179,6 +227,8 @@ private fun Phone.click(view: View) {
 private fun Phone.openStartedActivity() {
     val started = shadowOf(app).nextStartedActivity ?: shadowOf(compose.activity).nextStartedActivity ?: return
     bringTheAppForward(started)
+    // The app in front now, unless what started was the system's (its permission dialog, asked earlier by the app).
+    if (started.component?.packageName == app.packageName) lookingAt[this] = null
     pass(800)
 }
 

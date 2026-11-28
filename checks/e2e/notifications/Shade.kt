@@ -6,14 +6,23 @@ import android.app.Application
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.pm.PackageManager
+import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkQuery
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import org.junit.Assert.assertTrue
 import org.robolectric.Shadows.shadowOf
+import java.io.File
 import java.util.concurrent.Executors
 
 /*
@@ -68,6 +77,60 @@ fun Phone.shade(): List<ShadeNotification> {
             tag = posted.tag,
             id = posted.id,
         )
+    }
+}
+
+/**
+ * What a notification check pictures when its scenario ends, as [name].png: the shade pulled down over the top of the
+ * app, as the parent sees it. Each notification in it, newest first, is drawn as the system's own template draws it,
+ * expanded (its title, text, expanded lines and buttons), on the shade's card; an empty shade reads "No
+ * notifications". What the app shows stays visible under the shade.
+ */
+fun Phone.pictureTheShade(name: String) {
+    val dir = shotsDir() ?: return
+    settle()
+    val activity = compose.activity
+    val density = activity.resources.displayMetrics.density
+    fun dp(value: Int) = (value * density).toInt()
+    val night = activity.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    val posted = shadowOf(app.getSystemService(NotificationManager::class.java)).activeNotifications.sortedByDescending { it.postTime }
+    val shade = LinearLayout(activity).apply {
+        orientation = LinearLayout.VERTICAL
+        setBackgroundColor(if (night) 0xF2101012.toInt() else 0xF2E9E4EC.toInt())
+        setPadding(dp(12), dp(40), dp(12), dp(16))
+        isClickable = true
+    }
+    val card = if (night) 0xFF2B2930.toInt() else 0xFFFFFFFF.toInt()
+    if (posted.isEmpty()) {
+        shade.addView(TextView(activity).apply {
+            text = "No notifications"
+            setTextColor(if (night) 0xFFE6E1E5.toInt() else 0xFF1D1B20.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            gravity = Gravity.CENTER
+            setPadding(0, dp(24), 0, dp(24))
+        })
+    }
+    for (each in posted) {
+        val builder = Notification.Builder.recoverBuilder(activity, each.notification)
+        val views = builder.createBigContentView() ?: builder.createContentView()
+        val frame = FrameLayout(activity).apply {
+            background = GradientDrawable().apply { setColor(card); cornerRadius = dp(24).toFloat() }
+            clipToOutline = true
+            addView(views.apply(activity, this))
+        }
+        shade.addView(frame, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(8) })
+    }
+    val window = activity.window.decorView as ViewGroup
+    compose.runOnUiThread {
+        window.addView(shade, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP))
+    }
+    try {
+        pass(300)
+        // Roborazzi writes images only while recording, which its Gradle plugin switches on for its own record tasks.
+        System.setProperty("roborazzi.test.record", "true")
+        captureScreenRoboImage(File(dir, "$name.png").path)
+    } finally {
+        compose.runOnUiThread { window.removeView(shade) }
     }
 }
 
