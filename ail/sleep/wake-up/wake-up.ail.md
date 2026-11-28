@@ -41,14 +41,18 @@ node WakeUp : flow   level: experience
       because such sleeps are mis-taps; this removes junk entries without an extra control (DESIGN_SPEC §11)
     decide Undo after Woke up or a cancel makes the sleep run again from its start, and the notice "Undone" shows for two seconds
       because every log can be taken back at once (DESIGN_SPEC §1 "Undo after every log")
+    decide after a cancel, Today's sleep reads "<1m", as Today does whenever nothing was slept (TodayGrid)
+      because "unknown, confirm with the owner": the cancelled sleep is gone and counts nothing, yet "<1m" can read as a short sleep that was kept; keep it, or show "0m"?
     decide going back, like Done, closes the receipt and keeps what it shows
       because the receipt has no timeout and closing it is never a choice to undo (DESIGN_SPEC §3.3.1)
   look
     The receipt is the one StartSleep shows, with the wake icon in sleep.strong and the title "Woke up" (or "Sleep
-      cancelled"); the time line reads the end and how long the baby slept ("3:37 PM · Slept 20m"); a cancel has no
-      nudges and no Edit, so Done stands alone in the last row
+      cancelled"); the time line reads the end and how long the baby slept ("3:37 PM · Slept 20m"); a cancel's reads
+      "Slept <1m" alone, and it has no nudges and no Edit, so Done stands alone in the last row
     Home after waking: the Lamp is back to "Last fed", and the first row under it reads "Awake" over how long since the
       sleep ended
+    Behind a cancel's receipt, Today's sleep reads "<1m", as it does with no sleep at all: the cancelled sleep counts no
+      minutes, but nothing slept is written "<1m", not "0m"
   copy
     receipt.woke        "Woke up"
     receipt.cancelled   "Sleep cancelled"

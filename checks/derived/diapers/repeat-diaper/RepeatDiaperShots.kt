@@ -1,4 +1,4 @@
-// ail-derived-from: RepeatDiaper@5c022649db7e764f
+// ail-derived-from: RepeatDiaper@5bec2e41a4f3ddac
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -18,6 +18,6 @@ class RepeatDiaperShots : RepeatDiaperChecks() {
     @After
     fun pictureTheLastScreen() {
         val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
-        saveScreen(name)
+        pictureTheScreen(name)
     }
 }

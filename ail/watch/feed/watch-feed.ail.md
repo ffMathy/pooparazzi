@@ -27,6 +27,7 @@ node WatchFeed : flow   level: experience
       Given a food feed logged on the watch two seconds ago
       When the parent taps the Feed row and Food again
       Then Logged reads "Food at" the first feed's time over "Already logged", and no second feed is logged
+      And once Logged has closed, Main's Feed row still reads the first feed, "just now"
     Scenario: swiping back from feed type logs nothing
       Given Feed type, opened just now
       When the parent swipes right
@@ -49,7 +50,8 @@ node WatchFeed : flow   level: experience
   look
     Feed type: a list on watch.background under the time text; "Feed · 5:02 PM" in wear.titleMedium color.text, centred;
       Breast, Bottle and Food as full-width buttons in feed.container with wear.labelMedium feed.on.container,
-      radius.watch.button; Just the time an outlined button with the clock icon
+      radius.watch.button; Just the time an outlined button with the clock icon; at rest Food sits at the bottom edge, narrowed
+      and dimmed as the round screen's list morphs its last visible item, and Just the time under it below the fold
   copy
     feedType.title      "Feed · {time}"
     feedType.breast     "Breast"

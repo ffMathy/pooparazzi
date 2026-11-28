@@ -30,10 +30,12 @@ node Appearance : flow   level: experience
     decide the three are one connected choice group; the night window and "Dim for naps too" are not offered in Settings
       because "unknown, confirm with the owner"
   look
-    A connected choice group of three equal segments, Auto, Night and Day, in type.labelLarge; the chosen one filled
-      color.primary.container with color.on.primary.container text, the others color.surface.container with color.text; the hint
+    A connected choice group of three equal segments, 48dp tall and 2dp apart, the group's outer corners 20dp and the inner
+      6dp, each with a 1dp color.outline border, labels in type.labelLarge; the chosen one filled color.primary.container with
+      a 16dp check before its label in color.on.primary.container; the others have no fill (the page shows through) and
+      color.text labels; the hint
       under it in type.bodySmall color.text.dim, 8dp below. In Day the screen turns day.background with day.text and
-      day.text.dim
+      day.text.dim, the outlines and the chosen segment's fill taking the Day theme's lighter counterparts
   copy
     auto    "Auto"     ; da "Auto"
     night   "Night"    ; da "Nat"

@@ -1,4 +1,4 @@
-// ail-derived-from: WatchLogged@4c126603e5929359
+// ail-derived-from: WatchLogged@6ca6753e8bfa1306
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test

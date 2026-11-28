@@ -1,4 +1,4 @@
-// ail-derived-from: QuickWidget@c4591efc6c4aa4f7
+// ail-derived-from: QuickWidget@058a728f52c399af
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals
@@ -6,6 +6,9 @@ import org.junit.Test
 
 /** End-to-end check for QuickWidget: the 3×1 widget at its sizes, on the real phone app. */
 open class QuickWidgetChecks : Phone() {
+    /** Its scenarios end on the phone's home screen, so a derived check pictures the widget there, not the app. */
+    override fun pictureTheScreen(name: String) = pictureTheHomeScreen(name)
+
     @Test
     fun `the quick widget shows three labelled buttons`() {
         freshInstall()

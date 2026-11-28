@@ -1,4 +1,4 @@
-// ail-derived-from: LogWidget@d4300fe7ef4e4e48
+// ail-derived-from: LogWidget@b9b2c88bf4276232
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals
@@ -7,6 +7,9 @@ import org.junit.Test
 
 /** End-to-end check for LogWidget: the 4×2 widget's buttons and their lines, on the real phone app. */
 open class LogWidgetChecks : Phone() {
+    /** Its scenarios end on the phone's home screen, so a derived check pictures the widget there, not the app. */
+    override fun pictureTheScreen(name: String) = pictureTheHomeScreen(name)
+
     @Test
     fun `a new widget has nothing to show yet`() {
         freshInstall()

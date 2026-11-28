@@ -1,4 +1,4 @@
-// ail-derived-from: SleepNotification@c17f05441902f2ec
+// ail-derived-from: SleepNotification@f0f2100550ff40f9
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals
@@ -7,6 +7,9 @@ import org.junit.Test
 
 /** End-to-end check for SleepNotification: the running sleep in the shade, and its Woke up. */
 open class SleepNotificationChecks : Phone() {
+    /** Its scenarios end in the notification shade, so a derived check pictures the shade over the app. */
+    override fun pictureTheScreen(name: String) = pictureTheShade(name)
+
     @Test
     fun `the notification of a running sleep`() {
         freshInstall()

@@ -1,4 +1,4 @@
-// ail-derived-from: WakeUp@5cdd526b04f464f7
+// ail-derived-from: WakeUp@ed92e347798f21fe
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertTrue
@@ -36,7 +36,7 @@ class WakeUpShots : Phone() {
         waitFor("Awake")
         assertShows("Awake")
 
-        saveScreen("waking-up")
+        pictureTheScreen("waking-up")
     }
 
     @Test
@@ -55,7 +55,7 @@ class WakeUpShots : Phone() {
         waitFor("Woke up")
         assertShows("Woke up")
 
-        saveScreen("undoing-a-wake-up")
+        pictureTheScreen("undoing-a-wake-up")
     }
 
     @Test
@@ -73,7 +73,7 @@ class WakeUpShots : Phone() {
         waitFor("Awake")
         assertShows("Awake")
 
-        saveScreen("going-back-from-the-receipt-keeps-the-log")
+        pictureTheScreen("going-back-from-the-receipt-keeps-the-log")
     }
 
     @Test
@@ -101,7 +101,7 @@ class WakeUpShots : Phone() {
         waitFor("Start sleep")
         assertShows("Start sleep")
 
-        saveScreen("a-sleep-ended-within-a-minute-is-cancelled")
+        pictureTheScreen("a-sleep-ended-within-a-minute-is-cancelled")
     }
 
     @Test
@@ -121,6 +121,6 @@ class WakeUpShots : Phone() {
         waitFor("Woke up")
         assertShows("Woke up")
 
-        saveScreen("undoing-a-cancelled-sleep")
+        pictureTheScreen("undoing-a-cancelled-sleep")
     }
 }

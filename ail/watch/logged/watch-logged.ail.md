@@ -59,13 +59,16 @@ node WatchLogged : flow   level: experience
       because logging never needs the phone, and the watch never shows a dead-end "check connection" (DESIGN_SPEC §3.5.11)
     decide the first log after a new install has no sync icon on its Logged; the icon appears from a later log, once the watch has tried to reach the phone
       because "unknown, confirm with the owner"
+    decide the sync icon sits under the time pill, partly behind the Undo edge button
+      because "unknown, confirm with the owner": the icon is drawn whole but the edge button covers its lower part on a 227dp watch; keep it there, or move it clear of Undo?
     decide if Undo would resume a sleep another sleep now overlaps, nothing changes and Main is back
       because sleeps never overlap (wear/…/MainViewModel.kt; commit c043766)
   look
     Logged: no time text; a 270° bezel arc in color.outline, open at the bottom, draining clockwise; the check circle in
       the event's container with the check in its strong colour; the title in wear.titleLarge color.text with the time
       in the event's colour (feed.strong, diaper.text, sleep.text) on a pill of watch.surface.container, radius.watch.pill,
-      after the clock icon; a second line in wear.bodyMedium color.text.dim; the sync icon in color.text.dim; Undo as a
+      after the clock icon; a second line in wear.bodyMedium color.text.dim; the sync icon in color.text.dim, centred under the
+      pill, where the top edge of Undo covers its lower part, so only its top shows; Undo as a
       size.edge.small edge button in watch.surface.container with the undo icon and "Undo" in wear.labelMedium color.text
     Undone: the undo icon in color.text.dim over "Undone" in wear.titleLarge color.text, centred, no time text
   copy

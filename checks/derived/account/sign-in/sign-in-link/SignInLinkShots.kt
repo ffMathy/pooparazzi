@@ -1,4 +1,4 @@
-// ail-derived-from: SignInLink@7bb2152c54a69556
+// ail-derived-from: SignInLink@f80d6a22517e81de
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -18,6 +18,6 @@ class SignInLinkShots : SignInLinkChecks() {
     @After
     fun pictureTheLastScreen() {
         val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
-        saveScreen(name)
+        pictureTheScreen(name)
     }
 }

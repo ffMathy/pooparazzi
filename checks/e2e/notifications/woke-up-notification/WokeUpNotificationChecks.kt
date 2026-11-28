@@ -1,4 +1,4 @@
-// ail-derived-from: WokeUpNotification@fd4a829a02c340b9
+// ail-derived-from: WokeUpNotification@9a6d2dbf4e28b0c1
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals
@@ -7,6 +7,9 @@ import org.junit.Test
 
 /** End-to-end check for WokeUpNotification: "Woke up at …" and its Earlier offsets, from the shade. */
 open class WokeUpNotificationChecks : Phone() {
+    /** Its scenarios end in the notification shade, so a derived check pictures the shade over the app. */
+    override fun pictureTheScreen(name: String) = pictureTheShade(name)
+
     @Test
     fun `the woke-up notification`() {
         freshInstall()

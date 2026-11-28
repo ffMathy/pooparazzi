@@ -39,8 +39,11 @@ node SleepNotification : flow   level: experience
     decide feeds are never running notifications
       because feeds are instants (V1_ADDITIONS §2.1)
   look
-    The system's notification: the small sleepRunning icon, the title, the text, and expanded the lines in order, one a line;
-      the Woke up button with the wake icon
+    The system's notification, as its own template draws it in the shade: the small sleepRunning icon in a filled circle
+      and the app's name, the title, the text, and expanded the lines in order, one a line; under them the Woke up button,
+      drawn by the system as its label alone in the accent colour (capitals on this system, "WOKE UP"; the wake icon the app
+      gives it is not shown). After a wake-up the shade holds the woke-up notification instead, and
+      after a cancel it is empty; the app stays visible under the shade
   copy
     title               "Asleep"
     title.named         "{name} is asleep"

@@ -1,4 +1,4 @@
-// ail-derived-from: CoverWidget@2d050f91b023c431
+// ail-derived-from: CoverWidget@d5b40d342897885d
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -18,6 +18,6 @@ class CoverWidgetShots : CoverWidgetChecks() {
     @After
     fun pictureTheLastScreen() {
         val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
-        saveScreen(name)
+        pictureTheScreen(name)
     }
 }

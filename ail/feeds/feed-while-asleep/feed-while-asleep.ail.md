@@ -30,7 +30,7 @@ node FeedWhileAsleep : flow   level: experience
     Scenario: a feed seconds after the sleep began cancels it
       Given a sleep started 20 minutes ago, and the Feed sheet opened seconds later and nudged back 20 minutes
       When the parent taps Food
-      Then the sleep is gone: the sleep button reads "Start sleep", Home shows no "Awake" row, and Today counts no sleep
+      Then the sleep is gone: the sleep button reads "Start sleep", Home shows no "Awake" row, and Today counts no sleep, its sleep reading "<1m" as with nothing slept
   how
     decide a feed whose time is after the running sleep's start first ends the sleep at that time, as Woke up would; one at or before the start leaves it running
       because a feeding baby is awake, and a feed logged late must not end a sleep it came before (DESIGN_SPEC §4.4 "Awake on a log")
@@ -40,9 +40,13 @@ node FeedWhileAsleep : flow   level: experience
       because the 60 s rule is the one rule for every end of a sleep (V1_ADDITIONS §1 "Mis-taps")
     decide a feed nudged back to the sleep's own minute cancels the sleep instead of ending it: its time keeps the seconds of the Feed tap, so it lands seconds after the start
       because "unknown, confirm with the owner": is cancelling the sleep wanted here, or should such a feed leave the sleep running?
+    decide Today then reads "<1m" sleep, as it does whenever nothing was slept (TodayGrid)
+      because "unknown, confirm with the owner": the cancelled sleep counts nothing, yet "<1m" can read as a short sleep that was kept; keep it, or show "0m"?
     decide the phone then posts the woke-up notification for that sleep
       because a parent elsewhere should learn the baby is awake (DESIGN_SPEC §4.4, §10.5); the notifications are their own slice
   look
+    Home after a cancelled sleep: no "Awake" row, the sleep button "Start sleep", and Today's sleep "<1m", as with
+      nothing slept
     The note: a row under the nudges, 8dp below them, the wake icon 18dp in sleep.strong and the text in type.bodyMedium
       color.text.dim; it is announced when it appears or goes
   copy

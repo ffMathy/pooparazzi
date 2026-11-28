@@ -1,4 +1,4 @@
-// ail-derived-from: SignInLink@7bb2152c54a69556
+// ail-derived-from: SignInLink@f80d6a22517e81de
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Test

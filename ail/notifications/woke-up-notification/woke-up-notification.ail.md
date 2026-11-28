@@ -35,8 +35,11 @@ node WokeUpNotification : flow   level: experience
     decide it is silent, can be swiped away, goes by itself after 30 minutes, and is cancelled when a sleep runs again (a new sleep, or the wake-up undone in the app)
       because after that the wake-up is fixed in History (DESIGN_SPEC §3.3.7)
   look
-    The system's notification: the small wake icon, the title and text, and the three buttons, each with the clock icon (the
-      selected one with the check)
+    The system's notification, as its own template draws it in the shade, expanded: the small wake icon in a filled circle
+      and the app's name, the title, the text, then the day's line ("Today · 0 feeds · 0 pee · 0 poop · 20m sleep", as
+      the running sleep's), and the buttons that fit after the start in a row, each drawn by the system as its label alone
+      in the accent colour (capitals on this system, "−5M"; the clock icon the app gives them is not shown), the selected
+      one starting with the check
   copy
     title               "Woke up at {time}"
     title.named         "{name} woke up at {time}"

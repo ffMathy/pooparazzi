@@ -1,4 +1,4 @@
-// ail-derived-from: RepeatDiaper@5c022649db7e764f
+// ail-derived-from: RepeatDiaper@5bec2e41a4f3ddac
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertTrue

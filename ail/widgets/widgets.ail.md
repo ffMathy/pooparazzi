@@ -54,7 +54,7 @@ node Widgets : flow   level: experience
     decide a widget's write reaches the watch's Data Layer before its tap returns
       because the phone may freeze the app right after a widget tap (commit 97abb7c)
   look
-    Each widget is a rounded panel in the app's surface colour (color.background at night) with the system's widget corner;
+    Each widget is a rounded panel in color.surface.container (at night) with the system's widget corner;
       its buttons are radius 20dp, 8dp apart, Feed in feed.container with the feed icon in feed.strong, Diaper in
       diaper.container with the diaper icon in diaper.strong, the sleep button in sleep.container with the moon in
       sleep.strong; asleep, the sleep button is sleep.lit with a 2dp sleep.strong border and the wake icon

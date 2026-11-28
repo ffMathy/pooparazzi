@@ -1,4 +1,4 @@
-// ail-derived-from: LogWidget@d4300fe7ef4e4e48
+// ail-derived-from: LogWidget@b9b2c88bf4276232
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -18,6 +18,6 @@ class LogWidgetShots : LogWidgetChecks() {
     @After
     fun pictureTheLastScreen() {
         val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
-        saveScreen(name)
+        pictureTheScreen(name)
     }
 }

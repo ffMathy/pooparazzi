@@ -47,7 +47,7 @@ node SignedIn : flow   level: experience
   look
     Under the top bar, inside gutter.phone: "Signed in as" in type.labelMedium color.text.dim over the address in
       type.titleMedium color.text and the status in type.dataMedium color.text.dim; "Back up now" filled
-      color.primary.container, "Sign out" outlined, the hint in type.bodySmall color.text.dim, and "Delete account…" as a
+      color.primary.container, "Sign out" outlined, the hint in type.bodyMedium color.text.dim, and "Delete account…" as a
       text button in color.error; the confirmation in place of the buttons, its title in type.titleLarge color.text, its
       body in type.bodyMedium color.text.dim, Cancel and the confirming button (color.error)
   copy

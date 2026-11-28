@@ -1,4 +1,4 @@
-// ail-derived-from: WatchSide@871c05d941a10ee7
+// ail-derived-from: WatchSide@826d5d03f59064a8
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -18,6 +18,6 @@ class WatchSideShots : WatchSideChecks() {
     @After
     fun pictureTheLastScreen() {
         val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
-        saveScreen(name)
+        pictureTheScreen(name)
     }
 }

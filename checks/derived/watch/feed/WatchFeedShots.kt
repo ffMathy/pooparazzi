@@ -1,4 +1,4 @@
-// ail-derived-from: WatchFeed@0fb3c27ee5a80851
+// ail-derived-from: WatchFeed@54c33c8e881959d5
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -18,6 +18,6 @@ class WatchFeedShots : WatchFeedChecks() {
     @After
     fun pictureTheLastScreen() {
         val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
-        saveScreen(name)
+        pictureTheScreen(name)
     }
 }

@@ -35,9 +35,11 @@ node QuickWidget : flow   level: experience
     decide it keeps the receiver it had as a 2×1 (Feed and Sleep)
       because placed widgets must survive the update that added Diaper (DESIGN_SPEC §3.3.6)
   look
-    At 260 × 100: padding 12dp, three buttons 8dp apart, radius 20dp, each a 24dp icon over its label in 14sp in the button's
+    The widget is pictured alone on the home screen's wallpaper: a panel in color.surface.container with the system's widget
+      corner. At 260 × 100: padding 12dp, three buttons 8dp apart, radius 20dp, each a 24dp icon over its label in 14sp in the button's
       on-container colour, Feed in feed.container, Diaper in diaper.container, the sleep button in sleep.container (asleep:
-      sleep.lit with a 2dp sleep.strong border and the wake icon)
+      sleep.lit with a 2dp sleep.strong border and the wake icon), "Start sleep" wrapping onto two lines; at 180 × 100 the same
+      three buttons, each its 24dp icon alone
   copy
     label.feed          "Feed"
     label.diaper        "Diaper"

@@ -12,7 +12,7 @@ node WatchSide : flow   level: experience
       Given Feed type, opened just now
       When the parent taps Breast
       Then Side reads "Which side?" over the time of the Feed tap, spoken "Breast," and that time
-      And Left and Right are unticked over "No side", with Save
+      And Left and Right are unticked, with Save; the order line under them reads "No side", behind Save until the list is scrolled
     Scenario: ticking both sides records their order
       Given Side, opened just now
       When the parent ticks Left and then Right
@@ -22,7 +22,7 @@ node WatchSide : flow   level: experience
     Scenario: unticking a side moves the other one first
       Given Side with Left and then Right ticked
       When the parent unticks Left
-      Then Right is ticked first, spoken "Right, first", and the order line reads "Right"
+      Then Right is ticked first, spoken "Right, first", and the order line behind Save reads "Right"
     Scenario: saving a breast feed with no side
       Given Side, opened just now
       When the parent taps Save
@@ -38,12 +38,15 @@ node WatchSide : flow   level: experience
       because only the time is ever required (V1_ADDITIONS §2.2)
     decide the arrow is shown, never spoken: TalkBack reads "Left then right"; on Logged no-break spaces hold it to both sides
       because TalkBack never reads arrows, a "+" or dashes (DESIGN_SPEC §9.4), and the order must never break onto two lines (wear/…/ui/WatchText.kt)
+    decide the order line is the list's last item, under Right: at rest it sits below the fold, behind Save, and shows only once the list is scrolled
+      because "unknown, confirm with the owner": the list was tightened so that the title and both checkboxes clear Save on a 227dp watch (SideScreen.kt); should the order line show without scrolling?
     decide every target ignores taps for 500 ms when Side appears
       because a double tap on Breast must not land on Left (DESIGN_SPEC §5.9)
   look
     Side: "Which side?" in wear.titleMedium color.text over "Breast · 5:04 PM"; Left and Right as full-width checkbox
       buttons in feed.container, lit feed.lit with the box in feed.strong when ticked, the place in a feed.strong badge;
-      the order line in wear.bodyMedium color.text.dim; Save as a size.edge.medium edge button in color.primary.container
+      the order line under Right, centred, in wear.labelMedium, color.text.dim for "No side" and feed.text for a side; at rest it is
+      below the fold, hidden behind Save, so the screen at rest shows the title, Left, Right and Save only; Save as a size.edge.medium edge button in color.primary.container
       with the check icon and "Save" in color.on.primary.container
   copy
     side.title        "Which side?"

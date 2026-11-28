@@ -1,4 +1,4 @@
-// ail-derived-from: Widgets@6c6ed1df869bfbbf
+// ail-derived-from: Widgets@b32be72879b79053
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -18,6 +18,6 @@ class WidgetsShots : WidgetsChecks() {
     @After
     fun pictureTheLastScreen() {
         val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
-        saveScreen(name)
+        pictureTheScreen(name)
     }
 }

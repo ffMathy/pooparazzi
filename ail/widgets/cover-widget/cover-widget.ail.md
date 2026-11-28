@@ -25,9 +25,12 @@ node CoverWidget : flow   level: experience
     decide refreshes go to every placed widget by its provider's ids
       because the cover screen never asks for an update, and would never be drawn otherwise (DESIGN_SPEC §3.3.6)
   look
-    352 × 339, padding 12dp: the 48dp status row, then Feed, Diaper and the sleep button stacked 8dp apart, each a full-width
+    The widget is pictured alone on the home screen's wallpaper: a panel in color.surface.container with the system's widget
+      corner. 352 × 339, padding 12dp: the 48dp status row (empty, or after a log a 16dp check icon, the receipt in
+      color.text and Undo with its icon at the end), then Feed, Diaper and the sleep button stacked 8dp apart, each a full-width
       radius 20dp row in its container colour (feed.container, diaper.container, sleep.container) with a 24dp icon 20dp from
-      its start, 14dp, then the label in 16sp over its lines in 13sp
+      its start, 14dp, then the label in 16sp over its lines in 13sp; asleep, the sleep button is sleep.lit with a 2dp
+      sleep.strong border and the wake icon
   copy
     picker.cover        "Cover screen"
     receipt.started     "Sleep started at {time}"

@@ -38,7 +38,7 @@ node SignInLink : flow   level: experience
       because the checks run one phone on the local Firebase emulators (docs/BACKEND.md › Running the app against the emulators)
   look
     The address prompt in place of the email form, in type.bodyMedium color.text.dim, over the Email field and "Sign in"
-      filled color.primary.container; the error in type.bodySmall color.error under the field
+      filled color.primary.container; the error in type.bodyMedium (the size of the prompt) color.error under the field
   copy
     needsEmail   "To finish signing in, enter the email address the link was sent to."
     signIn       "Sign in"

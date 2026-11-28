@@ -1,4 +1,4 @@
-// ail-derived-from: FeedWhileAsleep@0d00cc3aa4385a34
+// ail-derived-from: FeedWhileAsleep@0d8e4c16a5cbe295
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.Assert.assertEquals

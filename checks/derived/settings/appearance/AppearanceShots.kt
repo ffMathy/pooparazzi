@@ -1,4 +1,4 @@
-// ail-derived-from: Appearance@56de240bdf219c84
+// ail-derived-from: Appearance@321d318f1e9e3089
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -18,6 +18,6 @@ class AppearanceShots : AppearanceChecks() {
     @After
     fun pictureTheLastScreen() {
         val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
-        saveScreen(name)
+        pictureTheScreen(name)
     }
 }

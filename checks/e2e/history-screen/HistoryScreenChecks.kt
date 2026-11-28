@@ -1,4 +1,4 @@
-// ail-derived-from: HistoryScreen@3d39a73da09ca63e
+// ail-derived-from: HistoryScreen@fb20a929c55a2b79
 package com.ffmathy.pooparazzi.checks
 
 import java.time.LocalTime
@@ -53,6 +53,8 @@ open class HistoryScreenChecks : Phone() {
         assertCannotTap("Previous day")
         tap("Next day")
         waitFor(historyDay(daysAgo(0)))
+        assertShows("Nothing logged on this day.")
+        assertCanTap("Previous day")
     }
 
     @Test

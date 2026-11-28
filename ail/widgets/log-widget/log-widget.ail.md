@@ -46,10 +46,16 @@ node LogWidget : flow   level: experience
     decide a 2×2 or smaller is the same widget without the status row, so its taps log without a receipt
       because "a 2×2 falls back to the 4×2 content without the status row" (DESIGN_SPEC §10.11)
   look
-    The 4×2 at 358 × 208: padding 12dp; the 48dp status row (receipt or notice text 15sp color.text after a 16dp check icon in
+    The widget is pictured alone on the home screen's wallpaper: a panel in color.surface.container with the system's widget
+      corner. The 4×2 at 358 × 208: padding 12dp; the 48dp status row (receipt or notice text 15sp color.text after a 16dp check icon in
       color.text.dim, Undo in color.primary at the end); under it the three buttons side by side, 8dp apart, radius 20dp, each
       a 24dp icon over its label in 15sp, then the history and upcoming lines in 12sp after 12dp icons, in the button's
-      on-container colour (feed.on.container, diaper.on.container, sleep.on.container)
+      on-container colour (feed.on.container, diaper.on.container, sleep.on.container); the lines and the icons centred in their
+      buttons; a button with fewer lines gets blank ones, so the three keep the same number of lines and their icons and labels
+      stay level; asleep, the sleep
+      button is sleep.lit with a 2dp sleep.strong border and the wake icon
+    Lower than 180dp (240 × 130) the same buttons fill the panel with no status row, a label that needs two lines ("Woke up")
+      wrapping; at 120 × 100 the three buttons are narrow, each its 24dp icon alone
   copy
     label.feed          "Feed"
     label.diaper        "Diaper"

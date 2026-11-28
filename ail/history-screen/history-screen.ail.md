@@ -36,7 +36,9 @@ node HistoryScreen : flow   level: experience
       When the parent taps Previous day
       Then the day reads "Yesterday ·" and yesterday's short date, and the counts "1h 00m" sleep
       And the list reads "Sleep · 1h 00m" over "1:00 PM – 2:00 PM", spoken "Sleep, 1 hour, 1:00 PM to 2:00 PM"
-      And Previous day can't be tapped, and Next day goes back to today
+      And Previous day can't be tapped
+      When the parent taps Next day
+      Then the day reads "Today ·" and today's short date again, its list "Nothing logged on this day.", and Previous day can be tapped
     Scenario: a sleep across midnight is listed on both days
       Given a sleep from 10:00 PM two days ago to 2:00 AM yesterday
       Then yesterday lists "Sleep · 4h 00m" over the start's short weekday, "10:00 PM – 2:00 AM", and counts "2h 00m" sleep
@@ -54,7 +56,7 @@ node HistoryScreen : flow   level: experience
       because the stats row stays the same: feeds · pee · poop · sleep (V1_ADDITIONS §4)
     decide a sleep is listed on each day it touches, as one row with its whole length and range; the day it ended on writes the start's short weekday first ("Wed 10:00 PM – 2:00 AM"); each day counts only its own minutes
       because a day prefix appears only when an entry starts on another day, and a sleep crossing midnight is one bar flush at 00:00 (DESIGN_SPEC §3.3.3, §4.4, §7)
-    decide row titles: "Sleep · 47m", "Feed", "Breast · Left → Right", "Bottle · Milk", "Food", "Pee", "Poop", "Pee + poop" (spoken "Pee and poop"), "Diaper"; instants show their time at the end, a sleep its range under the title
+    decide row titles: "Sleep · 47m", "Feed", "Breast · Left → Right", "Bottle · Milk", "Food", "Pee", "Poop", "Pee + poop" (spoken "Pee and poop"), "Diaper"; every row has a second line under its title: an instant its time, a sleep its range
       because receipts and History write Both as "Pee + poop" (DESIGN_SPEC §4.2; V1_ADDITIONS §4)
     decide the ribbon is decorative, with one spoken summary of the day's counts
       because it is not tappable, and the counts say it in words (DESIGN_SPEC §3.3.3, §9.4)
@@ -70,7 +72,8 @@ node HistoryScreen : flow   level: experience
     The counts: four columns, numbers in type.titleLarge color.text over captions in type.labelSmall color.text.dim; then the
       heading ("Today", "Yesterday" or the date) in type.labelMedium color.text.dim
     Rows: 56dp, 2dp apart, fill color.surface.container, the group's outer corners 20dp and inner 6dp; a 40dp shape-coded
-      avatar, the title in type.titleMedium, the time or range in type.dataMedium color.text.dim. The extended FAB "Add entry"
+      avatar, then the title in type.titleMedium over the time (an instant) or the range (a sleep) in type.dataMedium
+      color.text.dim, both start-aligned. The extended FAB "Add entry"
       at the bottom end, fill color.primary.container, 16dp corners
   copy
     history.title       "History"

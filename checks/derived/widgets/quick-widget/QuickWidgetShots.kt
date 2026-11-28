@@ -1,4 +1,4 @@
-// ail-derived-from: QuickWidget@c4591efc6c4aa4f7
+// ail-derived-from: QuickWidget@058a728f52c399af
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -18,6 +18,6 @@ class QuickWidgetShots : QuickWidgetChecks() {
     @After
     fun pictureTheLastScreen() {
         val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
-        saveScreen(name)
+        pictureTheScreen(name)
     }
 }

@@ -12,14 +12,15 @@ node RepeatDiaper : flow   level: experience
       Given a pee saved from the Diaper sheet a moment ago
       When the parent saves a pee again, within five seconds of the first
       Then the notice reads "Pee" over "Already logged at" the first change's time
-      And Today still counts 1 pee
+      And two seconds later the notice is gone, and Today is back in its place, still counting 1 pee
   how
     decide two diapers of the same kind (Pee, Poop, Both or a plain change) less than 5 s apart are one; the first is kept
       because one change logged twice, from any surface, must be one entry (DESIGN_SPEC §4.4 Dedupe)
     decide a repeat shows "Already logged at <time>" under the kind's name for 2 s, in place of Today
       because no rule is silent (DESIGN_SPEC §3.3.1 notice card, §5.12)
   look
-    The notice as for a repeated feed (RepeatFeed), with the diaper kind's icon and name
+    The notice as for a repeated feed (RepeatFeed), with the diaper kind's icon and name, for two seconds; then Today again
+      in its place, unchanged
   copy
     notice.repeat       "Already logged at {time}"
   uses      Diapers, RepeatFeed
