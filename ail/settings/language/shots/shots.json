@@ -1,0 +1,13 @@
+{
+  "node": "Language",
+  "shots": [
+    {
+      "test": "a new install follows the phone's language",
+      "file": "01-a-new-install-follows-the-phone-s-language.png"
+    },
+    {
+      "test": "choosing dansk",
+      "file": "02-choosing-dansk.png"
+    }
+  ]
+}

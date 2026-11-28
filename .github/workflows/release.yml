@@ -112,6 +112,20 @@ jobs:
       - name: Set up Gradle (with cache)
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+      # The AIL account checks (checks/e2e/account) run the app against the Firebase emulators (ail.config.json's
+      # service "firebase"); they run with the unit tests, so the emulators start first.
+      - name: Start the Firebase emulators
+        run: |
+          nohup scripts/ail/firebase-emulators.sh > "$RUNNER_TEMP/firebase-emulators.log" 2>&1 &
+          for _ in $(seq 1 150); do
+            curl -sf http://127.0.0.1:9099/ >/dev/null && curl -sf http://127.0.0.1:8080/ >/dev/null && exit 0
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/firebase-emulators.log"; exit 1
+
       # Robolectric's android-all jars come from the Maven Central mirror set for every Test task in the root
       # build.gradle.kts (robolectric.dependency.repo.url / .id).
       - name: Unit tests

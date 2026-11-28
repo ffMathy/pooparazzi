@@ -1,0 +1,17 @@
+{
+  "node": "TodayGrid",
+  "shots": [
+    {
+      "test": "Today before anything is logged",
+      "file": "01-today-before-anything-is-logged.png"
+    },
+    {
+      "test": "Today counts what was logged today",
+      "file": "02-today-counts-what-was-logged-today.png"
+    },
+    {
+      "test": "tapping Today opens History",
+      "file": "03-tapping-today-opens-history.png"
+    }
+  ]
+}

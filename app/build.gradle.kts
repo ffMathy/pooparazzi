@@ -51,7 +51,15 @@ android {
         }
     }
     buildTypes {
+        // The local Firebase emulators instead of a real project (FirebaseEmulators, docs/BACKEND.md › Running the app
+        // against the emulators): debug builds only, from -Ppooparazzi.firebase.emulators=<host>; release builds never.
+        debug {
+            val emulators = providers.gradleProperty("pooparazzi.firebase.emulators").orElse("").get()
+            require(emulators.matches(Regex("[A-Za-z0-9.:-]*"))) { "pooparazzi.firebase.emulators: host or host:authPort:firestorePort" }
+            buildConfigField("String", "FIREBASE_EMULATORS", "\"$emulators\"")
+        }
         release {
+            buildConfigField("String", "FIREBASE_EMULATORS", "\"\"")
             // R8 and resource shrinking (the watch's fonts and unused Material resources stay out of the APK).
             isMinifyEnabled = true
             isShrinkResources = true
@@ -76,12 +84,30 @@ android {
     // The font licences shown in Settings › About › Font licences, packaged from the single copy in third_party/
     // (assets/fonts/*-OFL.txt).
     sourceSets.getByName("main").assets.directories.add(rootProject.file("third_party").path)
+    // The AIL checks (ail.config.json): the end-to-end checks (checks/e2e) and the derived checks that picture each node
+    // (checks/derived) drive the real app on Robolectric, like these tests.
+    sourceSets.getByName("test").kotlin.directories.add(rootProject.file("checks/e2e").path)
+    sourceSets.getByName("test").kotlin.directories.add(rootProject.file("checks/derived").path)
     testOptions {
         unitTests.isIncludeAndroidResources = true
         // Hermetic unit tests: Firebase never starts in them, even on a machine with app/google-services.json
         // (AppAccounts). Tests that need accounts install a fake.
         unitTests.all { it.systemProperty("pooparazzi.accounts.disabled", "true") }
+        // Where an AIL derived check saves each scenario's last screen (scripts/ail/check.sh); empty: nowhere.
+        val ailShots = providers.gradleProperty("ail.shots").orElse("").get()
+        unitTests.all { it.systemProperty("ail.shots", ailShots) }
+        // A derived check (checks/derived, class <Node>Shots) plays its node's scenarios again to picture them: only
+        // ail runs it (scripts/ail/check.sh derived passes ail.derived), never the plain test task, so CI plays each
+        // scenario once.
+        val ailDerived = providers.gradleProperty("ail.derived").isPresent
+        unitTests.all { if (!ailDerived) it.exclude("**/*Shots.class", "**/*Shots$*.class") }
     }
+}
+
+// The watch's AIL checks (checks/e2e/watch, checks/derived/watch) drive the watch app: they are :wear's tests
+// (wear/build.gradle.kts), never :app's.
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    if (name.contains("UnitTest")) exclude("watch/**")
 }
 
 // The invite and email sign-in App Links exist only with a Firebase configuration: without one there is no site to

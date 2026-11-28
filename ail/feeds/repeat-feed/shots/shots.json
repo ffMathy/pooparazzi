@@ -1,0 +1,13 @@
+{
+  "node": "RepeatFeed",
+  "shots": [
+    {
+      "test": "the same feed again within five seconds",
+      "file": "01-the-same-feed-again-within-five-seconds.png"
+    },
+    {
+      "test": "another type within five seconds is a feed of its own",
+      "file": "02-another-type-within-five-seconds-is-a-feed-of-its-own.png"
+    }
+  ]
+}

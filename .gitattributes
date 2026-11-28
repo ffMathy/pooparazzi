@@ -1,0 +1,3 @@
+# AIL: generated code and the lock file stay committed, but GitHub collapses them in pull request diffs.
+core/src/main/kotlin/com/ffmathy/pooparazzi/core/ail/** linguist-generated=true
+ail.lock.json linguist-generated=true

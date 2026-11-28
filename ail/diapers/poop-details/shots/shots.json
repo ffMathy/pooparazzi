@@ -1,0 +1,25 @@
+{
+  "node": "PoopDetails",
+  "shots": [
+    {
+      "test": "poop reveals its colour and texture",
+      "file": "01-poop-reveals-its-colour-and-texture.png"
+    },
+    {
+      "test": "red poop shows the doctor hint",
+      "file": "02-red-poop-shows-the-doctor-hint.png"
+    },
+    {
+      "test": "black and pale poop show the hint, other colours don't",
+      "file": "03-black-and-pale-poop-show-the-hint-other-colours-don-t.png"
+    },
+    {
+      "test": "unticking poop clears its details",
+      "file": "04-unticking-poop-clears-its-details.png"
+    },
+    {
+      "test": "saving a poop with its details",
+      "file": "05-saving-a-poop-with-its-details.png"
+    }
+  ]
+}

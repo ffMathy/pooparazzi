@@ -45,7 +45,21 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true }
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    // The watch's AIL checks (ail.config.json): its end-to-end checks (checks/e2e/watch) and the derived checks that
+    // picture each watch node (checks/derived/watch) drive the real watch app on Robolectric, like these tests.
+    sourceSets.getByName("test").kotlin.directories.add(rootProject.file("checks/e2e/watch").path)
+    sourceSets.getByName("test").kotlin.directories.add(rootProject.file("checks/derived/watch").path)
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        // Where an AIL derived check saves each scenario's last screen (scripts/ail/check.sh); empty: nowhere.
+        val ailShots = providers.gradleProperty("ail.shots").orElse("").get()
+        unitTests.all { it.systemProperty("ail.shots", ailShots) }
+        // A derived check (checks/derived, class <Node>Shots) plays its node's scenarios again to picture them: only
+        // ail runs it (scripts/ail/check.sh derived passes ail.derived), never the plain test task, so CI plays each
+        // scenario once.
+        val ailDerived = providers.gradleProperty("ail.derived").isPresent
+        unitTests.all { if (!ailDerived) it.exclude("**/*Shots.class", "**/*Shots$*.class") }
+    }
 }
 
 dependencies {

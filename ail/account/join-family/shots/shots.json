@@ -1,0 +1,33 @@
+{
+  "node": "JoinFamily",
+  "shots": [
+    {
+      "test": "an invite asks first",
+      "file": "01-an-invite-asks-first.png"
+    },
+    {
+      "test": "joining",
+      "file": "02-joining.png"
+    },
+    {
+      "test": "not now",
+      "file": "03-not-now.png"
+    },
+    {
+      "test": "an invite opened while signed out",
+      "file": "04-an-invite-opened-while-signed-out.png"
+    },
+    {
+      "test": "an invite that was used",
+      "file": "05-an-invite-that-was-used.png"
+    },
+    {
+      "test": "an invite from your own family",
+      "file": "06-an-invite-from-your-own-family.png"
+    },
+    {
+      "test": "a link that isn't an invite",
+      "file": "07-a-link-that-isn-t-an-invite.png"
+    }
+  ]
+}

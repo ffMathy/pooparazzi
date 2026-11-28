@@ -1,0 +1,25 @@
+{
+  "node": "StartSleep",
+  "shots": [
+    {
+      "test": "starting a sleep",
+      "file": "01-starting-a-sleep.png"
+    },
+    {
+      "test": "nudging the start earlier",
+      "file": "02-nudging-the-start-earlier.png"
+    },
+    {
+      "test": "done keeps the sleep running",
+      "file": "03-done-keeps-the-sleep-running.png"
+    },
+    {
+      "test": "undoing a sleep start",
+      "file": "04-undoing-a-sleep-start.png"
+    },
+    {
+      "test": "edit opens the sleep",
+      "file": "05-edit-opens-the-sleep.png"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "node": "HomeLamp",
+  "shots": [
+    {
+      "test": "the Lamp before the first feed",
+      "file": "01-the-lamp-before-the-first-feed.png"
+    },
+    {
+      "test": "the Lamp just after a feed",
+      "file": "02-the-lamp-just-after-a-feed.png"
+    },
+    {
+      "test": "the Lamp counts the time since the last feed",
+      "file": "03-the-lamp-counts-the-time-since-the-last-feed.png"
+    },
+    {
+      "test": "tapping the Lamp opens the last feed",
+      "file": "04-tapping-the-lamp-opens-the-last-feed.png"
+    },
+    {
+      "test": "tapping the Lamp while asleep opens the running sleep",
+      "file": "05-tapping-the-lamp-while-asleep-opens-the-running-sleep.png"
+    }
+  ]
+}

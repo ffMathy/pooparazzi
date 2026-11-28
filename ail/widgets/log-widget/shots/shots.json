@@ -1,0 +1,29 @@
+{
+  "node": "LogWidget",
+  "shots": [
+    {
+      "test": "a new widget has nothing to show yet",
+      "file": "01-a-new-widget-has-nothing-to-show-yet.png"
+    },
+    {
+      "test": "the sleep button says how long the baby has slept",
+      "file": "02-the-sleep-button-says-how-long-the-baby-has-slept.png"
+    },
+    {
+      "test": "after waking the sleep button says how long the baby is awake",
+      "file": "03-after-waking-the-sleep-button-says-how-long-the-baby-is-awak.png"
+    },
+    {
+      "test": "Feed says when the next feed is expected",
+      "file": "04-feed-says-when-the-next-feed-is-expected.png"
+    },
+    {
+      "test": "a small log widget keeps only the icons",
+      "file": "05-a-small-log-widget-keeps-only-the-icons.png"
+    },
+    {
+      "test": "a log widget that is not tall enough has no status row",
+      "file": "06-a-log-widget-that-is-not-tall-enough-has-no-status-row.png"
+    }
+  ]
+}

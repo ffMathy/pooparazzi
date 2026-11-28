@@ -1,0 +1,25 @@
+{
+  "node": "SwitchBaby",
+  "shots": [
+    {
+      "test": "the switch baby sheet",
+      "file": "01-the-switch-baby-sheet.png"
+    },
+    {
+      "test": "switching to the other baby",
+      "file": "02-switching-to-the-other-baby.png"
+    },
+    {
+      "test": "cancelling keeps the baby",
+      "file": "03-cancelling-keeps-the-baby.png"
+    },
+    {
+      "test": "each baby has its own sleep",
+      "file": "04-each-baby-has-its-own-sleep.png"
+    },
+    {
+      "test": "history names the current baby",
+      "file": "05-history-names-the-current-baby.png"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "node": "WatchLogged",
+  "shots": [
+    {
+      "test": "logged closes after five seconds",
+      "file": "01-logged-closes-after-five-seconds.png"
+    },
+    {
+      "test": "logged ignores taps for its first second",
+      "file": "02-logged-ignores-taps-for-its-first-second.png"
+    },
+    {
+      "test": "tapping the background closes logged",
+      "file": "03-tapping-the-background-closes-logged.png"
+    },
+    {
+      "test": "undo takes a watch log back",
+      "file": "04-undo-takes-a-watch-log-back.png"
+    },
+    {
+      "test": "undoing a wake-up resumes the sleep",
+      "file": "05-undoing-a-wake-up-resumes-the-sleep.png"
+    },
+    {
+      "test": "a feed during a sleep wakes the baby too",
+      "file": "06-a-feed-during-a-sleep-wakes-the-baby-too.png"
+    },
+    {
+      "test": "a log within a minute of falling asleep cancels the sleep",
+      "file": "07-a-log-within-a-minute-of-falling-asleep-cancels-the-sleep.png"
+    },
+    {
+      "test": "logged says the log is kept on the watch",
+      "file": "08-logged-says-the-log-is-kept-on-the-watch.png"
+    }
+  ]
+}

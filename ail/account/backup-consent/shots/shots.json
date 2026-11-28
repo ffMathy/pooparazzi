@@ -1,0 +1,17 @@
+{
+  "node": "BackupConsent",
+  "shots": [
+    {
+      "test": "the consent after signing in",
+      "file": "01-the-consent-after-signing-in.png"
+    },
+    {
+      "test": "not now signs out",
+      "file": "02-not-now-signs-out.png"
+    },
+    {
+      "test": "agreeing starts the backup",
+      "file": "03-agreeing-starts-the-backup.png"
+    }
+  ]
+}

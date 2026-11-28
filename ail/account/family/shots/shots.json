@@ -1,0 +1,25 @@
+{
+  "node": "Family",
+  "shots": [
+    {
+      "test": "a family of one",
+      "file": "01-a-family-of-one.png"
+    },
+    {
+      "test": "inviting someone",
+      "file": "02-inviting-someone.png"
+    },
+    {
+      "test": "a family of two",
+      "file": "03-a-family-of-two.png"
+    },
+    {
+      "test": "leaving the family",
+      "file": "04-leaving-the-family.png"
+    },
+    {
+      "test": "removing a member",
+      "file": "05-removing-a-member.png"
+    }
+  ]
+}

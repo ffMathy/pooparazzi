@@ -1,0 +1,29 @@
+{
+  "node": "ForgotToLog",
+  "shots": [
+    {
+      "test": "a forgotten feed is offered its expected time",
+      "file": "01-a-forgotten-feed-is-offered-its-expected-time.png"
+    },
+    {
+      "test": "picking the expected time moves the feed there",
+      "file": "02-picking-the-expected-time-moves-the-feed-there.png"
+    },
+    {
+      "test": "a second tap goes back",
+      "file": "03-a-second-tap-goes-back.png"
+    },
+    {
+      "test": "an expected time close to now is not offered",
+      "file": "04-an-expected-time-close-to-now-is-not-offered.png"
+    },
+    {
+      "test": "without a week to go on there is no Expected",
+      "file": "05-without-a-week-to-go-on-there-is-no-expected.png"
+    },
+    {
+      "test": "a late Start sleep is offered its expected start",
+      "file": "06-a-late-start-sleep-is-offered-its-expected-start.png"
+    }
+  ]
+}

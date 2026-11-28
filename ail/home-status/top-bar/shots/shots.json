@@ -1,0 +1,13 @@
+{
+  "node": "TopBar",
+  "shots": [
+    {
+      "test": "the top bar of a new install",
+      "file": "01-the-top-bar-of-a-new-install.png"
+    },
+    {
+      "test": "the top bar opens History, Statistics and Settings",
+      "file": "02-the-top-bar-opens-history-statistics-and-settings.png"
+    }
+  ]
+}

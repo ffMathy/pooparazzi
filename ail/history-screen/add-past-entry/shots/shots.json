@@ -1,0 +1,29 @@
+{
+  "node": "AddPastEntry",
+  "shots": [
+    {
+      "test": "Add entry opens a feed 15 minutes ago",
+      "file": "01-add-entry-opens-a-feed-15-minutes-ago.png"
+    },
+    {
+      "test": "a past sleep starts as the last 15 minutes",
+      "file": "02-a-past-sleep-starts-as-the-last-15-minutes.png"
+    },
+    {
+      "test": "adding a past sleep",
+      "file": "03-adding-a-past-sleep.png"
+    },
+    {
+      "test": "a past sleep can't overlap another",
+      "file": "04-a-past-sleep-can-t-overlap-another.png"
+    },
+    {
+      "test": "a time that hasn't happened yet offers yesterday",
+      "file": "05-a-time-that-hasn-t-happened-yet-offers-yesterday.png"
+    },
+    {
+      "test": "every kind of past entry is listed by its kind",
+      "file": "06-every-kind-of-past-entry-is-listed-by-its-kind.png"
+    }
+  ]
+}

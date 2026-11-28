@@ -1,0 +1,17 @@
+{
+  "node": "Welcome",
+  "shots": [
+    {
+      "test": "the welcome on a first run with backup",
+      "file": "01-the-welcome-on-a-first-run-with-backup.png"
+    },
+    {
+      "test": "continuing without an account",
+      "file": "02-continuing-without-an-account.png"
+    },
+    {
+      "test": "signing in on the welcome",
+      "file": "03-signing-in-on-the-welcome.png"
+    }
+  ]
+}

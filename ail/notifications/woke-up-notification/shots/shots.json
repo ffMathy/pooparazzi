@@ -1,0 +1,21 @@
+{
+  "node": "WokeUpNotification",
+  "shots": [
+    {
+      "test": "the woke-up notification",
+      "file": "01-the-woke-up-notification.png"
+    },
+    {
+      "test": "an Earlier offset moves the wake-up",
+      "file": "02-an-earlier-offset-moves-the-wake-up.png"
+    },
+    {
+      "test": "the selected offset tapped again goes back to the tapped time",
+      "file": "03-the-selected-offset-tapped-again-goes-back-to-the-tapped-tim.png"
+    },
+    {
+      "test": "offsets before the start are left out",
+      "file": "04-offsets-before-the-start-are-left-out.png"
+    }
+  ]
+}

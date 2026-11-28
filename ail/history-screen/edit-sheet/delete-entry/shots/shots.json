@@ -1,0 +1,17 @@
+{
+  "node": "DeleteEntry",
+  "shots": [
+    {
+      "test": "deleting from History, and Undo",
+      "file": "01-deleting-from-history-and-undo.png"
+    },
+    {
+      "test": "deleting from Home, and Undo",
+      "file": "02-deleting-from-home-and-undo.png"
+    },
+    {
+      "test": "Done keeps the delete",
+      "file": "03-done-keeps-the-delete.png"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "specRoot": "ail",
+  "checksDir": "checks",
+  "migrate": "node-by-node",
+  "run": {
+    "legacy": {
+      "services": {
+        "firebase": {
+          "start": "scripts/ail/firebase-emulators.sh",
+          "cwd": ".",
+          "ready": "curl -sf http://127.0.0.1:9099/ >/dev/null && curl -sf http://127.0.0.1:8080/ >/dev/null",
+          "timeout": 300,
+          "env": {
+            "FIREBASE_AUTH_EMULATOR_HOST": "127.0.0.1:9099",
+            "FIRESTORE_EMULATOR_HOST": "127.0.0.1:8080"
+          }
+        }
+      },
+      "start": "scripts/ail/run-legacy.sh",
+      "cwd": ".",
+      "ready": "test -f .ail/legacy/ready",
+      "timeout": 1200,
+      "env": {
+        "AIL_APP": "the phone and watch apps, on Robolectric in each check's own process (checks/e2e/Phone.kt, checks/e2e/watch/Watch.kt)"
+      }
+    },
+    "app": {
+      "services": {
+        "firebase": {
+          "start": "scripts/ail/firebase-emulators.sh",
+          "cwd": ".",
+          "ready": "curl -sf http://127.0.0.1:9099/ >/dev/null && curl -sf http://127.0.0.1:8080/ >/dev/null",
+          "timeout": 300,
+          "env": {
+            "FIREBASE_AUTH_EMULATOR_HOST": "127.0.0.1:9099",
+            "FIRESTORE_EMULATOR_HOST": "127.0.0.1:8080"
+          }
+        }
+      },
+      "start": "scripts/ail/run-legacy.sh",
+      "cwd": ".",
+      "ready": "test -f .ail/legacy/ready",
+      "timeout": 1200,
+      "env": {
+        "AIL_APP": "the phone and watch apps, on Robolectric in each check's own process (checks/e2e/Phone.kt, checks/e2e/watch/Watch.kt)"
+      }
+    }
+  },
+  "tests": {
+    "e2e": "checks/e2e/{dir}/{name}Checks.kt",
+    "prepare": "scripts/ail/check.sh build",
+    "command": "scripts/ail/check.sh e2e {name} {report}"
+  }
+}

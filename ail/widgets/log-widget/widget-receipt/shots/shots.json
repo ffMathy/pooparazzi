@@ -1,0 +1,37 @@
+{
+  "node": "WidgetReceipt",
+  "shots": [
+    {
+      "test": "Start sleep on the widget logs at once",
+      "file": "01-start-sleep-on-the-widget-logs-at-once.png"
+    },
+    {
+      "test": "Undo on the widget takes the sleep back",
+      "file": "02-undo-on-the-widget-takes-the-sleep-back.png"
+    },
+    {
+      "test": "a second tap within two seconds changes nothing",
+      "file": "03-a-second-tap-within-two-seconds-changes-nothing.png"
+    },
+    {
+      "test": "the receipt goes after ten seconds",
+      "file": "04-the-receipt-goes-after-ten-seconds.png"
+    },
+    {
+      "test": "Woke up on the widget",
+      "file": "05-woke-up-on-the-widget.png"
+    },
+    {
+      "test": "the background opens the receipt in the app",
+      "file": "06-the-background-opens-the-receipt-in-the-app.png"
+    },
+    {
+      "test": "a sleep ended within a minute is cancelled on the widget",
+      "file": "07-a-sleep-ended-within-a-minute-is-cancelled-on-the-widget.png"
+    },
+    {
+      "test": "a feed logged from the widget's sheet leaves the receipt",
+      "file": "08-a-feed-logged-from-the-widget-s-sheet-leaves-the-receipt.png"
+    }
+  ]
+}

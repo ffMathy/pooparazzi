@@ -1,0 +1,21 @@
+{
+  "node": "Feeds",
+  "shots": [
+    {
+      "test": "opening the Feed sheet",
+      "file": "01-opening-the-feed-sheet.png"
+    },
+    {
+      "test": "nudging the feed earlier",
+      "file": "02-nudging-the-feed-earlier.png"
+    },
+    {
+      "test": "logging food",
+      "file": "03-logging-food.png"
+    },
+    {
+      "test": "logging just the time",
+      "file": "04-logging-just-the-time.png"
+    }
+  ]
+}

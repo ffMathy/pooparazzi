@@ -1,0 +1,21 @@
+{
+  "node": "DanishPhone",
+  "shots": [
+    {
+      "test": "your baby on a danish phone",
+      "file": "01-your-baby-on-a-danish-phone.png"
+    },
+    {
+      "test": "the introduction on a danish phone",
+      "file": "02-the-introduction-on-a-danish-phone.png"
+    },
+    {
+      "test": "settings on a danish phone",
+      "file": "03-settings-on-a-danish-phone.png"
+    },
+    {
+      "test": "adding and removing a baby in danish",
+      "file": "04-adding-and-removing-a-baby-in-danish.png"
+    }
+  ]
+}

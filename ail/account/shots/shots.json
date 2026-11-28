@@ -1,0 +1,9 @@
+{
+  "node": "Account",
+  "shots": [
+    {
+      "test": "a build without a backup",
+      "file": "01-a-build-without-a-backup.png"
+    }
+  ]
+}

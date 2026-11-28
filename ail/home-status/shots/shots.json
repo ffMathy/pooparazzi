@@ -1,0 +1,9 @@
+{
+  "node": "HomeStatus",
+  "shots": [
+    {
+      "test": "a new install has nothing to show yet",
+      "file": "01-a-new-install-has-nothing-to-show-yet.png"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "node": "StatisticsChart",
+  "shots": [
+    {
+      "test": "the open row's chart",
+      "file": "01-the-open-row-s-chart.png"
+    },
+    {
+      "test": "pressing a bar shows its day and value",
+      "file": "02-pressing-a-bar-shows-its-day-and-value.png"
+    },
+    {
+      "test": "an unusual day is grey and left out of the average",
+      "file": "03-an-unusual-day-is-grey-and-left-out-of-the-average.png"
+    }
+  ]
+}

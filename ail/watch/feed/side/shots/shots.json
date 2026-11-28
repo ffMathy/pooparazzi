@@ -1,0 +1,25 @@
+{
+  "node": "WatchSide",
+  "shots": [
+    {
+      "test": "the side screen",
+      "file": "01-the-side-screen.png"
+    },
+    {
+      "test": "ticking both sides records their order",
+      "file": "02-ticking-both-sides-records-their-order.png"
+    },
+    {
+      "test": "unticking a side moves the other one first",
+      "file": "03-unticking-a-side-moves-the-other-one-first.png"
+    },
+    {
+      "test": "saving a breast feed with no side",
+      "file": "04-saving-a-breast-feed-with-no-side.png"
+    },
+    {
+      "test": "swiping back from side returns to feed type",
+      "file": "05-swiping-back-from-side-returns-to-feed-type.png"
+    }
+  ]
+}

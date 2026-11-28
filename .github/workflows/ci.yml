@@ -46,6 +46,17 @@ jobs:
           # Pull requests read the cache that main writes, but do not write their own.
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
+      # The AIL account checks (checks/e2e/account) run the app against the Firebase emulators (ail.config.json's
+      # service "firebase"); they run with the unit tests, so the emulators start first.
+      - name: Start the Firebase emulators
+        run: |
+          nohup scripts/ail/firebase-emulators.sh > "$RUNNER_TEMP/firebase-emulators.log" 2>&1 &
+          for _ in $(seq 1 150); do
+            curl -sf http://127.0.0.1:9099/ >/dev/null && curl -sf http://127.0.0.1:8080/ >/dev/null && exit 0
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/firebase-emulators.log"; exit 1
+
       # Robolectric downloads its android-all jars at test time from the Maven Central mirror that the root
       # build.gradle.kts sets for every Test task (robolectric.dependency.repo.url / .id); nothing more to set here.
       - name: Unit tests

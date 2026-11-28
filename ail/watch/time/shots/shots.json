@@ -1,0 +1,33 @@
+{
+  "node": "WatchTime",
+  "shots": [
+    {
+      "test": "moving a feed's time",
+      "file": "01-moving-a-feed-s-time.png"
+    },
+    {
+      "test": "moving a feed's time back ten minutes",
+      "file": "02-moving-a-feed-s-time-back-ten-minutes.png"
+    },
+    {
+      "test": "the crown moves the time a minute a step",
+      "file": "03-the-crown-moves-the-time-a-minute-a-step.png"
+    },
+    {
+      "test": "turning the crown on logged opens time",
+      "file": "04-turning-the-crown-on-logged-opens-time.png"
+    },
+    {
+      "test": "swiping back from time keeps the time",
+      "file": "05-swiping-back-from-time-keeps-the-time.png"
+    },
+    {
+      "test": "moving a sleep's start",
+      "file": "06-moving-a-sleep-s-start.png"
+    },
+    {
+      "test": "a wake-up stays a minute after the sleep's start",
+      "file": "07-a-wake-up-stays-a-minute-after-the-sleep-s-start.png"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "node": "YourBaby",
+  "shots": [
+    {
+      "test": "what your baby asks",
+      "file": "01-what-your-baby-asks.png"
+    },
+    {
+      "test": "naming the baby and giving a birth date",
+      "file": "02-naming-the-baby-and-giving-a-birth-date.png"
+    },
+    {
+      "test": "a birth date can't be in the future",
+      "file": "03-a-birth-date-can-t-be-in-the-future.png"
+    },
+    {
+      "test": "continuing with nothing given",
+      "file": "04-continuing-with-nothing-given.png"
+    },
+    {
+      "test": "going back skips your baby",
+      "file": "05-going-back-skips-your-baby.png"
+    }
+  ]
+}

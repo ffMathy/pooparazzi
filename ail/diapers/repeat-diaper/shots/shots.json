@@ -1,0 +1,9 @@
+{
+  "node": "RepeatDiaper",
+  "shots": [
+    {
+      "test": "the same diaper again within five seconds",
+      "file": "01-the-same-diaper-again-within-five-seconds.png"
+    }
+  ]
+}

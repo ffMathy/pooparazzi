@@ -44,6 +44,20 @@ jobs:
         with:
           cache-read-only: true
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+      # The AIL account checks (checks/e2e/account) run the app against the Firebase emulators (ail.config.json's
+      # service "firebase"); they run with the unit tests, so the emulators start first.
+      - name: Start the Firebase emulators
+        run: |
+          nohup scripts/ail/firebase-emulators.sh > "$RUNNER_TEMP/firebase-emulators.log" 2>&1 &
+          for _ in $(seq 1 150); do
+            curl -sf http://127.0.0.1:9099/ >/dev/null && curl -sf http://127.0.0.1:8080/ >/dev/null && exit 0
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/firebase-emulators.log"; exit 1
+
       - name: Record the screenshots
         run: ./gradlew --console=plain :app:recordRoborazziDebug :wear:recordRoborazziDebug
 

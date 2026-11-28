@@ -1,0 +1,25 @@
+{
+  "node": "StatisticsScreen",
+  "shots": [
+    {
+      "test": "Statistics before anything is logged",
+      "file": "01-statistics-before-anything-is-logged.png"
+    },
+    {
+      "test": "averages per day over the last 30 days",
+      "file": "02-averages-per-day-over-the-last-30-days.png"
+    },
+    {
+      "test": "today so far until a whole day is logged",
+      "file": "03-today-so-far-until-a-whole-day-is-logged.png"
+    },
+    {
+      "test": "changing the range",
+      "file": "04-changing-the-range.png"
+    },
+    {
+      "test": "a row opens its chart",
+      "file": "05-a-row-opens-its-chart.png"
+    }
+  ]
+}

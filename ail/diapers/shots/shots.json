@@ -1,0 +1,29 @@
+{
+  "node": "Diapers",
+  "shots": [
+    {
+      "test": "opening the Diaper sheet",
+      "file": "01-opening-the-diaper-sheet.png"
+    },
+    {
+      "test": "saving a pee",
+      "file": "02-saving-a-pee.png"
+    },
+    {
+      "test": "saving pee and poop, nudged earlier",
+      "file": "03-saving-pee-and-poop-nudged-earlier.png"
+    },
+    {
+      "test": "saving with nothing ticked logs a plain change",
+      "file": "04-saving-with-nothing-ticked-logs-a-plain-change.png"
+    },
+    {
+      "test": "cancel logs nothing",
+      "file": "05-cancel-logs-nothing.png"
+    },
+    {
+      "test": "going back logs nothing",
+      "file": "06-going-back-logs-nothing.png"
+    }
+  ]
+}

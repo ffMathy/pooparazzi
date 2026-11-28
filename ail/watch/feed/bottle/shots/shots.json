@@ -1,0 +1,29 @@
+{
+  "node": "WatchBottle",
+  "shots": [
+    {
+      "test": "the bottle screen",
+      "file": "01-the-bottle-screen.png"
+    },
+    {
+      "test": "a second tap within half a second keeps a choice",
+      "file": "02-a-second-tap-within-half-a-second-keeps-a-choice.png"
+    },
+    {
+      "test": "stepping the amount",
+      "file": "03-stepping-the-amount.png"
+    },
+    {
+      "test": "an amount chip sets the amount",
+      "file": "04-an-amount-chip-sets-the-amount.png"
+    },
+    {
+      "test": "saving a bottle",
+      "file": "05-saving-a-bottle.png"
+    },
+    {
+      "test": "the chips follow the last bottle",
+      "file": "06-the-chips-follow-the-last-bottle.png"
+    }
+  ]
+}

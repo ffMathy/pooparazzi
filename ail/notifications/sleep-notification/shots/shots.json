@@ -1,0 +1,21 @@
+{
+  "node": "SleepNotification",
+  "shots": [
+    {
+      "test": "the notification of a running sleep",
+      "file": "01-the-notification-of-a-running-sleep.png"
+    },
+    {
+      "test": "the last feed shows in the expanded notification",
+      "file": "02-the-last-feed-shows-in-the-expanded-notification.png"
+    },
+    {
+      "test": "Woke up on the notification ends the sleep",
+      "file": "03-woke-up-on-the-notification-ends-the-sleep.png"
+    },
+    {
+      "test": "Woke up within a minute cancels the sleep",
+      "file": "04-woke-up-within-a-minute-cancels-the-sleep.png"
+    }
+  ]
+}

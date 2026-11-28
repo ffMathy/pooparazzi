@@ -1,0 +1,13 @@
+{
+  "node": "TypicalDay",
+  "shots": [
+    {
+      "test": "a typical day needs three logged days",
+      "file": "01-a-typical-day-needs-three-logged-days.png"
+    },
+    {
+      "test": "the usual time between feeds and the usual sleep",
+      "file": "02-the-usual-time-between-feeds-and-the-usual-sleep.png"
+    }
+  ]
+}
