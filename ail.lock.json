@@ -55,7 +55,8 @@
       "shots": "2374a7a7995e9da5"
     },
     "Feeds": {
-      "shots": "944d5eee84053f9c"
+      "shots": "944d5eee84053f9c",
+      "look": "012b7af9148795120457e59010069e4533f3936c57972b444954a141a20e691c"
     },
     "FeedWhileAsleep": {
       "shots": "0d00cc3aa4385a34"
@@ -145,7 +146,7 @@
     },
     "WakeUp": {
       "shots": "5cdd526b04f464f7",
-      "look": "78bbf2720f5f3069a0c8fb9d624f9765f0f8f923d50afc7637775eb2513aea3d"
+      "look": "c64abb6f0e66b9194f6f732ced3ab6291c7ca0de7441a7ab40370d8cc033bf96"
     },
     "Watch": {
       "shots": "9670abdc33e4b196"
