@@ -1,4 +1,4 @@
-// ail-derived-from: DiaperWhileAsleep@5b32630b3e4b4b00
+// ail-derived-from: DiaperWhileAsleep@bc28c83959248426
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -6,18 +6,29 @@ import org.junit.Rule
 import org.junit.rules.TestName
 
 /**
- * Derived check for DiaperWhileAsleep: it plays the node's scenarios exactly as its end-to-end check does (checks/e2e/diapers/diaper-while-asleep/DiaperWhileAsleepChecks.kt, which
- * passes against the app) and, with AIL_SHOTS_DIR set, saves the screen each scenario ends on, under the name ail gives
- * it, for a model to judge against the node's look and copy.
+ * Pictures the screen each DiaperWhileAsleep scenario ends on.
+ *
+ * The scenarios themselves are played by [DiaperWhileAsleepChecks]:
+ * - `the Diaper sheet says the sleep will end`
+ * - `saving the diaper ends the sleep`
+ * - `a diaper before the sleep began leaves it running`
+ *
+ * After each one, the screen the parent is looking at is saved into
+ * AIL_SHOTS_DIR (nothing is saved when it is unset), named after the
+ * scenario's title in lower case, each run of other characters one "-".
  */
 class DiaperWhileAsleepShots : DiaperWhileAsleepChecks() {
-    @get:Rule
-    val scenario = TestName()
 
-    /** The screen the scenario ended on, before the app closes: its title in lower case, other characters as one "-". */
+    @get:Rule
+    val shotName = TestName()
+
     @After
-    fun pictureTheLastScreen() {
-        val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
-        pictureTheScreen(name)
+    fun pictureTheEnd() {
+        pictureTheScreen(shotFileName(shotName.methodName))
     }
+
+    private fun shotFileName(title: String): String =
+        title.lowercase()
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .trim('-')
 }

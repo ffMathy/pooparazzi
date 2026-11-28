@@ -1,4 +1,4 @@
-// ail-derived-from: WatchBottle@3f209c6a2ce8be88
+// ail-derived-from: WatchBottle@f1524795cba41ff7
 package com.ffmathy.pooparazzi.checks
 
 import org.junit.After
@@ -6,18 +6,22 @@ import org.junit.Rule
 import org.junit.rules.TestName
 
 /**
- * Derived check for WatchBottle: it plays the node's scenarios exactly as its end-to-end check does (checks/e2e/watch/feed/bottle/WatchBottleChecks.kt, which
- * passes against the app) and, with AIL_SHOTS_DIR set, saves the screen each scenario ends on, under the name ail gives
- * it, for a model to judge against the node's look and copy.
+ * Derived check for WatchBottle. It plays every scenario of the end-to-end
+ * check (checks/e2e/watch/feed/bottle/WatchBottleChecks.kt) against the real
+ * watch app. After each scenario it pictures the screen the scenario ends on,
+ * named after the scenario's title.
  */
 class WatchBottleShots : WatchBottleChecks() {
-    @get:Rule
-    val scenario = TestName()
 
-    /** The screen the scenario ended on, before the app closes: its title in lower case, other characters as one "-". */
+    @get:Rule
+    val testName = TestName()
+
     @After
-    fun pictureTheLastScreen() {
-        val name = scenario.methodName.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "test" }
+    fun pictureTheScenario() {
+        val name = testName.methodName
+            .lowercase()
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .trim('-')
         pictureTheScreen(name)
     }
 }
