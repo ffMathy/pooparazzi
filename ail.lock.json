@@ -20,7 +20,7 @@
       "look": "1a2a1ee2dfb36b3765e3e4b5a9ff2696497cc6abaef8b5ac03778c211f4f754d"
     },
     "Appearance": {
-      "shots": "56de240bdf219c84"
+      "shots": "321d318f1e9e3089"
     },
     "Babies": {
       "shots": "a34821f055855184",
@@ -39,7 +39,7 @@
       "look": "46da8af50d7f2bfb60b7689e045f7074d598b03509285f858587e2883f399d9e"
     },
     "CoverWidget": {
-      "shots": "2d050f91b023c431"
+      "shots": "d5b40d342897885d"
     },
     "DanishPhone": {
       "shots": "eb890abe94cb3789",
@@ -54,7 +54,7 @@
       "look": "0bfaeda1cf46a56ca0aaa4e2166bad7abe3fc23756b5fbd866d5e1322fa967b0"
     },
     "DiaperWhileAsleep": {
-      "shots": "5b32630b3e4b4b00",
+      "shots": "bc28c83959248426",
       "look": "5e001f0e6b8f7393af39dfa9f30ad9535564e9bcb706fae3de38c24a4f995817"
     },
     "EditDiaper": {
@@ -69,12 +69,15 @@
       "shots": "2374a7a7995e9da5",
       "look": "a6e9d9032a83d5f6bf84b360a398b65e19d73fcb0f32b61d91c4f9306c6f6b25"
     },
+    "Family": {
+      "shots": "07754186835d08f8"
+    },
     "Feeds": {
       "shots": "944d5eee84053f9c",
       "look": "e9403a96024c4fb1ae13787fa56fbc34c1653b6bb42953159a10019903962877"
     },
     "FeedWhileAsleep": {
-      "shots": "0d00cc3aa4385a34"
+      "shots": "0d8e4c16a5cbe295"
     },
     "ForecastLines": {
       "shots": "b7b20072a7aa888f",
@@ -85,7 +88,7 @@
       "look": "82158f1f919f1a3c1448ad7ea8abbf1bbd5014c13bf0de9f9307da7693bb3df9"
     },
     "HistoryScreen": {
-      "shots": "3d39a73da09ca63e"
+      "shots": "fb20a929c55a2b79"
     },
     "HomeLamp": {
       "shots": "18b6a1eff6db0be5",
@@ -108,7 +111,7 @@
       "look": "9455fb8fb52a181e80a2aea6242387ba0fce0690d73ef3869d60b75b974b85bc"
     },
     "LogWidget": {
-      "shots": "d4300fe7ef4e4e48"
+      "shots": "b9b2c88bf4276232"
     },
     "NotificationSettings": {
       "shots": "ed30d41936915461",
@@ -119,14 +122,14 @@
       "look": "9520b5b97800486e0da57d3ecaf8fca7a4ac0397d43c54708de5aa0eda70a6a6"
     },
     "QuickWidget": {
-      "shots": "c4591efc6c4aa4f7"
+      "shots": "058a728f52c399af"
     },
     "RemoveBaby": {
       "shots": "12be13386295a5f5",
       "look": "658700f1fd5d949335cd447c5b209491b8a268a9694f051c8a03efe3298ca579"
     },
     "RepeatDiaper": {
-      "shots": "5c022649db7e764f",
+      "shots": "5bec2e41a4f3ddac",
       "look": "db668c5a186bb9994be5e1262265e9ec865bcc5df720ea53822d5d5db88b338e"
     },
     "RepeatFeed": {
@@ -142,10 +145,13 @@
       "look": "64b6717b6e2817a5d7cf07ec3402f6eccde4ca5cf60d37526605601d23f3aa18"
     },
     "SignedIn": {
-      "shots": "30819036c84dce0d"
+      "shots": "869c9a1a317de00c"
+    },
+    "SignIn": {
+      "shots": "160d9b1f131cc848"
     },
     "SignInLink": {
-      "shots": "7bb2152c54a69556"
+      "shots": "f80d6a22517e81de"
     },
     "SinceRows": {
       "shots": "ea47e612e15d3a63",
@@ -156,7 +162,7 @@
       "look": "f25f24f776b4957353f46f466cb5d93892d92d33e4df9534427f963daddbd857"
     },
     "SleepNotification": {
-      "shots": "c17f05441902f2ec"
+      "shots": "f0f2100550ff40f9"
     },
     "StartSleep": {
       "shots": "bab811e3dbd588a1",
@@ -195,25 +201,25 @@
       "look": "37ab2e6dc55101854e3ad0e345c470aa3c9bebe6fb056eb7c94d8bc7a02ab970"
     },
     "WatchBottle": {
-      "shots": "3f209c6a2ce8be88",
+      "shots": "f1524795cba41ff7",
       "look": "66ffaec0119519655bb653fb047c258f570e53582a0242bde57a3d3032339c22"
     },
     "WatchDiaper": {
-      "shots": "b5df2b10887a7228",
+      "shots": "6c54b6b06ceaa9ad",
       "look": "4e231e20af3f3b4b8fb105e59a5afe1f03e4498250c17738f59992ad165c73ca"
     },
     "WatchFeed": {
-      "shots": "0fb3c27ee5a80851"
+      "shots": "54c33c8e881959d5"
     },
     "WatchLogged": {
-      "shots": "4c126603e5929359"
+      "shots": "6ca6753e8bfa1306"
     },
     "WatchSettings": {
       "shots": "d6e0e1797e59ea49",
       "look": "313b444d6f0bb5a5b5282eb0773c3059c21498da4a708261e9a26d2e93d38739"
     },
     "WatchSide": {
-      "shots": "871c05d941a10ee7"
+      "shots": "826d5d03f59064a8"
     },
     "WatchSleep": {
       "shots": "3c5cb5b945a3827c"
@@ -235,11 +241,11 @@
       "look": "5c7694fb35052751f3f5892436ffccc201946c84c69117a1a661760d66d9784c"
     },
     "Widgets": {
-      "shots": "6c6ed1df869bfbbf",
+      "shots": "b32be72879b79053",
       "look": "187f3a09cd5236c4261872f5ef62a5b73cd5d8278523b140dcc52ca5d2b873f3"
     },
     "WokeUpNotification": {
-      "shots": "fd4a829a02c340b9"
+      "shots": "9a6d2dbf4e28b0c1"
     },
     "YourBaby": {
       "shots": "8358da4e5f0febf6",

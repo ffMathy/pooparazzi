@@ -1,0 +1,17 @@
+{
+  "node": "SignIn",
+  "shots": [
+    {
+      "test": "the account screen signed out",
+      "file": "01-the-account-screen-signed-out.png"
+    },
+    {
+      "test": "asking for a sign-in link",
+      "file": "02-asking-for-a-sign-in-link.png"
+    },
+    {
+      "test": "an address that doesn't look right",
+      "file": "03-an-address-that-doesn-t-look-right.png"
+    }
+  ]
+}
